@@ -1628,6 +1628,152 @@ void main() {
           'Cancelled sending message');
     });
 
+    test('send, edit and remove message', () async {
+      final Room testRoom = Room(id: 'test_room', client: matrix);
+      final testTimeline = await testRoom.getTimeline();
+      expect(testTimeline.events.length, 0);
+
+      await matrix.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              testRoom.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    Event(
+                      content: {'body': 'original_event'},
+                      type: 'm.room.message',
+                      eventId: 'original_event',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      room: testRoom,
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+
+      await matrix.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              testRoom.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    Event(
+                      content: {
+                        'msgtype': 'm.text',
+                        'body': ' * edited_event',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edited_event',
+                        },
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': 'original_event'
+                        }
+                      },
+                      type: 'm.room.message',
+                      eventId: 'edited_event',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      room: testRoom,
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+
+      await matrix.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              testRoom.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    Event(
+                      content: {
+                        'msgtype': 'm.text',
+                        'body': ' * edited_event',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edited_event',
+                        },
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': 'original_event'
+                        }
+                      },
+                      type: 'm.room.message',
+                      eventId: 'edited_event',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      room: testRoom,
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+
+      expect(testTimeline.events.first.eventId, 'edited_event');
+      expect(
+          testTimeline.events.first.relationshipType, RelationshipTypes.edit);
+
+      Event? eventFromDB;
+      eventFromDB =
+          await matrix.database!.getEventById('edited_event', testRoom);
+
+      expect(eventFromDB!.eventId, 'edited_event');
+      expect(eventFromDB.relationshipType, RelationshipTypes.edit);
+
+      await matrix.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              testRoom.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      content: {'redacts': 'original_event'},
+                      type: 'm.room.redaction',
+                      eventId: 'original_event_redaction',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      roomId: testRoom.id,
+                      redacts: 'original_event',
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+
+      eventFromDB =
+          await matrix.database!.getEventById('edited_event', testRoom);
+
+      expect(eventFromDB!.eventId, 'edited_event');
+      expect(eventFromDB.relationshipType, RelationshipTypes.edit);
+
+      expect(testTimeline.events.skip(1).first.eventId, 'edited_event');
+      expect(testTimeline.events.skip(1).first.relationshipType,
+          RelationshipTypes.edit);
+    });
+
     test('logout', () async {
       await matrix.logout();
     });
