@@ -98,25 +98,14 @@ class Box<V> {
   final BoxCollection boxCollection;
   final Map<String, V?> _cache = {};
 
-  /// _cachedKeys is only used to make sure that if you fetch all keys from a
-  /// box, you do not need to have an expensive read operation twice. There is
-  /// no other usage for this at the moment. So the cache is never partial.
-  /// Once the keys are cached, they need to be updated when changed in put and
-  /// delete* so that the cache does not become outdated.
-  Set<String>? _cachedKeys;
-
-  bool get _keysCached => _cachedKeys != null;
-
   Box(this.name, this.boxCollection);
 
   Future<List<String>> getAllKeys([Transaction? txn]) async {
-    if (_keysCached) return _cachedKeys!.toList();
     txn ??= boxCollection._db.transaction(name, 'readonly');
     final store = txn.objectStore(name);
     final request = store.getAllKeys(null);
     await request.onSuccess.first;
     final keys = request.result.cast<String>();
-    _cachedKeys = keys.toSet();
     return keys;
   }
 
@@ -157,7 +146,6 @@ class Box<V> {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => put(key, val, txn));
       _cache[key] = val;
-      _cachedKeys?.add(key);
       return;
     }
 
@@ -165,7 +153,6 @@ class Box<V> {
     final store = txn.objectStore(name);
     await store.put(val as Object, key);
     _cache[key] = val;
-    _cachedKeys?.add(key);
     return;
   }
 
@@ -173,7 +160,6 @@ class Box<V> {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => delete(key, txn));
       _cache[key] = null;
-      _cachedKeys?.remove(key);
       return;
     }
 
@@ -184,7 +170,6 @@ class Box<V> {
     // Set to null instead remove() so that inside of transactions null is
     // returned.
     _cache[key] = null;
-    _cachedKeys?.remove(key);
     return;
   }
 
@@ -194,7 +179,6 @@ class Box<V> {
       for (final key in keys) {
         _cache[key] = null;
       }
-      _cachedKeys?.removeAll(keys);
       return;
     }
 
@@ -203,7 +187,6 @@ class Box<V> {
     for (final key in keys) {
       await store.delete(key);
       _cache[key] = null;
-      _cachedKeys?.remove(key);
     }
     return;
   }
@@ -212,7 +195,6 @@ class Box<V> {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => clear(txn));
       _cache.clear();
-      _cachedKeys = null;
       return;
     }
 
@@ -220,7 +202,6 @@ class Box<V> {
     final store = txn.objectStore(name);
     await store.clear();
     _cache.clear();
-    _cachedKeys = null;
     return;
   }
 
