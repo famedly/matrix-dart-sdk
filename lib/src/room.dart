@@ -1641,9 +1641,7 @@ class Room {
     required bool ignoreErrors,
   }) async {
     try {
-      Logs().v(
-        'Request missing user $mxID in room ${getLocalizedDisplayname()} from the server...',
-      );
+      Logs().v('Request missing user $mxID in room $id from the server...');
       final resp = await client.getRoomStateWithKey(
         id,
         EventTypes.RoomMember,
