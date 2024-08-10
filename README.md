@@ -21,3 +21,13 @@ flutter pub add flutter_openssl_crypto
 See the API documentation for details:
 
 [API documentation](https://pub.dev/documentation/matrix/latest/)
+
+### Tests
+
+```shell
+thread_count=$(getconf _NPROCESSORS_ONLN) // or your favourite number :3
+dart test --concurrency=$thread_count test
+```
+
+- Adding the `-x olm` flag will skip tests which require olm
+- Using `-t olm` will run only olm specific tests, but these will probably break as they need prior setup (which is not marked as olm and hence won't be run)

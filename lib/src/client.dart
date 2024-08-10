@@ -790,6 +790,7 @@ class Client extends MatrixApi {
     HistoryVisibility? historyVisibility,
     bool waitForSync = true,
     bool groupCall = false,
+    bool federated = true,
     Map<String, dynamic>? powerLevelContentOverride,
   }) async {
     enableEncryption ??=
@@ -824,6 +825,7 @@ class Client extends MatrixApi {
     }
 
     final roomId = await createRoom(
+      creationContent: federated ? null : {'m.federate': false},
       invite: invite,
       preset: preset,
       name: groupName,
@@ -911,7 +913,7 @@ class Client extends MatrixApi {
     return id;
   }
 
-  @Deprecated('Use fetchOwnProfile() instead')
+  @Deprecated('Use getUserProfile(userID) instead')
   Future<Profile> get ownProfile => fetchOwnProfile();
 
   /// Returns the user's own displayname and avatar url. In Matrix it is possible that
@@ -919,6 +921,7 @@ class Client extends MatrixApi {
   /// Tries to get the profile from homeserver first, if failed, falls back to a profile
   /// from a room where the user exists. Set `useServerCache` to true to get any
   /// prior value from this function
+  @Deprecated('Use fetchOwnProfile() instead')
   Future<Profile> fetchOwnProfileFromServer(
       {bool useServerCache = false}) async {
     try {
@@ -943,64 +946,86 @@ class Client extends MatrixApi {
   /// This returns the profile from the first room by default, override `getFromRooms`
   /// to false to fetch from homeserver.
   Future<Profile> fetchOwnProfile({
-    bool getFromRooms = true,
-    bool cache = true,
+    @Deprecated('No longer supported') bool getFromRooms = true,
+    @Deprecated('No longer supported') bool cache = true,
   }) =>
-      getProfileFromUserId(
-        userID!,
-        getFromRooms: getFromRooms,
-        cache: cache,
+      getProfileFromUserId(userID!);
+
+  /// Get the combined profile information for this user. First checks for a
+  /// non outdated cached profile before requesting from the server. Cached
+  /// profiles are outdated if they have been cached in a time older than the
+  /// [maxCacheAge] or they have been marked as outdated by an event in the
+  /// sync loop.
+  /// In case of an
+  ///
+  /// [userId] The user whose profile information to get.
+  @override
+  Future<CachedProfileInformation> getUserProfile(
+    String userId, {
+    Duration timeout = const Duration(seconds: 30),
+    Duration maxCacheAge = const Duration(days: 1),
+  }) async {
+    final cachedProfile = await database?.getUserProfile(userId);
+    if (cachedProfile != null &&
+        !cachedProfile.outdated &&
+        DateTime.now().difference(cachedProfile.updated) < maxCacheAge) {
+      return cachedProfile;
+    }
+
+    final ProfileInformation profile;
+    try {
+      profile = await (_userProfileRequests[userId] ??=
+          super.getUserProfile(userId).timeout(timeout));
+    } catch (e) {
+      Logs().d('Unable to fetch profile from server', e);
+      if (cachedProfile == null) rethrow;
+      return cachedProfile;
+    } finally {
+      unawaited(_userProfileRequests.remove(userId));
+    }
+
+    final newCachedProfile = CachedProfileInformation.fromProfile(
+      profile,
+      outdated: false,
+      updated: DateTime.now(),
+    );
+
+    await database?.storeUserProfile(userId, newCachedProfile);
+
+    return newCachedProfile;
+  }
+
+  final Map<String, Future<ProfileInformation>> _userProfileRequests = {};
+
+  final CachedStreamController<String> onUserProfileUpdate =
+      CachedStreamController<String>();
+
+  /// Get the combined profile information for this user from the server or
+  /// from the cache depending on the cache value. Returns a `Profile` object
+  /// including the given userId but without information about how outdated
+  /// the profile is. If you need those, try using `getUserProfile()` instead.
+  Future<Profile> getProfileFromUserId(
+    String userId, {
+    @Deprecated('No longer supported') bool? getFromRooms,
+    @Deprecated('No longer supported') bool? cache,
+    Duration timeout = const Duration(seconds: 30),
+    Duration maxCacheAge = const Duration(days: 1),
+  }) async {
+    CachedProfileInformation? cachedProfileInformation;
+    try {
+      cachedProfileInformation = await getUserProfile(
+        userId,
+        timeout: timeout,
+        maxCacheAge: maxCacheAge,
       );
-
-  final Map<String, ProfileInformation> _profileRoomsCache = {};
-  final Map<String, ProfileInformation> _profileServerCache = {};
-
-  /// Get the combined profile information for this user.
-  /// If [getFromRooms] is true then the profile will first be searched from the
-  /// room memberships. This is unstable if the given user makes use of different displaynames
-  /// and avatars per room, which is common for some bots and bridges.
-  /// If [cache] is true then
-  /// the profile get cached for this session. Please note that then the profile may
-  /// become outdated if the user changes the displayname or avatar in this session.
-  Future<Profile> getProfileFromUserId(String userId,
-      {bool cache = true, bool getFromRooms = true}) async {
-    var profile =
-        getFromRooms ? _profileRoomsCache[userId] : _profileServerCache[userId];
-    if (cache && profile != null) {
-      return Profile(
-        userId: userId,
-        displayName: profile.displayname,
-        avatarUrl: profile.avatarUrl,
-      );
+    } catch (e) {
+      Logs().d('Unable to fetch profile for $userId', e);
     }
 
-    if (getFromRooms) {
-      final room = rooms.firstWhereOrNull((Room room) =>
-          room.getParticipants().indexWhere((User user) => user.id == userId) !=
-          -1);
-      if (room != null) {
-        final user =
-            room.getParticipants().firstWhere((User user) => user.id == userId);
-        final profileFromRooms = Profile(
-          userId: userId,
-          displayName: user.displayName,
-          avatarUrl: user.avatarUrl,
-        );
-        _profileRoomsCache[userId] = ProfileInformation(
-          avatarUrl: profileFromRooms.avatarUrl,
-          displayname: profileFromRooms.displayName,
-        );
-        return profileFromRooms;
-      }
-    }
-    profile = await getUserProfile(userId);
-    if (cache || _profileServerCache.containsKey(userId)) {
-      _profileServerCache[userId] = profile;
-    }
     return Profile(
       userId: userId,
-      displayName: profile.displayname,
-      avatarUrl: profile.avatarUrl,
+      displayName: cachedProfileInformation?.displayname,
+      avatarUrl: cachedProfileInformation?.avatarUrl,
     );
   }
 
@@ -1763,6 +1788,7 @@ class Client extends MatrixApi {
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
     } finally {
+      await database?.delete();
       _database = null;
     }
 
@@ -1829,7 +1855,10 @@ class Client extends MatrixApi {
 
   Future<void> _handleSoftLogout() async {
     final onSoftLogout = this.onSoftLogout;
-    if (onSoftLogout == null) return;
+    if (onSoftLogout == null) {
+      await logout();
+      return;
+    }
 
     _handleSoftLogoutFuture ??= () async {
       onLoginStateChanged.add(LoginState.softLoggedOut);
@@ -1838,7 +1867,7 @@ class Client extends MatrixApi {
         onLoginStateChanged.add(LoginState.loggedIn);
       } catch (e, s) {
         Logs().w('Unable to refresh session after soft logout', e, s);
-        await clear();
+        await logout();
         rethrow;
       }
     }();
@@ -1954,10 +1983,10 @@ class Client extends MatrixApi {
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.error,
           error: SdkError(exception: e, stackTrace: s)));
       if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
-        final onSoftLogout = this.onSoftLogout;
-        if (e.raw.tryGet<bool>('soft_logout') == true && onSoftLogout != null) {
-          Logs().w('The user has been soft logged out! Try to login again...');
-
+        if (e.raw.tryGet<bool>('soft_logout') == true) {
+          Logs().w(
+            'The user has been soft logged out! Calling client.onSoftLogout() if present.',
+          );
           await _handleSoftLogout();
         } else {
           Logs().w('The user has been logged out!');
@@ -1997,13 +2026,17 @@ class Client extends MatrixApi {
       if (join != null) {
         await _handleRooms(join, direction: direction);
       }
-      final invite = sync.rooms?.invite;
-      if (invite != null) {
-        await _handleRooms(invite, direction: direction);
-      }
+      // We need to handle leave before invite. If you decline an invite and
+      // then get another invite to the same room, Synapse will include the
+      // room both in invite and leave. If you get an invite and then leave, it
+      // will only be included in leave.
       final leave = sync.rooms?.leave;
       if (leave != null) {
         await _handleRooms(leave, direction: direction);
+      }
+      final invite = sync.rooms?.invite;
+      if (invite != null) {
+        await _handleRooms(invite, direction: direction);
       }
     }
     for (final newPresence in sync.presence ?? <Presence>[]) {
@@ -2284,6 +2317,19 @@ class Client extends MatrixApi {
               content: update.content)));
         }
       }
+
+      // Any kind of member change? We should invalidate the profile then:
+      if (event is StrippedStateEvent && event.type == EventTypes.RoomMember) {
+        final userId = event.stateKey;
+        if (userId != null) {
+          // We do not re-request the profile here as this would lead to
+          // an unknown amount of network requests as we never know how many
+          // member change events can come down in a single sync update.
+          await database?.markUserProfileAsOutdated(userId);
+          onUserProfileUpdate.add(userId);
+        }
+      }
+
       if (event.type == EventTypes.Message &&
           !room.isDirectChat &&
           database != null &&

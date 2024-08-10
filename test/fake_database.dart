@@ -22,7 +22,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:matrix/matrix.dart';
 
-Future<DatabaseApi> getDatabase(Client? c) => getMatrixSdkDatabase(c);
+Future<DatabaseApi> getDatabase(Client? c, {String? databasePath}) =>
+    getMatrixSdkDatabase(c, path: databasePath);
 
 bool hiveInitialized = false;
 
@@ -44,9 +45,10 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
 }
 
 // ignore: deprecated_member_use_from_same_package
-Future<MatrixSdkDatabase> getMatrixSdkDatabase(Client? c) async {
+Future<MatrixSdkDatabase> getMatrixSdkDatabase(Client? c,
+    {String? path}) async {
   final database = await databaseFactoryFfi.openDatabase(
-    ':memory:',
+    path ?? ':memory:',
     options: OpenDatabaseOptions(singleInstance: false),
   );
   final db = MatrixSdkDatabase(

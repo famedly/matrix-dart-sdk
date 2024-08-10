@@ -1,3 +1,23 @@
+## [0.32.0] 9th Aug 2024
+- chore: add info about tests to readme (td)
+- chore: increase log level to verbose in tests (td)
+- fix: App freezes because of recursive loop with getLocalizedDisplayname() call (Krille)
+- fix: Call logout on soft logout fail (Krille)
+- fix: don't restart github action service after apt install (Nicolas Werner)
+- fix: leave->invite in the same sync would hide the invite (Nicolas Werner)
+-  (BREAKING) fix: update last event properly on cancel send (td)
+
+## [0.31.0] 28th July 2024
+
+- ci: create release job fix (Karthikeyan S)
+- feat: Add support for isFederate option for rooms (Krille)
+- fix: add main thread receipts to event.receipts getter (td)
+- fix: also delete db on logout (td)
+- fix: bump database version to v9 (td)
+- fix: Synapse CI job failing because invite state not completely synced (Krille)
+- refactor: Better avatar and names for invites (Krille)
+- refactor: Cache profiles in database and refactor API (Krille)
+
 ## [0.30.0] 3rd July 2024
 
 - feat: Automatically cancel typing indicators after 30 seconds (Krille)

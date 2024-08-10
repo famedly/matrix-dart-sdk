@@ -1597,6 +1597,22 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<void> delete() => _collection.deleteFromDisk();
+
+  @override
+  Future<void> markUserProfileAsOutdated(userId) async {
+    return;
+  }
+
+  @override
+  Future<CachedProfileInformation?> getUserProfile(String userId) async {
+    return null;
+  }
+
+  @override
+  Future<void> storeUserProfile(
+      String userId, CachedProfileInformation profile) async {
+    return;
+  }
 }
 
 class TupleKey {

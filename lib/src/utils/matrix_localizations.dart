@@ -60,7 +60,11 @@ abstract class MatrixLocalizations {
 
   String get unknownUser;
 
+  String get cancelledSend;
+
   String youInvitedBy(String senderName);
+
+  String invitedBy(String senderName);
 
   String youInvitedUser(String targetName);
 

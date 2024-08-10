@@ -91,14 +91,14 @@ class MatrixWidget {
     // See https://github.com/matrix-org/matrix-doc/issues/1236 for a
     // description, specifically the section
     // `What does the other stuff in content mean?`
-    final userProfile = await room.client.fetchOwnProfile();
+    final userProfile = await room.client.getUserProfile(room.client.userID!);
     var parsedUri = url;
 
     // a key-value map with the strings to be replaced
     final replaceMap = {
-      r'$matrix_user_id': userProfile.userId,
+      r'$matrix_user_id': room.client.userID!,
       r'$matrix_room_id': room.id,
-      r'$matrix_display_name': userProfile.displayName ?? '',
+      r'$matrix_display_name': userProfile.displayname ?? '',
       r'$matrix_avatar_url': userProfile.avatarUrl?.toString() ?? '',
       // removing potentially dangerous keys containing anything but
       // `[a-zA-Z0-9_-]` as well as non string values
