@@ -1,3 +1,6 @@
+## [0.32.1] 16th Aug 2024
+- feat: support for authenticated media (td)
+
 ## [0.32.0] 9th Aug 2024
 - chore: add info about tests to readme (td)
 - chore: increase log level to verbose in tests (td)
