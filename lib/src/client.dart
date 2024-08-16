@@ -25,12 +25,14 @@ import 'dart:typed_data';
 import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
+import 'package:http/http.dart';
 import 'package:mime/mime.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:random_string/random_string.dart';
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/matrix_api_lite/generated/fixed_model.dart';
 import 'package:matrix/msc_extensions/msc_unpublished_custom_refresh_token_lifetime/msc_unpublished_custom_refresh_token_lifetime.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
@@ -41,6 +43,7 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:matrix/src/utils/try_get_push_rule.dart';
+import 'package:matrix/src/utils/versions_comparator.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -506,7 +509,7 @@ class Client extends MatrixApi {
       }
 
       // Check if server supports at least one supported version
-      final versions = await getVersions();
+      final versions = _versionsCache = await getVersions();
       if (!versions.versions
           .any((version) => supportedVersions.contains(version))) {
         throw BadServerVersionsException(
@@ -1158,12 +1161,222 @@ class Client extends MatrixApi {
     _archivedRooms.add(ArchivedRoom(room: archivedRoom, timeline: timeline));
   }
 
+  GetVersionsResponse? _versionsCache;
+
+  Future<bool> authenticatedMediaSupported() async {
+    _versionsCache ??= await getVersions();
+    return _versionsCache?.versions.any(
+          (v) => isVersionGreaterThanOrEqualTo(v, 'v1.11'),
+        ) ??
+        false;
+  }
+
   final _serverConfigCache = AsyncCache<ServerConfig>(const Duration(hours: 1));
 
-  /// Gets the config of the content repository, such as upload limit.
+  /// This endpoint allows clients to retrieve the configuration of the content
+  /// repository, such as upload limitations.
+  /// Clients SHOULD use this as a guide when using content repository endpoints.
+  /// All values are intentionally left optional. Clients SHOULD follow
+  /// the advice given in the field description when the field is not available.
+  ///
+  /// **NOTE:** Both clients and server administrators should be aware that proxies
+  /// between the client and the server may affect the apparent behaviour of content
+  /// repository APIs, for example, proxies may enforce a lower upload size limit
+  /// than is advertised by the server on this endpoint.
   @override
   Future<ServerConfig> getConfig() =>
-      _serverConfigCache.fetch(() => super.getConfig());
+      _serverConfigCache.fetch(() => _getAuthenticatedConfig());
+
+  // TODO: remove once we are able to autogen this
+  Future<ServerConfig> _getAuthenticatedConfig() async {
+    String path;
+    if (await authenticatedMediaSupported()) {
+      path = '_matrix/client/v1/media/config';
+    } else {
+      path = '_matrix/media/v3/config';
+    }
+    final requestUri = Uri(path: path);
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ServerConfig.fromJson(json as Map<String, Object?>);
+  }
+
+  ///
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  ///
+  ///
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if it is deemed
+  /// remote. This is to prevent routing loops where the server contacts itself. Defaults to
+  /// true if not provided.
+  ///
+  @override
+  // TODO: remove once we are able to autogen this
+  Future<FileResponse> getContent(String serverName, String mediaId,
+      {bool? allowRemote}) async {
+    String path;
+
+    if (await authenticatedMediaSupported()) {
+      path =
+          '_matrix/client/v1/media/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
+    } else {
+      path =
+          '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
+    }
+    final requestUri = Uri(path: path, queryParameters: {
+      if (allowRemote != null && !await authenticatedMediaSupported())
+        // removed with msc3916, so just to be explicit
+        'allow_remote': allowRemote.toString(),
+    });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    return FileResponse(
+        contentType: response.headers['content-type'], data: responseBody);
+  }
+
+  /// This will download content from the content repository (same as
+  /// the previous endpoint) but replace the target file name with the one
+  /// provided by the caller.
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  ///
+  ///
+  /// [fileName] A filename to give in the `Content-Disposition` header.
+  ///
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if it is deemed
+  /// remote. This is to prevent routing loops where the server contacts itself. Defaults to
+  /// true if not provided.
+  ///
+  @override
+  // TODO: remove once we are able to autogen this
+  Future<FileResponse> getContentOverrideName(
+      String serverName, String mediaId, String fileName,
+      {bool? allowRemote}) async {
+    String path;
+    if (await authenticatedMediaSupported()) {
+      path =
+          '_matrix/client/v1/media/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}';
+    } else {
+      path =
+          '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}';
+    }
+    final requestUri = Uri(path: path, queryParameters: {
+      if (allowRemote != null && !await authenticatedMediaSupported())
+        // removed with msc3916, so just to be explicit
+        'allow_remote': allowRemote.toString(),
+    });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    return FileResponse(
+        contentType: response.headers['content-type'], data: responseBody);
+  }
+
+  /// Get information about a URL for the client. Typically this is called when a
+  /// client sees a URL in a message and wants to render a preview for the user.
+  ///
+  /// **Note:**
+  /// Clients should consider avoiding this endpoint for URLs posted in encrypted
+  /// rooms. Encrypted rooms often contain more sensitive information the users
+  /// do not want to share with the homeserver, and this can mean that the URLs
+  /// being shared should also not be shared with the homeserver.
+  ///
+  /// [url] The URL to get a preview of.
+  ///
+  /// [ts] The preferred point in time to return a preview for. The server may
+  /// return a newer version if it does not have the requested version
+  /// available.
+  @override
+  // TODO: remove once we are able to autogen this
+  Future<GetUrlPreviewResponse> getUrlPreview(Uri url, {int? ts}) async {
+    String path;
+    if (await authenticatedMediaSupported()) {
+      path = '_matrix/client/v1/media/preview_url';
+    } else {
+      path = '_matrix/media/v3/preview_url';
+    }
+    final requestUri = Uri(path: path, queryParameters: {
+      'url': url.toString(),
+      if (ts != null) 'ts': ts.toString(),
+    });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetUrlPreviewResponse.fromJson(json as Map<String, Object?>);
+  }
+
+  /// Download a thumbnail of content from the content repository.
+  /// See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails) section for more information.
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  ///
+  ///
+  /// [width] The *desired* width of the thumbnail. The actual thumbnail may be
+  /// larger than the size specified.
+  ///
+  /// [height] The *desired* height of the thumbnail. The actual thumbnail may be
+  /// larger than the size specified.
+  ///
+  /// [method] The desired resizing method. See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails)
+  /// section for more information.
+  ///
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch
+  /// the media if it is deemed remote. This is to prevent routing loops
+  /// where the server contacts itself. Defaults to true if not provided.
+  @override
+  // TODO: remove once we are able to autogen this
+  Future<FileResponse> getContentThumbnail(
+      String serverName, String mediaId, int width, int height,
+      {Method? method, bool? allowRemote}) async {
+    String path;
+    if (await authenticatedMediaSupported()) {
+      path =
+          '_matrix/client/v1/media/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
+    } else {
+      path =
+          '_matrix/media/v3/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
+    }
+
+    final requestUri = Uri(path: path, queryParameters: {
+      'width': width.toString(),
+      'height': height.toString(),
+      if (method != null) 'method': method.name,
+      if (allowRemote != null && !await authenticatedMediaSupported())
+        // removed with msc3916, so just to be explicit
+        'allow_remote': allowRemote.toString(),
+    });
+
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    return FileResponse(
+        contentType: response.headers['content-type'], data: responseBody);
+  }
 
   /// Uploads a file and automatically caches it in the database, if it is small enough
   /// and returns the mxc url.
