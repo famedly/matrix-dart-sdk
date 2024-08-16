@@ -550,14 +550,16 @@ class Event extends MatrixEvent {
   ///
   /// Important! To use this link you have to set a http header like this:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
-  Future<Uri?> getAttachmentUri(
-      {bool getThumbnail = false,
-      bool useThumbnailMxcUrl = false,
-      double width = 800.0,
-      double height = 800.0,
-      ThumbnailMethod method = ThumbnailMethod.scale,
-      int minNoThumbSize = _minNoThumbSize,
-      bool animated = false}) async {
+  Uri? getAttachmentUri({
+    bool getThumbnail = false,
+    bool useThumbnailMxcUrl = false,
+    double width = 800.0,
+    double height = 800.0,
+    ThumbnailMethod method = ThumbnailMethod.scale,
+    int minNoThumbSize = _minNoThumbSize,
+    bool animated = false,
+    required bool useAuthenticatedMedia,
+  }) {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
         !hasAttachment ||
         isAttachmentEncrypted) {
@@ -578,15 +580,19 @@ class Event extends MatrixEvent {
     }
     // now generate the actual URLs
     if (getThumbnail) {
-      return await Uri.parse(thisMxcUrl).getThumbnailUri(
+      return Uri.parse(thisMxcUrl).getThumbnailUri(
         room.client,
+        useAuthenticatedMedia: useAuthenticatedMedia,
         width: width,
         height: height,
         method: method,
         animated: animated,
       );
     } else {
-      return await Uri.parse(thisMxcUrl).getDownloadUri(room.client);
+      return Uri.parse(thisMxcUrl).getDownloadUri(
+        room.client,
+        useAuthenticatedMedia: useAuthenticatedMedia,
+      );
     }
   }
 
@@ -677,10 +683,11 @@ class Event extends MatrixEvent {
   /// true to download the thumbnail instead. Set [fromLocalStoreOnly] to true
   /// if you want to retrieve the attachment from the local store only without
   /// making http request.
-  Future<MatrixFile> downloadAndDecryptAttachment(
-      {bool getThumbnail = false,
-      Future<Uint8List> Function(Uri)? downloadCallback,
-      bool fromLocalStoreOnly = false}) async {
+  Future<MatrixFile> downloadAndDecryptAttachment({
+    bool getThumbnail = false,
+    Future<Uint8List> Function(Uri)? downloadCallback,
+    bool fromLocalStoreOnly = false,
+  }) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
@@ -715,13 +722,31 @@ class Event extends MatrixEvent {
     final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
     if (canDownloadFileFromServer) {
       final httpClient = room.client.httpClient;
-      downloadCallback ??= (Uri url) async => (await httpClient.get(
-            url,
-            headers: {'authorization': 'Bearer ${room.client.accessToken}'},
-          ))
-              .bodyBytes;
-      uint8list =
-          await downloadCallback(await mxcUrl.getDownloadUri(room.client));
+      downloadCallback ??= (Uri url) async {
+        final resp = await httpClient.get(
+          url,
+          headers: {'authorization': 'Bearer ${room.client.accessToken}'},
+        );
+
+        // [Changed in v1.11] This endpoint MAY return 404 M_NOT_FOUND for media
+        // which exists, but is after the server froze unauthenticated media access.
+        // See Client Behaviour for more information.
+        if (resp.statusCode == 404) throw Exception('404 M_NOT_FOUND');
+        return resp.bodyBytes;
+      };
+
+      try {
+        uint8list = await downloadCallback(mxcUrl.getDownloadUri(
+          room.client,
+          useAuthenticatedMedia: true,
+        ));
+      } catch (e) {
+        uint8list = await downloadCallback(mxcUrl.getDownloadUri(
+          room.client,
+          useAuthenticatedMedia: false,
+        ));
+      }
+
       storeable = database != null &&
           storeable &&
           uint8list.lengthInBytes < database.maxFileSize;

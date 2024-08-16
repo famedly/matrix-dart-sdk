@@ -1329,7 +1329,8 @@ void main() {
         'sender': '@alice:example.org',
       }, room);
       var buffer = await event.downloadAndDecryptAttachment(
-          downloadCallback: downloadCallback);
+        downloadCallback: downloadCallback,
+      );
       expect(buffer.bytes, FILE_BUFF);
       expect(event.attachmentOrThumbnailMxcUrl().toString(),
           'mxc://example.org/file');
@@ -1366,30 +1367,52 @@ void main() {
           'mxc://example.org/file');
       expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true).toString(),
           'mxc://example.org/thumb');
-      expect((await event.getAttachmentUri()).toString(),
+      expect(event.getAttachmentUri(useAuthenticatedMedia: true).toString(),
           'https://fakeserver.notexisting/_matrix/client/v1/media/download/example.org/file');
-      expect((await event.getAttachmentUri(getThumbnail: true)).toString(),
+      expect(
+          event
+              .getAttachmentUri(
+                getThumbnail: true,
+                useAuthenticatedMedia: true,
+              )
+              .toString(),
           'https://fakeserver.notexisting/_matrix/client/v1/media/thumbnail/example.org/file?width=800&height=800&method=scale&animated=false');
       expect(
-          (await event.getAttachmentUri(useThumbnailMxcUrl: true)).toString(),
+          event
+              .getAttachmentUri(
+                useThumbnailMxcUrl: true,
+                useAuthenticatedMedia: true,
+              )
+              .toString(),
           'https://fakeserver.notexisting/_matrix/client/v1/media/download/example.org/thumb');
       expect(
-          (await event.getAttachmentUri(
-                  getThumbnail: true, useThumbnailMxcUrl: true))
+          event
+              .getAttachmentUri(
+                getThumbnail: true,
+                useThumbnailMxcUrl: true,
+                useAuthenticatedMedia: true,
+              )
               .toString(),
           'https://fakeserver.notexisting/_matrix/client/v1/media/thumbnail/example.org/thumb?width=800&height=800&method=scale&animated=false');
       expect(
-          (await event.getAttachmentUri(
-                  getThumbnail: true, minNoThumbSize: 9000000))
+          event
+              .getAttachmentUri(
+                getThumbnail: true,
+                minNoThumbSize: 9000000,
+                useAuthenticatedMedia: true,
+              )
               .toString(),
           'https://fakeserver.notexisting/_matrix/client/v1/media/download/example.org/file');
 
       buffer = await event.downloadAndDecryptAttachment(
-          downloadCallback: downloadCallback);
+        downloadCallback: downloadCallback,
+      );
       expect(buffer.bytes, FILE_BUFF);
 
       buffer = await event.downloadAndDecryptAttachment(
-          getThumbnail: true, downloadCallback: downloadCallback);
+        getThumbnail: true,
+        downloadCallback: downloadCallback,
+      );
       expect(buffer.bytes, THUMBNAIL_BUFF);
     });
     test(
@@ -1439,7 +1462,8 @@ void main() {
           'sender': '@alice:example.org',
         }, room);
         var buffer = await event.downloadAndDecryptAttachment(
-            downloadCallback: downloadCallback);
+          downloadCallback: downloadCallback,
+        );
         expect(buffer.bytes, FILE_BUFF_DEC);
 
         event = Event.fromJson({
@@ -1494,11 +1518,14 @@ void main() {
         expect(event.attachmentMxcUrl.toString(), 'mxc://example.com/file');
         expect(event.thumbnailMxcUrl.toString(), 'mxc://example.com/thumb');
         buffer = await event.downloadAndDecryptAttachment(
-            downloadCallback: downloadCallback);
+          downloadCallback: downloadCallback,
+        );
         expect(buffer.bytes, FILE_BUFF_DEC);
 
         buffer = await event.downloadAndDecryptAttachment(
-            getThumbnail: true, downloadCallback: downloadCallback);
+          getThumbnail: true,
+          downloadCallback: downloadCallback,
+        );
         expect(buffer.bytes, THUMB_BUFF_DEC);
 
         await room.client.dispose(closeDatabase: true);
@@ -1532,16 +1559,58 @@ void main() {
       }, room);
       expect(await event.isAttachmentInLocalStore(), false);
       var buffer = await event.downloadAndDecryptAttachment(
-          downloadCallback: downloadCallback);
+        downloadCallback: downloadCallback,
+      );
       expect(await event.isAttachmentInLocalStore(),
           event.room.client.database?.supportsFileStoring);
       expect(buffer.bytes, FILE_BUFF);
       expect(serverHits, 1);
       buffer = await event.downloadAndDecryptAttachment(
-          downloadCallback: downloadCallback);
+        downloadCallback: downloadCallback,
+      );
       expect(buffer.bytes, FILE_BUFF);
       expect(
           serverHits, event.room.client.database!.supportsFileStoring ? 1 : 2);
+
+      await room.client.dispose(closeDatabase: true);
+    });
+
+    test('downloadAndDecryptAttachment fallback', () async {
+      final hitMediaUrls = <String>[];
+      Future<Uint8List> downloadCallback(Uri uri) async {
+        hitMediaUrls.add(uri.toString());
+        throw Exception();
+      }
+
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
+          checkWellKnown: false);
+      final room = Room(id: '!localpart:server.abc', client: await getClient());
+      final event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': 'image',
+          'msgtype': 'm.image',
+          'url': 'mxc://example.org/newfile',
+          'info': {
+            'size': 5,
+          },
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, room);
+
+      try {
+        await event.downloadAndDecryptAttachment(
+          downloadCallback: downloadCallback,
+        );
+        // ignore: empty_catches
+      } catch (e) {}
+
+      expect(hitMediaUrls.length, 2);
+      expect(hitMediaUrls.first,
+          'https://fakeserver.notexisting/_matrix/client/v1/media/download/example.org/newfile');
+      expect(hitMediaUrls.last,
+          'https://fakeserver.notexisting/_matrix/media/v3/download/example.org/newfile');
 
       await room.client.dispose(closeDatabase: true);
     });
@@ -1574,7 +1643,8 @@ void main() {
       }, room);
 
       var buffer = await event.downloadAndDecryptAttachment(
-          downloadCallback: downloadCallback);
+        downloadCallback: downloadCallback,
+      );
       expect(await event.isAttachmentInLocalStore(),
           event.room.client.database?.supportsFileStoring);
       expect(buffer.bytes, FILE_BUFF);
@@ -1582,12 +1652,16 @@ void main() {
 
       if (event.room.client.database?.supportsFileStoring == true) {
         buffer = await event.downloadAndDecryptAttachment(
-            downloadCallback: downloadCallback, fromLocalStoreOnly: true);
+          downloadCallback: downloadCallback,
+          fromLocalStoreOnly: true,
+        );
         expect(buffer.bytes, FILE_BUFF);
       } else {
         expect(
             () async => await event.downloadAndDecryptAttachment(
-                downloadCallback: downloadCallback, fromLocalStoreOnly: true),
+                  downloadCallback: downloadCallback,
+                  fromLocalStoreOnly: true,
+                ),
             throwsA(anything));
       }
       expect(serverHits, 1);
@@ -1624,7 +1698,9 @@ void main() {
 
       expect(
           () async => await event.downloadAndDecryptAttachment(
-              downloadCallback: downloadCallback, fromLocalStoreOnly: true),
+                downloadCallback: downloadCallback,
+                fromLocalStoreOnly: true,
+              ),
           throwsA(anything));
 
       expect(serverHits, 0);

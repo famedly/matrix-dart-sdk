@@ -43,7 +43,6 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:matrix/src/utils/try_get_push_rule.dart';
-import 'package:matrix/src/utils/versions_comparator.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -509,7 +508,7 @@ class Client extends MatrixApi {
       }
 
       // Check if server supports at least one supported version
-      final versions = _versionsCache = await getVersions();
+      final versions = await getVersions();
       if (!versions.versions
           .any((version) => supportedVersions.contains(version))) {
         throw BadServerVersionsException(
@@ -1161,16 +1160,6 @@ class Client extends MatrixApi {
     _archivedRooms.add(ArchivedRoom(room: archivedRoom, timeline: timeline));
   }
 
-  GetVersionsResponse? _versionsCache;
-
-  Future<bool> authenticatedMediaSupported() async {
-    _versionsCache ??= await getVersions();
-    return _versionsCache?.versions.any(
-          (v) => isVersionGreaterThanOrEqualTo(v, 'v1.11'),
-        ) ??
-        false;
-  }
-
   final _serverConfigCache = AsyncCache<ServerConfig>(const Duration(hours: 1));
 
   /// This endpoint allows clients to retrieve the configuration of the content
@@ -1189,21 +1178,25 @@ class Client extends MatrixApi {
 
   // TODO: remove once we are able to autogen this
   Future<ServerConfig> _getAuthenticatedConfig() async {
-    String path;
-    if (await authenticatedMediaSupported()) {
-      path = '_matrix/client/v1/media/config';
-    } else {
-      path = '_matrix/media/v3/config';
+    Future<ServerConfig> request(String path) async {
+      final requestUri = Uri(path: path);
+      final request = Request('GET', baseUri!.resolveUri(requestUri));
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+      final response = await httpClient.send(request);
+      final responseBody = await response.stream.toBytes();
+      if (response.statusCode != 200) {
+        unexpectedResponse(response, responseBody);
+      }
+      final responseString = utf8.decode(responseBody);
+      final json = jsonDecode(responseString);
+      return ServerConfig.fromJson(json as Map<String, Object?>);
     }
-    final requestUri = Uri(path: path);
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    final responseString = utf8.decode(responseBody);
-    final json = jsonDecode(responseString);
-    return ServerConfig.fromJson(json as Map<String, Object?>);
+
+    try {
+      return request('_matrix/client/v1/media/config');
+    } catch (e) {
+      return request('_matrix/media/v3/config');
+    }
   }
 
   ///
@@ -1222,27 +1215,30 @@ class Client extends MatrixApi {
   // TODO: remove once we are able to autogen this
   Future<FileResponse> getContent(String serverName, String mediaId,
       {bool? allowRemote}) async {
-    String path;
-
-    if (await authenticatedMediaSupported()) {
-      path =
-          '_matrix/client/v1/media/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
-    } else {
-      path =
-          '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
+    Future<FileResponse> request(String path) async {
+      final requestUri = Uri(path: path, queryParameters: {
+        if (allowRemote != null)
+          // removed with msc3916, so just to be explicit
+          'allow_remote': allowRemote.toString(),
+      });
+      final request = Request('GET', baseUri!.resolveUri(requestUri));
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+      final response = await httpClient.send(request);
+      final responseBody = await response.stream.toBytes();
+      if (response.statusCode != 200) {
+        unexpectedResponse(response, responseBody);
+      }
+      return FileResponse(
+          contentType: response.headers['content-type'], data: responseBody);
     }
-    final requestUri = Uri(path: path, queryParameters: {
-      if (allowRemote != null && !await authenticatedMediaSupported())
-        // removed with msc3916, so just to be explicit
-        'allow_remote': allowRemote.toString(),
-    });
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    return FileResponse(
-        contentType: response.headers['content-type'], data: responseBody);
+
+    try {
+      return request(
+          '_matrix/client/v1/media/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}');
+    } catch (e) {
+      return request(
+          '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}');
+    }
   }
 
   /// This will download content from the content repository (same as
@@ -1266,26 +1262,30 @@ class Client extends MatrixApi {
   Future<FileResponse> getContentOverrideName(
       String serverName, String mediaId, String fileName,
       {bool? allowRemote}) async {
-    String path;
-    if (await authenticatedMediaSupported()) {
-      path =
-          '_matrix/client/v1/media/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}';
-    } else {
-      path =
-          '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}';
+    Future<FileResponse> request(String path) async {
+      final requestUri = Uri(path: path, queryParameters: {
+        if (allowRemote != null)
+          // removed with msc3916, so just to be explicit
+          'allow_remote': allowRemote.toString(),
+      });
+      final request = Request('GET', baseUri!.resolveUri(requestUri));
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+      final response = await httpClient.send(request);
+      final responseBody = await response.stream.toBytes();
+      if (response.statusCode != 200) {
+        unexpectedResponse(response, responseBody);
+      }
+      return FileResponse(
+          contentType: response.headers['content-type'], data: responseBody);
     }
-    final requestUri = Uri(path: path, queryParameters: {
-      if (allowRemote != null && !await authenticatedMediaSupported())
-        // removed with msc3916, so just to be explicit
-        'allow_remote': allowRemote.toString(),
-    });
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    return FileResponse(
-        contentType: response.headers['content-type'], data: responseBody);
+
+    try {
+      return request(
+          '_matrix/client/v1/media/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}');
+    } catch (e) {
+      return request(
+          '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}');
+    }
   }
 
   /// Get information about a URL for the client. Typically this is called when a
@@ -1305,24 +1305,28 @@ class Client extends MatrixApi {
   @override
   // TODO: remove once we are able to autogen this
   Future<GetUrlPreviewResponse> getUrlPreview(Uri url, {int? ts}) async {
-    String path;
-    if (await authenticatedMediaSupported()) {
-      path = '_matrix/client/v1/media/preview_url';
-    } else {
-      path = '_matrix/media/v3/preview_url';
+    Future<GetUrlPreviewResponse> request(String path) async {
+      final requestUri = Uri(path: path, queryParameters: {
+        'url': url.toString(),
+        if (ts != null) 'ts': ts.toString(),
+      });
+      final request = Request('GET', baseUri!.resolveUri(requestUri));
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+      final response = await httpClient.send(request);
+      final responseBody = await response.stream.toBytes();
+      if (response.statusCode != 200) {
+        unexpectedResponse(response, responseBody);
+      }
+      final responseString = utf8.decode(responseBody);
+      final json = jsonDecode(responseString);
+      return GetUrlPreviewResponse.fromJson(json as Map<String, Object?>);
     }
-    final requestUri = Uri(path: path, queryParameters: {
-      'url': url.toString(),
-      if (ts != null) 'ts': ts.toString(),
-    });
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    final responseString = utf8.decode(responseBody);
-    final json = jsonDecode(responseString);
-    return GetUrlPreviewResponse.fromJson(json as Map<String, Object?>);
+
+    try {
+      return request('_matrix/client/v1/media/preview_url');
+    } catch (e) {
+      return request('_matrix/media/v3/preview_url');
+    }
   }
 
   /// Download a thumbnail of content from the content repository.
@@ -1351,31 +1355,34 @@ class Client extends MatrixApi {
   Future<FileResponse> getContentThumbnail(
       String serverName, String mediaId, int width, int height,
       {Method? method, bool? allowRemote}) async {
-    String path;
-    if (await authenticatedMediaSupported()) {
-      path =
-          '_matrix/client/v1/media/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
-    } else {
-      path =
-          '_matrix/media/v3/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
+    Future<FileResponse> request(String path) async {
+      final requestUri = Uri(path: path, queryParameters: {
+        'width': width.toString(),
+        'height': height.toString(),
+        if (method != null) 'method': method.name,
+        if (allowRemote != null)
+          // removed with msc3916, so just to be explicit
+          'allow_remote': allowRemote.toString(),
+      });
+
+      final request = Request('GET', baseUri!.resolveUri(requestUri));
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+      final response = await httpClient.send(request);
+      final responseBody = await response.stream.toBytes();
+      if (response.statusCode != 200) {
+        unexpectedResponse(response, responseBody);
+      }
+      return FileResponse(
+          contentType: response.headers['content-type'], data: responseBody);
     }
 
-    final requestUri = Uri(path: path, queryParameters: {
-      'width': width.toString(),
-      'height': height.toString(),
-      if (method != null) 'method': method.name,
-      if (allowRemote != null && !await authenticatedMediaSupported())
-        // removed with msc3916, so just to be explicit
-        'allow_remote': allowRemote.toString(),
-    });
-
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    return FileResponse(
-        contentType: response.headers['content-type'], data: responseBody);
+    try {
+      return request(
+          '_matrix/client/v1/media/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}');
+    } catch (e) {
+      return request(
+          '_matrix/media/v3/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}');
+    }
   }
 
   /// Uploads a file and automatically caches it in the database, if it is small enough

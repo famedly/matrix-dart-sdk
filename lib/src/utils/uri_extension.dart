@@ -29,10 +29,13 @@ extension MxcUriExtension on Uri {
   ///
   /// Important! To use this link you have to set a http header like this:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
-  Future<Uri> getDownloadUri(Client client) async {
+  Uri getDownloadUri(
+    Client client, {
+    required bool useAuthenticatedMedia,
+  }) {
     String uriPath;
 
-    if (await client.authenticatedMediaSupported()) {
+    if (useAuthenticatedMedia) {
       uriPath =
           '_matrix/client/v1/media/download/$host${hasPort ? ':$port' : ''}$path';
     } else {
@@ -59,11 +62,14 @@ extension MxcUriExtension on Uri {
   ///
   /// Important! To use this link you have to set a http header like this:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
-  Future<Uri> getThumbnailUri(Client client,
-      {num? width,
-      num? height,
-      ThumbnailMethod? method = ThumbnailMethod.crop,
-      bool? animated = false}) async {
+  Uri getThumbnailUri(
+    Client client, {
+    required bool useAuthenticatedMedia,
+    num? width,
+    num? height,
+    ThumbnailMethod? method = ThumbnailMethod.crop,
+    bool? animated = false,
+  }) {
     if (!isScheme('mxc')) return Uri();
     final homeserver = client.homeserver;
     if (homeserver == null) {
@@ -71,7 +77,7 @@ extension MxcUriExtension on Uri {
     }
 
     String requestPath;
-    if (await client.authenticatedMediaSupported()) {
+    if (useAuthenticatedMedia) {
       requestPath =
           '/_matrix/client/v1/media/thumbnail/$host${hasPort ? ':$port' : ''}$path';
     } else {

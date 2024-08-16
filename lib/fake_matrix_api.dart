@@ -91,11 +91,6 @@ class FakeMatrixApi extends BaseClient {
     return completer.future;
   }
 
-  Set<String> servers = {
-    'https://fakeserver.notexisting',
-    'https://fakeserverpriortoauthmedia.notexisting'
-  };
-
   FutureOr<Response> mockIntercept(Request request) async {
     // Collect data from Request
     var action = request.url.path;
@@ -130,7 +125,7 @@ class FakeMatrixApi extends BaseClient {
     if (data is Map<String, dynamic> && data['timeout'] is String) {
       await Future.delayed(Duration(seconds: 5));
     }
-    if (!servers.contains(request.url.origin)) {
+    if (request.url.origin != 'https://fakeserver.notexisting') {
       return Response(
           '<html><head></head><body>Not found...</body></html>', 404);
     }
@@ -154,105 +149,89 @@ class FakeMatrixApi extends BaseClient {
 
     // Call API
     (_calledEndpoints[action] ??= <dynamic>[]).add(data);
-    if (request.url.origin ==
-            'https://fakeserverpriortoauthmedia.notexisting' &&
-        action.contains('/client/versions')) {
-      res = {
-        'versions': [
-          'r0.0.1',
-          'ra.b.c',
-          'v0.1',
-          'v1.1',
-          'v1.9',
-          'v1.10.1',
-        ],
-        'unstable_features': {'m.lazy_load_members': true},
-      };
-    } else {
-      final act = api[method]?[action];
-      if (act != null) {
-        res = act(data);
-        if (res is Map && res.containsKey('errcode')) {
-          if (res['errcode'] == 'M_NOT_FOUND') {
-            statusCode = 404;
-          } else {
-            statusCode = 405;
-          }
-        }
-      } else if (method == 'PUT' &&
-          action.contains('/client/v3/sendToDevice/')) {
-        res = {};
-        if (_failToDevice) {
-          statusCode = 500;
-        }
-      } else if (method == 'GET' &&
-          action.contains('/client/v3/rooms/') &&
-          action.contains('/state/m.room.member/') &&
-          !action.endsWith('%40alicyy%3Aexample.com') &&
-          !action.contains('%40getme')) {
-        res = {'displayname': '', 'membership': 'ban'};
-      } else if (method == 'PUT' &&
-          action.contains(
-              '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/')) {
-        res = {'event_id': '\$event${_eventCounter++}'};
-      } else if (method == 'PUT' &&
-          action.contains(
-              '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/')) {
-        res = {'event_id': '\$event${_eventCounter++}'};
-      } else if (action.contains('/client/v3/sync')) {
-        res = {
-          'next_batch': DateTime.now().millisecondsSinceEpoch.toString(),
-        };
-      } else if (method == 'PUT' &&
-          _client != null &&
-          action.contains('/account_data/') &&
-          !action.contains('/rooms/')) {
-        final type = Uri.decodeComponent(action.split('/').last);
-        final syncUpdate = sdk.SyncUpdate(
-          nextBatch: '',
-          accountData: [sdk.BasicEvent(content: decodeJson(data), type: type)],
-        );
-        if (_client?.database != null) {
-          await _client?.database?.transaction(() async {
-            await _client?.handleSync(syncUpdate);
-          });
+
+    final act = api[method]?[action];
+    if (act != null) {
+      res = act(data);
+      if (res is Map && res.containsKey('errcode')) {
+        if (res['errcode'] == 'M_NOT_FOUND') {
+          statusCode = 404;
         } else {
-          await _client?.handleSync(syncUpdate);
+          statusCode = 405;
         }
-        res = {};
-      } else if (method == 'PUT' &&
-          _client != null &&
-          action.contains('/account_data/') &&
-          action.contains('/rooms/')) {
-        final segments = action.split('/');
-        final type = Uri.decodeComponent(segments.last);
-        final roomId = Uri.decodeComponent(segments[segments.length - 3]);
-        final syncUpdate = sdk.SyncUpdate(
-          nextBatch: '',
-          rooms: RoomsUpdate(
-            join: {
-              roomId: JoinedRoomUpdate(accountData: [
-                sdk.BasicRoomEvent(
-                    content: decodeJson(data), type: type, roomId: roomId)
-              ])
-            },
-          ),
-        );
-        if (_client?.database != null) {
-          await _client?.database?.transaction(() async {
-            await _client?.handleSync(syncUpdate);
-          });
-        } else {
-          await _client?.handleSync(syncUpdate);
-        }
-        res = {};
-      } else {
-        res = {
-          'errcode': 'M_UNRECOGNIZED',
-          'error': 'Unrecognized request: $action'
-        };
-        statusCode = 405;
       }
+    } else if (method == 'PUT' && action.contains('/client/v3/sendToDevice/')) {
+      res = {};
+      if (_failToDevice) {
+        statusCode = 500;
+      }
+    } else if (method == 'GET' &&
+        action.contains('/client/v3/rooms/') &&
+        action.contains('/state/m.room.member/') &&
+        !action.endsWith('%40alicyy%3Aexample.com') &&
+        !action.contains('%40getme')) {
+      res = {'displayname': '', 'membership': 'ban'};
+    } else if (method == 'PUT' &&
+        action.contains(
+            '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/')) {
+      res = {'event_id': '\$event${_eventCounter++}'};
+    } else if (method == 'PUT' &&
+        action.contains(
+            '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/')) {
+      res = {'event_id': '\$event${_eventCounter++}'};
+    } else if (action.contains('/client/v3/sync')) {
+      res = {
+        'next_batch': DateTime.now().millisecondsSinceEpoch.toString(),
+      };
+    } else if (method == 'PUT' &&
+        _client != null &&
+        action.contains('/account_data/') &&
+        !action.contains('/rooms/')) {
+      final type = Uri.decodeComponent(action.split('/').last);
+      final syncUpdate = sdk.SyncUpdate(
+        nextBatch: '',
+        accountData: [sdk.BasicEvent(content: decodeJson(data), type: type)],
+      );
+      if (_client?.database != null) {
+        await _client?.database?.transaction(() async {
+          await _client?.handleSync(syncUpdate);
+        });
+      } else {
+        await _client?.handleSync(syncUpdate);
+      }
+      res = {};
+    } else if (method == 'PUT' &&
+        _client != null &&
+        action.contains('/account_data/') &&
+        action.contains('/rooms/')) {
+      final segments = action.split('/');
+      final type = Uri.decodeComponent(segments.last);
+      final roomId = Uri.decodeComponent(segments[segments.length - 3]);
+      final syncUpdate = sdk.SyncUpdate(
+        nextBatch: '',
+        rooms: RoomsUpdate(
+          join: {
+            roomId: JoinedRoomUpdate(accountData: [
+              sdk.BasicRoomEvent(
+                  content: decodeJson(data), type: type, roomId: roomId)
+            ])
+          },
+        ),
+      );
+      if (_client?.database != null) {
+        await _client?.database?.transaction(() async {
+          await _client?.handleSync(syncUpdate);
+        });
+      } else {
+        await _client?.handleSync(syncUpdate);
+      }
+      res = {};
+    } else {
+      res = {
+        'errcode': 'M_UNRECOGNIZED',
+        'error': 'Unrecognized request: $action'
+      };
+      statusCode = 405;
     }
 
     unawaited(Future.delayed(Duration(milliseconds: 1)).then((_) async {

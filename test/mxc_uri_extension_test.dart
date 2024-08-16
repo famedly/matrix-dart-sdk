@@ -32,18 +32,34 @@ void main() {
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
-      expect((await content.getDownloadUri(client)).toString(),
+      expect(
+          content
+              .getDownloadUri(
+                client,
+                useAuthenticatedMedia: true,
+              )
+              .toString(),
           '${client.homeserver.toString()}/_matrix/client/v1/media/download/exampleserver.abc/abcdefghijklmn');
       expect(
-          (await content.getThumbnailUri(client, width: 50, height: 50))
+          content
+              .getThumbnailUri(
+                client,
+                width: 50,
+                height: 50,
+                useAuthenticatedMedia: true,
+              )
               .toString(),
           '${client.homeserver.toString()}/_matrix/client/v1/media/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
       expect(
-          (await content.getThumbnailUri(client,
-                  width: 50,
-                  height: 50,
-                  method: ThumbnailMethod.scale,
-                  animated: true))
+          content
+              .getThumbnailUri(
+                client,
+                width: 50,
+                height: 50,
+                method: ThumbnailMethod.scale,
+                animated: true,
+                useAuthenticatedMedia: true,
+              )
               .toString(),
           '${client.homeserver.toString()}/_matrix/client/v1/media/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
     });
@@ -56,18 +72,34 @@ void main() {
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
-      expect((await content.getDownloadUri(client)).toString(),
+      expect(
+          content
+              .getDownloadUri(
+                client,
+                useAuthenticatedMedia: true,
+              )
+              .toString(),
           '${client.homeserver.toString()}/_matrix/client/v1/media/download/exampleserver.abc/abcdefghijklmn');
       expect(
-          (await content.getThumbnailUri(client, width: 50, height: 50))
+          content
+              .getThumbnailUri(
+                client,
+                width: 50,
+                height: 50,
+                useAuthenticatedMedia: true,
+              )
               .toString(),
           '${client.homeserver.toString()}/_matrix/client/v1/media/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
       expect(
-          (await content.getThumbnailUri(client,
-                  width: 50,
-                  height: 50,
-                  method: ThumbnailMethod.scale,
-                  animated: true))
+          content
+              .getThumbnailUri(
+                client,
+                width: 50,
+                height: 50,
+                method: ThumbnailMethod.scale,
+                animated: true,
+                useAuthenticatedMedia: true,
+              )
               .toString(),
           'https://fakeserver.notexisting:1337/_matrix/client/v1/media/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
     });
@@ -79,10 +111,22 @@ void main() {
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
-      expect((await content.getDownloadUri(client)).toString(),
+      expect(
+          content
+              .getDownloadUri(
+                client,
+                useAuthenticatedMedia: true,
+              )
+              .toString(),
           '${client.homeserver.toString()}/_matrix/client/v1/media/download/exampleserver.abc:1234/abcdefghijklmn');
       expect(
-          (await content.getThumbnailUri(client, width: 50, height: 50))
+          content
+              .getThumbnailUri(
+                client,
+                width: 50,
+                height: 50,
+                useAuthenticatedMedia: true,
+              )
               .toString(),
           '${client.homeserver.toString()}/_matrix/client/v1/media/thumbnail/exampleserver.abc:1234/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
     });
@@ -91,25 +135,48 @@ void main() {
       await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       final mxc = Uri.parse('https://wrong-scheme.com');
-      expect((await mxc.getDownloadUri(client)).toString(), '');
-      expect((await mxc.getThumbnailUri(client)).toString(), '');
+      expect(
+          mxc
+              .getDownloadUri(
+                client,
+                useAuthenticatedMedia: true,
+              )
+              .toString(),
+          '');
+      expect(
+          mxc
+              .getThumbnailUri(
+                client,
+                useAuthenticatedMedia: true,
+              )
+              .toString(),
+          '');
     });
 
     test('auth media fallback', () async {
       final client = Client('testclient', httpClient: FakeMatrixApi());
-      await client.checkHomeserver(
-          Uri.parse('https://fakeserverpriortoauthmedia.notexisting'),
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
-
-      expect(await client.authenticatedMediaSupported(), false);
       final mxc = 'mxc://exampleserver.abc:1234/abcdefghijklmn';
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
-      expect((await content.getDownloadUri(client)).toString(),
+      expect(
+          content
+              .getDownloadUri(
+                client,
+                useAuthenticatedMedia: false,
+              )
+              .toString(),
           '${client.homeserver.toString()}/_matrix/media/v3/download/exampleserver.abc:1234/abcdefghijklmn');
       expect(
-          (await content.getThumbnailUri(client, width: 50, height: 50))
+          content
+              .getThumbnailUri(
+                client,
+                width: 50,
+                height: 50,
+                useAuthenticatedMedia: false,
+              )
               .toString(),
           '${client.homeserver.toString()}/_matrix/media/v3/thumbnail/exampleserver.abc:1234/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
     });
