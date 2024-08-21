@@ -1,3 +1,7 @@
+## [0.32.2] 21st Aug 2024
+- fix: SQLCipher dylib location on macOS builds (The one with the braid)
+- refactor: Also use authenticated media if unstable features claim support (Krille)
+
 ## [0.32.1] 16th Aug 2024
 - feat: support for authenticated media (td)
 
