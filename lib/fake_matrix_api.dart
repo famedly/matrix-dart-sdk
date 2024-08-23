@@ -93,6 +93,7 @@ class FakeMatrixApi extends BaseClient {
 
   Set<String> servers = {
     'https://fakeserver.notexisting',
+    'https://fakeserver.notexisting:1337',
     'https://fakeserverpriortoauthmedia.notexisting'
   };
 
