@@ -526,7 +526,7 @@ class Client extends MatrixApi {
       }
 
       // Check if server supports at least one supported version
-      final versions = _versionsCache = await getVersions();
+      final versions = await getVersions();
       if (!versions.versions
           .any((version) => supportedVersions.contains(version))) {
         throw BadServerVersionsException(
@@ -1199,10 +1199,11 @@ class Client extends MatrixApi {
     _archivedRooms.add(ArchivedRoom(room: archivedRoom, timeline: timeline));
   }
 
-  GetVersionsResponse? _versionsCache;
+  final _versionsCache =
+      AsyncCache<GetVersionsResponse>(const Duration(hours: 1));
 
   Future<bool> authenticatedMediaSupported() async {
-    final versionsResponse = _versionsCache ??= await getVersions();
+    final versionsResponse = await _versionsCache.fetch(() => getVersions());
     return versionsResponse.versions.any(
           (v) => isVersionGreaterThanOrEqualTo(v, 'v1.11'),
         ) ||
@@ -1870,7 +1871,12 @@ class Client extends MatrixApi {
       }
 
       _groupCallSessionId = randomAlpha(12);
+
+      /// while I would like to move these to a onLoginStateChanged stream listener
+      /// that might be too much overhead and you don't have any use of these
+      /// when you are logged out anyway. So we just invalidate them on next login
       _serverConfigCache.invalidate();
+      _versionsCache.invalidate();
 
       final account = await this.database?.getClient(clientName);
       newRefreshToken ??= account?.tryGet<String>('refresh_token');
