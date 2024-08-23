@@ -25,7 +25,6 @@ import 'dart:typed_data';
 import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
-import 'package:http/http.dart';
 import 'package:mime/mime.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:random_string/random_string.dart';
@@ -123,6 +122,24 @@ class Client extends MatrixApi {
 
   /// The timeout until a typing indicator gets removed automatically.
   final Duration typingIndicatorTimeout;
+
+  DiscoveryInformation? _wellKnown;
+
+  /// the cached .well-known file updated using [getWellknown]
+  DiscoveryInformation? get wellKnown => _wellKnown;
+
+  /// The homeserver this client is communicating with.
+  ///
+  /// In case the [homeserver]'s host differs from the previous value, the
+  /// [wellKnown] cache will be invalidated.
+  @override
+  set homeserver(Uri? homeserver) {
+    if (homeserver?.host != this.homeserver?.host) {
+      _wellKnown = null;
+      unawaited(database?.storeWellKnown(null));
+    }
+    super.homeserver = homeserver;
+  }
 
   Future<MatrixImageFileResizedResponse?> Function(
       MatrixImageFileResizeArguments)? customImageResizer;
@@ -529,6 +546,27 @@ class Client extends MatrixApi {
       homeserver = null;
       rethrow;
     }
+  }
+
+  /// Gets discovery information about the domain. The file may include
+  /// additional keys, which MUST follow the Java package naming convention,
+  /// e.g. `com.example.myapp.property`. This ensures property names are
+  /// suitably namespaced for each application and reduces the risk of
+  /// clashes.
+  ///
+  /// Note that this endpoint is not necessarily handled by the homeserver,
+  /// but by another webserver, to be used for discovering the homeserver URL.
+  ///
+  /// The result of this call is stored in [wellKnown] for later use at runtime.
+  @override
+  Future<DiscoveryInformation> getWellknown() async {
+    final wellKnown = await super.getWellknown();
+
+    // do not reset the well known here, so super call
+    super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
+    _wellKnown = wellKnown;
+    await database?.storeWellKnown(wellKnown);
+    return wellKnown;
   }
 
   /// Checks to see if a username is available, and valid, for the server.
@@ -1196,7 +1234,7 @@ class Client extends MatrixApi {
       path = '_matrix/media/v3/config';
     }
     final requestUri = Uri(path: path);
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final request = http.Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1236,7 +1274,7 @@ class Client extends MatrixApi {
         // removed with msc3916, so just to be explicit
         'allow_remote': allowRemote.toString(),
     });
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final request = http.Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1279,7 +1317,7 @@ class Client extends MatrixApi {
         // removed with msc3916, so just to be explicit
         'allow_remote': allowRemote.toString(),
     });
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final request = http.Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1315,7 +1353,7 @@ class Client extends MatrixApi {
       'url': url.toString(),
       if (ts != null) 'ts': ts.toString(),
     });
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final request = http.Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1369,7 +1407,7 @@ class Client extends MatrixApi {
         'allow_remote': allowRemote.toString(),
     });
 
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final request = http.Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1956,12 +1994,16 @@ class Client extends MatrixApi {
           _accountData = data;
           _updatePushrules();
         });
+        _discoveryDataLoading = database.getWellKnown().then((data) {
+          _wellKnown = data;
+        });
         // ignore: deprecated_member_use_from_same_package
         presences.clear();
         if (waitUntilLoadCompletedLoaded) {
           await userDeviceKeysLoading;
           await roomsLoading;
           await _accountDataLoading;
+          await _discoveryDataLoading;
         }
       }
       _initLock = false;
@@ -2784,9 +2826,12 @@ class Client extends MatrixApi {
   Future? userDeviceKeysLoading;
   Future? roomsLoading;
   Future? _accountDataLoading;
+  Future? _discoveryDataLoading;
   Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
+
+  Future? get wellKnownLoading => _discoveryDataLoading;
 
   /// A map of known device keys per user.
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
@@ -3593,6 +3638,7 @@ class SdkError {
 
 class SyncConnectionException implements Exception {
   final Object originalException;
+
   SyncConnectionException(this.originalException);
 }
 
