@@ -1,11 +1,20 @@
+## [0.32.3] 27th Aug 2024
+
+- feat: cache .well-known data (The one with the braid)
+- fix: dedup /versions calls (td)
+- fix: race condition between getState and requestUser updates (td)
+
 ## [0.32.2] 21st Aug 2024
+
 - fix: SQLCipher dylib location on macOS builds (The one with the braid)
 - refactor: Also use authenticated media if unstable features claim support (Krille)
 
 ## [0.32.1] 16th Aug 2024
+
 - feat: support for authenticated media (td)
 
 ## [0.32.0] 9th Aug 2024
+
 - chore: add info about tests to readme (td)
 - chore: increase log level to verbose in tests (td)
 - fix: App freezes because of recursive loop with getLocalizedDisplayname() call (Krille)
