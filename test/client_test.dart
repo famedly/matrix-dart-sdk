@@ -70,6 +70,28 @@ void main() {
       matrix = await getClient();
     });
 
+    test('barebones client login', () async {
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: getDatabase,
+      );
+      expect(client.isLogged(), false);
+      await client.init();
+      expect(client.isLogged(), false);
+      await client.login(
+        LoginType.mLoginPassword,
+        token: 'abcd',
+        identifier:
+            AuthenticationUserIdentifier(user: '@test:fakeServer.notExisting'),
+        deviceId: 'GHTYAJCE',
+      );
+
+      expect(client.isLogged(), true);
+
+      await client.logout();
+    });
+
     test('Login', () async {
       matrix = Client(
         'testclient',
@@ -1173,7 +1195,8 @@ void main() {
       final client = await getClient();
       expect(client.wellKnown, null);
       await client.getWellknown();
-      expect(client.wellKnown?.mHomeserver.baseUrl.host, 'matrix.example.com');
+      expect(
+          client.wellKnown?.mHomeserver.baseUrl.host, 'fakeserver.notexisting');
     });
 
     test('refreshAccessToken', () async {
