@@ -1,3 +1,7 @@
+## [0.32.4] 28th Aug 2024
+
+- fix: actually make sure clientBox has a account (td)
+
 ## [0.32.3] 27th Aug 2024
 
 - feat: cache .well-known data (The one with the braid)
