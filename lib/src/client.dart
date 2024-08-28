@@ -1880,7 +1880,12 @@ class Client extends MatrixApi {
 
       final account = await this.database?.getClient(clientName);
       newRefreshToken ??= account?.tryGet<String>('refresh_token');
-      if (account != null) {
+      // can have discovery_information so make sure it also has the proper
+      // account creds
+      if (account != null &&
+          account['homeserver_url'] != null &&
+          account['user_id'] != null &&
+          account['token'] != null) {
         _id = account['client_id'];
         homeserver = Uri.parse(account['homeserver_url']);
         accessToken = this.accessToken = account['token'];

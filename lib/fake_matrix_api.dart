@@ -133,7 +133,8 @@ class FakeMatrixApi extends BaseClient {
     }
     if (!servers.contains(request.url.origin)) {
       return Response(
-          '<html><head></head><body>Not found...</body></html>', 404);
+          '<html><head></head><body>Not found ${request.url.origin}...</body></html>',
+          404);
     }
 
     if (!{
@@ -1158,7 +1159,7 @@ class FakeMatrixApi extends BaseClient {
       '/media/v3/config': (var req) => {'m.upload.size': 50000000},
       '/client/v1/media/config': (var req) => {'m.upload.size': 50000000},
       '/.well-known/matrix/client': (var req) => {
-            'm.homeserver': {'base_url': 'https://matrix.example.com'},
+            'm.homeserver': {'base_url': 'https://fakeserver.notexisting'},
             'm.identity_server': {'base_url': 'https://identity.example.com'},
             'org.example.custom.property': {
               'app_url': 'https://custom.app.example.org'
