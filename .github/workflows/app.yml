@@ -60,10 +60,6 @@ jobs:
           architecture: "arm64"
       - name: Run tests
         run: |
-          # Prevent restarting the github actions service on package upgrades
-          # See https://discourse.ubuntu.com/t/needrestart-changes-in-ubuntu-24-04-service-restarts/44671
-          echo '$nrconf{override_rc}{qr(^actions.runner.*.service$)} = 0;' | sudo tee /etc/needrestart/conf.d/githubactions.conf
-
           sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev libolm3 libssl3
           ./scripts/test.sh
       - uses: actions/upload-artifact@v4

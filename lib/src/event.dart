@@ -544,6 +544,66 @@ class Event extends MatrixEvent {
   /// [minNoThumbSize] is the minimum size that an original image may be to not fetch its thumbnail, defaults to 80k
   /// [useThumbnailMxcUrl] says weather to use the mxc url of the thumbnail, rather than the original attachment.
   ///  [animated] says weather the thumbnail is animated
+  ///
+  /// Throws an exception if the scheme is not `mxc` or the homeserver is not
+  /// set.
+  ///
+  /// Important! To use this link you have to set a http header like this:
+  /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
+  Future<Uri?> getAttachmentUri(
+      {bool getThumbnail = false,
+      bool useThumbnailMxcUrl = false,
+      double width = 800.0,
+      double height = 800.0,
+      ThumbnailMethod method = ThumbnailMethod.scale,
+      int minNoThumbSize = _minNoThumbSize,
+      bool animated = false}) async {
+    if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
+        !hasAttachment ||
+        isAttachmentEncrypted) {
+      return null; // can't url-thumbnail in encrypted rooms
+    }
+    if (useThumbnailMxcUrl && !hasThumbnail) {
+      return null; // can't fetch from thumbnail
+    }
+    final thisInfoMap = useThumbnailMxcUrl ? thumbnailInfoMap : infoMap;
+    final thisMxcUrl =
+        useThumbnailMxcUrl ? infoMap['thumbnail_url'] : content['url'];
+    // if we have as method scale, we can return safely the original image, should it be small enough
+    if (getThumbnail &&
+        method == ThumbnailMethod.scale &&
+        thisInfoMap['size'] is int &&
+        thisInfoMap['size'] < minNoThumbSize) {
+      getThumbnail = false;
+    }
+    // now generate the actual URLs
+    if (getThumbnail) {
+      return await Uri.parse(thisMxcUrl).getThumbnailUri(
+        room.client,
+        width: width,
+        height: height,
+        method: method,
+        animated: animated,
+      );
+    } else {
+      return await Uri.parse(thisMxcUrl).getDownloadUri(room.client);
+    }
+  }
+
+  /// Gets the attachment https URL to display in the timeline, taking into account if the original image is tiny.
+  /// Returns null for encrypted rooms, if the image can't be fetched via http url or if the event does not contain an attachment.
+  /// Set [getThumbnail] to true to fetch the thumbnail, set [width], [height] and [method]
+  /// for the respective thumbnailing properties.
+  /// [minNoThumbSize] is the minimum size that an original image may be to not fetch its thumbnail, defaults to 80k
+  /// [useThumbnailMxcUrl] says weather to use the mxc url of the thumbnail, rather than the original attachment.
+  ///  [animated] says weather the thumbnail is animated
+  ///
+  /// Throws an exception if the scheme is not `mxc` or the homeserver is not
+  /// set.
+  ///
+  /// Important! To use this link you have to set a http header like this:
+  /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
+  @Deprecated('Use getAttachmentUri() instead')
   Uri? getAttachmentUrl(
       {bool getThumbnail = false,
       bool useThumbnailMxcUrl = false,
@@ -655,9 +715,13 @@ class Event extends MatrixEvent {
     final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
     if (canDownloadFileFromServer) {
       final httpClient = room.client.httpClient;
-      downloadCallback ??=
-          (Uri url) async => (await httpClient.get(url)).bodyBytes;
-      uint8list = await downloadCallback(mxcUrl.getDownloadLink(room.client));
+      downloadCallback ??= (Uri url) async => (await httpClient.get(
+            url,
+            headers: {'authorization': 'Bearer ${room.client.accessToken}'},
+          ))
+              .bodyBytes;
+      uint8list =
+          await downloadCallback(await mxcUrl.getDownloadUri(room.client));
       storeable = database != null &&
           storeable &&
           uint8list.lengthInBytes < database.maxFileSize;

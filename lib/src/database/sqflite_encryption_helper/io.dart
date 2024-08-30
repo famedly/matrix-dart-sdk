@@ -81,7 +81,9 @@ class SQfLiteEncryptionHelper {
     }
     if (Platform.isMacOS) {
       return DynamicLibrary.open(
-          '/usr/lib/libsqlcipher_flutter_libs_plugin.dylib');
+        'sqlcipher_flutter_libs.framework/Versions/Current/'
+        'sqlcipher_flutter_libs',
+      );
     }
     if (Platform.isWindows) {
       return DynamicLibrary.open('libsqlcipher.dll');

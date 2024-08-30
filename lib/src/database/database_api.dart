@@ -27,7 +27,9 @@ import 'package:matrix/src/utils/queued_to_device_event.dart';
 
 abstract class DatabaseApi {
   int get maxFileSize => 1 * 1024 * 1024;
+
   bool get supportsFileStoring => false;
+
   Future<Map<String, dynamic>?> getClient(String name);
 
   Future updateClient(
@@ -333,6 +335,10 @@ abstract class DatabaseApi {
   Future<void> storePresence(String userId, CachedPresence presence);
 
   Future<CachedPresence?> getPresence(String userId);
+
+  Future<void> storeWellKnown(DiscoveryInformation? discoveryInformation);
+
+  Future<DiscoveryInformation?> getWellKnown();
 
   /// Deletes the whole database. The database needs to be created again after
   /// this.

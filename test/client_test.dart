@@ -70,6 +70,28 @@ void main() {
       matrix = await getClient();
     });
 
+    test('barebones client login', () async {
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: getDatabase,
+      );
+      expect(client.isLogged(), false);
+      await client.init();
+      expect(client.isLogged(), false);
+      await client.login(
+        LoginType.mLoginPassword,
+        token: 'abcd',
+        identifier:
+            AuthenticationUserIdentifier(user: '@test:fakeServer.notExisting'),
+        deviceId: 'GHTYAJCE',
+      );
+
+      expect(client.isLogged(), true);
+
+      await client.logout();
+    });
+
     test('Login', () async {
       matrix = Client(
         'testclient',
@@ -175,6 +197,7 @@ void main() {
           matrix.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS']
               ?.verified,
           false);
+      expect(matrix.wellKnown, isNull);
 
       await matrix.handleSync(SyncUpdate.fromJson({
         'next_batch': 'fakesync',
@@ -1166,6 +1189,14 @@ void main() {
       expect(await client.database?.getFile(response) != null,
           client.database?.supportsFileStoring);
       await client.dispose(closeDatabase: true);
+    });
+
+    test('wellKnown cache', () async {
+      final client = await getClient();
+      expect(client.wellKnown, null);
+      await client.getWellknown();
+      expect(
+          client.wellKnown?.mHomeserver.baseUrl.host, 'fakeserver.notexisting');
     });
 
     test('refreshAccessToken', () async {
