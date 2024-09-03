@@ -795,27 +795,49 @@ class Client extends MatrixApi {
         ));
       }
     }
+    try {
+      // Start a new direct chat
+      final roomId = await createRoom(
+        invite: [mxid],
+        isDirect: true,
+        preset: preset,
+        initialState: initialState,
+        powerLevelContentOverride: powerLevelContentOverride,
+      );
 
-    // Start a new direct chat
-    final roomId = await createRoom(
-      invite: [mxid],
-      isDirect: true,
-      preset: preset,
-      initialState: initialState,
-      powerLevelContentOverride: powerLevelContentOverride,
-    );
-
-    if (waitForSync) {
-      final room = getRoomById(roomId);
-      if (room == null || room.membership != Membership.join) {
-        // Wait for room actually appears in sync
-        await waitForRoomInSync(roomId, join: true);
+      if (waitForSync) {
+        final room = getRoomById(roomId);
+        if (room == null || room.membership != Membership.join) {
+          // Wait for room actually appears in sync
+          await waitForRoomInSync(roomId, join: true);
+        }
       }
+
+      await Room(id: roomId, client: this).addToDirectChat(mxid);
+
+      return roomId;
+    } catch (e) {
+      /// This looks up the room id of the room that was just created.
+      /// The room is empty since createRoom threw an error. To make sure not to
+      /// delete other empty rooms by accident, the creation time is checked.
+      /// Should be fixed in Synapse and then be removed
+      final sortedRooms = rooms.sortedBy((room) => room.timeCreated).reversed;
+      final emptyRoom = sortedRooms.firstWhereOrNull((room) =>
+          room.name.isEmpty &&
+          !room.isDirectChat &&
+          room.summary.mJoinedMemberCount == 1 &&
+          room.summary.mInvitedMemberCount == 0 &&
+          room.timeCreated
+              .isAfter(DateTime.now().subtract(Duration(seconds: 20))));
+      final roomId = emptyRoom?.id;
+
+      /// If we can find an empty unnamed room that was recently created, we leave and delete it
+      if (roomId != null) {
+        await leaveRoom(roomId);
+        await forgetRoom(roomId);
+      }
+      rethrow;
     }
-
-    await Room(id: roomId, client: this).addToDirectChat(mxid);
-
-    return roomId;
   }
 
   /// Simplified method to create a new group chat. By default it is a private
