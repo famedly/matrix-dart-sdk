@@ -1,3 +1,32 @@
+## [0.32.4] 28th Aug 2024
+
+- fix: actually make sure clientBox has a account (td)
+
+## [0.32.3] 27th Aug 2024
+
+- feat: cache .well-known data (The one with the braid)
+- fix: dedup /versions calls (td)
+- fix: race condition between getState and requestUser updates (td)
+
+## [0.32.2] 21st Aug 2024
+
+- fix: SQLCipher dylib location on macOS builds (The one with the braid)
+- refactor: Also use authenticated media if unstable features claim support (Krille)
+
+## [0.32.1] 16th Aug 2024
+
+- feat: support for authenticated media (td)
+
+## [0.32.0] 9th Aug 2024
+
+- chore: add info about tests to readme (td)
+- chore: increase log level to verbose in tests (td)
+- fix: App freezes because of recursive loop with getLocalizedDisplayname() call (Krille)
+- fix: Call logout on soft logout fail (Krille)
+- fix: don't restart github action service after apt install (Nicolas Werner)
+- fix: leave->invite in the same sync would hide the invite (Nicolas Werner)
+-  (BREAKING) fix: update last event properly on cancel send (td)
+
 ## [0.31.0] 28th July 2024
 
 - ci: create release job fix (Karthikeyan S)

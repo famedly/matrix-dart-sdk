@@ -49,7 +49,6 @@ jobs:
           path: coverage_dir/
           retention-days: 1
 
-
   coverage:
     runs-on: arm-ubuntu-latest-16core
     steps:
@@ -69,7 +68,6 @@ jobs:
           name: coverage
           path: coverage_dir/
           retention-days: 1
-
 
   merge_converage:
     if: ${{ !cancelled() }}

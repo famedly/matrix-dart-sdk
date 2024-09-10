@@ -70,6 +70,28 @@ void main() {
       matrix = await getClient();
     });
 
+    test('barebones client login', () async {
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: getDatabase,
+      );
+      expect(client.isLogged(), false);
+      await client.init();
+      expect(client.isLogged(), false);
+      await client.login(
+        LoginType.mLoginPassword,
+        token: 'abcd',
+        identifier:
+            AuthenticationUserIdentifier(user: '@test:fakeServer.notExisting'),
+        deviceId: 'GHTYAJCE',
+      );
+
+      expect(client.isLogged(), true);
+
+      await client.logout();
+    });
+
     test('Login', () async {
       matrix = Client(
         'testclient',
@@ -175,6 +197,7 @@ void main() {
           matrix.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS']
               ?.verified,
           false);
+      expect(matrix.wellKnown, isNull);
 
       await matrix.handleSync(SyncUpdate.fromJson({
         'next_batch': 'fakesync',
@@ -709,6 +732,66 @@ void main() {
       await client.database?.clearCache();
       await client.dispose(closeDatabase: true);
     });
+    test('leaveThenInvite should be invited', () async {
+      // Synapse includes a room in both invite and leave if you leave and get
+      // reinvited while you are offline. The other direction only contains the
+      // room in leave. Verify that we actually store the invite in the first
+      // case. See also
+      // https://github.com/famedly/product-management/issues/2283
+      final client = await getClient();
+      await client.abortSync();
+      client.rooms.clear();
+      await client.database?.clearCache();
+
+      final roomId = '!inviteLeaveRoom:example.com';
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'ABCDEF',
+          rooms: RoomsUpdate(
+            invite: {
+              roomId: InvitedRoomUpdate(
+                inviteState: [
+                  StrippedStateEvent(
+                    type: EventTypes.RoomMember,
+                    senderId: '@bob:example.com',
+                    stateKey: client.userID,
+                    content: {
+                      'membership': 'invite',
+                    },
+                  ),
+                ],
+              ),
+            },
+            leave: {
+              roomId: LeftRoomUpdate(
+                state: [
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    senderId: client.userID!,
+                    stateKey: client.userID,
+                    originServerTs: DateTime.now(),
+                    eventId:
+                        '\$abcdefwsjaskdfabsjfhabfsjgbahsjfkgbasjffsajfgsfd',
+                    content: {
+                      'membership': 'leave',
+                    },
+                  ),
+                ],
+              ),
+            },
+          ),
+        ),
+      );
+
+      final room = client.getRoomById(roomId);
+
+      expect(room?.membership, Membership.invite);
+
+      await client.abortSync();
+      client.rooms.clear();
+      await client.database?.clearCache();
+      await client.dispose(closeDatabase: true);
+    });
     test('ownProfile', () async {
       final client = await getClient();
       await client.abortSync();
@@ -1106,6 +1189,14 @@ void main() {
       expect(await client.database?.getFile(response) != null,
           client.database?.supportsFileStoring);
       await client.dispose(closeDatabase: true);
+    });
+
+    test('wellKnown cache', () async {
+      final client = await getClient();
+      expect(client.wellKnown, null);
+      await client.getWellknown();
+      expect(
+          client.wellKnown?.mHomeserver.baseUrl.host, 'fakeserver.notexisting');
     });
 
     test('refreshAccessToken', () async {

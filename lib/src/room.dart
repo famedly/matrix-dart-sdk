@@ -23,6 +23,7 @@ import 'dart:math';
 import 'package:async/async.dart';
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
+
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
@@ -1642,9 +1643,7 @@ class Room {
     required bool ignoreErrors,
   }) async {
     try {
-      Logs().v(
-        'Request missing user $mxID in room $name from the server...',
-      );
+      Logs().v('Request missing user $mxID in room $id from the server...');
       final resp = await client.getRoomStateWithKey(
         id,
         EventTypes.RoomMember,
@@ -1697,10 +1696,9 @@ class Room {
     required bool requestProfile,
   }) async {
     // Is user already in cache?
-    final userFromState = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     // If not in cache, try the database
-    var foundUser = userFromState;
+    User? foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     // If the room is not postloaded, check the database
     if (partial && foundUser == null) {
@@ -1709,8 +1707,10 @@ class Room {
 
     // If not in the database, try fetching the member from the server
     if (requestState && foundUser == null) {
-      foundUser = await _requestSingleParticipantViaState(mxID,
-          ignoreErrors: ignoreErrors);
+      foundUser = await _requestSingleParticipantViaState(
+        mxID,
+        ignoreErrors: ignoreErrors,
+      );
     }
 
     // If the user isn't found or they have left and no displayname set anymore, request their profile from the server
@@ -1742,11 +1742,14 @@ class Room {
     }
 
     if (foundUser == null) return null;
+    // make sure we didn't actually store anything by the time we did those requests
+    final userFromCurrentState =
+        getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     // Set user in the local state if the state changed.
     // If we set the state unconditionally, we might end up with a client calling this over and over thinking the user changed.
-    if (userFromState == null ||
-        userFromState.displayName != foundUser.displayName) {
+    if (userFromCurrentState == null ||
+        userFromCurrentState.displayName != foundUser.displayName) {
       setState(foundUser);
       // ignore: deprecated_member_use_from_same_package
       onUpdate.add(id);
