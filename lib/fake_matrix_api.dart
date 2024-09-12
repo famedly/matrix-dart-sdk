@@ -1972,7 +1972,7 @@ class FakeMatrixApi extends BaseClient {
               ]
             }
           },
-      '/client/v3/sync?filter=%7B%22room%22%3A%7B%22include_leave%22%3Atrue%2C%22timeline%22%3A%7B%22limit%22%3A10%7D%7D%7D&timeout=0':
+      '/client/v3/sync?filter=%7B%22room%22%3A%7B%22include_leave%22%3Atrue%2C%22state%22%3A%7B%22lazy_load_members%22%3Atrue%7D%2C%22timeline%22%3A%7B%22limit%22%3A10%7D%7D%7D&timeout=0':
           (var req) => archiveSyncResponse,
       '/client/v3/sync?filter=1234&timeout=0': (var req) => syncResponse,
       '/client/v3/sync?filter=1234&since=1234&full_state=false&set_presence=unavailable&timeout=15':
