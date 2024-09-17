@@ -66,7 +66,7 @@ class BoxCollection with ZoneTransactionMixin {
         },
       );
 
-  Future<void> close() => _db.close();
+  Future<void> close() => zoneTransaction(() => _db.close());
 
   @Deprecated('use collection.deleteDatabase now')
   static Future<void> delete(String path, [dynamic factory]) =>
