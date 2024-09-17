@@ -1109,8 +1109,17 @@ class Client extends MatrixApi {
   /// [ArchivedRoom] objects containing the [Room] and the associated [Timeline].
   Future<List<ArchivedRoom>> loadArchiveWithTimeline() async {
     _archivedRooms.clear();
+
+    final filter = jsonEncode(Filter(
+      room: RoomFilter(
+        state: StateFilter(lazyLoadMembers: true),
+        includeLeave: true,
+        timeline: StateFilter(limit: 10),
+      ),
+    ).toJson());
+
     final syncResp = await sync(
-      filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
+      filter: filter,
       timeout: _archiveCacheBusterTimeout,
       setPresence: syncPresence,
     );
