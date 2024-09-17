@@ -251,6 +251,8 @@ class Event extends MatrixEvent {
     _originalSource = null;
     final contentKeyWhiteList = <String>[];
     switch (type) {
+      case EventTypes.Message:
+        contentKeyWhiteList.add('m.relates_to');
       case EventTypes.RoomMember:
         contentKeyWhiteList.add('membership');
         break;

@@ -1626,8 +1626,136 @@ void main() {
       expect(
           await room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Cancelled sending message');
+
+      final timeline = await room.getTimeline();
+      expect(timeline.events.first.eventId, 'older_event');
+      // make sure older_event is also removed from the timeline
+      await timeline.events.first.cancelSend();
     });
 
+    test('send, edit and remove message', () async {
+      final timeline = await room.getTimeline();
+
+      await matrix.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    Event(
+                      content: {'body': 'before_og_event'},
+                      type: 'm.room.message',
+                      eventId: 'before_og_event',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      room: room,
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+
+      await matrix.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    Event(
+                      content: {'body': 'original_event'},
+                      type: 'm.room.message',
+                      eventId: 'original_event',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      room: room,
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+
+      await matrix.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    Event(
+                      content: {
+                        'msgtype': 'm.text',
+                        'body': ' * edited_event',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edited_event',
+                        },
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': 'original_event'
+                        }
+                      },
+                      type: 'm.room.message',
+                      eventId: 'edited_event',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      room: room,
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+
+      expect(timeline.events.first.eventId, 'edited_event');
+      expect(timeline.events.first.relationshipType, RelationshipTypes.edit);
+
+      Event? eventFromDB;
+      eventFromDB = await matrix.database!.getEventById('edited_event', room);
+
+      expect(eventFromDB!.eventId, 'edited_event');
+      expect(eventFromDB.relationshipType, RelationshipTypes.edit);
+
+      await matrix.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      content: {'redacts': 'original_event'},
+                      type: 'm.room.redaction',
+                      eventId: 'original_event_redaction',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      roomId: room.id,
+                      redacts: 'original_event',
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+
+      expect(timeline.events.skip(1).first.content.containsKey('m.relates_to'),
+          true);
+    });
     test('logout', () async {
       await matrix.logout();
     });
