@@ -114,11 +114,13 @@ class RoomsUpdate {
   Map<String, JoinedRoomUpdate>? join;
   Map<String, InvitedRoomUpdate>? invite;
   Map<String, LeftRoomUpdate>? leave;
+  Map<String, KnockRoomUpdate>? knock;
 
   RoomsUpdate({
     this.join,
     this.invite,
     this.leave,
+    this.knock,
   });
 
   RoomsUpdate.fromJson(Map<String, Object?> json) {
@@ -128,6 +130,8 @@ class RoomsUpdate {
         MapEntry(k, InvitedRoomUpdate.fromJson(v as Map<String, Object?>)));
     leave = json.tryGetMap<String, Object?>('leave')?.catchMap((k, v) =>
         MapEntry(k, LeftRoomUpdate.fromJson(v as Map<String, Object?>)));
+    knock = json.tryGetMap<String, Object?>('knock')?.catchMap((k, v) =>
+        MapEntry(k, KnockRoomUpdate.fromJson(v as Map<String, Object?>)));
   }
 
   Map<String, Object?> toJson() {
@@ -140,6 +144,9 @@ class RoomsUpdate {
     }
     if (leave != null) {
       data['leave'] = leave!.map((k, v) => MapEntry(k, v.toJson()));
+    }
+    if (knock != null) {
+      data['knock'] = knock!.map((k, v) => MapEntry(k, v.toJson()));
     }
     return data;
   }
@@ -228,6 +235,28 @@ class InvitedRoomUpdate extends SyncRoomUpdate {
     if (inviteState != null) {
       data['invite_state'] = {
         'events': inviteState!.map((i) => i.toJson()).toList(),
+      };
+    }
+    return data;
+  }
+}
+
+class KnockRoomUpdate extends SyncRoomUpdate {
+  List<StrippedStateEvent>? knockState;
+
+  KnockRoomUpdate({this.knockState});
+
+  KnockRoomUpdate.fromJson(Map<String, Object?> json)
+      : knockState = json
+            .tryGetMap<String, List<Object?>>('knock_state')?['events']
+            ?.map((i) => StrippedStateEvent.fromJson(i as Map<String, Object?>))
+            .toList();
+
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
+    if (knockState != null) {
+      data['knock_state'] = {
+        'events': knockState!.map((i) => i.toJson()).toList(),
       };
     }
     return data;

@@ -23,7 +23,7 @@ import 'package:test/test.dart';
 import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 
-void main() {
+void main() async {
   group('Timeline', () {
     Logs().level = Level.error;
 
@@ -114,6 +114,66 @@ void main() {
               invite: {'!5345234235:example.com': InvitedRoomUpdate()})));
       expect(client.getArchiveRoomFromCache('!5345234235:example.com'), null);
     });
+
+    test("assert that key updates don't change membership", () async {
+      const roomid = '!5345234235:example.com';
+
+      // prep work to be able to set a last event that would trigger the (fixed) bug
+      await client.loadArchiveWithTimeline();
+      expect(client.getArchiveRoomFromCache(roomid) != null, true);
+      expect(client.getRoomById(roomid)?.membership, Membership.leave);
+
+      final outboundSession = await client.encryption?.keyManager
+          .createOutboundGroupSession(roomid);
+      final inboundSession = client.encryption!.keyManager
+          .getInboundGroupSession(
+              roomid, outboundSession!.outboundGroupSession!.session_id())!;
+
+      // ensure encryption is "enabled"
+      client.getRoomById(roomid)?.setState(StrippedStateEvent(
+            type: EventTypes.Encryption,
+            content: {'algorithm': AlgorithmTypes.megolmV1AesSha2},
+            senderId: client.userID!,
+            stateKey: '',
+          ));
+      final encryptedEvent = await client.encryption!
+          .encryptGroupMessagePayload(
+              roomid, {'msgtype': 'm.room.text', 'body': 'empty'});
+
+      // reset client
+      await client.dispose().onError((e, s) {});
+      client = await getClient(
+        sendTimelineEventTimeout: const Duration(seconds: 5),
+      );
+
+      await client.abortSync();
+      insertList.clear();
+
+      // now do our tests
+      await client.loadArchiveWithTimeline();
+      expect(client.getArchiveRoomFromCache(roomid) != null, true);
+      expect(client.getRoomById(roomid)?.membership, Membership.leave);
+
+      // set the last event
+      final room = client.getRoomById(roomid)!;
+      room.lastEvent = Event(
+          type: EventTypes.Encrypted,
+          content: encryptedEvent,
+          senderId: client.userID!,
+          eventId: '\$archivedencr',
+          room: room,
+          originServerTs: DateTime.now());
+
+      // import the inbound session
+      await client.encryption!.keyManager.setInboundGroupSession(
+          roomid,
+          inboundSession.sessionId,
+          inboundSession.senderKey,
+          inboundSession.content);
+
+      expect(client.getArchiveRoomFromCache(roomid) != null, true);
+      expect(client.getRoomById(roomid)?.membership, Membership.leave);
+    }, tags: 'olm');
 
     test('clear archive', () async {
       await client.loadArchiveWithTimeline();

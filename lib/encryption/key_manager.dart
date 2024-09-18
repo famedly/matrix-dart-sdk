@@ -164,6 +164,7 @@ class KeyManager {
     if (!client.isLogged() || client.encryption == null) {
       return;
     }
+
     final storeFuture = client.database
         ?.storeInboundGroupSession(
       roomId,
@@ -200,8 +201,19 @@ class KeyManager {
           await client.database?.transaction(() async {
             await client.handleSync(
               SyncUpdate(
-                  nextBatch: '',
-                  rooms: RoomsUpdate(join: {room.id: JoinedRoomUpdate()})),
+                nextBatch: '',
+                rooms: switch (room.membership) {
+                  Membership.join =>
+                    RoomsUpdate(join: {room.id: JoinedRoomUpdate()}),
+                  Membership.ban ||
+                  Membership.leave =>
+                    RoomsUpdate(leave: {room.id: LeftRoomUpdate()}),
+                  Membership.invite =>
+                    RoomsUpdate(invite: {room.id: InvitedRoomUpdate()}),
+                  Membership.knock =>
+                    RoomsUpdate(knock: {room.id: KnockRoomUpdate()}),
+                },
+              ),
             );
           });
         }
