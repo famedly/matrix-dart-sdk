@@ -1,3 +1,10 @@
+## [0.33.0] 19th Sept 2024
+
+- feat: BREAKING CHANGE v1.11 matrix-spec endpoints (td)
+- fix: also lazy load members for archive (Nicolas Werner)
+- fix: don't convert archived rooms to joined rooms by accident (Nicolas Werner)
+- fix: wait for pending transactions before db close (Nicolas Werner)
+
 ## [0.32.4] 28th Aug 2024
 
 - fix: actually make sure clientBox has a account (td)
