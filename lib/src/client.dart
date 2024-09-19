@@ -538,7 +538,7 @@ class Client extends MatrixApi {
       final loginTypes = await getLoginFlows() ?? [];
       if (!loginTypes.any((f) => supportedLoginTypes.contains(f.type))) {
         throw BadServerLoginTypesException(
-            loginTypes.map((f) => f.type ?? '').toSet(), supportedLoginTypes);
+            loginTypes.map((f) => f.type).toSet(), supportedLoginTypes);
       }
 
       return (wellKnown, versions, loginTypes);
@@ -628,7 +628,7 @@ class Client extends MatrixApi {
   /// older server versions.
   @override
   Future<LoginResponse> login(
-    LoginType type, {
+    String type, {
     AuthenticationIdentifier? identifier,
     String? password,
     String? token,
@@ -1219,7 +1219,7 @@ class Client extends MatrixApi {
         versionsResponse.unstableFeatures?['org.matrix.msc3916.stable'] == true;
   }
 
-  final _serverConfigCache = AsyncCache<ServerConfig>(const Duration(hours: 1));
+  final _serverConfigCache = AsyncCache<MediaConfig>(const Duration(hours: 1));
 
   /// This endpoint allows clients to retrieve the configuration of the content
   /// repository, such as upload limitations.
@@ -1232,27 +1232,11 @@ class Client extends MatrixApi {
   /// repository APIs, for example, proxies may enforce a lower upload size limit
   /// than is advertised by the server on this endpoint.
   @override
-  Future<ServerConfig> getConfig() =>
-      _serverConfigCache.fetch(() => _getAuthenticatedConfig());
-
-  // TODO: remove once we are able to autogen this
-  Future<ServerConfig> _getAuthenticatedConfig() async {
-    String path;
-    if (await authenticatedMediaSupported()) {
-      path = '_matrix/client/v1/media/config';
-    } else {
-      path = '_matrix/media/v3/config';
-    }
-    final requestUri = Uri(path: path);
-    final request = http.Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    final responseString = utf8.decode(responseBody);
-    final json = jsonDecode(responseString);
-    return ServerConfig.fromJson(json as Map<String, Object?>);
-  }
+  Future<MediaConfig> getConfig() =>
+      _serverConfigCache.fetch(() async => (await authenticatedMediaSupported())
+          ? getConfigAuthed()
+          // ignore: deprecated_member_use_from_same_package
+          : super.getConfig());
 
   ///
   ///
@@ -1262,124 +1246,126 @@ class Client extends MatrixApi {
   /// [mediaId] The media ID from the `mxc://` URI (the path component)
   ///
   ///
-  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if it is deemed
-  /// remote. This is to prevent routing loops where the server contacts itself. Defaults to
-  /// true if not provided.
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if
+  /// it is deemed remote. This is to prevent routing loops where the server
+  /// contacts itself.
+  ///
+  /// Defaults to `true` if not provided.
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  ///
+  /// [allowRedirect] Indicates to the server that it may return a 307 or 308 redirect
+  /// response that points at the relevant media content. When not explicitly
+  /// set to `true` the server must return the media content itself.
   ///
   @override
-  // TODO: remove once we are able to autogen this
-  Future<FileResponse> getContent(String serverName, String mediaId,
-      {bool? allowRemote}) async {
-    String path;
-
-    if (await authenticatedMediaSupported()) {
-      path =
-          '_matrix/client/v1/media/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
-    } else {
-      path =
-          '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
-    }
-    final requestUri = Uri(path: path, queryParameters: {
-      if (allowRemote != null && !await authenticatedMediaSupported())
-        // removed with msc3916, so just to be explicit
-        'allow_remote': allowRemote.toString(),
-    });
-    final request = http.Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    return FileResponse(
-        contentType: response.headers['content-type'], data: responseBody);
+  Future<FileResponse> getContent(
+    String serverName,
+    String mediaId, {
+    bool? allowRemote,
+    int? timeoutMs,
+    bool? allowRedirect,
+  }) async {
+    return (await authenticatedMediaSupported())
+        ? getContentAuthed(
+            serverName,
+            mediaId,
+            timeoutMs: timeoutMs,
+          )
+        // ignore: deprecated_member_use_from_same_package
+        : super.getContent(
+            serverName,
+            mediaId,
+            allowRemote: allowRemote,
+            timeoutMs: timeoutMs,
+            allowRedirect: allowRedirect,
+          );
   }
 
   /// This will download content from the content repository (same as
   /// the previous endpoint) but replace the target file name with the one
   /// provided by the caller.
   ///
-  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  /// {{% boxes/warning %}}
+  /// {{< changed-in v="1.11" >}} This endpoint MAY return `404 M_NOT_FOUND`
+  /// for media which exists, but is after the server froze unauthenticated
+  /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
+  /// information.
+  /// {{% /boxes/warning %}}
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authority component).
   ///
   ///
-  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  /// [mediaId] The media ID from the `mxc://` URI (the path component).
   ///
   ///
   /// [fileName] A filename to give in the `Content-Disposition` header.
   ///
-  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if it is deemed
-  /// remote. This is to prevent routing loops where the server contacts itself. Defaults to
-  /// true if not provided.
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if
+  /// it is deemed remote. This is to prevent routing loops where the server
+  /// contacts itself.
   ///
+  /// Defaults to `true` if not provided.
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  ///
+  /// [allowRedirect] Indicates to the server that it may return a 307 or 308 redirect
+  /// response that points at the relevant media content. When not explicitly
+  /// set to `true` the server must return the media content itself.
   @override
-  // TODO: remove once we are able to autogen this
   Future<FileResponse> getContentOverrideName(
-      String serverName, String mediaId, String fileName,
-      {bool? allowRemote}) async {
-    String path;
-    if (await authenticatedMediaSupported()) {
-      path =
-          '_matrix/client/v1/media/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}';
-    } else {
-      path =
-          '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}';
-    }
-    final requestUri = Uri(path: path, queryParameters: {
-      if (allowRemote != null && !await authenticatedMediaSupported())
-        // removed with msc3916, so just to be explicit
-        'allow_remote': allowRemote.toString(),
-    });
-    final request = http.Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    return FileResponse(
-        contentType: response.headers['content-type'], data: responseBody);
-  }
-
-  /// Get information about a URL for the client. Typically this is called when a
-  /// client sees a URL in a message and wants to render a preview for the user.
-  ///
-  /// **Note:**
-  /// Clients should consider avoiding this endpoint for URLs posted in encrypted
-  /// rooms. Encrypted rooms often contain more sensitive information the users
-  /// do not want to share with the homeserver, and this can mean that the URLs
-  /// being shared should also not be shared with the homeserver.
-  ///
-  /// [url] The URL to get a preview of.
-  ///
-  /// [ts] The preferred point in time to return a preview for. The server may
-  /// return a newer version if it does not have the requested version
-  /// available.
-  @override
-  // TODO: remove once we are able to autogen this
-  Future<GetUrlPreviewResponse> getUrlPreview(Uri url, {int? ts}) async {
-    String path;
-    if (await authenticatedMediaSupported()) {
-      path = '_matrix/client/v1/media/preview_url';
-    } else {
-      path = '_matrix/media/v3/preview_url';
-    }
-    final requestUri = Uri(path: path, queryParameters: {
-      'url': url.toString(),
-      if (ts != null) 'ts': ts.toString(),
-    });
-    final request = http.Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    final responseString = utf8.decode(responseBody);
-    final json = jsonDecode(responseString);
-    return GetUrlPreviewResponse.fromJson(json as Map<String, Object?>);
+    String serverName,
+    String mediaId,
+    String fileName, {
+    bool? allowRemote,
+    int? timeoutMs,
+    bool? allowRedirect,
+  }) async {
+    return (await authenticatedMediaSupported())
+        ? getContentOverrideNameAuthed(
+            serverName,
+            mediaId,
+            fileName,
+            timeoutMs: timeoutMs,
+          )
+        // ignore: deprecated_member_use_from_same_package
+        : super.getContentOverrideName(
+            serverName,
+            mediaId,
+            fileName,
+            allowRemote: allowRemote,
+            timeoutMs: timeoutMs,
+            allowRedirect: allowRedirect,
+          );
   }
 
   /// Download a thumbnail of content from the content repository.
   /// See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails) section for more information.
   ///
-  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  /// {{% boxes/note %}}
+  /// Clients SHOULD NOT generate or use URLs which supply the access token in
+  /// the query string. These URLs may be copied by users verbatim and provided
+  /// in a chat message to another user, disclosing the sender's access token.
+  /// {{% /boxes/note %}}
+  ///
+  /// Clients MAY be redirected using the 307/308 responses below to download
+  /// the request object. This is typical when the homeserver uses a Content
+  /// Delivery Network (CDN).
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authority component).
   ///
   ///
-  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  /// [mediaId] The media ID from the `mxc://` URI (the path component).
   ///
   ///
   /// [width] The *desired* width of the thumbnail. The actual thumbnail may be
@@ -1391,39 +1377,82 @@ class Client extends MatrixApi {
   /// [method] The desired resizing method. See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails)
   /// section for more information.
   ///
-  /// [allowRemote] Indicates to the server that it should not attempt to fetch
-  /// the media if it is deemed remote. This is to prevent routing loops
-  /// where the server contacts itself. Defaults to true if not provided.
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  ///
+  /// [animated] Indicates preference for an animated thumbnail from the server, if possible. Animated
+  /// thumbnails typically use the content types `image/gif`, `image/png` (with APNG format),
+  /// `image/apng`, and `image/webp` instead of the common static `image/png` or `image/jpeg`
+  /// content types.
+  ///
+  /// When `true`, the server SHOULD return an animated thumbnail if possible and supported.
+  /// When `false`, the server MUST NOT return an animated thumbnail. For example, returning a
+  /// static `image/png` or `image/jpeg` thumbnail. When not provided, the server SHOULD NOT
+  /// return an animated thumbnail.
+  ///
+  /// Servers SHOULD prefer to return `image/webp` thumbnails when supporting animation.
+  ///
+  /// When `true` and the media cannot be animated, such as in the case of a JPEG or PDF, the
+  /// server SHOULD behave as though `animated` is `false`.
   @override
-  // TODO: remove once we are able to autogen this
   Future<FileResponse> getContentThumbnail(
-      String serverName, String mediaId, int width, int height,
-      {Method? method, bool? allowRemote}) async {
-    String path;
-    if (await authenticatedMediaSupported()) {
-      path =
-          '_matrix/client/v1/media/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
-    } else {
-      path =
-          '_matrix/media/v3/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}';
-    }
+    String serverName,
+    String mediaId,
+    int width,
+    int height, {
+    Method? method,
+    bool? allowRemote,
+    int? timeoutMs,
+    bool? allowRedirect,
+    bool? animated,
+  }) async {
+    return (await authenticatedMediaSupported())
+        ? getContentThumbnailAuthed(
+            serverName,
+            mediaId,
+            width,
+            height,
+            method: method,
+            timeoutMs: timeoutMs,
+            animated: animated,
+          )
+        // ignore: deprecated_member_use_from_same_package
+        : super.getContentThumbnail(
+            serverName,
+            mediaId,
+            width,
+            height,
+            method: method,
+            timeoutMs: timeoutMs,
+            animated: animated,
+          );
+  }
 
-    final requestUri = Uri(path: path, queryParameters: {
-      'width': width.toString(),
-      'height': height.toString(),
-      if (method != null) 'method': method.name,
-      if (allowRemote != null && !await authenticatedMediaSupported())
-        // removed with msc3916, so just to be explicit
-        'allow_remote': allowRemote.toString(),
-    });
-
-    final request = http.Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    return FileResponse(
-        contentType: response.headers['content-type'], data: responseBody);
+  /// Get information about a URL for the client. Typically this is called when a
+  /// client sees a URL in a message and wants to render a preview for the user.
+  ///
+  /// {{% boxes/note %}}
+  /// Clients should consider avoiding this endpoint for URLs posted in encrypted
+  /// rooms. Encrypted rooms often contain more sensitive information the users
+  /// do not want to share with the homeserver, and this can mean that the URLs
+  /// being shared should also not be shared with the homeserver.
+  /// {{% /boxes/note %}}
+  ///
+  /// [url] The URL to get a preview of.
+  ///
+  /// [ts] The preferred point in time to return a preview for. The server may
+  /// return a newer version if it does not have the requested version
+  /// available.
+  @override
+  Future<PreviewForUrl> getUrlPreview(Uri url, {int? ts}) async {
+    return (await authenticatedMediaSupported())
+        ? getUrlPreviewAuthed(url, ts: ts)
+        // ignore: deprecated_member_use_from_same_package
+        : super.getUrlPreview(url, ts: ts);
   }
 
   /// Uploads a file and automatically caches it in the database, if it is small enough
@@ -1614,7 +1643,7 @@ class Client extends MatrixApi {
   final CachedStreamController<KeyVerification> onKeyVerificationRequest =
       CachedStreamController();
 
-  /// When the library calls an endpoint that needs UIA the `UiaRequest` is passed down this screen.
+  /// When the library calls an endpoint that needs UIA the `UiaRequest` is passed down this stream.
   /// The client can open a UIA prompt based on this.
   final CachedStreamController<UiaRequest> onUiaRequest =
       CachedStreamController();
@@ -3348,10 +3377,12 @@ class Client extends MatrixApi {
 
   /// Changes the password. You should either set oldPasswort or another authentication flow.
   @override
-  Future<void> changePassword(String newPassword,
-      {String? oldPassword,
-      AuthenticationData? auth,
-      bool? logoutDevices}) async {
+  Future<void> changePassword(
+    String newPassword, {
+    String? oldPassword,
+    AuthenticationData? auth,
+    bool? logoutDevices,
+  }) async {
     final userID = this.userID;
     try {
       if (oldPassword != null && userID != null) {

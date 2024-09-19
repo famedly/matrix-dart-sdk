@@ -12,6 +12,8 @@ import 'package:matrix/matrix_api_lite/model/matrix_event.dart';
 import 'package:matrix/matrix_api_lite/model/matrix_keys.dart';
 import 'package:matrix/matrix_api_lite/model/sync_update.dart';
 
+// ignore_for_file: provide_deprecation_message
+
 class Api {
   Client httpClient;
   Uri? baseUri;
@@ -43,6 +45,326 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return DiscoveryInformation.fromJson(json as Map<String, Object?>);
+  }
+
+  /// Gets server admin contact and support page of the domain.
+  ///
+  /// Like the [well-known discovery URI](https://spec.matrix.org/unstable/client-server-api/#well-known-uri),
+  /// this should be accessed with the hostname of the homeserver by making a
+  /// GET request to `https://hostname/.well-known/matrix/support`.
+  ///
+  /// Note that this endpoint is not necessarily handled by the homeserver.
+  /// It may be served by another webserver, used for discovering support
+  /// information for the homeserver.
+  Future<GetWellknownSupportResponse> getWellknownSupport() async {
+    final requestUri = Uri(path: '.well-known/matrix/support');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetWellknownSupportResponse.fromJson(json as Map<String, Object?>);
+  }
+
+  /// This API asks the homeserver to call the
+  /// [`/_matrix/app/v1/ping`](#post_matrixappv1ping) endpoint on the
+  /// application service to ensure that the homeserver can communicate
+  /// with the application service.
+  ///
+  /// This API requires the use of an application service access token (`as_token`)
+  /// instead of a typical client's access token. This API cannot be invoked by
+  /// users who are not identified as application services. Additionally, the
+  /// appservice ID in the path must be the same as the appservice whose `as_token`
+  /// is being used.
+  ///
+  /// [appserviceId] The appservice ID of the appservice to ping. This must be the same
+  /// as the appservice whose `as_token` is being used to authenticate the
+  /// request.
+  ///
+  /// [transactionId] An optional transaction ID that is passed through to the `/_matrix/app/v1/ping` call.
+  ///
+  /// returns `duration_ms`:
+  /// The duration in milliseconds that the
+  /// [`/_matrix/app/v1/ping`](#post_matrixappv1ping)
+  /// request took from the homeserver's point of view.
+  Future<int> pingAppservice(String appserviceId,
+      {String? transactionId}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/v1/appservice/${Uri.encodeComponent(appserviceId)}/ping');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (transactionId != null) 'transaction_id': transactionId,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['duration_ms'] as int;
+  }
+
+  /// Optional endpoint - the server is not required to implement this endpoint if it does not
+  /// intend to use or support this functionality.
+  ///
+  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
+  ///
+  /// An already-authenticated client can call this endpoint to generate a single-use, time-limited,
+  /// token for an unauthenticated client to log in with, becoming logged in as the same user which
+  /// called this endpoint. The unauthenticated client uses the generated token in a `m.login.token`
+  /// login flow with the homeserver.
+  ///
+  /// Clients, both authenticated and unauthenticated, might wish to hide user interface which exposes
+  /// this feature if the server is not offering it. Authenticated clients can check for support on
+  /// a per-user basis with the `m.get_login_token` [capability](https://spec.matrix.org/unstable/client-server-api/#capabilities-negotiation),
+  /// while unauthenticated clients can detect server support by looking for an `m.login.token` login
+  /// flow with `get_login_token: true` on [`GET /login`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3login).
+  ///
+  /// In v1.7 of the specification, transmission of the generated token to an unauthenticated client is
+  /// left as an implementation detail. Future MSCs such as [MSC3906](https://github.com/matrix-org/matrix-spec-proposals/pull/3906)
+  /// might standardise a way to transmit the token between clients.
+  ///
+  /// The generated token MUST only be valid for a single login, enforced by the server. Clients which
+  /// intend to log in multiple devices must generate a token for each.
+  ///
+  /// With other User-Interactive Authentication (UIA)-supporting endpoints, servers sometimes do not re-prompt
+  /// for verification if the session recently passed UIA. For this endpoint, servers MUST always re-prompt
+  /// the user for verification to ensure explicit consent is gained for each additional client.
+  ///
+  /// Servers are encouraged to apply stricter than normal rate limiting to this endpoint, such as maximum
+  /// of 1 request per minute.
+  ///
+  /// [auth] Additional authentication information for the user-interactive authentication API.
+  Future<GenerateLoginTokenResponse> generateLoginToken(
+      {AuthenticationData? auth}) async {
+    final requestUri = Uri(path: '_matrix/client/v1/login/get_token');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (auth != null) 'auth': auth.toJson(),
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GenerateLoginTokenResponse.fromJson(json as Map<String, Object?>);
+  }
+
+  /// This endpoint allows clients to retrieve the configuration of the content
+  /// repository, such as upload limitations.
+  /// Clients SHOULD use this as a guide when using content repository endpoints.
+  /// All values are intentionally left optional. Clients SHOULD follow
+  /// the advice given in the field description when the field is not available.
+  ///
+  /// {{% boxes/note %}}
+  /// Both clients and server administrators should be aware that proxies
+  /// between the client and the server may affect the apparent behaviour of content
+  /// repository APIs, for example, proxies may enforce a lower upload size limit
+  /// than is advertised by the server on this endpoint.
+  /// {{% /boxes/note %}}
+  Future<MediaConfig> getConfigAuthed() async {
+    final requestUri = Uri(path: '_matrix/client/v1/media/config');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return MediaConfig.fromJson(json as Map<String, Object?>);
+  }
+
+  /// {{% boxes/note %}}
+  /// Clients SHOULD NOT generate or use URLs which supply the access token in
+  /// the query string. These URLs may be copied by users verbatim and provided
+  /// in a chat message to another user, disclosing the sender's access token.
+  /// {{% /boxes/note %}}
+  ///
+  /// Clients MAY be redirected using the 307/308 responses below to download
+  /// the request object. This is typical when the homeserver uses a Content
+  /// Delivery Network (CDN).
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authority component).
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component).
+  ///
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  Future<FileResponse> getContentAuthed(String serverName, String mediaId,
+      {int? timeoutMs}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/v1/media/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
+        queryParameters: {
+          if (timeoutMs != null) 'timeout_ms': timeoutMs.toString(),
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    return FileResponse(
+        contentType: response.headers['content-type'], data: responseBody);
+  }
+
+  /// This will download content from the content repository (same as
+  /// the previous endpoint) but replaces the target file name with the one
+  /// provided by the caller.
+  ///
+  /// {{% boxes/note %}}
+  /// Clients SHOULD NOT generate or use URLs which supply the access token in
+  /// the query string. These URLs may be copied by users verbatim and provided
+  /// in a chat message to another user, disclosing the sender's access token.
+  /// {{% /boxes/note %}}
+  ///
+  /// Clients MAY be redirected using the 307/308 responses below to download
+  /// the request object. This is typical when the homeserver uses a Content
+  /// Delivery Network (CDN).
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authority component).
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component).
+  ///
+  ///
+  /// [fileName] A filename to give in the `Content-Disposition` header.
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  Future<FileResponse> getContentOverrideNameAuthed(
+      String serverName, String mediaId, String fileName,
+      {int? timeoutMs}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/v1/media/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}',
+        queryParameters: {
+          if (timeoutMs != null) 'timeout_ms': timeoutMs.toString(),
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    return FileResponse(
+        contentType: response.headers['content-type'], data: responseBody);
+  }
+
+  /// Get information about a URL for the client. Typically this is called when a
+  /// client sees a URL in a message and wants to render a preview for the user.
+  ///
+  /// {{% boxes/note %}}
+  /// Clients should consider avoiding this endpoint for URLs posted in encrypted
+  /// rooms. Encrypted rooms often contain more sensitive information the users
+  /// do not want to share with the homeserver, and this can mean that the URLs
+  /// being shared should also not be shared with the homeserver.
+  /// {{% /boxes/note %}}
+  ///
+  /// [url] The URL to get a preview of.
+  ///
+  /// [ts] The preferred point in time to return a preview for. The server may
+  /// return a newer version if it does not have the requested version
+  /// available.
+  Future<PreviewForUrl> getUrlPreviewAuthed(Uri url, {int? ts}) async {
+    final requestUri =
+        Uri(path: '_matrix/client/v1/media/preview_url', queryParameters: {
+      'url': url.toString(),
+      if (ts != null) 'ts': ts.toString(),
+    });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return PreviewForUrl.fromJson(json as Map<String, Object?>);
+  }
+
+  /// Download a thumbnail of content from the content repository.
+  /// See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails) section for more information.
+  ///
+  /// {{% boxes/note %}}
+  /// Clients SHOULD NOT generate or use URLs which supply the access token in
+  /// the query string. These URLs may be copied by users verbatim and provided
+  /// in a chat message to another user, disclosing the sender's access token.
+  /// {{% /boxes/note %}}
+  ///
+  /// Clients MAY be redirected using the 307/308 responses below to download
+  /// the request object. This is typical when the homeserver uses a Content
+  /// Delivery Network (CDN).
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authority component).
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component).
+  ///
+  ///
+  /// [width] The *desired* width of the thumbnail. The actual thumbnail may be
+  /// larger than the size specified.
+  ///
+  /// [height] The *desired* height of the thumbnail. The actual thumbnail may be
+  /// larger than the size specified.
+  ///
+  /// [method] The desired resizing method. See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails)
+  /// section for more information.
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  ///
+  /// [animated] Indicates preference for an animated thumbnail from the server, if possible. Animated
+  /// thumbnails typically use the content types `image/gif`, `image/png` (with APNG format),
+  /// `image/apng`, and `image/webp` instead of the common static `image/png` or `image/jpeg`
+  /// content types.
+  ///
+  /// When `true`, the server SHOULD return an animated thumbnail if possible and supported.
+  /// When `false`, the server MUST NOT return an animated thumbnail. For example, returning a
+  /// static `image/png` or `image/jpeg` thumbnail. When not provided, the server SHOULD NOT
+  /// return an animated thumbnail.
+  ///
+  /// Servers SHOULD prefer to return `image/webp` thumbnails when supporting animation.
+  ///
+  /// When `true` and the media cannot be animated, such as in the case of a JPEG or PDF, the
+  /// server SHOULD behave as though `animated` is `false`.
+  ///
+  Future<FileResponse> getContentThumbnailAuthed(
+      String serverName, String mediaId, int width, int height,
+      {Method? method, int? timeoutMs, bool? animated}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/v1/media/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
+        queryParameters: {
+          'width': width.toString(),
+          'height': height.toString(),
+          if (method != null) 'method': method.name,
+          if (timeoutMs != null) 'timeout_ms': timeoutMs.toString(),
+          if (animated != null) 'animated': animated.toString(),
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    return FileResponse(
+        contentType: response.headers['content-type'], data: responseBody);
   }
 
   /// Queries the server to determine if a given registration token is still
@@ -157,9 +479,26 @@ class Api {
   /// will be returned in chronological order starting at `from`. If it
   /// is set to `b`, events will be returned in *reverse* chronological
   /// order, again starting at `from`.
+  ///
+  /// [recurse] Whether to additionally include events which only relate indirectly to the
+  /// given event, i.e. events related to the given event via two or more direct relationships.
+  ///
+  /// If set to `false`, only events which have a direct relation with the given
+  /// event will be included.
+  ///
+  /// If set to `true`, events which have an indirect relation with the given event
+  /// will be included additionally up to a certain depth level. Homeservers SHOULD traverse
+  /// at least 3 levels of relationships. Implementations MAY perform more but MUST be careful
+  /// to not infinitely recurse.
+  ///
+  /// The default value is `false`.
   Future<GetRelatingEventsResponse> getRelatingEvents(
       String roomId, String eventId,
-      {String? from, String? to, int? limit, Direction? dir}) async {
+      {String? from,
+      String? to,
+      int? limit,
+      Direction? dir,
+      bool? recurse}) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v1/rooms/${Uri.encodeComponent(roomId)}/relations/${Uri.encodeComponent(eventId)}',
@@ -168,6 +507,7 @@ class Api {
           if (to != null) 'to': to,
           if (limit != null) 'limit': limit.toString(),
           if (dir != null) 'dir': dir.name,
+          if (recurse != null) 'recurse': recurse.toString(),
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -218,9 +558,26 @@ class Api {
   /// will be returned in chronological order starting at `from`. If it
   /// is set to `b`, events will be returned in *reverse* chronological
   /// order, again starting at `from`.
+  ///
+  /// [recurse] Whether to additionally include events which only relate indirectly to the
+  /// given event, i.e. events related to the given event via two or more direct relationships.
+  ///
+  /// If set to `false`, only events which have a direct relation with the given
+  /// event will be included.
+  ///
+  /// If set to `true`, events which have an indirect relation with the given event
+  /// will be included additionally up to a certain depth level. Homeservers SHOULD traverse
+  /// at least 3 levels of relationships. Implementations MAY perform more but MUST be careful
+  /// to not infinitely recurse.
+  ///
+  /// The default value is `false`.
   Future<GetRelatingEventsWithRelTypeResponse> getRelatingEventsWithRelType(
       String roomId, String eventId, String relType,
-      {String? from, String? to, int? limit, Direction? dir}) async {
+      {String? from,
+      String? to,
+      int? limit,
+      Direction? dir,
+      bool? recurse}) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v1/rooms/${Uri.encodeComponent(roomId)}/relations/${Uri.encodeComponent(eventId)}/${Uri.encodeComponent(relType)}',
@@ -229,6 +586,7 @@ class Api {
           if (to != null) 'to': to,
           if (limit != null) 'limit': limit.toString(),
           if (dir != null) 'dir': dir.name,
+          if (recurse != null) 'recurse': recurse.toString(),
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -285,10 +643,27 @@ class Api {
   /// will be returned in chronological order starting at `from`. If it
   /// is set to `b`, events will be returned in *reverse* chronological
   /// order, again starting at `from`.
+  ///
+  /// [recurse] Whether to additionally include events which only relate indirectly to the
+  /// given event, i.e. events related to the given event via two or more direct relationships.
+  ///
+  /// If set to `false`, only events which have a direct relation with the given
+  /// event will be included.
+  ///
+  /// If set to `true`, events which have an indirect relation with the given event
+  /// will be included additionally up to a certain depth level. Homeservers SHOULD traverse
+  /// at least 3 levels of relationships. Implementations MAY perform more but MUST be careful
+  /// to not infinitely recurse.
+  ///
+  /// The default value is `false`.
   Future<GetRelatingEventsWithRelTypeAndEventTypeResponse>
       getRelatingEventsWithRelTypeAndEventType(
           String roomId, String eventId, String relType, String eventType,
-          {String? from, String? to, int? limit, Direction? dir}) async {
+          {String? from,
+          String? to,
+          int? limit,
+          Direction? dir,
+          bool? recurse}) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v1/rooms/${Uri.encodeComponent(roomId)}/relations/${Uri.encodeComponent(eventId)}/${Uri.encodeComponent(relType)}/${Uri.encodeComponent(eventType)}',
@@ -297,6 +672,7 @@ class Api {
           if (to != null) 'to': to,
           if (limit != null) 'limit': limit.toString(),
           if (dir != null) 'dir': dir.name,
+          if (recurse != null) 'recurse': recurse.toString(),
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -309,8 +685,10 @@ class Api {
         json as Map<String, Object?>);
   }
 
-  /// Paginates over the thread roots in a room, ordered by the `latest_event` of each thread root
-  /// in its bundle.
+  /// This API is used to paginate through the list of the thread roots in a given room.
+  ///
+  /// Optionally, the returned list may be filtered according to whether the requesting
+  /// user has participated in the thread.
   ///
   /// [roomId] The room ID where the thread roots are located.
   ///
@@ -394,10 +772,10 @@ class Api {
     return GetEventByTimestampResponse.fromJson(json as Map<String, Object?>);
   }
 
-  /// Gets a list of the third party identifiers that the homeserver has
+  /// Gets a list of the third-party identifiers that the homeserver has
   /// associated with the user's account.
   ///
-  /// This is *not* the same as the list of third party identifiers bound to
+  /// This is *not* the same as the list of third-party identifiers bound to
   /// the user's Matrix ID in identity servers.
   ///
   /// Identifiers in this list may be used by the homeserver as, for example,
@@ -433,7 +811,7 @@ class Api {
   /// This results in this endpoint being an equivalent to `/3pid/bind` rather
   /// than dual-purpose.
   ///
-  /// [threePidCreds] The third party credentials to associate with the account.
+  /// [threePidCreds] The third-party credentials to associate with the account.
   ///
   /// returns `submit_url`:
   /// An optional field containing a URL where the client must
@@ -448,7 +826,7 @@ class Api {
   /// verification will happen without the client's involvement
   /// provided the homeserver advertises this specification version
   /// in the `/versions` response (ie: r0.5.0).
-  @Deprecated('message')
+  @deprecated
   Future<Uri?> post3PIDs(ThreePidCredentials threePidCreds) async {
     final requestUri = Uri(path: '_matrix/client/v3/account/3pid');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
@@ -534,21 +912,21 @@ class Api {
     return ignore(json);
   }
 
-  /// Removes a third party identifier from the user's account. This might not
+  /// Removes a third-party identifier from the user's account. This might not
   /// cause an unbind of the identifier from the identity server.
   ///
   /// Unlike other endpoints, this endpoint does not take an `id_access_token`
   /// parameter because the homeserver is expected to sign the request to the
   /// identity server instead.
   ///
-  /// [address] The third party address being removed.
+  /// [address] The third-party address being removed.
   ///
   /// [idServer] The identity server to unbind from. If not provided, the homeserver
   /// MUST use the `id_server` the identifier was added through. If the
   /// homeserver does not know the original `id_server`, it MUST return
   /// a `id_server_unbind_result` of `no-support`.
   ///
-  /// [medium] The medium of the third party identifier being removed.
+  /// [medium] The medium of the third-party identifier being removed.
   ///
   /// returns `id_server_unbind_result`:
   /// An indicator as to whether or not the homeserver was able to unbind
@@ -711,21 +1089,21 @@ class Api {
     return RequestTokenResponse.fromJson(json as Map<String, Object?>);
   }
 
-  /// Removes a user's third party identifier from the provided identity server
+  /// Removes a user's third-party identifier from the provided identity server
   /// without removing it from the homeserver.
   ///
   /// Unlike other endpoints, this endpoint does not take an `id_access_token`
   /// parameter because the homeserver is expected to sign the request to the
   /// identity server instead.
   ///
-  /// [address] The third party address being removed.
+  /// [address] The third-party address being removed.
   ///
   /// [idServer] The identity server to unbind from. If not provided, the homeserver
   /// MUST use the `id_server` the identifier was added through. If the
   /// homeserver does not know the original `id_server`, it MUST return
   /// a `id_server_unbind_result` of `no-support`.
   ///
-  /// [medium] The medium of the third party identifier being removed.
+  /// [medium] The medium of the third-party identifier being removed.
   ///
   /// returns `id_server_unbind_result`:
   /// An indicator as to whether or not the identity server was able to unbind
@@ -771,6 +1149,23 @@ class Api {
   ///
   /// [auth] Additional authentication information for the user-interactive authentication API.
   ///
+  /// [erase] Whether the user would like their content to be erased as
+  /// much as possible from the server.
+  ///
+  /// Erasure means that any users (or servers) which join the
+  /// room after the erasure request are served redacted copies of
+  /// the events sent by this account. Users which had visibility
+  /// on those events prior to the erasure are still able to see
+  /// unredacted copies. No redactions are sent and the erasure
+  /// request is not shared over federation, so other servers
+  /// might still serve unredacted copies.
+  ///
+  /// The server should additionally erase any non-event data
+  /// associated with the user, such as [account data](https://spec.matrix.org/unstable/client-server-api/#client-config)
+  /// and [contact 3PIDs](https://spec.matrix.org/unstable/client-server-api/#adding-account-administrative-contact-information).
+  ///
+  /// Defaults to `false` if not present.
+  ///
   /// [idServer] The identity server to unbind all of the user's 3PIDs from.
   /// If not provided, the homeserver MUST use the `id_server`
   /// that was originally use to bind each identifier. If the
@@ -788,13 +1183,16 @@ class Api {
   /// must be `success` if the homeserver has no identifiers to unbind
   /// for the user.
   Future<IdServerUnbindResult> deactivateAccount(
-      {AuthenticationData? auth, String? idServer}) async {
+      {AuthenticationData? auth, bool? erase, String? idServer}) async {
     final requestUri = Uri(path: '_matrix/client/v3/account/deactivate');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    if (bearerToken != null) {
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    }
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
       if (auth != null) 'auth': auth.toJson(),
+      if (erase != null) 'erase': erase,
       if (idServer != null) 'id_server': idServer,
     }));
     final response = await httpClient.send(request);
@@ -833,7 +1231,9 @@ class Api {
       {AuthenticationData? auth, bool? logoutDevices}) async {
     final requestUri = Uri(path: '_matrix/client/v3/account/password');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    if (bearerToken != null) {
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    }
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
       if (auth != null) 'auth': auth.toJson(),
@@ -1111,7 +1511,7 @@ class Api {
   /// [invite] A list of user IDs to invite to the room. This will tell the
   /// server to invite everyone in the list to the newly created room.
   ///
-  /// [invite3pid] A list of objects representing third party IDs to invite into
+  /// [invite3pid] A list of objects representing third-party IDs to invite into
   /// the room.
   ///
   /// [isDirect] This flag makes the server set the `is_direct` flag on the
@@ -1132,7 +1532,7 @@ class Api {
   /// based on a preset.
   ///
   /// If unspecified, the server should use the `visibility` to determine
-  /// which preset to use. A visbility of `public` equates to a preset of
+  /// which preset to use. A visibility of `public` equates to a preset of
   /// `public_chat` and `private` visibility equates to a preset of
   /// `private_chat`.
   ///
@@ -1493,7 +1893,7 @@ class Api {
   /// request to this API or from the initial sync API.
   ///
   /// [timeout] The maximum time in milliseconds to wait for an event.
-  @Deprecated('message')
+  @deprecated
   Future<GetEventsResponse> getEvents({String? from, int? timeout}) async {
     final requestUri = Uri(path: '_matrix/client/v3/events', queryParameters: {
       if (from != null) 'from': from,
@@ -1552,7 +1952,7 @@ class Api {
   /// or the [/rooms/{roomId}/context/{eventId](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidcontexteventid) API.
   ///
   /// [eventId] The event ID to get.
-  @Deprecated('message')
+  @deprecated
   Future<MatrixEvent> getOneEvent(String eventId) async {
     final requestUri =
         Uri(path: '_matrix/client/v3/events/${Uri.encodeComponent(eventId)}');
@@ -1598,8 +1998,7 @@ class Api {
     final requestUri = Uri(
         path: '_matrix/client/v3/join/${Uri.encodeComponent(roomIdOrAlias)}',
         queryParameters: {
-          if (serverName != null)
-            'server_name': serverName.map((v) => v).toList(),
+          if (serverName != null) 'server_name': serverName,
         });
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -1700,6 +2099,19 @@ class Api {
   ///
   /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
   ///
+  /// User-Interactive Authentication MUST be performed, except in these cases:
+  /// - there is no existing cross-signing master key uploaded to the homeserver, OR
+  /// - there is an existing cross-signing master key and it exactly matches the
+  ///   cross-signing master key provided in the request body. If there are any additional
+  ///   keys provided in the request (self-signing key, user-signing key) they MUST also
+  ///   match the existing keys stored on the server. In other words, the request contains
+  ///   no new keys.
+  ///
+  /// This allows clients to freely upload one set of keys, but not modify/overwrite keys if
+  /// they already exist. Allowing clients to upload the same set of keys more than once
+  /// makes this endpoint idempotent in the case where the response is lost over the network,
+  /// which would otherwise cause a UIA challenge upon retry.
+  ///
   /// [auth] Additional authentication information for the
   /// user-interactive authentication API.
   ///
@@ -1746,13 +2158,8 @@ class Api {
   ///
   /// [timeout] The time (in milliseconds) to wait when downloading keys from
   /// remote servers. 10 seconds is the recommended default.
-  ///
-  /// [token] If the client is fetching keys as a result of a device update received
-  /// in a sync request, this should be the 'since' token of that sync request,
-  /// or any later sync token. This allows the server to ensure its response
-  /// contains the keys advertised by the notification in that sync.
   Future<QueryKeysResponse> queryKeys(Map<String, List<String>> deviceKeys,
-      {int? timeout, String? token}) async {
+      {int? timeout}) async {
     final requestUri = Uri(path: '_matrix/client/v3/keys/query');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -1761,7 +2168,6 @@ class Api {
       'device_keys':
           deviceKeys.map((k, v) => MapEntry(k, v.map((v) => v).toList())),
       if (timeout != null) 'timeout': timeout,
-      if (token != null) 'token': token,
     }));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1771,10 +2177,14 @@ class Api {
     return QueryKeysResponse.fromJson(json as Map<String, Object?>);
   }
 
-  /// Publishes cross-signing signatures for the user.  The request body is a
-  /// map from user ID to key ID to signed JSON object.
+  /// Publishes cross-signing signatures for the user.
   ///
-  /// [signatures] The signatures to be published.
+  /// The signed JSON object must match the key previously uploaded or
+  /// retrieved for the given key ID, with the exception of the `signatures`
+  /// property, which contains the new signature(s) to add.
+  ///
+  /// [body] A map from user ID to key ID to signed JSON objects containing the
+  /// signatures to be published.
   ///
   /// returns `failures`:
   /// A map from user ID to key ID to an error for any signatures
@@ -1782,13 +2192,13 @@ class Api {
   /// be set to `M_INVALID_SIGNATURE`.
   Future<Map<String, Map<String, Map<String, Object?>>>?>
       uploadCrossSigningSignatures(
-          Map<String, Map<String, Map<String, Object?>>> signatures) async {
+          Map<String, Map<String, Map<String, Object?>>> body) async {
     final requestUri = Uri(path: '_matrix/client/v3/keys/signatures/upload');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(jsonEncode(signatures
-        .map((k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v))))));
+    request.bodyBytes = utf8.encode(jsonEncode(
+        body.map((k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v))))));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -1800,6 +2210,59 @@ class Api {
             (v as Map<String, Object?>)
                 .map((k, v) => MapEntry(k, v as Map<String, Object?>))))
         : null)(json['failures']);
+  }
+
+  /// Publishes end-to-end encryption keys for the device.
+  ///
+  /// [deviceKeys] Identity keys for the device. May be absent if no new
+  /// identity keys are required.
+  ///
+  /// [fallbackKeys] The public key which should be used if the device's one-time keys
+  /// are exhausted. The fallback key is not deleted once used, but should
+  /// be replaced when additional one-time keys are being uploaded. The
+  /// server will notify the client of the fallback key being used through
+  /// `/sync`.
+  ///
+  /// There can only be at most one key per algorithm uploaded, and the server
+  /// will only persist one key per algorithm.
+  ///
+  /// When uploading a signed key, an additional `fallback: true` key should
+  /// be included to denote that the key is a fallback key.
+  ///
+  /// May be absent if a new fallback key is not required.
+  ///
+  /// [oneTimeKeys] One-time public keys for "pre-key" messages.  The names of
+  /// the properties should be in the format
+  /// `<algorithm>:<key_id>`. The format of the key is determined
+  /// by the [key algorithm](https://spec.matrix.org/unstable/client-server-api/#key-algorithms).
+  ///
+  /// May be absent if no new one-time keys are required.
+  ///
+  /// returns `one_time_key_counts`:
+  /// For each key algorithm, the number of unclaimed one-time keys
+  /// of that type currently held on the server for this device.
+  /// If an algorithm is not listed, the count for that algorithm
+  /// is to be assumed zero.
+  Future<Map<String, int>> uploadKeys(
+      {MatrixDeviceKeys? deviceKeys,
+      Map<String, Object?>? fallbackKeys,
+      Map<String, Object?>? oneTimeKeys}) async {
+    final requestUri = Uri(path: '_matrix/client/v3/keys/upload');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (deviceKeys != null) 'device_keys': deviceKeys.toJson(),
+      if (fallbackKeys != null) 'fallback_keys': fallbackKeys,
+      if (oneTimeKeys != null) 'one_time_keys': oneTimeKeys,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return (json['one_time_key_counts'] as Map<String, Object?>)
+        .map((k, v) => MapEntry(k, v as int));
   }
 
   /// *Note that this API takes either a room ID or alias, unlike other membership APIs.*
@@ -1833,8 +2296,7 @@ class Api {
     final requestUri = Uri(
         path: '_matrix/client/v3/knock/${Uri.encodeComponent(roomIdOrAlias)}',
         queryParameters: {
-          if (serverName != null)
-            'server_name': serverName.map((v) => v).toList(),
+          if (serverName != null) 'server_name': serverName,
         });
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -1881,7 +2343,7 @@ class Api {
   /// invalidate any access token previously associated with that device. See
   /// [Relationship between access tokens and devices](https://spec.matrix.org/unstable/client-server-api/#relationship-between-access-tokens-and-devices).
   ///
-  /// [address] Third party identifier for the user.  Deprecated in favour of `identifier`.
+  /// [address] Third-party identifier for the user.  Deprecated in favour of `identifier`.
   ///
   /// [deviceId] ID of the client device. If this does not correspond to a
   /// known client device, a new device will be created. The given
@@ -1895,7 +2357,7 @@ class Api {
   /// [initialDeviceDisplayName] A display name to assign to the newly-created device. Ignored
   /// if `device_id` corresponds to a known device.
   ///
-  /// [medium] When logging in using a third party identifier, the medium of the identifier. Must be 'email'.  Deprecated in favour of `identifier`.
+  /// [medium] When logging in using a third-party identifier, the medium of the identifier. Must be 'email'.  Deprecated in favour of `identifier`.
   ///
   /// [password] Required when `type` is `m.login.password`. The user's
   /// password.
@@ -1906,8 +2368,12 @@ class Api {
   ///
   /// [type] The login type being used.
   ///
+  /// This must be a type returned in one of the flows of the
+  /// response of the [`GET /login`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3login)
+  /// endpoint, like `m.login.password` or `m.login.token`.
+  ///
   /// [user] The fully qualified user ID or just local part of the user ID, to log in.  Deprecated in favour of `identifier`.
-  Future<LoginResponse> login(LoginType type,
+  Future<LoginResponse> login(String type,
       {String? address,
       String? deviceId,
       AuthenticationIdentifier? identifier,
@@ -1930,7 +2396,7 @@ class Api {
       if (password != null) 'password': password,
       if (refreshToken != null) 'refresh_token': refreshToken,
       if (token != null) 'token': token,
-      'type': type.name,
+      'type': type,
       if (user != null) 'user': user,
     }));
     final response = await httpClient.send(request);
@@ -2177,7 +2643,7 @@ class Api {
   /// is supplied, rather than via an explicit flag.
   ///
   /// [server] The server to fetch the public room lists from. Defaults to the
-  /// local server.
+  /// local server. Case sensitive.
   Future<GetPublicRoomsResponse> getPublicRooms(
       {int? limit, String? since, String? server}) async {
     final requestUri =
@@ -2201,7 +2667,7 @@ class Api {
   /// of joined members, with the largest rooms first.
   ///
   /// [server] The server to fetch the public room lists from. Defaults to the
-  /// local server.
+  /// local server. Case sensitive.
   ///
   /// [filter] Filter to apply to the results.
   ///
@@ -2215,7 +2681,7 @@ class Api {
   /// of pagination is specified solely by which token is supplied,
   /// rather than via an explicit flag.
   ///
-  /// [thirdPartyInstanceId] The specific third party network/protocol to request from the
+  /// [thirdPartyInstanceId] The specific third-party network/protocol to request from the
   /// homeserver. Can only be used if `include_all_networks` is false.
   Future<QueryPublicRoomsResponse> queryPublicRooms(
       {String? server,
@@ -2578,8 +3044,8 @@ class Api {
   /// The server SHOULD register an account with a User ID based on the
   /// `username` provided, if any. Note that the grammar of Matrix User ID
   /// localparts is restricted, so the server MUST either map the provided
-  /// `username` onto a `user_id` in a logical manner, or reject
-  /// `username`\s which do not comply to the grammar, with
+  /// `username` onto a `user_id` in a logical manner, or reject any
+  /// `username` which does not comply to the grammar with
   /// `M_INVALID_USERNAME`.
   ///
   /// Matrix clients MUST NOT assume that localpart of the registered
@@ -2853,9 +3319,9 @@ class Api {
   ///
   /// [version] The backup in which to store the keys. Must be the current backup.
   ///
-  /// [backupData] The backup data.
+  /// [body] The backup data.
   Future<RoomKeysUpdateResponse> putRoomKeys(
-      String version, RoomKeys backupData) async {
+      String version, RoomKeys body) async {
     final requestUri =
         Uri(path: '_matrix/client/v3/room_keys/keys', queryParameters: {
       'version': version,
@@ -2863,7 +3329,7 @@ class Api {
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(jsonEncode(backupData.toJson()));
+    request.bodyBytes = utf8.encode(jsonEncode(body.toJson()));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -2922,9 +3388,9 @@ class Api {
   ///
   /// [version] The backup in which to store the keys. Must be the current backup.
   ///
-  /// [backupData] The backup data
+  /// [body] The backup data
   Future<RoomKeysUpdateResponse> putRoomKeysByRoomId(
-      String roomId, String version, RoomKeyBackup backupData) async {
+      String roomId, String version, RoomKeyBackup body) async {
     final requestUri = Uri(
         path: '_matrix/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}',
         queryParameters: {
@@ -2933,7 +3399,7 @@ class Api {
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(jsonEncode(backupData.toJson()));
+    request.bodyBytes = utf8.encode(jsonEncode(body.toJson()));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -3000,9 +3466,9 @@ class Api {
   ///
   /// [version] The backup in which to store the key. Must be the current backup.
   ///
-  /// [data] The key data.
+  /// [body] The key data.
   Future<RoomKeysUpdateResponse> putRoomKeyBySessionId(String roomId,
-      String sessionId, String version, KeyBackupData data) async {
+      String sessionId, String version, KeyBackupData body) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
@@ -3012,7 +3478,7 @@ class Api {
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(jsonEncode(data.toJson()));
+    request.bodyBytes = utf8.encode(jsonEncode(body.toJson()));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -3288,9 +3754,9 @@ class Api {
 
   /// *Note that there are two forms of this API, which are documented separately.
   /// This version of the API does not require that the inviter know the Matrix
-  /// identifier of the invitee, and instead relies on third party identifiers.
+  /// identifier of the invitee, and instead relies on third-party identifiers.
   /// The homeserver uses an identity server to perform the mapping from
-  /// third party identifier to a Matrix identifier. The other is documented in the*
+  /// third-party identifier to a Matrix identifier. The other is documented in the*
   /// [joining rooms section](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3roomsroomidinvite).
   ///
   /// This API invites a user to participate in a particular room.
@@ -3301,18 +3767,18 @@ class Api {
   /// join that room.
   ///
   /// If the identity server did know the Matrix user identifier for the
-  /// third party identifier, the homeserver will append a `m.room.member`
+  /// third-party identifier, the homeserver will append a `m.room.member`
   /// event to the room.
   ///
   /// If the identity server does not know a Matrix user identifier for the
-  /// passed third party identifier, the homeserver will issue an invitation
-  /// which can be accepted upon providing proof of ownership of the third
+  /// passed third-party identifier, the homeserver will issue an invitation
+  /// which can be accepted upon providing proof of ownership of the third-
   /// party identifier. This is achieved by the identity server generating a
   /// token, which it gives to the inviting homeserver. The homeserver will
   /// add an `m.room.third_party_invite` event into the graph for the room,
   /// containing that token.
   ///
-  /// When the invitee binds the invited third party identifier to a Matrix
+  /// When the invitee binds the invited third-party identifier to a Matrix
   /// user ID, the identity server will give the user a list of pending
   /// invitations, each containing:
   ///
@@ -3329,13 +3795,13 @@ class Api {
   ///
   /// [roomId] The room identifier (not alias) to which to invite the user.
   ///
-  /// [address] The invitee's third party identifier.
+  /// [address] The invitee's third-party identifier.
   ///
   /// [idAccessToken] An access token previously registered with the identity server. Servers
   /// can treat this as optional to distinguish between r0.5-compatible clients
   /// and this specification version.
   ///
-  /// [idServer] The hostname+port of the identity server which should be used for third party identifier lookups.
+  /// [idServer] The hostname+port of the identity server which should be used for third-party identifier lookups.
   ///
   /// [medium] The kind of address being passed in the address field, for example
   /// `email` (see [the list of recognised values](https://spec.matrix.org/unstable/appendices/#3pid-types)).
@@ -3363,7 +3829,7 @@ class Api {
   /// *Note that there are two forms of this API, which are documented separately.
   /// This version of the API requires that the inviter knows the Matrix
   /// identifier of the invitee. The other is documented in the
-  /// [third party invites](https://spec.matrix.org/unstable/client-server-api/#third-party-invites) section.*
+  /// [third-party invites](https://spec.matrix.org/unstable/client-server-api/#third-party-invites) section.*
   ///
   /// This API invites a user to participate in a particular room.
   /// They do not start participating in the room until they actually join the
@@ -3743,7 +4209,14 @@ class Api {
   }
 
   /// Reports an event as inappropriate to the server, which may then notify
-  /// the appropriate people.
+  /// the appropriate people. The caller must be joined to the room to report
+  /// it.
+  ///
+  /// It might be possible for clients to deduce whether an event exists by
+  /// timing the response, as only a report for an event that does exist
+  /// will require the homeserver to check whether a user is joined to
+  /// the room. To combat this, homeserver implementations should add
+  /// a random delay when generating a response.
   ///
   /// [roomId] The room in which the event being reported is located.
   ///
@@ -4134,7 +4607,7 @@ class Api {
     return SyncUpdate.fromJson(json as Map<String, Object?>);
   }
 
-  /// Retrieve an array of third party network locations from a Matrix room
+  /// Retrieve an array of third-party network locations from a Matrix room
   /// alias.
   ///
   /// [alias] The Matrix room alias to look up.
@@ -4158,23 +4631,23 @@ class Api {
   /// Requesting this endpoint with a valid protocol name results in a list
   /// of successful mapping results in a JSON array. Each result contains
   /// objects to represent the Matrix room or rooms that represent a portal
-  /// to this third party network. Each has the Matrix room alias string,
-  /// an identifier for the particular third party network protocol, and an
+  /// to this third-party network. Each has the Matrix room alias string,
+  /// an identifier for the particular third-party network protocol, and an
   /// object containing the network-specific fields that comprise this
   /// identifier. It should attempt to canonicalise the identifier as much
   /// as reasonably possible given the network type.
   ///
-  /// [protocol] The protocol used to communicate to the third party network.
+  /// [protocol] The protocol used to communicate to the third-party network.
   ///
-  /// [searchFields] One or more custom fields to help identify the third party
+  /// [fields] One or more custom fields to help identify the third-party
   /// location.
   Future<List<Location>> queryLocationByProtocol(String protocol,
-      {String? searchFields}) async {
+      {Map<String, String>? fields}) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/thirdparty/location/${Uri.encodeComponent(protocol)}',
         queryParameters: {
-          if (searchFields != null) 'searchFields': searchFields,
+          if (fields != null) ...fields,
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -4188,7 +4661,7 @@ class Api {
         .toList();
   }
 
-  /// Fetches the metadata from the homeserver about a particular third party protocol.
+  /// Fetches the metadata from the homeserver about a particular third-party protocol.
   ///
   /// [protocol] The name of the protocol.
   Future<Protocol> getProtocolMetadata(String protocol) async {
@@ -4221,7 +4694,7 @@ class Api {
         (k, v) => MapEntry(k, Protocol.fromJson(v as Map<String, Object?>)));
   }
 
-  /// Retrieve an array of third party users from a Matrix User ID.
+  /// Retrieve an array of third-party users from a Matrix User ID.
   ///
   /// [userid] The Matrix User ID to look up.
   Future<List<ThirdPartyUser>> queryUserByID(String userid) async {
@@ -4241,19 +4714,19 @@ class Api {
         .toList();
   }
 
-  /// Retrieve a Matrix User ID linked to a user on the third party service, given
+  /// Retrieve a Matrix User ID linked to a user on the third-party service, given
   /// a set of user parameters.
   ///
   /// [protocol] The name of the protocol.
   ///
   /// [fields] One or more custom fields that are passed to the AS to help identify the user.
   Future<List<ThirdPartyUser>> queryUserByProtocol(String protocol,
-      {String? fields}) async {
+      {Map<String, String>? fields}) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/thirdparty/user/${Uri.encodeComponent(protocol)}',
         queryParameters: {
-          if (fields != null) 'fields...': fields,
+          if (fields != null) ...fields,
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -4301,16 +4774,16 @@ class Api {
   /// [type] The event type of the account data to set. Custom types should be
   /// namespaced to avoid clashes.
   ///
-  /// [content] The content of the account data.
+  /// [body] The content of the account data.
   Future<void> setAccountData(
-      String userId, String type, Map<String, Object?> content) async {
+      String userId, String type, Map<String, Object?> body) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/account_data/${Uri.encodeComponent(type)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(jsonEncode(content));
+    request.bodyBytes = utf8.encode(jsonEncode(body));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -4325,20 +4798,20 @@ class Api {
   ///
   /// [userId] The id of the user uploading the filter. The access token must be authorized to make requests for this user id.
   ///
-  /// [filter] The filter to upload.
+  /// [body] The filter to upload.
   ///
   /// returns `filter_id`:
   /// The ID of the filter that was created. Cannot start
   /// with a `{` as this character is used to determine
   /// if the filter provided is inline JSON or a previously
   /// declared filter by homeservers on some APIs.
-  Future<String> defineFilter(String userId, Filter filter) async {
+  Future<String> defineFilter(String userId, Filter body) async {
     final requestUri = Uri(
         path: '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/filter');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(jsonEncode(filter.toJson()));
+    request.bodyBytes = utf8.encode(jsonEncode(body.toJson()));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -4433,16 +4906,16 @@ class Api {
   /// [type] The event type of the account data to set. Custom types should be
   /// namespaced to avoid clashes.
   ///
-  /// [content] The content of the account data.
+  /// [body] The content of the account data.
   Future<void> setAccountDataPerRoom(String userId, String roomId, String type,
-      Map<String, Object?> content) async {
+      Map<String, Object?> body) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/account_data/${Uri.encodeComponent(type)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(jsonEncode(content));
+    request.bodyBytes = utf8.encode(jsonEncode(body));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -4508,21 +4981,16 @@ class Api {
   ///
   /// [tag] The tag to add.
   ///
-  /// [order] A number in a range `[0,1]` describing a relative
-  /// position of the room under the given tag.
-  Future<void> setRoomTag(String userId, String roomId, String tag,
-      {double? order,
-      Map<String, Object?> additionalProperties = const {}}) async {
+  /// [body] Extra data for the tag, e.g. ordering.
+  Future<void> setRoomTag(
+      String userId, String roomId, String tag, Tag body) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(jsonEncode({
-      ...additionalProperties,
-      if (order != null) 'order': order,
-    }));
+    request.bodyBytes = utf8.encode(jsonEncode(body.toJson()));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -4591,13 +5059,20 @@ class Api {
   /// which has not yet landed in the spec. For example, a feature currently
   /// undergoing the proposal process may appear here and eventually be taken
   /// off this list once the feature lands in the spec and the server deems it
-  /// reasonable to do so. Servers may wish to keep advertising features here
-  /// after they've been released into the spec to give clients a chance to
-  /// upgrade appropriately. Additionally, clients should avoid using unstable
-  /// features in their stable releases.
+  /// reasonable to do so. Servers can choose to enable some features only for
+  /// some users, so clients should include authentication in the request to
+  /// get all the features available for the logged-in user. If no
+  /// authentication is provided, the server should only return the features
+  /// available to all users. Servers may wish to keep advertising features
+  /// here after they've been released into the spec to give clients a chance
+  /// to upgrade appropriately. Additionally, clients should avoid using
+  /// unstable features in their stable releases.
   Future<GetVersionsResponse> getVersions() async {
     final requestUri = Uri(path: '_matrix/client/versions');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
+    if (bearerToken != null) {
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    }
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -4606,6 +5081,41 @@ class Api {
     return GetVersionsResponse.fromJson(json as Map<String, Object?>);
   }
 
+  /// Creates a new `mxc://` URI, independently of the content being uploaded. The content must be provided later
+  /// via [`PUT /_matrix/media/v3/upload/{serverName}/{mediaId}`](https://spec.matrix.org/unstable/client-server-api/#put_matrixmediav3uploadservernamemediaid).
+  ///
+  /// The server may optionally enforce a maximum age for unused IDs,
+  /// and delete media IDs when the client doesn't start the upload in time,
+  /// or when the upload was interrupted and not resumed in time. The server
+  /// should include the maximum POSIX millisecond timestamp to complete the
+  /// upload in the `unused_expires_at` field in the response JSON. The
+  /// recommended default expiration is 24 hours which should be enough time
+  /// to accommodate users on poor connection who find a better connection to
+  /// complete the upload.
+  ///
+  /// As well as limiting the rate of requests to create `mxc://` URIs, the server
+  /// should limit the number of concurrent *pending media uploads* a given
+  /// user can have. A pending media upload is a created `mxc://` URI where (a)
+  /// the media has not yet been uploaded, and (b) has not yet expired (the
+  /// `unused_expires_at` timestamp has not yet passed). In both cases, the
+  /// server should respond with an HTTP 429 error with an errcode of
+  /// `M_LIMIT_EXCEEDED`.
+  Future<CreateContentResponse> createContent() async {
+    final requestUri = Uri(path: '_matrix/media/v1/create');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return CreateContentResponse.fromJson(json as Map<String, Object?>);
+  }
+
+  /// {{% boxes/note %}}
+  /// Replaced by [`GET /_matrix/client/v1/media/config`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv1mediaconfig).
+  /// {{% /boxes/note %}}
+  ///
   /// This endpoint allows clients to retrieve the configuration of the content
   /// repository, such as upload limitations.
   /// Clients SHOULD use this as a guide when using content repository endpoints.
@@ -4616,7 +5126,8 @@ class Api {
   /// between the client and the server may affect the apparent behaviour of content
   /// repository APIs, for example, proxies may enforce a lower upload size limit
   /// than is advertised by the server on this endpoint.
-  Future<ServerConfig> getConfig() async {
+  @deprecated
+  Future<MediaConfig> getConfig() async {
     final requestUri = Uri(path: '_matrix/media/v3/config');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -4625,31 +5136,56 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ServerConfig.fromJson(json as Map<String, Object?>);
+    return MediaConfig.fromJson(json as Map<String, Object?>);
   }
 
+  /// {{% boxes/note %}}
+  /// Replaced by [`GET /_matrix/client/v1/media/download/{serverName}/{mediaId}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv1mediadownloadservernamemediaid)
+  /// (requires authentication).
+  /// {{% /boxes/note %}}
+  ///
+  /// {{% boxes/warning %}}
+  /// {{< changed-in v="1.11" >}} This endpoint MAY return `404 M_NOT_FOUND`
+  /// for media which exists, but is after the server froze unauthenticated
+  /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
+  /// information.
+  /// {{% /boxes/warning %}}
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authority component).
   ///
   ///
-  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  /// [mediaId] The media ID from the `mxc://` URI (the path component).
   ///
   ///
-  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if
+  /// it is deemed remote. This is to prevent routing loops where the server
+  /// contacts itself.
+  ///
+  /// Defaults to `true` if not provided.
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
   ///
   ///
-  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if it is deemed
-  /// remote. This is to prevent routing loops where the server contacts itself. Defaults to
-  /// true if not provided.
+  /// [allowRedirect] Indicates to the server that it may return a 307 or 308 redirect
+  /// response that points at the relevant media content. When not explicitly
+  /// set to `true` the server must return the media content itself.
   ///
+  @deprecated
   Future<FileResponse> getContent(String serverName, String mediaId,
-      {bool? allowRemote}) async {
+      {bool? allowRemote, int? timeoutMs, bool? allowRedirect}) async {
     final requestUri = Uri(
         path:
             '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
         queryParameters: {
           if (allowRemote != null) 'allow_remote': allowRemote.toString(),
+          if (timeoutMs != null) 'timeout_ms': timeoutMs.toString(),
+          if (allowRedirect != null) 'allow_redirect': allowRedirect.toString(),
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -4657,33 +5193,60 @@ class Api {
         contentType: response.headers['content-type'], data: responseBody);
   }
 
+  /// {{% boxes/note %}}
+  /// Replaced by [`GET /_matrix/client/v1/media/download/{serverName}/{mediaId}/{fileName}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv1mediadownloadservernamemediaidfilename)
+  /// (requires authentication).
+  /// {{% /boxes/note %}}
+  ///
   /// This will download content from the content repository (same as
   /// the previous endpoint) but replace the target file name with the one
   /// provided by the caller.
   ///
-  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  /// {{% boxes/warning %}}
+  /// {{< changed-in v="1.11" >}} This endpoint MAY return `404 M_NOT_FOUND`
+  /// for media which exists, but is after the server froze unauthenticated
+  /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
+  /// information.
+  /// {{% /boxes/warning %}}
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authority component).
   ///
   ///
-  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  /// [mediaId] The media ID from the `mxc://` URI (the path component).
   ///
   ///
   /// [fileName] A filename to give in the `Content-Disposition` header.
   ///
-  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if it is deemed
-  /// remote. This is to prevent routing loops where the server contacts itself. Defaults to
-  /// true if not provided.
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if
+  /// it is deemed remote. This is to prevent routing loops where the server
+  /// contacts itself.
   ///
+  /// Defaults to `true` if not provided.
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  ///
+  /// [allowRedirect] Indicates to the server that it may return a 307 or 308 redirect
+  /// response that points at the relevant media content. When not explicitly
+  /// set to `true` the server must return the media content itself.
+  ///
+  @deprecated
   Future<FileResponse> getContentOverrideName(
       String serverName, String mediaId, String fileName,
-      {bool? allowRemote}) async {
+      {bool? allowRemote, int? timeoutMs, bool? allowRedirect}) async {
     final requestUri = Uri(
         path:
             '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}',
         queryParameters: {
           if (allowRemote != null) 'allow_remote': allowRemote.toString(),
+          if (timeoutMs != null) 'timeout_ms': timeoutMs.toString(),
+          if (allowRedirect != null) 'allow_redirect': allowRedirect.toString(),
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -4691,6 +5254,10 @@ class Api {
         contentType: response.headers['content-type'], data: responseBody);
   }
 
+  /// {{% boxes/note %}}
+  /// Replaced by [`GET /_matrix/client/v1/media/preview_url`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv1mediapreview_url).
+  /// {{% /boxes/note %}}
+  ///
   /// Get information about a URL for the client. Typically this is called when a
   /// client sees a URL in a message and wants to render a preview for the user.
   ///
@@ -4705,7 +5272,8 @@ class Api {
   /// [ts] The preferred point in time to return a preview for. The server may
   /// return a newer version if it does not have the requested version
   /// available.
-  Future<GetUrlPreviewResponse> getUrlPreview(Uri url, {int? ts}) async {
+  @deprecated
+  Future<PreviewForUrl> getUrlPreview(Uri url, {int? ts}) async {
     final requestUri =
         Uri(path: '_matrix/media/v3/preview_url', queryParameters: {
       'url': url.toString(),
@@ -4718,16 +5286,28 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetUrlPreviewResponse.fromJson(json as Map<String, Object?>);
+    return PreviewForUrl.fromJson(json as Map<String, Object?>);
   }
 
+  /// {{% boxes/note %}}
+  /// Replaced by [`GET /_matrix/client/v1/media/thumbnail/{serverName}/{mediaId}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv1mediathumbnailservernamemediaid)
+  /// (requires authentication).
+  /// {{% /boxes/note %}}
+  ///
   /// Download a thumbnail of content from the content repository.
   /// See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails) section for more information.
   ///
-  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  /// {{% boxes/warning %}}
+  /// {{< changed-in v="1.11" >}} This endpoint MAY return `404 M_NOT_FOUND`
+  /// for media which exists, but is after the server froze unauthenticated
+  /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
+  /// information.
+  /// {{% /boxes/warning %}}
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authority component).
   ///
   ///
-  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  /// [mediaId] The media ID from the `mxc://` URI (the path component).
   ///
   ///
   /// [width] The *desired* width of the thumbnail. The actual thumbnail may be
@@ -4739,12 +5319,47 @@ class Api {
   /// [method] The desired resizing method. See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails)
   /// section for more information.
   ///
-  /// [allowRemote] Indicates to the server that it should not attempt to fetch
-  /// the media if it is deemed remote. This is to prevent routing loops
-  /// where the server contacts itself. Defaults to true if not provided.
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if
+  /// it is deemed remote. This is to prevent routing loops where the server
+  /// contacts itself.
+  ///
+  /// Defaults to `true` if not provided.
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  ///
+  /// [allowRedirect] Indicates to the server that it may return a 307 or 308 redirect
+  /// response that points at the relevant media content. When not explicitly
+  /// set to `true` the server must return the media content itself.
+  ///
+  ///
+  /// [animated] Indicates preference for an animated thumbnail from the server, if possible. Animated
+  /// thumbnails typically use the content types `image/gif`, `image/png` (with APNG format),
+  /// `image/apng`, and `image/webp` instead of the common static `image/png` or `image/jpeg`
+  /// content types.
+  ///
+  /// When `true`, the server SHOULD return an animated thumbnail if possible and supported.
+  /// When `false`, the server MUST NOT return an animated thumbnail. For example, returning a
+  /// static `image/png` or `image/jpeg` thumbnail. When not provided, the server SHOULD NOT
+  /// return an animated thumbnail.
+  ///
+  /// Servers SHOULD prefer to return `image/webp` thumbnails when supporting animation.
+  ///
+  /// When `true` and the media cannot be animated, such as in the case of a JPEG or PDF, the
+  /// server SHOULD behave as though `animated` is `false`.
+  ///
+  @deprecated
   Future<FileResponse> getContentThumbnail(
       String serverName, String mediaId, int width, int height,
-      {Method? method, bool? allowRemote}) async {
+      {Method? method,
+      bool? allowRemote,
+      int? timeoutMs,
+      bool? allowRedirect,
+      bool? animated}) async {
     final requestUri = Uri(
         path:
             '_matrix/media/v3/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
@@ -4753,9 +5368,11 @@ class Api {
           'height': height.toString(),
           if (method != null) 'method': method.name,
           if (allowRemote != null) 'allow_remote': allowRemote.toString(),
+          if (timeoutMs != null) 'timeout_ms': timeoutMs.toString(),
+          if (allowRedirect != null) 'allow_redirect': allowRedirect.toString(),
+          if (animated != null) 'animated': animated.toString(),
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -4767,13 +5384,13 @@ class Api {
   ///
   /// [filename] The name of the file being uploaded
   ///
-  /// [content] The content to be uploaded.
+  /// [body]
   ///
   /// [contentType] The content type of the file being uploaded
   ///
   /// returns `content_uri`:
-  /// The [MXC URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the uploaded content.
-  Future<Uri> uploadContent(Uint8List content,
+  /// The [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the uploaded content.
+  Future<Uri> uploadContent(Uint8List body,
       {String? filename, String? contentType}) async {
     final requestUri = Uri(path: '_matrix/media/v3/upload', queryParameters: {
       if (filename != null) 'filename': filename,
@@ -4781,12 +5398,49 @@ class Api {
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     if (contentType != null) request.headers['content-type'] = contentType;
-    request.bodyBytes = content;
+    request.bodyBytes = body;
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return Uri.parse(json['content_uri'] as String);
+    return ((json['content_uri'] as String).startsWith('mxc://')
+        ? Uri.parse(json['content_uri'] as String)
+        : throw Exception('Uri not an mxc URI'));
+  }
+
+  /// This endpoint permits uploading content to an `mxc://` URI that was created
+  /// earlier via [POST /_matrix/media/v1/create](https://spec.matrix.org/unstable/client-server-api/#post_matrixmediav1create).
+  ///
+  /// [serverName] The server name from the `mxc://` URI returned by `POST /_matrix/media/v1/create` (the authority component).
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI returned by `POST /_matrix/media/v1/create` (the path component).
+  ///
+  ///
+  /// [filename] The name of the file being uploaded
+  ///
+  /// [body]
+  ///
+  /// [contentType] The content type of the file being uploaded
+  Future<Map<String, Object?>> uploadContentToMXC(
+      String serverName, String mediaId, Uint8List body,
+      {String? filename, String? contentType}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/media/v3/upload/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
+        queryParameters: {
+          if (filename != null) 'filename': filename,
+        });
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    if (contentType != null) request.headers['content-type'] = contentType;
+    request.bodyBytes = body;
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json as Map<String, Object?>;
   }
 }

@@ -85,6 +85,195 @@ class DiscoveryInformation {
 }
 
 ///
+@_NameSource('generated')
+@EnhancedEnum()
+enum Role {
+  @EnhancedEnumValue(name: 'm.role.admin')
+  mRoleAdmin,
+  @EnhancedEnumValue(name: 'm.role.security')
+  mRoleSecurity
+}
+
+/// A way to contact the server administrator.
+@_NameSource('spec')
+class Contact {
+  Contact({
+    this.emailAddress,
+    this.matrixId,
+    required this.role,
+  });
+
+  Contact.fromJson(Map<String, Object?> json)
+      : emailAddress =
+            ((v) => v != null ? v as String : null)(json['email_address']),
+        matrixId = ((v) => v != null ? v as String : null)(json['matrix_id']),
+        role = Role.values.fromString(json['role'] as String)!;
+  Map<String, Object?> toJson() {
+    final emailAddress = this.emailAddress;
+    final matrixId = this.matrixId;
+    return {
+      if (emailAddress != null) 'email_address': emailAddress,
+      if (matrixId != null) 'matrix_id': matrixId,
+      'role': role.name,
+    };
+  }
+
+  /// An email address to reach the administrator.
+  ///
+  /// At least one of `matrix_id` or `email_address` is
+  /// required.
+  String? emailAddress;
+
+  /// A [Matrix User ID](https://spec.matrix.org/unstable/appendices/#user-identifiers)
+  /// representing the administrator.
+  ///
+  /// It could be an account registered on a different
+  /// homeserver so the administrator can be contacted
+  /// when the homeserver is down.
+  ///
+  /// At least one of `matrix_id` or `email_address` is
+  /// required.
+  String? matrixId;
+
+  /// An informal description of what the contact methods
+  /// are used for.
+  ///
+  /// `m.role.admin` is a catch-all role for any queries
+  /// and `m.role.security` is intended for sensitive
+  /// requests.
+  ///
+  /// Unspecified roles are permitted through the use of
+  /// [Namespaced Identifiers](https://spec.matrix.org/unstable/appendices/#common-namespaced-identifier-grammar).
+  Role role;
+}
+
+///
+@_NameSource('generated')
+class GetWellknownSupportResponse {
+  GetWellknownSupportResponse({
+    this.contacts,
+    this.supportPage,
+  });
+
+  GetWellknownSupportResponse.fromJson(Map<String, Object?> json)
+      : contacts = ((v) => v != null
+            ? (v as List)
+                .map((v) => Contact.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['contacts']),
+        supportPage =
+            ((v) => v != null ? v as String : null)(json['support_page']);
+  Map<String, Object?> toJson() {
+    final contacts = this.contacts;
+    final supportPage = this.supportPage;
+    return {
+      if (contacts != null)
+        'contacts': contacts.map((v) => v.toJson()).toList(),
+      if (supportPage != null) 'support_page': supportPage,
+    };
+  }
+
+  /// Ways to contact the server administrator.
+  ///
+  /// At least one of `contacts` or `support_page` is required.
+  /// If only `contacts` is set, it must contain at least one
+  /// item.
+  List<Contact>? contacts;
+
+  /// The URL of a page to give users help specific to the
+  /// homeserver, like extra login/registration steps.
+  ///
+  /// At least one of `contacts` or `support_page` is required.
+  String? supportPage;
+}
+
+///
+@_NameSource('generated')
+class GenerateLoginTokenResponse {
+  GenerateLoginTokenResponse({
+    required this.expiresInMs,
+    required this.loginToken,
+  });
+
+  GenerateLoginTokenResponse.fromJson(Map<String, Object?> json)
+      : expiresInMs = json['expires_in_ms'] as int,
+        loginToken = json['login_token'] as String;
+  Map<String, Object?> toJson() => {
+        'expires_in_ms': expiresInMs,
+        'login_token': loginToken,
+      };
+
+  /// The time remaining in milliseconds until the homeserver will no longer accept the token. `120000`
+  /// (2 minutes) is recommended as a default.
+  int expiresInMs;
+
+  /// The login token for the `m.login.token` login flow.
+  String loginToken;
+}
+
+///
+@_NameSource('rule override generated')
+class MediaConfig {
+  MediaConfig({
+    this.mUploadSize,
+  });
+
+  MediaConfig.fromJson(Map<String, Object?> json)
+      : mUploadSize =
+            ((v) => v != null ? v as int : null)(json['m.upload.size']);
+  Map<String, Object?> toJson() {
+    final mUploadSize = this.mUploadSize;
+    return {
+      if (mUploadSize != null) 'm.upload.size': mUploadSize,
+    };
+  }
+
+  /// The maximum size an upload can be in bytes.
+  /// Clients SHOULD use this as a guide when uploading content.
+  /// If not listed or null, the size limit should be treated as unknown.
+  int? mUploadSize;
+}
+
+///
+@_NameSource('rule override generated')
+class PreviewForUrl {
+  PreviewForUrl({
+    this.matrixImageSize,
+    this.ogImage,
+  });
+
+  PreviewForUrl.fromJson(Map<String, Object?> json)
+      : matrixImageSize =
+            ((v) => v != null ? v as int : null)(json['matrix:image:size']),
+        ogImage = ((v) =>
+            v != null ? Uri.parse(v as String) : null)(json['og:image']);
+  Map<String, Object?> toJson() {
+    final matrixImageSize = this.matrixImageSize;
+    final ogImage = this.ogImage;
+    return {
+      if (matrixImageSize != null) 'matrix:image:size': matrixImageSize,
+      if (ogImage != null) 'og:image': ogImage.toString(),
+    };
+  }
+
+  /// The byte-size of the image. Omitted if there is no image attached.
+  int? matrixImageSize;
+
+  /// An [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the image. Omitted if there is no image.
+  Uri? ogImage;
+}
+
+///
+@_NameSource('generated')
+@EnhancedEnum()
+enum Method {
+  @EnhancedEnumValue(name: 'crop')
+  crop,
+  @EnhancedEnumValue(name: 'scale')
+  scale
+}
+
+///
 @_NameSource('spec')
 class PublicRoomsChunk {
   PublicRoomsChunk({
@@ -170,13 +359,13 @@ class PublicRoomsChunk {
 
 ///
 @_NameSource('spec')
-class ChildRoomsChunk {
-  ChildRoomsChunk({
+class SpaceHierarchyRoomsChunk {
+  SpaceHierarchyRoomsChunk({
     required this.childrenState,
     this.roomType,
   });
 
-  ChildRoomsChunk.fromJson(Map<String, Object?> json)
+  SpaceHierarchyRoomsChunk.fromJson(Map<String, Object?> json)
       : childrenState = (json['children_state'] as List)
             .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
             .toList(),
@@ -201,7 +390,7 @@ class ChildRoomsChunk {
 
 ///
 @_NameSource('rule override generated')
-class SpaceRoomsChunk implements PublicRoomsChunk, ChildRoomsChunk {
+class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
   SpaceRoomsChunk({
     this.avatarUrl,
     this.canonicalAlias,
@@ -352,6 +541,7 @@ class GetRelatingEventsResponse {
     required this.chunk,
     this.nextBatch,
     this.prevBatch,
+    this.recursionDepth,
   });
 
   GetRelatingEventsResponse.fromJson(Map<String, Object?> json)
@@ -359,91 +549,18 @@ class GetRelatingEventsResponse {
             .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
             .toList(),
         nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']);
+        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+        recursionDepth =
+            ((v) => v != null ? v as int : null)(json['recursion_depth']);
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
     final prevBatch = this.prevBatch;
+    final recursionDepth = this.recursionDepth;
     return {
       'chunk': chunk.map((v) => v.toJson()).toList(),
       if (nextBatch != null) 'next_batch': nextBatch,
       if (prevBatch != null) 'prev_batch': prevBatch,
-    };
-  }
-
-  /// The child events of the requested event, ordered topologically most-recent first.
-  List<MatrixEvent> chunk;
-
-  /// An opaque string representing a pagination token. The absence of this token
-  /// means there are no more results to fetch and the client should stop paginating.
-  String? nextBatch;
-
-  /// An opaque string representing a pagination token. The absence of this token
-  /// means this is the start of the result set, i.e. this is the first batch/page.
-  String? prevBatch;
-}
-
-///
-@_NameSource('generated')
-class GetRelatingEventsWithRelTypeResponse {
-  GetRelatingEventsWithRelTypeResponse({
-    required this.chunk,
-    this.nextBatch,
-    this.prevBatch,
-  });
-
-  GetRelatingEventsWithRelTypeResponse.fromJson(Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
-            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-            .toList(),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']);
-  Map<String, Object?> toJson() {
-    final nextBatch = this.nextBatch;
-    final prevBatch = this.prevBatch;
-    return {
-      'chunk': chunk.map((v) => v.toJson()).toList(),
-      if (nextBatch != null) 'next_batch': nextBatch,
-      if (prevBatch != null) 'prev_batch': prevBatch,
-    };
-  }
-
-  /// The child events of the requested event, ordered topologically
-  /// most-recent first. The events returned will match the `relType`
-  /// supplied in the URL.
-  List<MatrixEvent> chunk;
-
-  /// An opaque string representing a pagination token. The absence of this token
-  /// means there are no more results to fetch and the client should stop paginating.
-  String? nextBatch;
-
-  /// An opaque string representing a pagination token. The absence of this token
-  /// means this is the start of the result set, i.e. this is the first batch/page.
-  String? prevBatch;
-}
-
-///
-@_NameSource('generated')
-class GetRelatingEventsWithRelTypeAndEventTypeResponse {
-  GetRelatingEventsWithRelTypeAndEventTypeResponse({
-    required this.chunk,
-    this.nextBatch,
-    this.prevBatch,
-  });
-
-  GetRelatingEventsWithRelTypeAndEventTypeResponse.fromJson(
-      Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
-            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-            .toList(),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']);
-  Map<String, Object?> toJson() {
-    final nextBatch = this.nextBatch;
-    final prevBatch = this.prevBatch;
-    return {
-      'chunk': chunk.map((v) => v.toJson()).toList(),
-      if (nextBatch != null) 'next_batch': nextBatch,
-      if (prevBatch != null) 'prev_batch': prevBatch,
+      if (recursionDepth != null) 'recursion_depth': recursionDepth,
     };
   }
 
@@ -459,6 +576,110 @@ class GetRelatingEventsWithRelTypeAndEventTypeResponse {
   /// An opaque string representing a pagination token. The absence of this token
   /// means this is the start of the result set, i.e. this is the first batch/page.
   String? prevBatch;
+
+  /// If the `recurse` parameter was supplied by the client, this response field is
+  /// mandatory and gives the actual depth to which the server recursed. If the client
+  /// did not specify the `recurse` parameter, this field must be absent.
+  int? recursionDepth;
+}
+
+///
+@_NameSource('generated')
+class GetRelatingEventsWithRelTypeResponse {
+  GetRelatingEventsWithRelTypeResponse({
+    required this.chunk,
+    this.nextBatch,
+    this.prevBatch,
+    this.recursionDepth,
+  });
+
+  GetRelatingEventsWithRelTypeResponse.fromJson(Map<String, Object?> json)
+      : chunk = (json['chunk'] as List)
+            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+            .toList(),
+        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+        recursionDepth =
+            ((v) => v != null ? v as int : null)(json['recursion_depth']);
+  Map<String, Object?> toJson() {
+    final nextBatch = this.nextBatch;
+    final prevBatch = this.prevBatch;
+    final recursionDepth = this.recursionDepth;
+    return {
+      'chunk': chunk.map((v) => v.toJson()).toList(),
+      if (nextBatch != null) 'next_batch': nextBatch,
+      if (prevBatch != null) 'prev_batch': prevBatch,
+      if (recursionDepth != null) 'recursion_depth': recursionDepth,
+    };
+  }
+
+  /// The child events of the requested event, ordered topologically most-recent
+  /// first. The events returned will match the `relType` and `eventType` supplied
+  /// in the URL.
+  List<MatrixEvent> chunk;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means there are no more results to fetch and the client should stop paginating.
+  String? nextBatch;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means this is the start of the result set, i.e. this is the first batch/page.
+  String? prevBatch;
+
+  /// If the `recurse` parameter was supplied by the client, this response field is
+  /// mandatory and gives the actual depth to which the server recursed. If the client
+  /// did not specify the `recurse` parameter, this field must be absent.
+  int? recursionDepth;
+}
+
+///
+@_NameSource('generated')
+class GetRelatingEventsWithRelTypeAndEventTypeResponse {
+  GetRelatingEventsWithRelTypeAndEventTypeResponse({
+    required this.chunk,
+    this.nextBatch,
+    this.prevBatch,
+    this.recursionDepth,
+  });
+
+  GetRelatingEventsWithRelTypeAndEventTypeResponse.fromJson(
+      Map<String, Object?> json)
+      : chunk = (json['chunk'] as List)
+            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+            .toList(),
+        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+        recursionDepth =
+            ((v) => v != null ? v as int : null)(json['recursion_depth']);
+  Map<String, Object?> toJson() {
+    final nextBatch = this.nextBatch;
+    final prevBatch = this.prevBatch;
+    final recursionDepth = this.recursionDepth;
+    return {
+      'chunk': chunk.map((v) => v.toJson()).toList(),
+      if (nextBatch != null) 'next_batch': nextBatch,
+      if (prevBatch != null) 'prev_batch': prevBatch,
+      if (recursionDepth != null) 'recursion_depth': recursionDepth,
+    };
+  }
+
+  /// The child events of the requested event, ordered topologically most-recent
+  /// first. The events returned will match the `relType` and `eventType` supplied
+  /// in the URL.
+  List<MatrixEvent> chunk;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means there are no more results to fetch and the client should stop paginating.
+  String? nextBatch;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means this is the start of the result set, i.e. this is the first batch/page.
+  String? prevBatch;
+
+  /// If the `recurse` parameter was supplied by the client, this response field is
+  /// mandatory and gives the actual depth to which the server recursed. If the client
+  /// did not specify the `recurse` parameter, this field must be absent.
+  int? recursionDepth;
 }
 
 ///
@@ -492,8 +713,8 @@ class GetThreadRootsResponse {
     };
   }
 
-  /// The thread roots, ordered by the `latest_event` in each event's aggregation bundle. All events
-  /// returned include bundled [aggregations](https://spec.matrix.org/unstable/client-server-api/#aggregations).
+  /// The thread roots, ordered by the `latest_event` in each event's aggregated children. All events
+  /// returned include bundled [aggregations](https://spec.matrix.org/unstable/client-server-api/#aggregations-of-child-events).
   ///
   /// If the thread root event was sent by an [ignored user](https://spec.matrix.org/unstable/client-server-api/#ignoring-users), the
   /// event is returned redacted to the caller. This is to simulate the same behaviour of a client doing
@@ -564,13 +785,13 @@ class ThirdPartyIdentifier {
         'validated_at': validatedAt,
       };
 
-  /// The timestamp, in milliseconds, when the homeserver associated the third party identifier with the user.
+  /// The timestamp, in milliseconds, when the homeserver associated the third-party identifier with the user.
   int addedAt;
 
-  /// The third party identifier address.
+  /// The third-party identifier address.
   String address;
 
-  /// The medium of the third party identifier.
+  /// The medium of the third-party identifier.
   ThirdPartyIdentifierMedium medium;
 
   /// The timestamp, in milliseconds, when the identifier was
@@ -961,7 +1182,7 @@ class Invite3pid {
         'medium': medium,
       };
 
-  /// The invitee's third party identifier.
+  /// The invitee's third-party identifier.
   String address;
 
   /// An access token previously registered with the identity server. Servers
@@ -969,7 +1190,7 @@ class Invite3pid {
   /// and this specification version.
   String idAccessToken;
 
-  /// The hostname+port of the identity server which should be used for third party identifier lookups.
+  /// The hostname+port of the identity server which should be used for third-party identifier lookups.
   String idServer;
 
   /// The kind of address being passed in the address field, for example `email`
@@ -1155,7 +1376,7 @@ class PeekEventsResponse {
 }
 
 /// A signature of an `m.third_party_invite` token to prove that this user
-/// owns a third party identity which has been invited to the room.
+/// owns a third-party identity which has been invited to the room.
 @_NameSource('spec')
 class ThirdPartySigned {
   ThirdPartySigned({
@@ -1374,33 +1595,33 @@ class QueryKeysResponse {
 @_NameSource('spec')
 class LoginFlow {
   LoginFlow({
-    this.type,
+    this.getLoginToken,
+    required this.type,
   });
 
   LoginFlow.fromJson(Map<String, Object?> json)
-      : type = ((v) => v != null ? v as String : null)(json['type']);
+      : getLoginToken =
+            ((v) => v != null ? v as bool : null)(json['get_login_token']),
+        type = json['type'] as String;
   Map<String, Object?> toJson() {
-    final type = this.type;
+    final getLoginToken = this.getLoginToken;
     return {
-      if (type != null) 'type': type,
+      if (getLoginToken != null) 'get_login_token': getLoginToken,
+      'type': type,
     };
   }
 
+  /// If `type` is `m.login.token`, an optional field to indicate
+  /// to the unauthenticated client that the homeserver supports
+  /// the [`POST /login/get_token`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv1loginget_token)
+  /// endpoint. Note that supporting the endpoint does not
+  /// necessarily indicate that the user attempting to log in will
+  /// be able to generate such a token.
+  bool? getLoginToken;
+
   /// The login type. This is supplied as the `type` when
   /// logging in.
-  String? type;
-}
-
-///
-@_NameSource('rule override generated')
-@EnhancedEnum()
-enum LoginType {
-  @EnhancedEnumValue(name: 'm.login.password')
-  mLoginPassword,
-  @EnhancedEnumValue(name: 'm.login.token')
-  mLoginToken,
-  @EnhancedEnumValue(name: 'org.matrix.login.jwt')
-  mLoginJWT
+  String type;
 }
 
 ///
@@ -1713,7 +1934,9 @@ class PublicRoomQueryFilter {
       : genericSearchTerm = ((v) =>
             v != null ? v as String : null)(json['generic_search_term']),
         roomTypes = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
+            ? (v as List)
+                .map((v) => ((v) => v != null ? v as String : null)(v))
+                .toList()
             : null)(json['room_types']);
   Map<String, Object?> toJson() {
     final genericSearchTerm = this.genericSearchTerm;
@@ -1732,7 +1955,7 @@ class PublicRoomQueryFilter {
   /// for. To include rooms without a room type, specify `null` within this
   /// list. When not specified, all applicable rooms (regardless of type)
   /// are returned.
-  List<String>? roomTypes;
+  List<String?>? roomTypes;
 }
 
 /// A list of the rooms on the server.
@@ -1929,22 +2152,26 @@ class PushCondition {
     this.key,
     required this.kind,
     this.pattern,
+    this.value,
   });
 
   PushCondition.fromJson(Map<String, Object?> json)
       : is$ = ((v) => v != null ? v as String : null)(json['is']),
         key = ((v) => v != null ? v as String : null)(json['key']),
         kind = json['kind'] as String,
-        pattern = ((v) => v != null ? v as String : null)(json['pattern']);
+        pattern = ((v) => v != null ? v as String : null)(json['pattern']),
+        value = ((v) => v != null ? v as Object? : null)(json['value']);
   Map<String, Object?> toJson() {
     final is$ = this.is$;
     final key = this.key;
     final pattern = this.pattern;
+    final value = this.value;
     return {
       if (is$ != null) 'is': is$,
       if (key != null) 'key': key,
       'kind': kind,
       if (pattern != null) 'pattern': pattern,
+      if (value != null) 'value': value,
     };
   }
 
@@ -1954,8 +2181,8 @@ class PushCondition {
   /// so forth. If no prefix is present, this parameter defaults to ==.
   String? is$;
 
-  /// Required for `event_match` conditions. The dot-separated field of the
-  /// event to match.
+  /// Required for `event_match`, `event_property_is` and `event_property_contains`
+  /// conditions. The dot-separated field of the event to match.
   ///
   /// Required for `sender_notification_permission` conditions. The field in
   /// the power level event the user needs a minimum power level for. Fields
@@ -1963,13 +2190,18 @@ class PushCondition {
   /// event's `content`.
   String? key;
 
-  /// The kind of condition to apply. See [conditions](https://spec.matrix.org/unstable/client-server-api/#conditions) for
+  /// The kind of condition to apply. See [conditions](https://spec.matrix.org/unstable/client-server-api/#conditions-1) for
   /// more information on the allowed kinds and how they work.
   String kind;
 
-  /// Required for `event_match` conditions. The glob-style pattern to
-  /// match against.
+  /// Required for `event_match` conditions. The [glob-style pattern](https://spec.matrix.org/unstable/appendices#glob-style-matching)
+  /// to match against.
   String? pattern;
+
+  /// Required for `event_property_is` and `event_property_contains` conditions.
+  /// A non-compound [canonical JSON](https://spec.matrix.org/unstable/appendices#canonical-json) value to match
+  /// against.
+  Object? value;
 }
 
 ///
@@ -2023,8 +2255,8 @@ class PushRule {
   /// Whether the push rule is enabled or not.
   bool enabled;
 
-  /// The glob-style pattern to match against.  Only applicable to `content`
-  /// rules.
+  /// The [glob-style pattern](https://spec.matrix.org/unstable/appendices#glob-style-matching) to match against.
+  /// Only applicable to `content` rules.
   String? pattern;
 
   /// The ID of this rule.
@@ -2542,7 +2774,7 @@ class RoomMember {
     };
   }
 
-  /// The mxc avatar url of the user this object is representing.
+  /// The avatar of the user this object is representing, as an [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris).
   Uri? avatarUrl;
 
   /// The display name of the user this object is representing.
@@ -2724,7 +2956,11 @@ class EventFilter {
     };
   }
 
-  /// The maximum number of events to return.
+  /// The maximum number of events to return, must be an integer greater than 0.
+  ///
+  /// Servers should apply a default value, and impose a maximum value to avoid
+  /// resource exhaustion.
+  ///
   int? limit;
 
   /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `'senders'` filter.
@@ -2887,7 +3123,11 @@ class SearchFilter implements EventFilter, RoomEventFilter {
     };
   }
 
-  /// The maximum number of events to return.
+  /// The maximum number of events to return, must be an integer greater than 0.
+  ///
+  /// Servers should apply a default value, and impose a maximum value to avoid
+  /// resource exhaustion.
+  ///
   @override
   int? limit;
 
@@ -3245,7 +3485,7 @@ class SearchResultsEventContext {
   /// The historic profile information of the
   /// users that sent the events returned.
   ///
-  /// The `string` key is the user ID for which
+  /// The key is the user ID for which
   /// the profile belongs to.
   Map<String, UserProfile>? profileInfo;
 
@@ -3374,7 +3614,7 @@ class ResultRoomEvents {
   /// This is included if the request had the
   /// `include_state` key set with a value of `true`.
   ///
-  /// The `string` key is the room ID for which the `State
+  /// The key is the room ID for which the `State
   /// Event` array belongs to.
   Map<String, List<MatrixEvent>>? state;
 }
@@ -3441,10 +3681,10 @@ class Location {
   /// An alias for a matrix room.
   String alias;
 
-  /// Information used to identify this third party location.
+  /// Information used to identify this third-party location.
   Map<String, Object?> fields;
 
-  /// The protocol ID that the third party location is a part of.
+  /// The protocol ID that the third-party location is a part of.
   String protocol;
 }
 
@@ -3549,7 +3789,7 @@ class Protocol {
   /// May be an empty object if no fields are defined.
   Map<String, FieldType> fieldTypes;
 
-  /// A content URI representing an icon for the third party protocol.
+  /// A content URI representing an icon for the third-party protocol.
   String icon;
 
   /// A list of objects representing independent instances of configuration.
@@ -3557,13 +3797,13 @@ class Protocol {
   /// same application service.
   List<ProtocolInstance> instances;
 
-  /// Fields which may be used to identify a third party location. These should be
+  /// Fields which may be used to identify a third-party location. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the name of a channel.
   List<String> locationFields;
 
-  /// Fields which may be used to identify a third party user. These should be
+  /// Fields which may be used to identify a third-party user. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the nickname of a user.
@@ -3589,13 +3829,13 @@ class ThirdPartyUser {
         'userid': userid,
       };
 
-  /// Information used to identify this third party location.
+  /// Information used to identify this third-party location.
   Map<String, Object?> fields;
 
-  /// The protocol ID that the third party location is a part of.
+  /// The protocol ID that the third-party location is a part of.
   String protocol;
 
-  /// A Matrix User ID represting a third party user.
+  /// A Matrix User ID represting a third-party user.
   String userid;
 }
 
@@ -3684,7 +3924,11 @@ class StateFilter implements EventFilter, RoomEventFilter {
     };
   }
 
-  /// The maximum number of events to return.
+  /// The maximum number of events to return, must be an integer greater than 0.
+  ///
+  /// Servers should apply a default value, and impose a maximum value to avoid
+  /// resource exhaustion.
+  ///
   @override
   int? limit;
 
@@ -3857,7 +4101,7 @@ class Filter {
   /// The user account data that isn't associated with rooms to include.
   EventFilter? accountData;
 
-  /// List of event fields to include. If this list is absent then all fields are included. The entries may include '.' characters to indicate sub-fields. So ['content.body'] will include the 'body' field of the 'content' object. A literal '.' character in a field name may be escaped using a '\\'. A server may include more fields than were requested.
+  /// List of event fields to include. If this list is absent then all fields are included. The entries are [dot-separated paths for each property](https://spec.matrix.org/unstable/appendices#dot-separated-property-paths) to include. So ['content.body'] will include the 'body' field of the 'content' object. A server may include more fields than were requested.
   List<String>? eventFields;
 
   /// The format to use for events. 'client' will return the events in a format suitable for clients. 'federation' will return the raw event as received over federation. The default is 'client'.
@@ -3963,7 +4207,7 @@ class Profile {
     };
   }
 
-  /// The avatar url, as an MXC, if one exists.
+  /// The avatar url, as an [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris), if one exists.
   Uri? avatarUrl;
 
   /// The display name of the user, if one exists.
@@ -4065,63 +4309,32 @@ class GetVersionsResponse {
 }
 
 ///
-@_NameSource('rule override generated')
-class ServerConfig {
-  ServerConfig({
-    this.mUploadSize,
+@_NameSource('generated')
+class CreateContentResponse {
+  CreateContentResponse({
+    required this.contentUri,
+    this.unusedExpiresAt,
   });
 
-  ServerConfig.fromJson(Map<String, Object?> json)
-      : mUploadSize =
-            ((v) => v != null ? v as int : null)(json['m.upload.size']);
+  CreateContentResponse.fromJson(Map<String, Object?> json)
+      : contentUri = ((json['content_uri'] as String).startsWith('mxc://')
+            ? Uri.parse(json['content_uri'] as String)
+            : throw Exception('Uri not an mxc URI')),
+        unusedExpiresAt =
+            ((v) => v != null ? v as int : null)(json['unused_expires_at']);
   Map<String, Object?> toJson() {
-    final mUploadSize = this.mUploadSize;
+    final unusedExpiresAt = this.unusedExpiresAt;
     return {
-      if (mUploadSize != null) 'm.upload.size': mUploadSize,
+      'content_uri': contentUri.toString(),
+      if (unusedExpiresAt != null) 'unused_expires_at': unusedExpiresAt,
     };
   }
 
-  /// The maximum size an upload can be in bytes.
-  /// Clients SHOULD use this as a guide when uploading content.
-  /// If not listed or null, the size limit should be treated as unknown.
-  int? mUploadSize;
-}
+  /// The [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) at
+  /// which the content will be available, once it is uploaded.
+  Uri contentUri;
 
-///
-@_NameSource('generated')
-class GetUrlPreviewResponse {
-  GetUrlPreviewResponse({
-    this.matrixImageSize,
-    this.ogImage,
-  });
-
-  GetUrlPreviewResponse.fromJson(Map<String, Object?> json)
-      : matrixImageSize =
-            ((v) => v != null ? v as int : null)(json['matrix:image:size']),
-        ogImage = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['og:image']);
-  Map<String, Object?> toJson() {
-    final matrixImageSize = this.matrixImageSize;
-    final ogImage = this.ogImage;
-    return {
-      if (matrixImageSize != null) 'matrix:image:size': matrixImageSize,
-      if (ogImage != null) 'og:image': ogImage.toString(),
-    };
-  }
-
-  /// The byte-size of the image. Omitted if there is no image attached.
-  int? matrixImageSize;
-
-  /// An [MXC URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the image. Omitted if there is no image.
-  Uri? ogImage;
-}
-
-///
-@_NameSource('generated')
-@EnhancedEnum()
-enum Method {
-  @EnhancedEnumValue(name: 'crop')
-  crop,
-  @EnhancedEnumValue(name: 'scale')
-  scale
+  /// The timestamp (in milliseconds since the unix epoch) when the
+  /// generated media id will expire, if media is not uploaded.
+  int? unusedExpiresAt;
 }
