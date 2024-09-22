@@ -663,9 +663,6 @@ class Room {
     return sendEvent(event, txid: txid);
   }
 
-  final Map<String, MatrixFile> sendingFilePlaceholders = {};
-  final Map<String, MatrixImageFile> sendingFileThumbnails = {};
-
   /// Sends a [file] to this room after uploading it. Returns the mxc uri of
   /// the uploaded file. If [waitUntilSent] is true, the future will wait until
   /// the message event has received the server. Otherwise the future will only
@@ -689,10 +686,6 @@ class Room {
     String? threadLastEventId,
   }) async {
     txid ??= client.generateUniqueTransactionId();
-    sendingFilePlaceholders[txid] = file;
-    if (thumbnail != null) {
-      sendingFileThumbnails[txid] = thumbnail;
-    }
 
     // Create a fake Event object as a placeholder for the uploading file:
     final syncUpdate = SyncUpdate(
@@ -729,6 +722,19 @@ class Room {
         },
       ),
     );
+    await _handleFakeSync(syncUpdate);
+    await client.database?.storeFile(
+      Uri.parse('com.famedly.sending_attachment://file/$txid'),
+      file.bytes,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+    if (thumbnail != null) {
+      await client.database?.storeFile(
+        Uri.parse('com.famedly.sending_attachment://thumbnail/$txid'),
+        file.bytes,
+        DateTime.now().millisecondsSinceEpoch,
+      );
+    }
 
     MatrixFile uploadFile = file; // ignore: omit_local_variable_types
     // computing the thumbnail in case we can
@@ -883,8 +889,13 @@ class Room {
       threadRootEventId: threadRootEventId,
       threadLastEventId: threadLastEventId,
     );
-    sendingFilePlaceholders.remove(txid);
-    sendingFileThumbnails.remove(txid);
+    await client.database?.deleteFile(
+      Uri.parse('com.famedly.sending_attachment://file/$txid'),
+    );
+    await client.database?.deleteFile(
+      Uri.parse('com.famedly.sending_attachment://thumbnail/$txid'),
+    );
+
     return eventId;
   }
 
