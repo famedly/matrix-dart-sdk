@@ -28,7 +28,7 @@ import 'fake_client.dart';
 
 void main() {
   /// All Tests related to the Event
-  group('Event', tags: 'olm', () {
+  group('Event', () {
     Logs().level = Level.error;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -269,7 +269,7 @@ void main() {
       await matrix.dispose(closeDatabase: true);
     });
 
-    test('requestKey', () async {
+    test('requestKey', tags: 'olm', () async {
       final matrix = Client('testclient', httpClient: FakeMatrixApi());
       await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
@@ -310,7 +310,7 @@ void main() {
 
       await matrix.dispose(closeDatabase: true);
     });
-    test('requestKey', () async {
+    test('requestKey', tags: 'olm', () async {
       jsonObj['state_key'] = '@alice:example.com';
       final event = Event.fromJson(
           jsonObj, Room(id: '!localpart:server.abc', client: client));
@@ -1394,6 +1394,7 @@ void main() {
     });
     test(
       'encrypted attachments',
+      tags: 'olm',
       () async {
         final FILE_BUFF_ENC =
             Uint8List.fromList([0x3B, 0x6B, 0xB2, 0x8C, 0xAF]);
@@ -1504,7 +1505,7 @@ void main() {
         await room.client.dispose(closeDatabase: true);
       },
     );
-    test('downloadAndDecryptAttachment store', () async {
+    test('downloadAndDecryptAttachment store', tags: 'olm', () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       var serverHits = 0;
       Future<Uint8List> downloadCallback(Uri uri) async {
@@ -1546,7 +1547,7 @@ void main() {
       await room.client.dispose(closeDatabase: true);
     });
 
-    test('downloadAndDecryptAttachment store only', () async {
+    test('downloadAndDecryptAttachment store only', tags: 'olm', () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       var serverHits = 0;
       Future<Uint8List> downloadCallback(Uri uri) async {
@@ -1595,7 +1596,8 @@ void main() {
       await room.client.dispose(closeDatabase: true);
     });
 
-    test('downloadAndDecryptAttachment store only without file', () async {
+    test('downloadAndDecryptAttachment store only without file', tags: 'olm',
+        () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       var serverHits = 0;
       Future<Uint8List> downloadCallback(Uri uri) async {
