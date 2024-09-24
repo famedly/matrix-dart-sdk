@@ -1200,6 +1200,35 @@ void main() {
       }, room);
       expect(event.plaintextBody, '**blah**');
     });
+
+    test('body', () {
+      final event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': 'blah',
+          'msgtype': 'm.text',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>blub</b>',
+        },
+        'event_id': '\$source',
+        'sender': '@alice:example.org',
+      }, room);
+      expect(event.body, 'blah');
+
+      final event2 = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': '',
+          'msgtype': 'm.text',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>blub</b>',
+        },
+        'event_id': '\$source',
+        'sender': '@alice:example.org',
+      }, room);
+      expect(event2.body, 'm.room.message');
+    });
+
     test('getDisplayEvent', () {
       final room = Room(id: '!1234', client: client);
       var event = Event.fromJson({

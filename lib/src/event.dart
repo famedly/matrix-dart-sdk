@@ -292,7 +292,6 @@ class Event extends MatrixEvent {
   String get body {
     if (redacted) return 'Redacted';
     if (text != '') return text;
-    if (formattedText != '') return formattedText;
     return type;
   }
 
