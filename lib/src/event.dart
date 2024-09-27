@@ -761,7 +761,10 @@ class Event extends MatrixEvent {
   /// Returns a localized String representation of this event. For a
   /// room list you may find [withSenderNamePrefix] useful. Set [hideReply] to
   /// crop all lines starting with '>'. With [plaintextBody] it'll use the
-  /// plaintextBody instead of the normal body.
+  /// plaintextBody instead of the normal body which in practice will convert
+  /// the html body to a plain text body before falling back to the body. In
+  /// either case this function won't return the html body without converting
+  /// it to plain text.
   /// [removeMarkdown] allow to remove the markdown formating from the event body.
   /// Usefull form message preview or notifications text.
   Future<String> calcLocalizedBody(MatrixLocalizations i18n,
@@ -850,37 +853,41 @@ class Event extends MatrixEvent {
   }
 
   /// Calculating the body of an event regardless of localization.
-  String calcUnlocalizedBody(
-      {bool hideReply = false,
-      bool hideEdit = false,
-      bool plaintextBody = false,
-      bool removeMarkdown = false}) {
+  String calcUnlocalizedBody({
+    bool hideReply = false,
+    bool hideEdit = false,
+    bool plaintextBody = false,
+    bool removeMarkdown = false,
+  }) {
     if (redacted) {
       return 'Removed by ${senderFromMemoryOrFallback.displayName ?? senderId}';
     }
     var body = plaintextBody ? this.plaintextBody : this.body;
 
-    // we need to know if the message is an html message to be able to determine
-    // if we need to strip the reply fallback.
-    var htmlMessage = content['format'] != 'org.matrix.custom.html';
+    // Html messages will already have their reply fallback removed during the Html to Text conversion.
+    var mayHaveReplyFallback =
+        !plaintextBody || content['format'] != 'org.matrix.custom.html';
+
     // If we have an edit, we want to operate on the new content
     final newContent = content.tryGetMap<String, Object?>('m.new_content');
     if (hideEdit &&
         relationshipType == RelationshipTypes.edit &&
         newContent != null) {
       if (plaintextBody && newContent['format'] == 'org.matrix.custom.html') {
-        htmlMessage = true;
-        body = HtmlToText.convert(
-            newContent.tryGet<String>('formatted_body') ?? formattedText);
+        final newBody = newContent.tryGet<String>('formatted_body');
+        if (newBody != null) {
+          mayHaveReplyFallback = false;
+          body = HtmlToText.convert(newBody);
+        }
       } else {
-        htmlMessage = false;
+        mayHaveReplyFallback = true;
         body = newContent.tryGet<String>('body') ?? body;
       }
     }
     // Hide reply fallback
     // Be sure that the plaintextBody already stripped teh reply fallback,
     // if the message is formatted
-    if (hideReply && (!plaintextBody || htmlMessage)) {
+    if (hideReply && mayHaveReplyFallback) {
       body = body.replaceFirst(
           RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'), '');
     }
