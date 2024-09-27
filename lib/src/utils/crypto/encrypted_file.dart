@@ -23,16 +23,16 @@ import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 
 class EncryptedFile {
-  EncryptedFile({
+  const EncryptedFile({
     required this.data,
     required this.k,
     required this.iv,
     required this.sha256,
   });
-  Uint8List data;
-  String k;
-  String iv;
-  String sha256;
+  final Uint8List data;
+  final String k;
+  final String iv;
+  final String sha256;
 }
 
 Future<EncryptedFile> encryptFile(Uint8List input) async {

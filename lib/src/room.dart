@@ -781,11 +781,12 @@ class Room {
       syncUpdate.rooms!.join!.values.first.timeline!.events!.first
           .unsigned![fileSendingStatusKey] = FileSendingStatus.encrypting.name;
       await _handleFakeSync(syncUpdate);
-      encryptedFile = await file.encrypt();
+      encryptedFile = await file.encrypt(client.nativeImplementations);
       uploadFile = encryptedFile.toMatrixFile();
 
       if (thumbnail != null) {
-        encryptedThumbnail = await thumbnail.encrypt();
+        encryptedThumbnail =
+            await thumbnail.encrypt(client.nativeImplementations);
         uploadThumbnail = encryptedThumbnail.toMatrixFile();
       }
     }

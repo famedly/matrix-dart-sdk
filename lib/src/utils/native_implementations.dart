@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/compute_callback.dart';
+import 'package:matrix/src/utils/crypto/encrypted_file.dart' as crypto_file;
 
 /// provides native implementations for demanding arithmetic operations
 /// in order to prevent the UI from blocking
@@ -32,6 +33,11 @@ abstract class NativeImplementations {
 
   FutureOr<Uint8List> keyFromPassphrase(
     KeyFromPassphraseArgs args, {
+    bool retryInDummy = true,
+  });
+
+  FutureOr<EncryptedFile> encryptFile(
+    Uint8List bytes, {
     bool retryInDummy = true,
   });
 
@@ -84,6 +90,14 @@ abstract class NativeImplementations {
 
 class NativeImplementationsDummy extends NativeImplementations {
   const NativeImplementationsDummy();
+
+  @override
+  Future<EncryptedFile> encryptFile(
+    Uint8List bytes, {
+    bool retryInDummy = true,
+  }) {
+    return crypto_file.encryptFile(bytes);
+  }
 
   @override
   Future<Uint8List?> decryptFile(
@@ -150,6 +164,17 @@ class NativeImplementationsIsolate extends NativeImplementations {
       FutureOr<T> Function(U arg) function, U arg) async {
     final compute = this.compute;
     return await compute(function, arg);
+  }
+
+  @override
+  Future<EncryptedFile> encryptFile(
+    Uint8List bytes, {
+    bool retryInDummy = true,
+  }) {
+    return runInBackground<EncryptedFile, Uint8List>(
+      NativeImplementations.dummy.encryptFile,
+      bytes,
+    );
   }
 
   @override

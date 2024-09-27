@@ -36,8 +36,8 @@ class MatrixFile {
 
   /// Encrypts this file and returns the
   /// encryption information as an [EncryptedFile].
-  Future<EncryptedFile> encrypt() async {
-    return await encryptFile(bytes);
+  Future<EncryptedFile> encrypt(NativeImplementations implementations) async {
+    return await implementations.encryptFile(bytes);
   }
 
   MatrixFile({required this.bytes, required String name, String? mimeType})

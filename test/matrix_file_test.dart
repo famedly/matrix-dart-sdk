@@ -34,7 +34,7 @@ void main() {
         bytes: Uint8List.fromList(text.codeUnits),
       );
 
-      final encryptedFile = await file.encrypt();
+      final encryptedFile = await file.encrypt(NativeImplementationsDummy());
       expect(encryptedFile.data.isNotEmpty, true);
     });
 
