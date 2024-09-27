@@ -297,9 +297,13 @@ class Event extends MatrixEvent {
 
   /// Use this to get a plain-text representation of the event, stripping things
   /// like spoilers and thelike. Useful for plain text notifications.
-  String get plaintextBody => content['format'] == 'org.matrix.custom.html'
-      ? HtmlToText.convert(formattedText)
-      : body;
+  String get plaintextBody => switch (formattedText) {
+        // if the formattedText is empty, fallback to body
+        '' => body,
+        final String s when content['format'] == 'org.matrix.custom.html' =>
+          HtmlToText.convert(s),
+        _ => body,
+      };
 
   /// Returns a list of [Receipt] instances for this event.
   List<Receipt> get receipts {
@@ -873,12 +877,14 @@ class Event extends MatrixEvent {
     if (hideEdit &&
         relationshipType == RelationshipTypes.edit &&
         newContent != null) {
-      if (plaintextBody && newContent['format'] == 'org.matrix.custom.html') {
-        final newBody = newContent.tryGet<String>('formatted_body');
-        if (newBody != null) {
-          mayHaveReplyFallback = false;
-          body = HtmlToText.convert(newBody);
-        }
+      final newBody =
+          newContent.tryGet<String>('formatted_body', TryGet.silent);
+      if (plaintextBody &&
+          newContent['format'] == 'org.matrix.custom.html' &&
+          newBody != null &&
+          newBody.isNotEmpty) {
+        mayHaveReplyFallback = false;
+        body = HtmlToText.convert(newBody);
       } else {
         mayHaveReplyFallback = true;
         body = newContent.tryGet<String>('body') ?? body;
