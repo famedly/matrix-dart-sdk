@@ -1229,6 +1229,453 @@ void main() {
       expect(event2.body, 'm.room.message');
     });
 
+    group('unlocalized body reply stripping', () {
+      int i = 0;
+
+      void testUnlocalizedBody({
+        required Object? body,
+        required Object? formattedBody,
+        required bool html,
+        Object? editBody,
+        Object? editFormattedBody,
+        bool editHtml = false,
+        bool isEdit = false,
+        required String expectation,
+        required bool plaintextBody,
+      }) {
+        i += 1;
+        test('$i', () {
+          final event = Event.fromJson({
+            'type': EventTypes.Message,
+            'content': {
+              'msgtype': 'm.text',
+              if (body != null) 'body': body,
+              if (formattedBody != null) 'formatted_body': formattedBody,
+              if (html) 'format': 'org.matrix.custom.html',
+              if (isEdit) ...{
+                'm.new_content': {
+                  if (editBody != null) 'body': editBody,
+                  if (editFormattedBody != null)
+                    'formatted_body': editFormattedBody,
+                  if (editHtml) 'format': 'org.matrix.custom.html',
+                },
+                'm.relates_to': {
+                  'event_id': '\$source2',
+                  'rel_type': RelationshipTypes.edit,
+                },
+              },
+            },
+            'event_id': '\$source',
+            'sender': '@alice:example.org',
+          }, room);
+
+          expect(
+            event.calcUnlocalizedBody(
+                hideReply: true, hideEdit: true, plaintextBody: plaintextBody),
+            expectation,
+            reason:
+                'event was ${event.toJson()} and plaintextBody ${plaintextBody ? "was" : "was not"} set',
+          );
+        });
+      }
+
+      // everything where we expect the body to be returned
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        // not sure we actually want m.room.message here and not an empty string
+        expectation: 'm.room.message',
+        plaintextBody: false,
+        body: '',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'm.room.message',
+        plaintextBody: false,
+        body: null,
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'm.room.message',
+        plaintextBody: false,
+        body: 5,
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: null,
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: null,
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: 'body',
+        // do we actually expect this to then use the body?
+        formattedBody: '',
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: 5,
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: '**formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: '**formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: true,
+      );
+
+      // everything where we expect the formatted body to be returned
+      testUnlocalizedBody(
+        expectation: '**formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: '**formatted body**',
+        plaintextBody: true,
+        body: 5,
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+
+      // everything where we expect the edit body to be returned
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: 5,
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: false,
+      );
+
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: false,
+      );
+
+      // everything where we expect the edit formatted body to be returned
+      testUnlocalizedBody(
+        expectation: '**edit formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: '**edit formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: '**edit formatted body**',
+        plaintextBody: true,
+        body: null,
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: '**edit formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: null,
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+    });
+
     test('getDisplayEvent', () {
       final room = Room(id: '!1234', client: client);
       var event = Event.fromJson({
