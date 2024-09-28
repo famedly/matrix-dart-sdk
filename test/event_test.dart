@@ -56,6 +56,8 @@ void main() {
     final event = Event.fromJson(
         jsonObj, Room(id: '!testroom:example.abc', client: client));
 
+    tearDownAll(() async => client.dispose());
+
     test('Create from json', () async {
       jsonObj['content'] = json.decode(contentJson);
       expect(event.toJson(), jsonObj);
@@ -237,6 +239,8 @@ void main() {
         expect(event.content.isEmpty, true);
         redactionEventJson.remove('redacts');
         expect(event.unsigned?['redacted_because'], redactionEventJson);
+
+        await client.dispose();
       }
     });
 
@@ -248,6 +252,8 @@ void main() {
       expect(() async => await event.cancelSend(), throwsException);
       event.status = EventStatus.sending;
       await event.cancelSend();
+
+      await room.client.dispose();
     });
 
     test('sendAgain', () async {
@@ -327,6 +333,8 @@ void main() {
         ),
       );
       expect(event.canRedact, true);
+
+      await client.dispose();
     });
     test('getLocalizedBody, isEventKnown', () async {
       final matrix = Client('testclient', httpClient: FakeMatrixApi());
@@ -961,6 +969,8 @@ void main() {
       expect(await event.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Unknown event unknown.event.type');
       expect(event.isEventTypeKnown, false);
+
+      await matrix.dispose(closeDatabase: true);
     });
 
     test('getLocalizedBody, parameters', () async {
@@ -1126,6 +1136,8 @@ void main() {
         await event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example accepted key verification request',
       );
+
+      await matrix.dispose(closeDatabase: true);
     });
 
     test('aggregations', () {
