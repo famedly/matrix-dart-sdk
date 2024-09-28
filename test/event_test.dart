@@ -1686,6 +1686,105 @@ void main() {
         editFormattedBody: '<b>edit formatted body</b>',
         editHtml: true,
       );
+
+      // test with reply fallback
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: true,
+        isEdit: false,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody: null,
+        html: true,
+        isEdit: false,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: '**formatted body**',
+        plaintextBody: true,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: true,
+        isEdit: false,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: '**edit formatted body**',
+        plaintextBody: true,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
     });
 
     test('getDisplayEvent', () {

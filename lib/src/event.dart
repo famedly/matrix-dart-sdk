@@ -869,8 +869,9 @@ class Event extends MatrixEvent {
     var body = plaintextBody ? this.plaintextBody : this.body;
 
     // Html messages will already have their reply fallback removed during the Html to Text conversion.
-    var mayHaveReplyFallback =
-        !plaintextBody || content['format'] != 'org.matrix.custom.html';
+    var mayHaveReplyFallback = !plaintextBody ||
+        (content['format'] != 'org.matrix.custom.html' ||
+            formattedText.isEmpty);
 
     // If we have an edit, we want to operate on the new content
     final newContent = content.tryGetMap<String, Object?>('m.new_content');
