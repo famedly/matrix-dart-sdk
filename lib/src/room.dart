@@ -1189,22 +1189,31 @@ class Room {
   /// Set the power level of the user with the [userID] to the value [power].
   /// Returns the event ID of the new state event. If there is no known
   /// power level event, there might something broken and this returns null.
-  Future<String> setPower(String userID, int power) async {
-    final powerMap = Map<String, Object?>.from(
-      getState(EventTypes.RoomPowerLevels)?.content ?? {},
-    );
+  /// Please note, that you need to await the power level state from sync before
+  /// the changes are actually applied. Especially if you want to set multiple
+  /// power levels at once, you need to await each change in the sync, to not
+  /// override those.
+  Future<String> setPower(String userId, int power) async {
+    final powerLevelMapCopy =
+        getState(EventTypes.RoomPowerLevels)?.content.copy() ?? {};
 
-    final usersPowerMap = powerMap['users'] is Map<String, Object?>
-        ? powerMap['users'] as Map<String, Object?>
-        : (powerMap['users'] = <String, Object?>{});
+    var users = powerLevelMapCopy['users'];
 
-    usersPowerMap[userID] = power;
+    if (users is! Map<String, Object?>) {
+      if (users != null) {
+        Logs().v(
+            'Repairing Power Level "users" has the wrong type "${powerLevelMapCopy['users'].runtimeType}"');
+      }
+      users = powerLevelMapCopy['users'] = <String, Object?>{};
+    }
+
+    users[userId] = power;
 
     return await client.setRoomStateWithKey(
       id,
       EventTypes.RoomPowerLevels,
       '',
-      powerMap,
+      powerLevelMapCopy,
     );
   }
 
