@@ -204,7 +204,13 @@ class FakeMatrixApi extends BaseClient {
           await Future.delayed(Duration(milliseconds: 50));
         }
         res = {
-          'next_batch': DateTime.now().millisecondsSinceEpoch.toString(),
+          // So that it is clear which sync we are processing prefix it with 'empty_'
+          'next_batch': 'empty_${DateTime.now().millisecondsSinceEpoch}',
+          // ensure we don't generate new keys for no reason
+          'device_one_time_keys_count': {
+            'curve25519': 10,
+            'signed_curve25519': 100
+          },
         };
       } else if (method == 'PUT' &&
           _client != null &&
@@ -1038,7 +1044,7 @@ class FakeMatrixApi extends BaseClient {
         '@bob:example.com',
       ],
     },
-    'device_one_time_keys_count': {'curve25519': 10, 'signed_curve25519': 20},
+    'device_one_time_keys_count': {'curve25519': 10, 'signed_curve25519': 100},
   };
 
   static Map<String, dynamic> archiveSyncResponse = {
