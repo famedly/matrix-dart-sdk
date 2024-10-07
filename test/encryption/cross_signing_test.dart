@@ -34,6 +34,7 @@ void main() {
       await olm.init();
       olm.get_library_version();
       client = await getClient();
+      await client.abortSync();
     });
 
     test('basic things', () async {

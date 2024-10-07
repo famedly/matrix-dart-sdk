@@ -53,6 +53,7 @@ Future<Client> getClient({
     newOlmAccount: pickledOlmAccount,
   );
   await Future.delayed(Duration(milliseconds: 10));
+  await client.abortSync();
   return client;
 }
 

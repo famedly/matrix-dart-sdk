@@ -45,11 +45,13 @@ void main() {
     final dbPath = join(Directory.current.path, 'test.sqlite');
 
     setUp(() async {
-      expect(await File(dbPath).exists(), false);
+      expect(await File(dbPath).exists(), false,
+          reason: '$dbPath should not exist');
       clientOnPath = await getClient(
         databasePath: dbPath,
       );
-      expect(await File(dbPath).exists(), true);
+      await clientOnPath.abortSync();
+      expect(await File(dbPath).exists(), true, reason: '$dbPath should exist');
     });
     test('logout', () async {
       expect(await File(dbPath).exists(), true);
@@ -137,10 +139,11 @@ void main() {
         newOlmAccount: pickledOlmAccount,
       );
 
-      await Future.delayed(Duration(milliseconds: 50));
-
       final loginState = await loginStateFuture;
       final sync = await syncFuture;
+
+      // to ensure our state doesn't get overwritten once we manually inject SyncUpdates
+      await matrix.abortSync();
 
       expect(loginState, LoginState.loggedIn);
       expect(matrix.onSync.value != null, true);
@@ -185,7 +188,7 @@ void main() {
           PresenceType.online);
       expect(presenceCounter, 1);
       expect(accountDataCounter, 10);
-      await Future.delayed(Duration(milliseconds: 50));
+
       expect(matrix.userDeviceKeys.keys.toSet(), {
         '@alice:example.com',
         '@othertest:fakeServer.notExisting',
@@ -1134,7 +1137,7 @@ void main() {
         newOlmAccount: pickledOlmAccount,
       );
 
-      await Future.delayed(Duration(milliseconds: 500));
+      await client1.abortSync();
 
       expect(client1.isLogged(), true);
       expect(client1.rooms.length, 3);
@@ -1146,7 +1149,8 @@ void main() {
       );
 
       await client2.init();
-      await Future.delayed(Duration(milliseconds: 500));
+
+      await client2.abortSync();
 
       expect(client2.isLogged(), true);
       expect(client2.accessToken, client1.accessToken);
@@ -1197,6 +1201,7 @@ void main() {
       await client.getWellknown();
       expect(
           client.wellKnown?.mHomeserver.baseUrl.host, 'fakeserver.notexisting');
+      await client.dispose();
     });
 
     test('refreshAccessToken', () async {
@@ -1204,6 +1209,7 @@ void main() {
       expect(client.accessToken, 'abcd');
       await client.refreshAccessToken();
       expect(client.accessToken, 'a_new_token');
+      await client.dispose();
     });
 
     test('handleSoftLogout', () async {
@@ -1226,6 +1232,7 @@ void main() {
         storedClient?.tryGet<String>('refresh_token'),
         'another_new_token',
       );
+      await client.dispose();
     });
 
     test('object equality', () async {
@@ -1274,6 +1281,7 @@ void main() {
       final client = await getClient();
       client.backgroundSync = true;
       await client.clearCache();
+      await client.dispose();
     });
 
     test('dispose', () async {
@@ -1311,6 +1319,7 @@ void main() {
       await hiveClient.init();
       await Future.delayed(Duration(milliseconds: 200));
       expect(hiveClient.isLogged(), true);
+      await hiveClient.dispose(closeDatabase: false);
     });
 
     test('getEventByPushNotification', () async {
@@ -1402,6 +1411,8 @@ void main() {
               null,
           true,
           reason: '!5345234235:example.com not found as archived room');
+
+      await client.dispose();
     });
 
     test(
@@ -1430,6 +1441,7 @@ void main() {
           expect(error.userId, '@user:server');
           expect(error.toString(), 'Exception: BAD_ACCOUNT_KEY');
         }
+        await customClient.dispose(closeDatabase: true);
       },
     );
 
