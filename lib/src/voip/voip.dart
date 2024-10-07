@@ -248,7 +248,7 @@ class VoIP {
             return;
           }
           if (call.remoteUserId != null && call.remoteUserId != remoteUserId) {
-            Logs().w(
+            Logs().d(
                 'Ignoring call event ${event.type} for room ${room.id} from sender $remoteUserId, expected sender: ${call.remoteUserId}');
             return;
           }
