@@ -127,10 +127,6 @@ class FakeMatrixApi extends BaseClient {
 
     //print('\$method request to $action with Data: $data');
 
-    // Sync requests with timeout
-    if (data is Map<String, dynamic> && data['timeout'] is String) {
-      await Future.delayed(Duration(seconds: 5));
-    }
     if (!servers.contains(request.url.origin)) {
       return Response(
           '<html><head></head><body>Not found ${request.url.origin}...</body></html>',
@@ -202,6 +198,11 @@ class FakeMatrixApi extends BaseClient {
               '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/')) {
         res = {'event_id': '\$event${_eventCounter++}'};
       } else if (action.contains('/client/v3/sync')) {
+        // Sync requests with timeout
+        final timeout = request.url.queryParameters['timeout'];
+        if (timeout != null && timeout != '0') {
+          await Future.delayed(Duration(milliseconds: 50));
+        }
         res = {
           'next_batch': DateTime.now().millisecondsSinceEpoch.toString(),
         };
