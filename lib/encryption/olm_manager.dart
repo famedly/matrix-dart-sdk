@@ -28,6 +28,7 @@ import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
 import 'package:matrix/encryption/utils/olm_session.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/api.dart';
+import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 
 class OlmManager {
@@ -326,43 +327,50 @@ class OlmManager {
     return false;
   }
 
+  final _otkUpdateDedup = AsyncCache<void>.ephemeral();
+
   Future<void> handleDeviceOneTimeKeysCount(
       Map<String, int>? countJson, List<String>? unusedFallbackKeyTypes) async {
     if (!enabled) {
       return;
     }
-    final haveFallbackKeys = encryption.isMinOlmVersion(3, 2, 0);
-    // Check if there are at least half of max_number_of_one_time_keys left on the server
-    // and generate and upload more if not.
 
-    // If the server did not send us a count, assume it is 0
-    final keyCount = countJson?.tryGet<int>('signed_curve25519') ?? 0;
+    await _otkUpdateDedup.fetch(() =>
+        runBenchmarked('handleOtkUpdate', () async {
+          final haveFallbackKeys = encryption.isMinOlmVersion(3, 2, 0);
+          // Check if there are at least half of max_number_of_one_time_keys left on the server
+          // and generate and upload more if not.
 
-    // If the server does not support fallback keys, it will not tell us about them.
-    // If the server supports them but has no key, upload a new one.
-    var unusedFallbackKey = true;
-    if (unusedFallbackKeyTypes?.contains('signed_curve25519') == false) {
-      unusedFallbackKey = false;
-    }
+          // If the server did not send us a count, assume it is 0
+          final keyCount = countJson?.tryGet<int>('signed_curve25519') ?? 0;
 
-    // fixup accidental too many uploads. We delete only one of them so that the server has time to update the counts and because we will get rate limited anyway.
-    if (keyCount > _olmAccount!.max_number_of_one_time_keys()) {
-      final requestingKeysFrom = {
-        client.userID!: {ourDeviceId!: 'signed_curve25519'}
-      };
-      await client.claimKeys(requestingKeysFrom, timeout: 10000);
-    }
+          // If the server does not support fallback keys, it will not tell us about them.
+          // If the server supports them but has no key, upload a new one.
+          var unusedFallbackKey = true;
+          if (unusedFallbackKeyTypes?.contains('signed_curve25519') == false) {
+            unusedFallbackKey = false;
+          }
 
-    // Only upload keys if they are less than half of the max or we have no unused fallback key
-    if (keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2) ||
-        !unusedFallbackKey) {
-      await uploadKeys(
-        oldKeyCount: keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2)
-            ? keyCount
-            : null,
-        unusedFallbackKey: haveFallbackKeys ? unusedFallbackKey : null,
-      );
-    }
+          // fixup accidental too many uploads. We delete only one of them so that the server has time to update the counts and because we will get rate limited anyway.
+          if (keyCount > _olmAccount!.max_number_of_one_time_keys()) {
+            final requestingKeysFrom = {
+              client.userID!: {ourDeviceId!: 'signed_curve25519'}
+            };
+            await client.claimKeys(requestingKeysFrom, timeout: 10000);
+          }
+
+          // Only upload keys if they are less than half of the max or we have no unused fallback key
+          if (keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2) ||
+              !unusedFallbackKey) {
+            await uploadKeys(
+              oldKeyCount:
+                  keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2)
+                      ? keyCount
+                      : null,
+              unusedFallbackKey: haveFallbackKeys ? unusedFallbackKey : null,
+            );
+          }
+        }));
   }
 
   Future<void> storeOlmSession(OlmSession session) async {
