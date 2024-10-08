@@ -493,7 +493,9 @@ class Room {
 
   bool get markedUnread {
     return MarkedUnread.fromJson(
-            roomAccountData[EventType.markedUnread]?.content ?? {})
+            roomAccountData[EventType.markedUnread]?.content ??
+                roomAccountData[EventType.oldMarkedUnread]?.content ??
+                {})
         .unread;
   }
 
