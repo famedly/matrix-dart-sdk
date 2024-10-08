@@ -59,7 +59,7 @@ void main() {
     test('event_match rule', () async {
       final event = Event.fromJson(jsonObj, room);
 
-      final override_ruleset = PushRuleSet(override: [
+      final override_ruleset = PushRuleSet(overrideField: [
         PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
           'notify',
           {'set_tweak': 'highlight', 'value': true},
@@ -174,7 +174,7 @@ void main() {
       testMatch(room_ruleset, event);
       testMatch(sender_ruleset, event);
 
-      final override_ruleset2 = PushRuleSet(override: [
+      final override_ruleset2 = PushRuleSet(overrideField: [
         PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
           'notify',
           {'set_tweak': 'highlight', 'value': true},
@@ -194,12 +194,12 @@ void main() {
 
       event.senderId = senderID;
       testMatch(override_ruleset2, event);
-      override_ruleset2.override?[0].enabled = false;
+      override_ruleset2.overrideField?[0].enabled = false;
       testNotMatch(override_ruleset2, event);
     });
 
     test('invalid push condition', () async {
-      final invalid_ruleset = PushRuleSet(override: [
+      final invalid_ruleset = PushRuleSet(overrideField: [
         PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
           'notify',
           {'set_tweak': 'highlight', 'value': true},
@@ -233,7 +233,7 @@ void main() {
         'origin_server_ts': 5,
       }, room);
 
-      final ruleset = PushRuleSet(override: [
+      final ruleset = PushRuleSet(overrideField: [
         PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
           'notify',
           {'set_tweak': 'highlight', 'value': true},
@@ -267,7 +267,7 @@ void main() {
         'origin_server_ts': 5,
       }, room);
 
-      final ruleset = PushRuleSet(override: [
+      final ruleset = PushRuleSet(overrideField: [
         PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
           'notify',
           {'set_tweak': 'highlight', 'value': true},
@@ -281,27 +281,27 @@ void main() {
       var evaluator = PushruleEvaluator.fromRuleset(ruleset);
       expect(evaluator.match(event).notify, true);
 
-      ruleset.override?[0].conditions?[0].is$ = '<=0';
+      ruleset.overrideField?[0].conditions?[0].is$ = '<=0';
       evaluator = PushruleEvaluator.fromRuleset(ruleset);
       expect(evaluator.match(event).notify, false);
 
-      ruleset.override?[0].conditions?[0].is$ = '<=1';
+      ruleset.overrideField?[0].conditions?[0].is$ = '<=1';
       evaluator = PushruleEvaluator.fromRuleset(ruleset);
       expect(evaluator.match(event).notify, true);
 
-      ruleset.override?[0].conditions?[0].is$ = '>=1';
+      ruleset.overrideField?[0].conditions?[0].is$ = '>=1';
       evaluator = PushruleEvaluator.fromRuleset(ruleset);
       expect(evaluator.match(event).notify, true);
 
-      ruleset.override?[0].conditions?[0].is$ = '>1';
+      ruleset.overrideField?[0].conditions?[0].is$ = '>1';
       evaluator = PushruleEvaluator.fromRuleset(ruleset);
       expect(evaluator.match(event).notify, false);
 
-      ruleset.override?[0].conditions?[0].is$ = '==1';
+      ruleset.overrideField?[0].conditions?[0].is$ = '==1';
       evaluator = PushruleEvaluator.fromRuleset(ruleset);
       expect(evaluator.match(event).notify, true);
 
-      ruleset.override?[0].conditions?[0].is$ = '1';
+      ruleset.overrideField?[0].conditions?[0].is$ = '1';
       evaluator = PushruleEvaluator.fromRuleset(ruleset);
       expect(evaluator.match(event).notify, true);
     });
@@ -321,7 +321,7 @@ void main() {
         'origin_server_ts': 5,
       }, room);
 
-      final ruleset = PushRuleSet(override: [
+      final ruleset = PushRuleSet(overrideField: [
         PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
           'notify',
           {'set_tweak': 'highlight', 'value': true},
