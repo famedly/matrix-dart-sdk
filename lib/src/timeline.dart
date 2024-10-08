@@ -79,7 +79,10 @@ class Timeline {
   bool _fetchedAllDatabaseEvents = false;
 
   bool get canRequestHistory {
-    if (events.isEmpty) return true;
+    if (events.isEmpty) {
+      return room.prev_batch != null ||
+          room.historyVisibility == HistoryVisibility.worldReadable;
+    }
     return !_fetchedAllDatabaseEvents ||
         (room.prev_batch != null && events.last.type != EventTypes.RoomCreate);
   }
@@ -160,7 +163,8 @@ class Timeline {
             direction: direction,
           );
         } else {
-          if (room.prev_batch == null) {
+          if (room.prev_batch == null &&
+              room.historyVisibility != HistoryVisibility.worldReadable) {
             Logs().i('No more events to request from server...');
           } else {
             await room.requestHistory(
