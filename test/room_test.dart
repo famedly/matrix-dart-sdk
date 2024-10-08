@@ -787,6 +787,20 @@ void main() {
       await room.invite('Testname');
     });
 
+    test('setPower', () async {
+      final powerLevelMap =
+          room.getState(EventTypes.RoomPowerLevels, '')!.content.copy();
+
+      // Request to fake api does not update anything:
+      await room.setPower('@bob:fakeServer.notExisting', 100);
+
+      // Original power level map has not changed:
+      expect(
+        powerLevelMap,
+        room.getState(EventTypes.RoomPowerLevels, '')!.content.copy(),
+      );
+    });
+
     test('getParticipants', () async {
       var userList = room.getParticipants();
       expect(userList.length, 4);
