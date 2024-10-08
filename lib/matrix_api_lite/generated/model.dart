@@ -26,6 +26,13 @@ class HomeserverInformation {
 
   /// The base URL for the homeserver for client-server connections.
   Uri baseUrl;
+
+  @override
+  bool operator ==(Object other) =>
+      other is HomeserverInformation && other.baseUrl == baseUrl;
+
+  @override
+  int get hashCode => baseUrl.hashCode;
 }
 
 ///
@@ -43,6 +50,13 @@ class IdentityServerInformation {
 
   /// The base URL for the identity server for client-server connections.
   Uri baseUrl;
+
+  @override
+  bool operator ==(Object other) =>
+      other is IdentityServerInformation && other.baseUrl == baseUrl;
+
+  @override
+  int get hashCode => baseUrl.hashCode;
 }
 
 /// Used by clients to determine the homeserver, identity server, and other
@@ -82,6 +96,15 @@ class DiscoveryInformation {
   IdentityServerInformation? mIdentityServer;
 
   Map<String, Map<String, Object?>> additionalProperties;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DiscoveryInformation &&
+      other.mHomeserver == mHomeserver &&
+      other.mIdentityServer == mIdentityServer;
+
+  @override
+  int get hashCode => Object.hash(mHomeserver, mIdentityServer);
 }
 
 ///
@@ -145,6 +168,16 @@ class Contact {
   /// Unspecified roles are permitted through the use of
   /// [Namespaced Identifiers](https://spec.matrix.org/unstable/appendices/#common-namespaced-identifier-grammar).
   Role role;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Contact &&
+      other.emailAddress == emailAddress &&
+      other.matrixId == matrixId &&
+      other.role == role;
+
+  @override
+  int get hashCode => Object.hash(emailAddress, matrixId, role);
 }
 
 ///
@@ -185,6 +218,15 @@ class GetWellknownSupportResponse {
   ///
   /// At least one of `contacts` or `support_page` is required.
   String? supportPage;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetWellknownSupportResponse &&
+      other.contacts == contacts &&
+      other.supportPage == supportPage;
+
+  @override
+  int get hashCode => Object.hash(contacts, supportPage);
 }
 
 ///
@@ -209,6 +251,15 @@ class GenerateLoginTokenResponse {
 
   /// The login token for the `m.login.token` login flow.
   String loginToken;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GenerateLoginTokenResponse &&
+      other.expiresInMs == expiresInMs &&
+      other.loginToken == loginToken;
+
+  @override
+  int get hashCode => Object.hash(expiresInMs, loginToken);
 }
 
 ///
@@ -232,6 +283,13 @@ class MediaConfig {
   /// Clients SHOULD use this as a guide when uploading content.
   /// If not listed or null, the size limit should be treated as unknown.
   int? mUploadSize;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MediaConfig && other.mUploadSize == mUploadSize;
+
+  @override
+  int get hashCode => mUploadSize.hashCode;
 }
 
 ///
@@ -261,6 +319,15 @@ class PreviewForUrl {
 
   /// An [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the image. Omitted if there is no image.
   Uri? ogImage;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PreviewForUrl &&
+      other.matrixImageSize == matrixImageSize &&
+      other.ogImage == ogImage;
+
+  @override
+  int get hashCode => Object.hash(matrixImageSize, ogImage);
 }
 
 ///
@@ -355,6 +422,24 @@ class PublicRoomsChunk {
 
   /// Whether the room may be viewed by guest users without joining.
   bool worldReadable;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PublicRoomsChunk &&
+      other.avatarUrl == avatarUrl &&
+      other.canonicalAlias == canonicalAlias &&
+      other.guestCanJoin == guestCanJoin &&
+      other.joinRule == joinRule &&
+      other.name == name &&
+      other.numJoinedMembers == numJoinedMembers &&
+      other.roomId == roomId &&
+      other.roomType == roomType &&
+      other.topic == topic &&
+      other.worldReadable == worldReadable;
+
+  @override
+  int get hashCode => Object.hash(avatarUrl, canonicalAlias, guestCanJoin,
+      joinRule, name, numJoinedMembers, roomId, roomType, topic, worldReadable);
 }
 
 ///
@@ -386,6 +471,15 @@ class SpaceHierarchyRoomsChunk {
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
   String? roomType;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SpaceHierarchyRoomsChunk &&
+      other.childrenState == childrenState &&
+      other.roomType == roomType;
+
+  @override
+  int get hashCode => Object.hash(childrenState, roomType);
 }
 
 ///
@@ -493,6 +587,35 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
   /// If the room is not a space-room, this should be empty.
   @override
   List<ChildrenState> childrenState;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SpaceRoomsChunk &&
+      other.avatarUrl == avatarUrl &&
+      other.canonicalAlias == canonicalAlias &&
+      other.guestCanJoin == guestCanJoin &&
+      other.joinRule == joinRule &&
+      other.name == name &&
+      other.numJoinedMembers == numJoinedMembers &&
+      other.roomId == roomId &&
+      other.roomType == roomType &&
+      other.topic == topic &&
+      other.worldReadable == worldReadable &&
+      other.childrenState == childrenState;
+
+  @override
+  int get hashCode => Object.hash(
+      avatarUrl,
+      canonicalAlias,
+      guestCanJoin,
+      joinRule,
+      name,
+      numJoinedMembers,
+      roomId,
+      roomType,
+      topic,
+      worldReadable,
+      childrenState);
 }
 
 ///
@@ -522,6 +645,15 @@ class GetSpaceHierarchyResponse {
 
   /// The rooms for the current page, with the current filters.
   List<SpaceRoomsChunk> rooms;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetSpaceHierarchyResponse &&
+      other.nextBatch == nextBatch &&
+      other.rooms == rooms;
+
+  @override
+  int get hashCode => Object.hash(nextBatch, rooms);
 }
 
 ///
@@ -581,6 +713,17 @@ class GetRelatingEventsResponse {
   /// mandatory and gives the actual depth to which the server recursed. If the client
   /// did not specify the `recurse` parameter, this field must be absent.
   int? recursionDepth;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetRelatingEventsResponse &&
+      other.chunk == chunk &&
+      other.nextBatch == nextBatch &&
+      other.prevBatch == prevBatch &&
+      other.recursionDepth == recursionDepth;
+
+  @override
+  int get hashCode => Object.hash(chunk, nextBatch, prevBatch, recursionDepth);
 }
 
 ///
@@ -630,6 +773,17 @@ class GetRelatingEventsWithRelTypeResponse {
   /// mandatory and gives the actual depth to which the server recursed. If the client
   /// did not specify the `recurse` parameter, this field must be absent.
   int? recursionDepth;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetRelatingEventsWithRelTypeResponse &&
+      other.chunk == chunk &&
+      other.nextBatch == nextBatch &&
+      other.prevBatch == prevBatch &&
+      other.recursionDepth == recursionDepth;
+
+  @override
+  int get hashCode => Object.hash(chunk, nextBatch, prevBatch, recursionDepth);
 }
 
 ///
@@ -680,6 +834,17 @@ class GetRelatingEventsWithRelTypeAndEventTypeResponse {
   /// mandatory and gives the actual depth to which the server recursed. If the client
   /// did not specify the `recurse` parameter, this field must be absent.
   int? recursionDepth;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetRelatingEventsWithRelTypeAndEventTypeResponse &&
+      other.chunk == chunk &&
+      other.nextBatch == nextBatch &&
+      other.prevBatch == prevBatch &&
+      other.recursionDepth == recursionDepth;
+
+  @override
+  int get hashCode => Object.hash(chunk, nextBatch, prevBatch, recursionDepth);
 }
 
 ///
@@ -724,6 +889,15 @@ class GetThreadRootsResponse {
   /// A token to supply to `from` to keep paginating the responses. Not present when there are
   /// no further results.
   String? nextBatch;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetThreadRootsResponse &&
+      other.chunk == chunk &&
+      other.nextBatch == nextBatch;
+
+  @override
+  int get hashCode => Object.hash(chunk, nextBatch);
 }
 
 ///
@@ -750,6 +924,15 @@ class GetEventByTimestampResponse {
   /// `event_id` fetched is too far out of range to be useful for your
   /// use case.
   int originServerTs;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetEventByTimestampResponse &&
+      other.eventId == eventId &&
+      other.originServerTs == originServerTs;
+
+  @override
+  int get hashCode => Object.hash(eventId, originServerTs);
 }
 
 ///
@@ -797,6 +980,17 @@ class ThirdPartyIdentifier {
   /// The timestamp, in milliseconds, when the identifier was
   /// validated by the identity server.
   int validatedAt;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ThirdPartyIdentifier &&
+      other.addedAt == addedAt &&
+      other.address == address &&
+      other.medium == medium &&
+      other.validatedAt == validatedAt;
+
+  @override
+  int get hashCode => Object.hash(addedAt, address, medium, validatedAt);
 }
 
 ///
@@ -834,6 +1028,17 @@ class ThreePidCredentials {
 
   /// The session identifier given by the identity server.
   String sid;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ThreePidCredentials &&
+      other.clientSecret == clientSecret &&
+      other.idAccessToken == idAccessToken &&
+      other.idServer == idServer &&
+      other.sid == sid;
+
+  @override
+  int get hashCode => Object.hash(clientSecret, idAccessToken, idServer, sid);
 }
 
 ///
@@ -882,6 +1087,15 @@ class RequestTokenResponse {
   /// advertises this specification version in the `/versions` response
   /// (ie: r0.5.0).
   Uri? submitUrl;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RequestTokenResponse &&
+      other.sid == sid &&
+      other.submitUrl == submitUrl;
+
+  @override
+  int get hashCode => Object.hash(sid, submitUrl);
 }
 
 ///
@@ -920,6 +1134,16 @@ class TokenOwnerInfo {
 
   /// The user ID that owns the access token.
   String userId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TokenOwnerInfo &&
+      other.deviceId == deviceId &&
+      other.isGuest == isGuest &&
+      other.userId == userId;
+
+  @override
+  int get hashCode => Object.hash(deviceId, isGuest, userId);
 }
 
 ///
@@ -954,6 +1178,16 @@ class ConnectionInfo {
 
   /// User agent string last seen in the session.
   String? userAgent;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ConnectionInfo &&
+      other.ip == ip &&
+      other.lastSeen == lastSeen &&
+      other.userAgent == userAgent;
+
+  @override
+  int get hashCode => Object.hash(ip, lastSeen, userAgent);
 }
 
 ///
@@ -979,6 +1213,13 @@ class SessionInfo {
 
   /// Information particular connections in the session.
   List<ConnectionInfo>? connections;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SessionInfo && other.connections == connections;
+
+  @override
+  int get hashCode => connections.hashCode;
 }
 
 ///
@@ -1004,6 +1245,13 @@ class DeviceInfo {
 
   /// A user's sessions (i.e. what they did with an access token from one login).
   List<SessionInfo>? sessions;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DeviceInfo && other.sessions == sessions;
+
+  @override
+  int get hashCode => sessions.hashCode;
 }
 
 ///
@@ -1035,6 +1283,13 @@ class WhoIsInfo {
 
   /// The Matrix user ID of the user.
   String? userId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is WhoIsInfo && other.devices == devices && other.userId == userId;
+
+  @override
+  int get hashCode => Object.hash(devices, userId);
 }
 
 ///
@@ -1052,6 +1307,13 @@ class ChangePasswordCapability {
 
   /// True if the user can change their password, false otherwise.
   bool enabled;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChangePasswordCapability && other.enabled == enabled;
+
+  @override
+  int get hashCode => enabled.hashCode;
 }
 
 /// The stability of the room version.
@@ -1086,6 +1348,15 @@ class RoomVersionsCapability {
 
   /// The default room version the server is using for new rooms.
   String default$;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RoomVersionsCapability &&
+      other.available == available &&
+      other.default$ == default$;
+
+  @override
+  int get hashCode => Object.hash(available, default$);
 }
 
 ///
@@ -1126,6 +1397,15 @@ class Capabilities {
   RoomVersionsCapability? mRoomVersions;
 
   Map<String, Map<String, Object?>> additionalProperties;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Capabilities &&
+      other.mChangePassword == mChangePassword &&
+      other.mRoomVersions == mRoomVersions;
+
+  @override
+  int get hashCode => Object.hash(mChangePassword, mRoomVersions);
 }
 
 ///
@@ -1158,6 +1438,16 @@ class StateEvent {
 
   /// The type of event to send.
   String type;
+
+  @override
+  bool operator ==(Object other) =>
+      other is StateEvent &&
+      other.content == content &&
+      other.stateKey == stateKey &&
+      other.type == type;
+
+  @override
+  int get hashCode => Object.hash(content, stateKey, type);
 }
 
 ///
@@ -1196,6 +1486,17 @@ class Invite3pid {
   /// The kind of address being passed in the address field, for example `email`
   /// (see [the list of recognised values](https://spec.matrix.org/unstable/appendices/#3pid-types)).
   String medium;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Invite3pid &&
+      other.address == address &&
+      other.idAccessToken == idAccessToken &&
+      other.idServer == idServer &&
+      other.medium == medium;
+
+  @override
+  int get hashCode => Object.hash(address, idAccessToken, idServer, medium);
 }
 
 ///
@@ -1264,6 +1565,18 @@ class Device {
   /// was last seen. (May be a few minutes out of date, for efficiency
   /// reasons).
   int? lastSeenTs;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Device &&
+      other.deviceId == deviceId &&
+      other.displayName == displayName &&
+      other.lastSeenIp == lastSeenIp &&
+      other.lastSeenTs == lastSeenTs;
+
+  @override
+  int get hashCode =>
+      Object.hash(deviceId, displayName, lastSeenIp, lastSeenTs);
 }
 
 ///
@@ -1293,6 +1606,15 @@ class GetRoomIdByAliasResponse {
 
   /// A list of servers that are aware of this room alias.
   List<String>? servers;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetRoomIdByAliasResponse &&
+      other.roomId == roomId &&
+      other.servers == servers;
+
+  @override
+  int get hashCode => Object.hash(roomId, servers);
 }
 
 ///
@@ -1333,6 +1655,16 @@ class GetEventsResponse {
   /// A token which correlates to the start of `chunk`. This
   /// is usually the same token supplied to `from=`.
   String? start;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetEventsResponse &&
+      other.chunk == chunk &&
+      other.end == end &&
+      other.start == start;
+
+  @override
+  int get hashCode => Object.hash(chunk, end, start);
 }
 
 ///
@@ -1373,6 +1705,16 @@ class PeekEventsResponse {
   /// A token which correlates to the first value in `chunk`. This
   /// is usually the same token supplied to `from=`.
   String? start;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PeekEventsResponse &&
+      other.chunk == chunk &&
+      other.end == end &&
+      other.start == start;
+
+  @override
+  int get hashCode => Object.hash(chunk, end, start);
 }
 
 /// A signature of an `m.third_party_invite` token to prove that this user
@@ -1414,6 +1756,17 @@ class ThirdPartySigned {
 
   /// The state key of the m.third_party_invite event.
   String token;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ThirdPartySigned &&
+      other.mxid == mxid &&
+      other.sender == sender &&
+      other.signatures == signatures &&
+      other.token == token;
+
+  @override
+  int get hashCode => Object.hash(mxid, sender, signatures, token);
 }
 
 ///
@@ -1448,6 +1801,15 @@ class GetKeysChangesResponse {
   /// the end-to-end encrypted rooms they previously shared
   /// with the user.
   List<String>? left;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetKeysChangesResponse &&
+      other.changed == changed &&
+      other.left == left;
+
+  @override
+  int get hashCode => Object.hash(changed, left);
 }
 
 ///
@@ -1495,6 +1857,15 @@ class ClaimKeysResponse {
   /// If necessary, the claimed key might be a fallback key. Fallback
   /// keys are re-used by the server until replaced by the device.
   Map<String, Map<String, Map<String, Object?>>> oneTimeKeys;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ClaimKeysResponse &&
+      other.failures == failures &&
+      other.oneTimeKeys == oneTimeKeys;
+
+  @override
+  int get hashCode => Object.hash(failures, oneTimeKeys);
 }
 
 ///
@@ -1589,6 +1960,19 @@ class QueryKeysResponse {
   /// information returned will be the same as uploaded via
   /// `/keys/device_signing/upload`.
   Map<String, MatrixCrossSigningKey>? userSigningKeys;
+
+  @override
+  bool operator ==(Object other) =>
+      other is QueryKeysResponse &&
+      other.deviceKeys == deviceKeys &&
+      other.failures == failures &&
+      other.masterKeys == masterKeys &&
+      other.selfSigningKeys == selfSigningKeys &&
+      other.userSigningKeys == userSigningKeys;
+
+  @override
+  int get hashCode => Object.hash(
+      deviceKeys, failures, masterKeys, selfSigningKeys, userSigningKeys);
 }
 
 ///
@@ -1622,6 +2006,15 @@ class LoginFlow {
   /// The login type. This is supplied as the `type` when
   /// logging in.
   String type;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LoginFlow &&
+      other.getLoginToken == getLoginToken &&
+      other.type == type;
+
+  @override
+  int get hashCode => Object.hash(getLoginToken, type);
 }
 
 ///
@@ -1703,6 +2096,21 @@ class LoginResponse {
   /// optionally validating the URLs within. This object takes the same
   /// form as the one returned from .well-known autodiscovery.
   DiscoveryInformation? wellKnown;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LoginResponse &&
+      other.accessToken == accessToken &&
+      other.deviceId == deviceId &&
+      other.expiresInMs == expiresInMs &&
+      other.homeServer == homeServer &&
+      other.refreshToken == refreshToken &&
+      other.userId == userId &&
+      other.wellKnown == wellKnown;
+
+  @override
+  int get hashCode => Object.hash(accessToken, deviceId, expiresInMs,
+      homeServer, refreshToken, userId, wellKnown);
 }
 
 ///
@@ -1757,6 +2165,19 @@ class Notification {
   /// The unix timestamp at which the event notification was sent,
   /// in milliseconds.
   int ts;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Notification &&
+      other.actions == actions &&
+      other.event == event &&
+      other.profileTag == profileTag &&
+      other.read == read &&
+      other.roomId == roomId &&
+      other.ts == ts;
+
+  @override
+  int get hashCode => Object.hash(actions, event, profileTag, read, roomId, ts);
 }
 
 ///
@@ -1787,6 +2208,15 @@ class GetNotificationsResponse {
 
   /// The list of events that triggered notifications.
   List<Notification> notifications;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetNotificationsResponse &&
+      other.nextToken == nextToken &&
+      other.notifications == notifications;
+
+  @override
+  int get hashCode => Object.hash(nextToken, notifications);
 }
 
 ///
@@ -1842,6 +2272,18 @@ class GetPresenceResponse {
 
   /// The state message for this user if one was set.
   String? statusMsg;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetPresenceResponse &&
+      other.currentlyActive == currentlyActive &&
+      other.lastActiveAgo == lastActiveAgo &&
+      other.presence == presence &&
+      other.statusMsg == statusMsg;
+
+  @override
+  int get hashCode =>
+      Object.hash(currentlyActive, lastActiveAgo, presence, statusMsg);
 }
 
 ///
@@ -1871,6 +2313,15 @@ class ProfileInformation {
 
   /// The user's display name if they have set one, otherwise not present.
   String? displayname;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProfileInformation &&
+      other.avatarUrl == avatarUrl &&
+      other.displayname == displayname;
+
+  @override
+  int get hashCode => Object.hash(avatarUrl, displayname);
 }
 
 /// A list of the rooms on the server.
@@ -1920,6 +2371,18 @@ class GetPublicRoomsResponse {
   /// An estimate on the total number of public rooms, if the
   /// server has an estimate.
   int? totalRoomCountEstimate;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetPublicRoomsResponse &&
+      other.chunk == chunk &&
+      other.nextBatch == nextBatch &&
+      other.prevBatch == prevBatch &&
+      other.totalRoomCountEstimate == totalRoomCountEstimate;
+
+  @override
+  int get hashCode =>
+      Object.hash(chunk, nextBatch, prevBatch, totalRoomCountEstimate);
 }
 
 ///
@@ -1956,6 +2419,15 @@ class PublicRoomQueryFilter {
   /// list. When not specified, all applicable rooms (regardless of type)
   /// are returned.
   List<String?>? roomTypes;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PublicRoomQueryFilter &&
+      other.genericSearchTerm == genericSearchTerm &&
+      other.roomTypes == roomTypes;
+
+  @override
+  int get hashCode => Object.hash(genericSearchTerm, roomTypes);
 }
 
 /// A list of the rooms on the server.
@@ -2005,6 +2477,18 @@ class QueryPublicRoomsResponse {
   /// An estimate on the total number of public rooms, if the
   /// server has an estimate.
   int? totalRoomCountEstimate;
+
+  @override
+  bool operator ==(Object other) =>
+      other is QueryPublicRoomsResponse &&
+      other.chunk == chunk &&
+      other.nextBatch == nextBatch &&
+      other.prevBatch == prevBatch &&
+      other.totalRoomCountEstimate == totalRoomCountEstimate;
+
+  @override
+  int get hashCode =>
+      Object.hash(chunk, nextBatch, prevBatch, totalRoomCountEstimate);
 }
 
 ///
@@ -2041,6 +2525,13 @@ class PusherData {
   Uri? url;
 
   Map<String, Object?> additionalProperties;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PusherData && other.format == format && other.url == url;
+
+  @override
+  int get hashCode => Object.hash(format, url);
 }
 
 ///
@@ -2067,6 +2558,13 @@ class PusherId {
   /// more detail.
   /// Max length, 512 bytes.
   String pushkey;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PusherId && other.appId == appId && other.pushkey == pushkey;
+
+  @override
+  int get hashCode => Object.hash(appId, pushkey);
 }
 
 ///
@@ -2142,6 +2640,22 @@ class Pusher implements PusherId {
   /// This string determines which set of device specific rules this
   /// pusher executes.
   String? profileTag;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Pusher &&
+      other.appId == appId &&
+      other.pushkey == pushkey &&
+      other.appDisplayName == appDisplayName &&
+      other.data == data &&
+      other.deviceDisplayName == deviceDisplayName &&
+      other.kind == kind &&
+      other.lang == lang &&
+      other.profileTag == profileTag;
+
+  @override
+  int get hashCode => Object.hash(appId, pushkey, appDisplayName, data,
+      deviceDisplayName, kind, lang, profileTag);
 }
 
 ///
@@ -2202,6 +2716,18 @@ class PushCondition {
   /// A non-compound [canonical JSON](https://spec.matrix.org/unstable/appendices#canonical-json) value to match
   /// against.
   Object? value;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PushCondition &&
+      other.is$ == is$ &&
+      other.key == key &&
+      other.kind == kind &&
+      other.pattern == pattern &&
+      other.value == value;
+
+  @override
+  int get hashCode => Object.hash(is$, key, kind, pattern, value);
 }
 
 ///
@@ -2261,6 +2787,20 @@ class PushRule {
 
   /// The ID of this rule.
   String ruleId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PushRule &&
+      other.actions == actions &&
+      other.conditions == conditions &&
+      other.default$ == default$ &&
+      other.enabled == enabled &&
+      other.pattern == pattern &&
+      other.ruleId == ruleId;
+
+  @override
+  int get hashCode =>
+      Object.hash(actions, conditions, default$, enabled, pattern, ruleId);
 }
 
 ///
@@ -2268,7 +2808,7 @@ class PushRule {
 class PushRuleSet {
   PushRuleSet({
     this.content,
-    this.override,
+    this.overrideField,
     this.room,
     this.sender,
     this.underride,
@@ -2280,7 +2820,7 @@ class PushRuleSet {
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
             : null)(json['content']),
-        override = ((v) => v != null
+        overrideField = ((v) => v != null
             ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
@@ -2302,14 +2842,14 @@ class PushRuleSet {
             : null)(json['underride']);
   Map<String, Object?> toJson() {
     final content = this.content;
-    final override = this.override;
+    final overrideField = this.overrideField;
     final room = this.room;
     final sender = this.sender;
     final underride = this.underride;
     return {
       if (content != null) 'content': content.map((v) => v.toJson()).toList(),
-      if (override != null)
-        'override': override.map((v) => v.toJson()).toList(),
+      if (overrideField != null)
+        'override': overrideField.map((v) => v.toJson()).toList(),
       if (room != null) 'room': room.map((v) => v.toJson()).toList(),
       if (sender != null) 'sender': sender.map((v) => v.toJson()).toList(),
       if (underride != null)
@@ -2321,7 +2861,7 @@ class PushRuleSet {
   List<PushRule>? content;
 
   ///
-  List<PushRule>? override;
+  List<PushRule>? overrideField;
 
   ///
   List<PushRule>? room;
@@ -2331,6 +2871,19 @@ class PushRuleSet {
 
   ///
   List<PushRule>? underride;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PushRuleSet &&
+      other.content == content &&
+      other.overrideField == overrideField &&
+      other.room == room &&
+      other.sender == sender &&
+      other.underride == underride;
+
+  @override
+  int get hashCode =>
+      Object.hash(content, overrideField, room, sender, underride);
 }
 
 ///
@@ -2340,7 +2893,7 @@ enum PushRuleKind {
   @EnhancedEnumValue(name: 'content')
   content,
   @EnhancedEnumValue(name: 'override')
-  override,
+  overrideField,
   @EnhancedEnumValue(name: 'room')
   room,
   @EnhancedEnumValue(name: 'sender')
@@ -2386,6 +2939,16 @@ class RefreshResponse {
   /// be refreshed again. If not given, the old refresh token can
   /// be re-used.
   String? refreshToken;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RefreshResponse &&
+      other.accessToken == accessToken &&
+      other.expiresInMs == expiresInMs &&
+      other.refreshToken == refreshToken;
+
+  @override
+  int get hashCode => Object.hash(accessToken, expiresInMs, refreshToken);
 }
 
 ///
@@ -2477,6 +3040,20 @@ class RegisterResponse {
   /// Any user ID returned by this API must conform to the grammar given in the
   /// [Matrix specification](https://spec.matrix.org/unstable/appendices/#user-identifiers).
   String userId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RegisterResponse &&
+      other.accessToken == accessToken &&
+      other.deviceId == deviceId &&
+      other.expiresInMs == expiresInMs &&
+      other.homeServer == homeServer &&
+      other.refreshToken == refreshToken &&
+      other.userId == userId;
+
+  @override
+  int get hashCode => Object.hash(
+      accessToken, deviceId, expiresInMs, homeServer, refreshToken, userId);
 }
 
 ///
@@ -2501,6 +3078,15 @@ class RoomKeysUpdateResponse {
   /// The new etag value representing stored keys in the backup.
   /// See `GET /room_keys/version/{version}` for more details.
   String etag;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RoomKeysUpdateResponse &&
+      other.count == count &&
+      other.etag == etag;
+
+  @override
+  int get hashCode => Object.hash(count, etag);
 }
 
 /// The key data
@@ -2539,6 +3125,18 @@ class KeyBackupData {
   /// algorithms in [Server-side key backups](https://spec.matrix.org/unstable/client-server-api/#server-side-key-backups) for more information on the
   /// expected format of the data.
   Map<String, Object?> sessionData;
+
+  @override
+  bool operator ==(Object other) =>
+      other is KeyBackupData &&
+      other.firstMessageIndex == firstMessageIndex &&
+      other.forwardedCount == forwardedCount &&
+      other.isVerified == isVerified &&
+      other.sessionData == sessionData;
+
+  @override
+  int get hashCode =>
+      Object.hash(firstMessageIndex, forwardedCount, isVerified, sessionData);
 }
 
 /// The backed up keys for a room.
@@ -2557,6 +3155,13 @@ class RoomKeyBackup {
 
   /// A map of session IDs to key data.
   Map<String, KeyBackupData> sessions;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RoomKeyBackup && other.sessions == sessions;
+
+  @override
+  int get hashCode => sessions.hashCode;
 }
 
 ///
@@ -2575,6 +3180,12 @@ class RoomKeys {
 
   /// A map of room IDs to room key backup data.
   Map<String, RoomKeyBackup> rooms;
+
+  @override
+  bool operator ==(Object other) => other is RoomKeys && other.rooms == rooms;
+
+  @override
+  int get hashCode => rooms.hashCode;
 }
 
 ///
@@ -2630,6 +3241,18 @@ class GetRoomKeysVersionCurrentResponse {
 
   /// The backup version.
   String version;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetRoomKeysVersionCurrentResponse &&
+      other.algorithm == algorithm &&
+      other.authData == authData &&
+      other.count == count &&
+      other.etag == etag &&
+      other.version == version;
+
+  @override
+  int get hashCode => Object.hash(algorithm, authData, count, etag, version);
 }
 
 ///
@@ -2677,6 +3300,18 @@ class GetRoomKeysVersionResponse {
 
   /// The backup version.
   String version;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetRoomKeysVersionResponse &&
+      other.algorithm == algorithm &&
+      other.authData == authData &&
+      other.count == count &&
+      other.etag == etag &&
+      other.version == version;
+
+  @override
+  int get hashCode => Object.hash(algorithm, authData, count, etag, version);
 }
 
 /// The events and state surrounding the requested event.
@@ -2750,6 +3385,20 @@ class EventContext {
 
   /// The state of the room at the last event returned.
   List<MatrixEvent>? state;
+
+  @override
+  bool operator ==(Object other) =>
+      other is EventContext &&
+      other.end == end &&
+      other.event == event &&
+      other.eventsAfter == eventsAfter &&
+      other.eventsBefore == eventsBefore &&
+      other.start == start &&
+      other.state == state;
+
+  @override
+  int get hashCode =>
+      Object.hash(end, event, eventsAfter, eventsBefore, start, state);
 }
 
 ///
@@ -2779,6 +3428,15 @@ class RoomMember {
 
   /// The display name of the user this object is representing.
   String? displayName;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RoomMember &&
+      other.avatarUrl == avatarUrl &&
+      other.displayName == displayName;
+
+  @override
+  int get hashCode => Object.hash(avatarUrl, displayName);
 }
 
 ///
@@ -2861,6 +3519,17 @@ class GetRoomEventsResponse {
   /// sent to the client in prior calls to this endpoint, assuming
   /// the membership of those members has not changed.
   List<MatrixEvent>? state;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetRoomEventsResponse &&
+      other.chunk == chunk &&
+      other.end == end &&
+      other.start == start &&
+      other.state == state;
+
+  @override
+  int get hashCode => Object.hash(chunk, end, start, state);
 }
 
 ///
@@ -2914,6 +3583,16 @@ class IncludeEventContext {
   /// that sent the events that were returned.
   /// By default, this is `false`.
   bool? includeProfile;
+
+  @override
+  bool operator ==(Object other) =>
+      other is IncludeEventContext &&
+      other.afterLimit == afterLimit &&
+      other.beforeLimit == beforeLimit &&
+      other.includeProfile == includeProfile;
+
+  @override
+  int get hashCode => Object.hash(afterLimit, beforeLimit, includeProfile);
 }
 
 ///
@@ -2974,6 +3653,18 @@ class EventFilter {
 
   /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
   List<String>? types;
+
+  @override
+  bool operator ==(Object other) =>
+      other is EventFilter &&
+      other.limit == limit &&
+      other.notSenders == notSenders &&
+      other.notTypes == notTypes &&
+      other.senders == senders &&
+      other.types == types;
+
+  @override
+  int get hashCode => Object.hash(limit, notSenders, notTypes, senders, types);
 }
 
 ///
@@ -3046,6 +3737,20 @@ class RoomEventFilter {
   /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
   bool? unreadThreadNotifications;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RoomEventFilter &&
+      other.containsUrl == containsUrl &&
+      other.includeRedundantMembers == includeRedundantMembers &&
+      other.lazyLoadMembers == lazyLoadMembers &&
+      other.notRooms == notRooms &&
+      other.rooms == rooms &&
+      other.unreadThreadNotifications == unreadThreadNotifications;
+
+  @override
+  int get hashCode => Object.hash(containsUrl, includeRedundantMembers,
+      lazyLoadMembers, notRooms, rooms, unreadThreadNotifications);
 }
 
 ///
@@ -3177,6 +3882,35 @@ class SearchFilter implements EventFilter, RoomEventFilter {
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
   @override
   bool? unreadThreadNotifications;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SearchFilter &&
+      other.limit == limit &&
+      other.notSenders == notSenders &&
+      other.notTypes == notTypes &&
+      other.senders == senders &&
+      other.types == types &&
+      other.containsUrl == containsUrl &&
+      other.includeRedundantMembers == includeRedundantMembers &&
+      other.lazyLoadMembers == lazyLoadMembers &&
+      other.notRooms == notRooms &&
+      other.rooms == rooms &&
+      other.unreadThreadNotifications == unreadThreadNotifications;
+
+  @override
+  int get hashCode => Object.hash(
+      limit,
+      notSenders,
+      notTypes,
+      senders,
+      types,
+      containsUrl,
+      includeRedundantMembers,
+      lazyLoadMembers,
+      notRooms,
+      rooms,
+      unreadThreadNotifications);
 }
 
 ///
@@ -3209,6 +3943,12 @@ class Group {
 
   /// Key that defines the group.
   GroupKey? key;
+
+  @override
+  bool operator ==(Object other) => other is Group && other.key == key;
+
+  @override
+  int get hashCode => key.hashCode;
 }
 
 ///
@@ -3233,6 +3973,13 @@ class Groupings {
 
   /// List of groups to request.
   List<Group>? groupBy;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Groupings && other.groupBy == groupBy;
+
+  @override
+  int get hashCode => groupBy.hashCode;
 }
 
 ///
@@ -3333,6 +4080,21 @@ class RoomEventsCriteria {
 
   /// The string to search events for
   String searchTerm;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RoomEventsCriteria &&
+      other.eventContext == eventContext &&
+      other.filter == filter &&
+      other.groupings == groupings &&
+      other.includeState == includeState &&
+      other.keys == keys &&
+      other.orderBy == orderBy &&
+      other.searchTerm == searchTerm;
+
+  @override
+  int get hashCode => Object.hash(
+      eventContext, filter, groupings, includeState, keys, orderBy, searchTerm);
 }
 
 ///
@@ -3355,6 +4117,13 @@ class Categories {
 
   /// Mapping of category name to search criteria.
   RoomEventsCriteria? roomEvents;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Categories && other.roomEvents == roomEvents;
+
+  @override
+  int get hashCode => roomEvents.hashCode;
 }
 
 /// The results for a particular group value.
@@ -3396,6 +4165,16 @@ class GroupValue {
 
   /// Which results are in this group.
   List<String>? results;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GroupValue &&
+      other.nextBatch == nextBatch &&
+      other.order == order &&
+      other.results == results;
+
+  @override
+  int get hashCode => Object.hash(nextBatch, order, results);
 }
 
 ///
@@ -3425,6 +4204,15 @@ class UserProfile {
 
   ///
   String? displayname;
+
+  @override
+  bool operator ==(Object other) =>
+      other is UserProfile &&
+      other.avatarUrl == avatarUrl &&
+      other.displayname == displayname;
+
+  @override
+  int get hashCode => Object.hash(avatarUrl, displayname);
 }
 
 ///
@@ -3491,6 +4279,19 @@ class SearchResultsEventContext {
 
   /// Pagination token for the start of the chunk
   String? start;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SearchResultsEventContext &&
+      other.end == end &&
+      other.eventsAfter == eventsAfter &&
+      other.eventsBefore == eventsBefore &&
+      other.profileInfo == profileInfo &&
+      other.start == start;
+
+  @override
+  int get hashCode =>
+      Object.hash(end, eventsAfter, eventsBefore, profileInfo, start);
 }
 
 /// The result object.
@@ -3529,6 +4330,16 @@ class Result {
 
   /// The event that matched.
   MatrixEvent? result;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Result &&
+      other.context == context &&
+      other.rank == rank &&
+      other.result == result;
+
+  @override
+  int get hashCode => Object.hash(context, rank, result);
 }
 
 ///
@@ -3617,6 +4428,20 @@ class ResultRoomEvents {
   /// The key is the room ID for which the `State
   /// Event` array belongs to.
   Map<String, List<MatrixEvent>>? state;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ResultRoomEvents &&
+      other.count == count &&
+      other.groups == groups &&
+      other.highlights == highlights &&
+      other.nextBatch == nextBatch &&
+      other.results == results &&
+      other.state == state;
+
+  @override
+  int get hashCode =>
+      Object.hash(count, groups, highlights, nextBatch, results, state);
 }
 
 ///
@@ -3639,6 +4464,13 @@ class ResultCategories {
 
   /// Mapping of category name to search criteria.
   ResultRoomEvents? roomEvents;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ResultCategories && other.roomEvents == roomEvents;
+
+  @override
+  int get hashCode => roomEvents.hashCode;
 }
 
 ///
@@ -3657,6 +4489,13 @@ class SearchResults {
 
   /// Describes which categories to search in and their criteria.
   ResultCategories searchCategories;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SearchResults && other.searchCategories == searchCategories;
+
+  @override
+  int get hashCode => searchCategories.hashCode;
 }
 
 ///
@@ -3686,6 +4525,16 @@ class Location {
 
   /// The protocol ID that the third-party location is a part of.
   String protocol;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Location &&
+      other.alias == alias &&
+      other.fields == fields &&
+      other.protocol == protocol;
+
+  @override
+  int get hashCode => Object.hash(alias, fields, protocol);
 }
 
 /// Definition of valid values for a field.
@@ -3711,6 +4560,15 @@ class FieldType {
   /// coarse to verify the value as the application service providing this protocol
   /// may apply additional validation or filtering.
   String regexp;
+
+  @override
+  bool operator ==(Object other) =>
+      other is FieldType &&
+      other.placeholder == placeholder &&
+      other.regexp == regexp;
+
+  @override
+  int get hashCode => Object.hash(placeholder, regexp);
 }
 
 ///
@@ -3750,6 +4608,17 @@ class ProtocolInstance {
 
   /// A unique identifier across all instances.
   String networkId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProtocolInstance &&
+      other.desc == desc &&
+      other.fields == fields &&
+      other.icon == icon &&
+      other.networkId == networkId;
+
+  @override
+  int get hashCode => Object.hash(desc, fields, icon, networkId);
 }
 
 ///
@@ -3808,6 +4677,19 @@ class Protocol {
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the nickname of a user.
   List<String> userFields;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Protocol &&
+      other.fieldTypes == fieldTypes &&
+      other.icon == icon &&
+      other.instances == instances &&
+      other.locationFields == locationFields &&
+      other.userFields == userFields;
+
+  @override
+  int get hashCode =>
+      Object.hash(fieldTypes, icon, instances, locationFields, userFields);
 }
 
 ///
@@ -3837,6 +4719,16 @@ class ThirdPartyUser {
 
   /// A Matrix User ID represting a third-party user.
   String userid;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ThirdPartyUser &&
+      other.fields == fields &&
+      other.protocol == protocol &&
+      other.userid == userid;
+
+  @override
+  int get hashCode => Object.hash(fields, protocol, userid);
 }
 
 ///
@@ -3978,6 +4870,35 @@ class StateFilter implements EventFilter, RoomEventFilter {
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
   @override
   bool? unreadThreadNotifications;
+
+  @override
+  bool operator ==(Object other) =>
+      other is StateFilter &&
+      other.limit == limit &&
+      other.notSenders == notSenders &&
+      other.notTypes == notTypes &&
+      other.senders == senders &&
+      other.types == types &&
+      other.containsUrl == containsUrl &&
+      other.includeRedundantMembers == includeRedundantMembers &&
+      other.lazyLoadMembers == lazyLoadMembers &&
+      other.notRooms == notRooms &&
+      other.rooms == rooms &&
+      other.unreadThreadNotifications == unreadThreadNotifications;
+
+  @override
+  int get hashCode => Object.hash(
+      limit,
+      notSenders,
+      notTypes,
+      senders,
+      types,
+      containsUrl,
+      includeRedundantMembers,
+      lazyLoadMembers,
+      notRooms,
+      rooms,
+      unreadThreadNotifications);
 }
 
 ///
@@ -4053,6 +4974,21 @@ class RoomFilter {
 
   /// The message and state update events to include for rooms.
   StateFilter? timeline;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RoomFilter &&
+      other.accountData == accountData &&
+      other.ephemeral == ephemeral &&
+      other.includeLeave == includeLeave &&
+      other.notRooms == notRooms &&
+      other.rooms == rooms &&
+      other.state == state &&
+      other.timeline == timeline;
+
+  @override
+  int get hashCode => Object.hash(
+      accountData, ephemeral, includeLeave, notRooms, rooms, state, timeline);
 }
 
 ///
@@ -4112,6 +5048,19 @@ class Filter {
 
   /// Filters to be applied to room data.
   RoomFilter? room;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Filter &&
+      other.accountData == accountData &&
+      other.eventFields == eventFields &&
+      other.eventFormat == eventFormat &&
+      other.presence == presence &&
+      other.room == room;
+
+  @override
+  int get hashCode =>
+      Object.hash(accountData, eventFields, eventFormat, presence, room);
 }
 
 ///
@@ -4151,6 +5100,18 @@ class OpenIdCredentials {
 
   /// The string `Bearer`.
   String tokenType;
+
+  @override
+  bool operator ==(Object other) =>
+      other is OpenIdCredentials &&
+      other.accessToken == accessToken &&
+      other.expiresIn == expiresIn &&
+      other.matrixServerName == matrixServerName &&
+      other.tokenType == tokenType;
+
+  @override
+  int get hashCode =>
+      Object.hash(accessToken, expiresIn, matrixServerName, tokenType);
 }
 
 ///
@@ -4180,6 +5141,12 @@ class Tag {
   double? order;
 
   Map<String, Object?> additionalProperties;
+
+  @override
+  bool operator ==(Object other) => other is Tag && other.order == order;
+
+  @override
+  int get hashCode => order.hashCode;
 }
 
 ///
@@ -4215,6 +5182,16 @@ class Profile {
 
   /// The user's matrix user ID.
   String userId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Profile &&
+      other.avatarUrl == avatarUrl &&
+      other.displayName == displayName &&
+      other.userId == userId;
+
+  @override
+  int get hashCode => Object.hash(avatarUrl, displayName, userId);
 }
 
 ///
@@ -4240,6 +5217,15 @@ class SearchUserDirectoryResponse {
 
   /// Ordered by rank and then whether or not profile info is available.
   List<Profile> results;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SearchUserDirectoryResponse &&
+      other.limited == limited &&
+      other.results == results;
+
+  @override
+  int get hashCode => Object.hash(limited, results);
 }
 
 ///
@@ -4275,6 +5261,17 @@ class TurnServerCredentials {
 
   /// The username to use.
   String username;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TurnServerCredentials &&
+      other.password == password &&
+      other.ttl == ttl &&
+      other.uris == uris &&
+      other.username == username;
+
+  @override
+  int get hashCode => Object.hash(password, ttl, uris, username);
 }
 
 ///
@@ -4306,6 +5303,15 @@ class GetVersionsResponse {
 
   /// The supported versions.
   List<String> versions;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetVersionsResponse &&
+      other.unstableFeatures == unstableFeatures &&
+      other.versions == versions;
+
+  @override
+  int get hashCode => Object.hash(unstableFeatures, versions);
 }
 
 ///
@@ -4337,4 +5343,13 @@ class CreateContentResponse {
   /// The timestamp (in milliseconds since the unix epoch) when the
   /// generated media id will expire, if media is not uploaded.
   int? unusedExpiresAt;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CreateContentResponse &&
+      other.contentUri == contentUri &&
+      other.unusedExpiresAt == unusedExpiresAt;
+
+  @override
+  int get hashCode => Object.hash(contentUri, unusedExpiresAt);
 }

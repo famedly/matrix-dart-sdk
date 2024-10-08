@@ -236,7 +236,7 @@ class PushruleEvaluator {
   final List<_OptimizedRules> _underride = [];
 
   PushruleEvaluator.fromRuleset(PushRuleSet ruleset) {
-    for (final o in ruleset.override ?? []) {
+    for (final o in ruleset.overrideField ?? []) {
       if (!o.enabled) continue;
       try {
         _override.add(_OptimizedRules.fromRule(o));

@@ -437,7 +437,7 @@ extension PushRuleKindFromStringExtension on Iterable<PushRuleKind> {
   PushRuleKind? fromString(String val) {
     final override = {
       'content': PushRuleKind.content,
-      'override': PushRuleKind.override,
+      'override': PushRuleKind.overrideField,
       'room': PushRuleKind.room,
       'sender': PushRuleKind.sender,
       'underride': PushRuleKind.underride,
@@ -452,33 +452,33 @@ extension PushRuleKindEnhancedEnum on PushRuleKind {
 // ignore: override_on_non_overriding_member
   String get name => {
         PushRuleKind.content: 'content',
-        PushRuleKind.override: 'override',
+        PushRuleKind.overrideField: 'override',
         PushRuleKind.room: 'room',
         PushRuleKind.sender: 'sender',
         PushRuleKind.underride: 'underride',
       }[this]!;
   bool get isContent => this == PushRuleKind.content;
-  bool get isOverride => this == PushRuleKind.override;
+  bool get isOverrideField => this == PushRuleKind.overrideField;
   bool get isRoom => this == PushRuleKind.room;
   bool get isSender => this == PushRuleKind.sender;
   bool get isUnderride => this == PushRuleKind.underride;
   T when<T>({
     required T Function() content,
-    required T Function() override,
+    required T Function() overrideField,
     required T Function() room,
     required T Function() sender,
     required T Function() underride,
   }) =>
       {
         PushRuleKind.content: content,
-        PushRuleKind.override: override,
+        PushRuleKind.overrideField: overrideField,
         PushRuleKind.room: room,
         PushRuleKind.sender: sender,
         PushRuleKind.underride: underride,
       }[this]!();
   T maybeWhen<T>({
     T? Function()? content,
-    T? Function()? override,
+    T? Function()? overrideField,
     T? Function()? room,
     T? Function()? sender,
     T? Function()? underride,
@@ -486,7 +486,7 @@ extension PushRuleKindEnhancedEnum on PushRuleKind {
   }) =>
       {
         PushRuleKind.content: content,
-        PushRuleKind.override: override,
+        PushRuleKind.overrideField: overrideField,
         PushRuleKind.room: room,
         PushRuleKind.sender: sender,
         PushRuleKind.underride: underride,
