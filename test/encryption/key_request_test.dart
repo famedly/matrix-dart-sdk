@@ -76,6 +76,8 @@ void main() {
     });
     test('Reply To Request', () async {
       final matrix = await getClient();
+      await matrix.abortSync();
+
       matrix.setUserId('@alice:example.com'); // we need to pretend to be alice
       FakeMatrixApi.calledEndpoints.clear();
       await matrix

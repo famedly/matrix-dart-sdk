@@ -127,10 +127,6 @@ class FakeMatrixApi extends BaseClient {
 
     //print('\$method request to $action with Data: $data');
 
-    // Sync requests with timeout
-    if (data is Map<String, dynamic> && data['timeout'] is String) {
-      await Future.delayed(Duration(seconds: 5));
-    }
     if (!servers.contains(request.url.origin)) {
       return Response(
           '<html><head></head><body>Not found ${request.url.origin}...</body></html>',
@@ -202,8 +198,19 @@ class FakeMatrixApi extends BaseClient {
               '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/')) {
         res = {'event_id': '\$event${_eventCounter++}'};
       } else if (action.contains('/client/v3/sync')) {
+        // Sync requests with timeout
+        final timeout = request.url.queryParameters['timeout'];
+        if (timeout != null && timeout != '0') {
+          await Future.delayed(Duration(milliseconds: 50));
+        }
         res = {
-          'next_batch': DateTime.now().millisecondsSinceEpoch.toString(),
+          // So that it is clear which sync we are processing prefix it with 'empty_'
+          'next_batch': 'empty_${DateTime.now().millisecondsSinceEpoch}',
+          // ensure we don't generate new keys for no reason
+          'device_one_time_keys_count': {
+            'curve25519': 10,
+            'signed_curve25519': 100
+          },
         };
       } else if (method == 'PUT' &&
           _client != null &&
@@ -1037,7 +1044,7 @@ class FakeMatrixApi extends BaseClient {
         '@bob:example.com',
       ],
     },
-    'device_one_time_keys_count': {'curve25519': 10, 'signed_curve25519': 20},
+    'device_one_time_keys_count': {'curve25519': 10, 'signed_curve25519': 100},
   };
 
   static Map<String, dynamic> archiveSyncResponse = {

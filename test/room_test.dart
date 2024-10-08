@@ -55,6 +55,7 @@ void main() {
     Logs().level = Level.error;
     test('Login', () async {
       matrix = await getClient();
+      await matrix.abortSync();
     });
 
     test('Create from json', () async {

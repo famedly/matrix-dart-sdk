@@ -48,6 +48,7 @@ void main() {
       await client.login(LoginType.mLoginPassword,
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234');
+      await client.abortSync();
     });
     tearDown(() async {
       await client.logout();

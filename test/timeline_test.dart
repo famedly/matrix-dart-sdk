@@ -67,6 +67,7 @@ void main() {
       client = await getClient(
         sendTimelineEventTimeout: const Duration(seconds: 5),
       );
+      await client.abortSync();
 
       final poison = Random().nextInt(2 ^ 32);
       currentPoison = poison;
