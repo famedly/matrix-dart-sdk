@@ -1226,10 +1226,9 @@ void main() {
       await room.markUnread(true);
       await room.markUnread(false);
       expect(room.markedUnread, false);
-      room.roomAccountData['com.famedly.marked_unread'] =
-          BasicRoomEvent.fromJson({
+      room.roomAccountData['m.marked_unread'] = BasicRoomEvent.fromJson({
         'content': {'unread': true},
-        'type': 'com.famedly.marked_unread'
+        'type': 'm.marked_unread'
       });
       expect(room.markedUnread, true);
     });

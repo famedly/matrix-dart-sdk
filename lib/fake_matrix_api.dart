@@ -2597,7 +2597,7 @@ class FakeMatrixApi extends BaseClient {
           (var req) => {},
       '/client/v3/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
           (var req) => {},
-      '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/account_data/com.famedly.marked_unread':
+      '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/account_data/m.marked_unread':
           (var req) => {},
       '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct':
           (var req) => {},
