@@ -1455,8 +1455,10 @@ class Client extends MatrixApi {
         : super.getUrlPreview(url, ts: ts);
   }
 
-  /// Uploads a file and automatically caches it in the database, if it is small enough
-  /// and returns the mxc url.
+  /// Uploads a file into the Media Repository of the server and also caches it
+  /// in the local database, if it is small enough.
+  /// Returns the mxc url. Please note, that this does **not** encrypt
+  /// the content. Use `Room.sendFileEvent()` for end to end encryption.
   @override
   Future<Uri> uploadContent(Uint8List file,
       {String? filename, String? contentType}) async {
