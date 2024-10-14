@@ -136,20 +136,29 @@ extension CommandsClientExtension on Client {
         throw CommandException('You must enter a valid mxid when using /dm');
       }
 
-      return await args.client.startDirectChat(
+      final roomId = await args.client.startDirectChat(
         mxid,
         enableEncryption: !parts.any((part) => part == '--no-encryption'),
       );
+      stdout?.write(
+        DefaultCommandOutput(
+          rooms: [roomId],
+          users: [mxid],
+        ).toString(),
+      );
+      return null;
     });
     addCommand('create', (args, stdout) async {
       final groupName = args.msg.replaceFirst('--no-encryption', '').trim();
 
       final parts = args.msg.split(' ');
 
-      return await args.client.createGroupChat(
+      final roomId = await args.client.createGroupChat(
         groupName: groupName,
         enableEncryption: !parts.any((part) => part == '--no-encryption'),
       );
+      stdout?.write(DefaultCommandOutput(rooms: [roomId]).toString());
+      return null;
     });
     addCommand('plain', (args, stdout) async {
       final room = args.room;
@@ -202,7 +211,8 @@ extension CommandsClientExtension on Client {
       return await room.sendReaction(inReplyTo.eventId, reaction);
     });
     addCommand('join', (args, stdout) async {
-      await args.client.joinRoom(args.msg);
+      final roomId = await args.client.joinRoom(args.msg);
+      stdout?.write(DefaultCommandOutput(rooms: [roomId]).toString());
       return null;
     });
     addCommand('leave', (args, stdout) async {
@@ -245,6 +255,7 @@ extension CommandsClientExtension on Client {
         throw CommandException('You must enter a valid mxid when using /kick');
       }
       await room.kick(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
       return null;
     });
     addCommand('ban', (args, stdout) async {
@@ -258,6 +269,7 @@ extension CommandsClientExtension on Client {
         throw CommandException('You must enter a valid mxid when using /ban');
       }
       await room.ban(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
       return null;
     });
     addCommand('unban', (args, stdout) async {
@@ -271,6 +283,7 @@ extension CommandsClientExtension on Client {
         throw CommandException('You must enter a valid mxid when using /unban');
       }
       await room.unban(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
       return null;
     });
     addCommand('invite', (args, stdout) async {
@@ -287,6 +300,7 @@ extension CommandsClientExtension on Client {
         );
       }
       await room.invite(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
       return null;
     });
     addCommand('myroomnick', (args, stdout) async {
@@ -358,7 +372,8 @@ extension CommandsClientExtension on Client {
         throw CommandException('User $mxid is not in this room');
       }
       await room.addToDirectChat(mxid);
-      return;
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
+      return null;
     });
     addCommand('markasgroup', (args, stdout) async {
       final room = args.room;
@@ -425,6 +440,7 @@ extension CommandsClientExtension on Client {
         throw CommandException('Please provide a User ID');
       }
       await ignoreUser(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
       return null;
     });
     addCommand('unignore', (args, stdout) async {
@@ -433,6 +449,7 @@ extension CommandsClientExtension on Client {
         throw CommandException('Please provide a User ID');
       }
       await unignoreUser(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
       return null;
     });
   }
@@ -473,4 +490,56 @@ class CommandException implements Exception {
 
 class RoomCommandException extends CommandException {
   const RoomCommandException() : super('This command must run on a room');
+}
+
+/// Helper class for normalized command output
+///
+/// This class can be used to provide a default, processable output of commands
+/// containing some generic data.
+class DefaultCommandOutput {
+  static const format = 'com.famedly.default_command_output';
+  final List<String>? rooms;
+  final List<String>? events;
+  final List<String>? users;
+  final List<String>? messages;
+  final Map<String, Object?>? custom;
+
+  const DefaultCommandOutput({
+    this.rooms,
+    this.events,
+    this.users,
+    this.messages,
+    this.custom,
+  });
+
+  static DefaultCommandOutput? fromStdout(String stdout) {
+    final Object? json = jsonDecode(stdout);
+    if (json is! Map<String, Object?>) {
+      return null;
+    }
+    if (json['format'] != format) return null;
+    return DefaultCommandOutput(
+      rooms: json['rooms'] as List<String>?,
+      events: json['events'] as List<String>?,
+      users: json['users'] as List<String>?,
+      messages: json['messages'] as List<String>?,
+      custom: json['custom'] as Map<String, Object?>?,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    return {
+      'format': format,
+      if (rooms != null) 'rooms': rooms,
+      if (events != null) 'events': events,
+      if (users != null) 'users': users,
+      if (messages != null) 'messages': messages,
+      ...?custom,
+    };
+  }
+
+  @override
+  String toString() {
+    return jsonEncode(toJson());
+  }
 }
