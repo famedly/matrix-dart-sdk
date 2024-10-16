@@ -28,7 +28,7 @@ import 'fake_client.dart';
 
 void main() {
   /// All Tests related to the Event
-  group('Event', tags: 'olm', () {
+  group('Event', () {
     Logs().level = Level.error;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -55,6 +55,8 @@ void main() {
     final room = Room(id: '!testroom:example.abc', client: client);
     final event = Event.fromJson(
         jsonObj, Room(id: '!testroom:example.abc', client: client));
+
+    tearDownAll(() async => client.dispose());
 
     test('Create from json', () async {
       jsonObj['content'] = json.decode(contentJson);
@@ -237,6 +239,8 @@ void main() {
         expect(event.content.isEmpty, true);
         redactionEventJson.remove('redacts');
         expect(event.unsigned?['redacted_because'], redactionEventJson);
+
+        await client.dispose();
       }
     });
 
@@ -248,6 +252,8 @@ void main() {
       expect(() async => await event.cancelSend(), throwsException);
       event.status = EventStatus.sending;
       await event.cancelSend();
+
+      await room.client.dispose();
     });
 
     test('sendAgain', () async {
@@ -269,7 +275,7 @@ void main() {
       await matrix.dispose(closeDatabase: true);
     });
 
-    test('requestKey', () async {
+    test('requestKey', tags: 'olm', () async {
       final matrix = Client('testclient', httpClient: FakeMatrixApi());
       await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
@@ -310,7 +316,7 @@ void main() {
 
       await matrix.dispose(closeDatabase: true);
     });
-    test('requestKey', () async {
+    test('requestKey', tags: 'olm', () async {
       jsonObj['state_key'] = '@alice:example.com';
       final event = Event.fromJson(
           jsonObj, Room(id: '!localpart:server.abc', client: client));
@@ -327,6 +333,8 @@ void main() {
         ),
       );
       expect(event.canRedact, true);
+
+      await client.dispose();
     });
     test('getLocalizedBody, isEventKnown', () async {
       final matrix = Client('testclient', httpClient: FakeMatrixApi());
@@ -961,6 +969,8 @@ void main() {
       expect(await event.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Unknown event unknown.event.type');
       expect(event.isEventTypeKnown, false);
+
+      await matrix.dispose(closeDatabase: true);
     });
 
     test('getLocalizedBody, parameters', () async {
@@ -1126,6 +1136,8 @@ void main() {
         await event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example accepted key verification request',
       );
+
+      await matrix.dispose(closeDatabase: true);
     });
 
     test('aggregations', () {
@@ -1200,6 +1212,581 @@ void main() {
       }, room);
       expect(event.plaintextBody, '**blah**');
     });
+
+    test('body', () {
+      final event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': 'blah',
+          'msgtype': 'm.text',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>blub</b>',
+        },
+        'event_id': '\$source',
+        'sender': '@alice:example.org',
+      }, room);
+      expect(event.body, 'blah');
+
+      final event2 = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': '',
+          'msgtype': 'm.text',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>blub</b>',
+        },
+        'event_id': '\$source',
+        'sender': '@alice:example.org',
+      }, room);
+      expect(event2.body, 'm.room.message');
+    });
+
+    group('unlocalized body reply stripping', () {
+      int i = 0;
+
+      void testUnlocalizedBody({
+        required Object? body,
+        required Object? formattedBody,
+        required bool html,
+        Object? editBody,
+        Object? editFormattedBody,
+        bool editHtml = false,
+        bool isEdit = false,
+        required String expectation,
+        required bool plaintextBody,
+      }) {
+        i += 1;
+        test('$i', () {
+          final event = Event.fromJson({
+            'type': EventTypes.Message,
+            'content': {
+              'msgtype': 'm.text',
+              if (body != null) 'body': body,
+              if (formattedBody != null) 'formatted_body': formattedBody,
+              if (html) 'format': 'org.matrix.custom.html',
+              if (isEdit) ...{
+                'm.new_content': {
+                  if (editBody != null) 'body': editBody,
+                  if (editFormattedBody != null)
+                    'formatted_body': editFormattedBody,
+                  if (editHtml) 'format': 'org.matrix.custom.html',
+                },
+                'm.relates_to': {
+                  'event_id': '\$source2',
+                  'rel_type': RelationshipTypes.edit,
+                },
+              },
+            },
+            'event_id': '\$source',
+            'sender': '@alice:example.org',
+          }, room);
+
+          expect(
+            event.calcUnlocalizedBody(
+                hideReply: true, hideEdit: true, plaintextBody: plaintextBody),
+            expectation,
+            reason:
+                'event was ${event.toJson()} and plaintextBody ${plaintextBody ? "was" : "was not"} set',
+          );
+        });
+      }
+
+      // everything where we expect the body to be returned
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        // not sure we actually want m.room.message here and not an empty string
+        expectation: 'm.room.message',
+        plaintextBody: false,
+        body: '',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'm.room.message',
+        plaintextBody: false,
+        body: null,
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'm.room.message',
+        plaintextBody: false,
+        body: 5,
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: null,
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: null,
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: 'body',
+        // do we actually expect this to then use the body?
+        formattedBody: '',
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: 5,
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: '**formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: '**formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: true,
+      );
+
+      // everything where we expect the formatted body to be returned
+      testUnlocalizedBody(
+        expectation: '**formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: '**formatted body**',
+        plaintextBody: true,
+        body: 5,
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: false,
+        editBody: null,
+        editFormattedBody: null,
+        editHtml: false,
+      );
+
+      // everything where we expect the edit body to be returned
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: 5,
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: false,
+      );
+
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: false,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: null,
+        editHtml: false,
+      );
+
+      // everything where we expect the edit formatted body to be returned
+      testUnlocalizedBody(
+        expectation: '**edit formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: null,
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: '**edit formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: '**edit formatted body**',
+        plaintextBody: true,
+        body: null,
+        formattedBody: '<b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: '**edit formatted body**',
+        plaintextBody: true,
+        body: 'body',
+        formattedBody: null,
+        html: true,
+        isEdit: true,
+        editBody: 'edit body',
+        editFormattedBody: '<b>edit formatted body</b>',
+        editHtml: true,
+      );
+
+      // test with reply fallback
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: false,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: true,
+        isEdit: false,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: false,
+        isEdit: false,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'body',
+        plaintextBody: true,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody: null,
+        html: true,
+        isEdit: false,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: '**formatted body**',
+        plaintextBody: true,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: true,
+        isEdit: false,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: false,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+      testUnlocalizedBody(
+        expectation: 'edit body',
+        plaintextBody: true,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: false,
+      );
+      testUnlocalizedBody(
+        expectation: '**edit formatted body**',
+        plaintextBody: true,
+        body: '> <@some:user.id> acb def\n\nbody',
+        formattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        html: true,
+        isEdit: true,
+        // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
+        editBody: '> <@some:user.id> acb def\n\nedit body',
+        editFormattedBody:
+            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editHtml: true,
+      );
+    });
+
     test('getDisplayEvent', () {
       final room = Room(id: '!1234', client: client);
       var event = Event.fromJson({
@@ -1394,6 +1981,7 @@ void main() {
     });
     test(
       'encrypted attachments',
+      tags: 'olm',
       () async {
         final FILE_BUFF_ENC =
             Uint8List.fromList([0x3B, 0x6B, 0xB2, 0x8C, 0xAF]);
@@ -1504,7 +2092,7 @@ void main() {
         await room.client.dispose(closeDatabase: true);
       },
     );
-    test('downloadAndDecryptAttachment store', () async {
+    test('downloadAndDecryptAttachment store', tags: 'olm', () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       var serverHits = 0;
       Future<Uint8List> downloadCallback(Uri uri) async {
@@ -1546,7 +2134,7 @@ void main() {
       await room.client.dispose(closeDatabase: true);
     });
 
-    test('downloadAndDecryptAttachment store only', () async {
+    test('downloadAndDecryptAttachment store only', tags: 'olm', () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       var serverHits = 0;
       Future<Uint8List> downloadCallback(Uri uri) async {
@@ -1595,7 +2183,8 @@ void main() {
       await room.client.dispose(closeDatabase: true);
     });
 
-    test('downloadAndDecryptAttachment store only without file', () async {
+    test('downloadAndDecryptAttachment store only without file', tags: 'olm',
+        () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       var serverHits = 0;
       Future<Uint8List> downloadCallback(Uri uri) async {
