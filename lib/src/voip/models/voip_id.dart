@@ -20,5 +20,5 @@ class VoipId {
       other is VoipId && roomId == other.roomId && callId == other.callId;
 
   @override
-  int get hashCode => roomId.hashCode ^ callId.hashCode;
+  int get hashCode => Object.hash(roomId.hashCode, callId.hashCode);
 }

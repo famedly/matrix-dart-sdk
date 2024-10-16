@@ -462,8 +462,11 @@ class LiveKitBackend extends CallBackend {
           livekitAlias == other.livekitAlias;
 
   @override
-  int get hashCode =>
-      type.hashCode ^ livekitServiceUrl.hashCode ^ livekitAlias.hashCode;
+  int get hashCode => Object.hash(
+        type.hashCode,
+        livekitServiceUrl.hashCode,
+        livekitAlias.hashCode,
+      );
 
   /// get everything else from your livekit sdk in your client
   @override
