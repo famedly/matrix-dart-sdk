@@ -35,5 +35,5 @@ class CallParticipant {
           deviceId == other.deviceId;
 
   @override
-  int get hashCode => userId.hashCode ^ deviceId.hashCode;
+  int get hashCode => Object.hash(userId.hashCode, deviceId.hashCode);
 }
