@@ -97,7 +97,7 @@ class Client extends MatrixApi {
   DateTime? _accessTokenExpiresAt;
 
   // For CommandsClientExtension
-  final Map<String, FutureOr<String?> Function(CommandArgs)> commands = {};
+  final Map<String, CommandExecutionCallback> commands = {};
   final Filter syncFilter;
 
   final NativeImplementations nativeImplementations;
