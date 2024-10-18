@@ -87,7 +87,7 @@ class DiscoveryInformation {
         additionalProperties = Map.fromEntries(json.entries
             .where(
                 (e) => !['m.homeserver', 'm.identity_server'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value as Map<String, Object?>)));
+            .map((e) => MapEntry(e.key, e.value)));
   Map<String, Object?> toJson() {
     final mIdentityServer = this.mIdentityServer;
     return {
@@ -104,7 +104,7 @@ class DiscoveryInformation {
   /// Used by clients to discover identity server information.
   IdentityServerInformation? mIdentityServer;
 
-  Map<String, Map<String, Object?>> additionalProperties;
+  Map<String, Object?> additionalProperties;
 
   @dart.override
   bool operator ==(Object other) =>
@@ -1354,24 +1354,24 @@ class WhoIsInfo {
 
 ///
 @_NameSource('spec')
-class ChangePasswordCapability {
-  ChangePasswordCapability({
+class BooleanCapability {
+  BooleanCapability({
     required this.enabled,
   });
 
-  ChangePasswordCapability.fromJson(Map<String, Object?> json)
+  BooleanCapability.fromJson(Map<String, Object?> json)
       : enabled = json['enabled'] as bool;
   Map<String, Object?> toJson() => {
         'enabled': enabled,
       };
 
-  /// True if the user can change their password, false otherwise.
+  /// True if the user can perform the action, false otherwise.
   bool enabled;
 
   @dart.override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is ChangePasswordCapability &&
+      (other is BooleanCapability &&
           other.runtimeType == runtimeType &&
           other.enabled == enabled);
 
@@ -1428,51 +1428,99 @@ class RoomVersionsCapability {
 @_NameSource('spec')
 class Capabilities {
   Capabilities({
+    this.m3pidChanges,
     this.mChangePassword,
+    this.mGetLoginToken,
     this.mRoomVersions,
+    this.mSetAvatarUrl,
+    this.mSetDisplayname,
     this.additionalProperties = const {},
   });
 
   Capabilities.fromJson(Map<String, Object?> json)
-      : mChangePassword = ((v) => v != null
-            ? ChangePasswordCapability.fromJson(v as Map<String, Object?>)
+      : m3pidChanges = ((v) => v != null
+            ? BooleanCapability.fromJson(v as Map<String, Object?>)
+            : null)(json['m.3pid_changes']),
+        mChangePassword = ((v) => v != null
+            ? BooleanCapability.fromJson(v as Map<String, Object?>)
             : null)(json['m.change_password']),
+        mGetLoginToken = ((v) => v != null
+            ? BooleanCapability.fromJson(v as Map<String, Object?>)
+            : null)(json['m.get_login_token']),
         mRoomVersions = ((v) => v != null
             ? RoomVersionsCapability.fromJson(v as Map<String, Object?>)
             : null)(json['m.room_versions']),
+        mSetAvatarUrl = ((v) => v != null
+            ? BooleanCapability.fromJson(v as Map<String, Object?>)
+            : null)(json['m.set_avatar_url']),
+        mSetDisplayname = ((v) => v != null
+            ? BooleanCapability.fromJson(v as Map<String, Object?>)
+            : null)(json['m.set_displayname']),
         additionalProperties = Map.fromEntries(json.entries
-            .where((e) =>
-                !['m.change_password', 'm.room_versions'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value as Map<String, Object?>)));
+            .where((e) => ![
+                  'm.3pid_changes',
+                  'm.change_password',
+                  'm.get_login_token',
+                  'm.room_versions',
+                  'm.set_avatar_url',
+                  'm.set_displayname'
+                ].contains(e.key))
+            .map((e) => MapEntry(e.key, e.value)));
   Map<String, Object?> toJson() {
+    final m3pidChanges = this.m3pidChanges;
     final mChangePassword = this.mChangePassword;
+    final mGetLoginToken = this.mGetLoginToken;
     final mRoomVersions = this.mRoomVersions;
+    final mSetAvatarUrl = this.mSetAvatarUrl;
+    final mSetDisplayname = this.mSetDisplayname;
     return {
       ...additionalProperties,
+      if (m3pidChanges != null) 'm.3pid_changes': m3pidChanges.toJson(),
       if (mChangePassword != null)
         'm.change_password': mChangePassword.toJson(),
+      if (mGetLoginToken != null) 'm.get_login_token': mGetLoginToken.toJson(),
       if (mRoomVersions != null) 'm.room_versions': mRoomVersions.toJson(),
+      if (mSetAvatarUrl != null) 'm.set_avatar_url': mSetAvatarUrl.toJson(),
+      if (mSetDisplayname != null)
+        'm.set_displayname': mSetDisplayname.toJson(),
     };
   }
 
+  /// Capability to indicate if the user can change 3PID associations on their account.
+  BooleanCapability? m3pidChanges;
+
   /// Capability to indicate if the user can change their password.
-  ChangePasswordCapability? mChangePassword;
+  BooleanCapability? mChangePassword;
+
+  /// Capability to indicate if the user can generate tokens to log further clients into their account.
+  BooleanCapability? mGetLoginToken;
 
   /// The room versions the server supports.
   RoomVersionsCapability? mRoomVersions;
 
-  Map<String, Map<String, Object?>> additionalProperties;
+  /// Capability to indicate if the user can change their avatar.
+  BooleanCapability? mSetAvatarUrl;
+
+  /// Capability to indicate if the user can change their display name.
+  BooleanCapability? mSetDisplayname;
+
+  Map<String, Object?> additionalProperties;
 
   @dart.override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Capabilities &&
           other.runtimeType == runtimeType &&
+          other.m3pidChanges == m3pidChanges &&
           other.mChangePassword == mChangePassword &&
-          other.mRoomVersions == mRoomVersions);
+          other.mGetLoginToken == mGetLoginToken &&
+          other.mRoomVersions == mRoomVersions &&
+          other.mSetAvatarUrl == mSetAvatarUrl &&
+          other.mSetDisplayname == mSetDisplayname);
 
   @dart.override
-  int get hashCode => Object.hash(mChangePassword, mRoomVersions);
+  int get hashCode => Object.hash(m3pidChanges, mChangePassword, mGetLoginToken,
+      mRoomVersions, mSetAvatarUrl, mSetDisplayname);
 }
 
 ///
@@ -2995,6 +3043,90 @@ class PushRuleSet {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is PushRuleSet &&
+          other.runtimeType == runtimeType &&
+          other.content == content &&
+          other.override == override &&
+          other.room == room &&
+          other.sender == sender &&
+          other.underride == underride);
+
+  @dart.override
+  int get hashCode => Object.hash(content, override, room, sender, underride);
+}
+
+///
+@_NameSource('generated')
+class GetPushRulesGlobalResponse {
+  GetPushRulesGlobalResponse({
+    this.content,
+    this.override,
+    this.room,
+    this.sender,
+    this.underride,
+  });
+
+  GetPushRulesGlobalResponse.fromJson(Map<String, Object?> json)
+      : content = ((v) => v != null
+            ? (v as List)
+                .map((v) => PushRule.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['content']),
+        override = ((v) => v != null
+            ? (v as List)
+                .map((v) => PushRule.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['override']),
+        room = ((v) => v != null
+            ? (v as List)
+                .map((v) => PushRule.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['room']),
+        sender = ((v) => v != null
+            ? (v as List)
+                .map((v) => PushRule.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['sender']),
+        underride = ((v) => v != null
+            ? (v as List)
+                .map((v) => PushRule.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['underride']);
+  Map<String, Object?> toJson() {
+    final content = this.content;
+    final override = this.override;
+    final room = this.room;
+    final sender = this.sender;
+    final underride = this.underride;
+    return {
+      if (content != null) 'content': content.map((v) => v.toJson()).toList(),
+      if (override != null)
+        'override': override.map((v) => v.toJson()).toList(),
+      if (room != null) 'room': room.map((v) => v.toJson()).toList(),
+      if (sender != null) 'sender': sender.map((v) => v.toJson()).toList(),
+      if (underride != null)
+        'underride': underride.map((v) => v.toJson()).toList(),
+    };
+  }
+
+  ///
+  List<PushRule>? content;
+
+  ///
+  List<PushRule>? override;
+
+  ///
+  List<PushRule>? room;
+
+  ///
+  List<PushRule>? sender;
+
+  ///
+  List<PushRule>? underride;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetPushRulesGlobalResponse &&
           other.runtimeType == runtimeType &&
           other.content == content &&
           other.override == override &&
@@ -4734,7 +4866,7 @@ class FieldType {
         'regexp': regexp,
       };
 
-  /// An placeholder serving as a valid example of the field value.
+  /// A placeholder serving as a valid example of the field value.
   String placeholder;
 
   /// A regular expression for validation of a field's value. This may be relatively
@@ -4836,9 +4968,9 @@ class Protocol {
         'user_fields': userFields.map((v) => v).toList(),
       };
 
-  /// The type definitions for the fields defined in the `user_fields` and
-  /// `location_fields`. Each entry in those arrays MUST have an entry here. The
-  /// `string` key for this object is field name itself.
+  /// The type definitions for the fields defined in `user_fields` and
+  /// `location_fields`. Each entry in those arrays MUST have an entry here.
+  /// The `string` key for this object is the field name itself.
   ///
   /// May be an empty object if no fields are defined.
   Map<String, FieldType> fieldTypes;
@@ -4904,7 +5036,7 @@ class ThirdPartyUser {
   /// The protocol ID that the third-party location is a part of.
   String protocol;
 
-  /// A Matrix User ID represting a third-party user.
+  /// A Matrix User ID representing a third-party user.
   String userid;
 
   @dart.override
