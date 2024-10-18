@@ -17,7 +17,7 @@ class VoipId {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is VoipId && roomId == other.roomId && callId == other.callId;
+      (other is VoipId && roomId == other.roomId && callId == other.callId);
 
   @override
   int get hashCode => Object.hash(roomId.hashCode, callId.hashCode);

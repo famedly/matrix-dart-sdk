@@ -1,3 +1,6 @@
+import 'dart:core' as dart;
+import 'dart:core';
+
 import 'package:enhanced_enum/enhanced_enum.dart';
 
 import 'package:matrix/matrix_api_lite/model/children_state.dart';
@@ -26,6 +29,16 @@ class HomeserverInformation {
 
   /// The base URL for the homeserver for client-server connections.
   Uri baseUrl;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is HomeserverInformation &&
+          other.runtimeType == runtimeType &&
+          other.baseUrl == baseUrl);
+
+  @dart.override
+  int get hashCode => baseUrl.hashCode;
 }
 
 ///
@@ -43,6 +56,16 @@ class IdentityServerInformation {
 
   /// The base URL for the identity server for client-server connections.
   Uri baseUrl;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IdentityServerInformation &&
+          other.runtimeType == runtimeType &&
+          other.baseUrl == baseUrl);
+
+  @dart.override
+  int get hashCode => baseUrl.hashCode;
 }
 
 /// Used by clients to determine the homeserver, identity server, and other
@@ -82,6 +105,17 @@ class DiscoveryInformation {
   IdentityServerInformation? mIdentityServer;
 
   Map<String, Map<String, Object?>> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DiscoveryInformation &&
+          other.runtimeType == runtimeType &&
+          other.mHomeserver == mHomeserver &&
+          other.mIdentityServer == mIdentityServer);
+
+  @dart.override
+  int get hashCode => Object.hash(mHomeserver, mIdentityServer);
 }
 
 ///
@@ -145,6 +179,18 @@ class Contact {
   /// Unspecified roles are permitted through the use of
   /// [Namespaced Identifiers](https://spec.matrix.org/unstable/appendices/#common-namespaced-identifier-grammar).
   Role role;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Contact &&
+          other.runtimeType == runtimeType &&
+          other.emailAddress == emailAddress &&
+          other.matrixId == matrixId &&
+          other.role == role);
+
+  @dart.override
+  int get hashCode => Object.hash(emailAddress, matrixId, role);
 }
 
 ///
@@ -185,6 +231,17 @@ class GetWellknownSupportResponse {
   ///
   /// At least one of `contacts` or `support_page` is required.
   String? supportPage;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetWellknownSupportResponse &&
+          other.runtimeType == runtimeType &&
+          other.contacts == contacts &&
+          other.supportPage == supportPage);
+
+  @dart.override
+  int get hashCode => Object.hash(contacts, supportPage);
 }
 
 ///
@@ -209,6 +266,17 @@ class GenerateLoginTokenResponse {
 
   /// The login token for the `m.login.token` login flow.
   String loginToken;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GenerateLoginTokenResponse &&
+          other.runtimeType == runtimeType &&
+          other.expiresInMs == expiresInMs &&
+          other.loginToken == loginToken);
+
+  @dart.override
+  int get hashCode => Object.hash(expiresInMs, loginToken);
 }
 
 ///
@@ -232,6 +300,16 @@ class MediaConfig {
   /// Clients SHOULD use this as a guide when uploading content.
   /// If not listed or null, the size limit should be treated as unknown.
   int? mUploadSize;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MediaConfig &&
+          other.runtimeType == runtimeType &&
+          other.mUploadSize == mUploadSize);
+
+  @dart.override
+  int get hashCode => mUploadSize.hashCode;
 }
 
 ///
@@ -261,6 +339,17 @@ class PreviewForUrl {
 
   /// An [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the image. Omitted if there is no image.
   Uri? ogImage;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PreviewForUrl &&
+          other.runtimeType == runtimeType &&
+          other.matrixImageSize == matrixImageSize &&
+          other.ogImage == ogImage);
+
+  @dart.override
+  int get hashCode => Object.hash(matrixImageSize, ogImage);
 }
 
 ///
@@ -355,6 +444,26 @@ class PublicRoomsChunk {
 
   /// Whether the room may be viewed by guest users without joining.
   bool worldReadable;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PublicRoomsChunk &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.canonicalAlias == canonicalAlias &&
+          other.guestCanJoin == guestCanJoin &&
+          other.joinRule == joinRule &&
+          other.name == name &&
+          other.numJoinedMembers == numJoinedMembers &&
+          other.roomId == roomId &&
+          other.roomType == roomType &&
+          other.topic == topic &&
+          other.worldReadable == worldReadable);
+
+  @dart.override
+  int get hashCode => Object.hash(avatarUrl, canonicalAlias, guestCanJoin,
+      joinRule, name, numJoinedMembers, roomId, roomType, topic, worldReadable);
 }
 
 ///
@@ -386,6 +495,17 @@ class SpaceHierarchyRoomsChunk {
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
   String? roomType;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpaceHierarchyRoomsChunk &&
+          other.runtimeType == runtimeType &&
+          other.childrenState == childrenState &&
+          other.roomType == roomType);
+
+  @dart.override
+  int get hashCode => Object.hash(childrenState, roomType);
 }
 
 ///
@@ -493,6 +613,37 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
   /// If the room is not a space-room, this should be empty.
   @override
   List<ChildrenState> childrenState;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpaceRoomsChunk &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.canonicalAlias == canonicalAlias &&
+          other.guestCanJoin == guestCanJoin &&
+          other.joinRule == joinRule &&
+          other.name == name &&
+          other.numJoinedMembers == numJoinedMembers &&
+          other.roomId == roomId &&
+          other.roomType == roomType &&
+          other.topic == topic &&
+          other.worldReadable == worldReadable &&
+          other.childrenState == childrenState);
+
+  @dart.override
+  int get hashCode => Object.hash(
+      avatarUrl,
+      canonicalAlias,
+      guestCanJoin,
+      joinRule,
+      name,
+      numJoinedMembers,
+      roomId,
+      roomType,
+      topic,
+      worldReadable,
+      childrenState);
 }
 
 ///
@@ -522,6 +673,17 @@ class GetSpaceHierarchyResponse {
 
   /// The rooms for the current page, with the current filters.
   List<SpaceRoomsChunk> rooms;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetSpaceHierarchyResponse &&
+          other.runtimeType == runtimeType &&
+          other.nextBatch == nextBatch &&
+          other.rooms == rooms);
+
+  @dart.override
+  int get hashCode => Object.hash(nextBatch, rooms);
 }
 
 ///
@@ -581,6 +743,19 @@ class GetRelatingEventsResponse {
   /// mandatory and gives the actual depth to which the server recursed. If the client
   /// did not specify the `recurse` parameter, this field must be absent.
   int? recursionDepth;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRelatingEventsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch &&
+          other.prevBatch == prevBatch &&
+          other.recursionDepth == recursionDepth);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, nextBatch, prevBatch, recursionDepth);
 }
 
 ///
@@ -630,6 +805,19 @@ class GetRelatingEventsWithRelTypeResponse {
   /// mandatory and gives the actual depth to which the server recursed. If the client
   /// did not specify the `recurse` parameter, this field must be absent.
   int? recursionDepth;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRelatingEventsWithRelTypeResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch &&
+          other.prevBatch == prevBatch &&
+          other.recursionDepth == recursionDepth);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, nextBatch, prevBatch, recursionDepth);
 }
 
 ///
@@ -680,6 +868,19 @@ class GetRelatingEventsWithRelTypeAndEventTypeResponse {
   /// mandatory and gives the actual depth to which the server recursed. If the client
   /// did not specify the `recurse` parameter, this field must be absent.
   int? recursionDepth;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRelatingEventsWithRelTypeAndEventTypeResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch &&
+          other.prevBatch == prevBatch &&
+          other.recursionDepth == recursionDepth);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, nextBatch, prevBatch, recursionDepth);
 }
 
 ///
@@ -724,6 +925,17 @@ class GetThreadRootsResponse {
   /// A token to supply to `from` to keep paginating the responses. Not present when there are
   /// no further results.
   String? nextBatch;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetThreadRootsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, nextBatch);
 }
 
 ///
@@ -750,6 +962,17 @@ class GetEventByTimestampResponse {
   /// `event_id` fetched is too far out of range to be useful for your
   /// use case.
   int originServerTs;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetEventByTimestampResponse &&
+          other.runtimeType == runtimeType &&
+          other.eventId == eventId &&
+          other.originServerTs == originServerTs);
+
+  @dart.override
+  int get hashCode => Object.hash(eventId, originServerTs);
 }
 
 ///
@@ -797,6 +1020,19 @@ class ThirdPartyIdentifier {
   /// The timestamp, in milliseconds, when the identifier was
   /// validated by the identity server.
   int validatedAt;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ThirdPartyIdentifier &&
+          other.runtimeType == runtimeType &&
+          other.addedAt == addedAt &&
+          other.address == address &&
+          other.medium == medium &&
+          other.validatedAt == validatedAt);
+
+  @dart.override
+  int get hashCode => Object.hash(addedAt, address, medium, validatedAt);
 }
 
 ///
@@ -834,6 +1070,19 @@ class ThreePidCredentials {
 
   /// The session identifier given by the identity server.
   String sid;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ThreePidCredentials &&
+          other.runtimeType == runtimeType &&
+          other.clientSecret == clientSecret &&
+          other.idAccessToken == idAccessToken &&
+          other.idServer == idServer &&
+          other.sid == sid);
+
+  @dart.override
+  int get hashCode => Object.hash(clientSecret, idAccessToken, idServer, sid);
 }
 
 ///
@@ -882,6 +1131,17 @@ class RequestTokenResponse {
   /// advertises this specification version in the `/versions` response
   /// (ie: r0.5.0).
   Uri? submitUrl;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RequestTokenResponse &&
+          other.runtimeType == runtimeType &&
+          other.sid == sid &&
+          other.submitUrl == submitUrl);
+
+  @dart.override
+  int get hashCode => Object.hash(sid, submitUrl);
 }
 
 ///
@@ -920,6 +1180,18 @@ class TokenOwnerInfo {
 
   /// The user ID that owns the access token.
   String userId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TokenOwnerInfo &&
+          other.runtimeType == runtimeType &&
+          other.deviceId == deviceId &&
+          other.isGuest == isGuest &&
+          other.userId == userId);
+
+  @dart.override
+  int get hashCode => Object.hash(deviceId, isGuest, userId);
 }
 
 ///
@@ -954,6 +1226,18 @@ class ConnectionInfo {
 
   /// User agent string last seen in the session.
   String? userAgent;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ConnectionInfo &&
+          other.runtimeType == runtimeType &&
+          other.ip == ip &&
+          other.lastSeen == lastSeen &&
+          other.userAgent == userAgent);
+
+  @dart.override
+  int get hashCode => Object.hash(ip, lastSeen, userAgent);
 }
 
 ///
@@ -979,6 +1263,16 @@ class SessionInfo {
 
   /// Information particular connections in the session.
   List<ConnectionInfo>? connections;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SessionInfo &&
+          other.runtimeType == runtimeType &&
+          other.connections == connections);
+
+  @dart.override
+  int get hashCode => connections.hashCode;
 }
 
 ///
@@ -1004,6 +1298,16 @@ class DeviceInfo {
 
   /// A user's sessions (i.e. what they did with an access token from one login).
   List<SessionInfo>? sessions;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DeviceInfo &&
+          other.runtimeType == runtimeType &&
+          other.sessions == sessions);
+
+  @dart.override
+  int get hashCode => sessions.hashCode;
 }
 
 ///
@@ -1035,6 +1339,17 @@ class WhoIsInfo {
 
   /// The Matrix user ID of the user.
   String? userId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WhoIsInfo &&
+          other.runtimeType == runtimeType &&
+          other.devices == devices &&
+          other.userId == userId);
+
+  @dart.override
+  int get hashCode => Object.hash(devices, userId);
 }
 
 ///
@@ -1052,6 +1367,16 @@ class ChangePasswordCapability {
 
   /// True if the user can change their password, false otherwise.
   bool enabled;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ChangePasswordCapability &&
+          other.runtimeType == runtimeType &&
+          other.enabled == enabled);
+
+  @dart.override
+  int get hashCode => enabled.hashCode;
 }
 
 /// The stability of the room version.
@@ -1086,6 +1411,17 @@ class RoomVersionsCapability {
 
   /// The default room version the server is using for new rooms.
   String default$;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomVersionsCapability &&
+          other.runtimeType == runtimeType &&
+          other.available == available &&
+          other.default$ == default$);
+
+  @dart.override
+  int get hashCode => Object.hash(available, default$);
 }
 
 ///
@@ -1126,6 +1462,17 @@ class Capabilities {
   RoomVersionsCapability? mRoomVersions;
 
   Map<String, Map<String, Object?>> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Capabilities &&
+          other.runtimeType == runtimeType &&
+          other.mChangePassword == mChangePassword &&
+          other.mRoomVersions == mRoomVersions);
+
+  @dart.override
+  int get hashCode => Object.hash(mChangePassword, mRoomVersions);
 }
 
 ///
@@ -1158,6 +1505,18 @@ class StateEvent {
 
   /// The type of event to send.
   String type;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StateEvent &&
+          other.runtimeType == runtimeType &&
+          other.content == content &&
+          other.stateKey == stateKey &&
+          other.type == type);
+
+  @dart.override
+  int get hashCode => Object.hash(content, stateKey, type);
 }
 
 ///
@@ -1196,6 +1555,19 @@ class Invite3pid {
   /// The kind of address being passed in the address field, for example `email`
   /// (see [the list of recognised values](https://spec.matrix.org/unstable/appendices/#3pid-types)).
   String medium;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Invite3pid &&
+          other.runtimeType == runtimeType &&
+          other.address == address &&
+          other.idAccessToken == idAccessToken &&
+          other.idServer == idServer &&
+          other.medium == medium);
+
+  @dart.override
+  int get hashCode => Object.hash(address, idAccessToken, idServer, medium);
 }
 
 ///
@@ -1264,6 +1636,20 @@ class Device {
   /// was last seen. (May be a few minutes out of date, for efficiency
   /// reasons).
   int? lastSeenTs;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Device &&
+          other.runtimeType == runtimeType &&
+          other.deviceId == deviceId &&
+          other.displayName == displayName &&
+          other.lastSeenIp == lastSeenIp &&
+          other.lastSeenTs == lastSeenTs);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(deviceId, displayName, lastSeenIp, lastSeenTs);
 }
 
 ///
@@ -1293,6 +1679,17 @@ class GetRoomIdByAliasResponse {
 
   /// A list of servers that are aware of this room alias.
   List<String>? servers;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRoomIdByAliasResponse &&
+          other.runtimeType == runtimeType &&
+          other.roomId == roomId &&
+          other.servers == servers);
+
+  @dart.override
+  int get hashCode => Object.hash(roomId, servers);
 }
 
 ///
@@ -1333,6 +1730,18 @@ class GetEventsResponse {
   /// A token which correlates to the start of `chunk`. This
   /// is usually the same token supplied to `from=`.
   String? start;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetEventsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.end == end &&
+          other.start == start);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, end, start);
 }
 
 ///
@@ -1373,6 +1782,18 @@ class PeekEventsResponse {
   /// A token which correlates to the first value in `chunk`. This
   /// is usually the same token supplied to `from=`.
   String? start;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PeekEventsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.end == end &&
+          other.start == start);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, end, start);
 }
 
 /// A signature of an `m.third_party_invite` token to prove that this user
@@ -1414,6 +1835,19 @@ class ThirdPartySigned {
 
   /// The state key of the m.third_party_invite event.
   String token;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ThirdPartySigned &&
+          other.runtimeType == runtimeType &&
+          other.mxid == mxid &&
+          other.sender == sender &&
+          other.signatures == signatures &&
+          other.token == token);
+
+  @dart.override
+  int get hashCode => Object.hash(mxid, sender, signatures, token);
 }
 
 ///
@@ -1448,6 +1882,17 @@ class GetKeysChangesResponse {
   /// the end-to-end encrypted rooms they previously shared
   /// with the user.
   List<String>? left;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetKeysChangesResponse &&
+          other.runtimeType == runtimeType &&
+          other.changed == changed &&
+          other.left == left);
+
+  @dart.override
+  int get hashCode => Object.hash(changed, left);
 }
 
 ///
@@ -1495,6 +1940,17 @@ class ClaimKeysResponse {
   /// If necessary, the claimed key might be a fallback key. Fallback
   /// keys are re-used by the server until replaced by the device.
   Map<String, Map<String, Map<String, Object?>>> oneTimeKeys;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ClaimKeysResponse &&
+          other.runtimeType == runtimeType &&
+          other.failures == failures &&
+          other.oneTimeKeys == oneTimeKeys);
+
+  @dart.override
+  int get hashCode => Object.hash(failures, oneTimeKeys);
 }
 
 ///
@@ -1589,6 +2045,21 @@ class QueryKeysResponse {
   /// information returned will be the same as uploaded via
   /// `/keys/device_signing/upload`.
   Map<String, MatrixCrossSigningKey>? userSigningKeys;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is QueryKeysResponse &&
+          other.runtimeType == runtimeType &&
+          other.deviceKeys == deviceKeys &&
+          other.failures == failures &&
+          other.masterKeys == masterKeys &&
+          other.selfSigningKeys == selfSigningKeys &&
+          other.userSigningKeys == userSigningKeys);
+
+  @dart.override
+  int get hashCode => Object.hash(
+      deviceKeys, failures, masterKeys, selfSigningKeys, userSigningKeys);
 }
 
 ///
@@ -1622,6 +2093,17 @@ class LoginFlow {
   /// The login type. This is supplied as the `type` when
   /// logging in.
   String type;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoginFlow &&
+          other.runtimeType == runtimeType &&
+          other.getLoginToken == getLoginToken &&
+          other.type == type);
+
+  @dart.override
+  int get hashCode => Object.hash(getLoginToken, type);
 }
 
 ///
@@ -1703,6 +2185,23 @@ class LoginResponse {
   /// optionally validating the URLs within. This object takes the same
   /// form as the one returned from .well-known autodiscovery.
   DiscoveryInformation? wellKnown;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoginResponse &&
+          other.runtimeType == runtimeType &&
+          other.accessToken == accessToken &&
+          other.deviceId == deviceId &&
+          other.expiresInMs == expiresInMs &&
+          other.homeServer == homeServer &&
+          other.refreshToken == refreshToken &&
+          other.userId == userId &&
+          other.wellKnown == wellKnown);
+
+  @dart.override
+  int get hashCode => Object.hash(accessToken, deviceId, expiresInMs,
+      homeServer, refreshToken, userId, wellKnown);
 }
 
 ///
@@ -1757,6 +2256,21 @@ class Notification {
   /// The unix timestamp at which the event notification was sent,
   /// in milliseconds.
   int ts;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Notification &&
+          other.runtimeType == runtimeType &&
+          other.actions == actions &&
+          other.event == event &&
+          other.profileTag == profileTag &&
+          other.read == read &&
+          other.roomId == roomId &&
+          other.ts == ts);
+
+  @dart.override
+  int get hashCode => Object.hash(actions, event, profileTag, read, roomId, ts);
 }
 
 ///
@@ -1787,6 +2301,17 @@ class GetNotificationsResponse {
 
   /// The list of events that triggered notifications.
   List<Notification> notifications;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetNotificationsResponse &&
+          other.runtimeType == runtimeType &&
+          other.nextToken == nextToken &&
+          other.notifications == notifications);
+
+  @dart.override
+  int get hashCode => Object.hash(nextToken, notifications);
 }
 
 ///
@@ -1842,6 +2367,20 @@ class GetPresenceResponse {
 
   /// The state message for this user if one was set.
   String? statusMsg;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetPresenceResponse &&
+          other.runtimeType == runtimeType &&
+          other.currentlyActive == currentlyActive &&
+          other.lastActiveAgo == lastActiveAgo &&
+          other.presence == presence &&
+          other.statusMsg == statusMsg);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(currentlyActive, lastActiveAgo, presence, statusMsg);
 }
 
 ///
@@ -1871,6 +2410,17 @@ class ProfileInformation {
 
   /// The user's display name if they have set one, otherwise not present.
   String? displayname;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProfileInformation &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.displayname == displayname);
+
+  @dart.override
+  int get hashCode => Object.hash(avatarUrl, displayname);
 }
 
 /// A list of the rooms on the server.
@@ -1920,6 +2470,20 @@ class GetPublicRoomsResponse {
   /// An estimate on the total number of public rooms, if the
   /// server has an estimate.
   int? totalRoomCountEstimate;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetPublicRoomsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch &&
+          other.prevBatch == prevBatch &&
+          other.totalRoomCountEstimate == totalRoomCountEstimate);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(chunk, nextBatch, prevBatch, totalRoomCountEstimate);
 }
 
 ///
@@ -1956,6 +2520,17 @@ class PublicRoomQueryFilter {
   /// list. When not specified, all applicable rooms (regardless of type)
   /// are returned.
   List<String?>? roomTypes;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PublicRoomQueryFilter &&
+          other.runtimeType == runtimeType &&
+          other.genericSearchTerm == genericSearchTerm &&
+          other.roomTypes == roomTypes);
+
+  @dart.override
+  int get hashCode => Object.hash(genericSearchTerm, roomTypes);
 }
 
 /// A list of the rooms on the server.
@@ -2005,6 +2580,20 @@ class QueryPublicRoomsResponse {
   /// An estimate on the total number of public rooms, if the
   /// server has an estimate.
   int? totalRoomCountEstimate;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is QueryPublicRoomsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch &&
+          other.prevBatch == prevBatch &&
+          other.totalRoomCountEstimate == totalRoomCountEstimate);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(chunk, nextBatch, prevBatch, totalRoomCountEstimate);
 }
 
 ///
@@ -2041,6 +2630,17 @@ class PusherData {
   Uri? url;
 
   Map<String, Object?> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PusherData &&
+          other.runtimeType == runtimeType &&
+          other.format == format &&
+          other.url == url);
+
+  @dart.override
+  int get hashCode => Object.hash(format, url);
 }
 
 ///
@@ -2067,6 +2667,17 @@ class PusherId {
   /// more detail.
   /// Max length, 512 bytes.
   String pushkey;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PusherId &&
+          other.runtimeType == runtimeType &&
+          other.appId == appId &&
+          other.pushkey == pushkey);
+
+  @dart.override
+  int get hashCode => Object.hash(appId, pushkey);
 }
 
 ///
@@ -2142,6 +2753,24 @@ class Pusher implements PusherId {
   /// This string determines which set of device specific rules this
   /// pusher executes.
   String? profileTag;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Pusher &&
+          other.runtimeType == runtimeType &&
+          other.appId == appId &&
+          other.pushkey == pushkey &&
+          other.appDisplayName == appDisplayName &&
+          other.data == data &&
+          other.deviceDisplayName == deviceDisplayName &&
+          other.kind == kind &&
+          other.lang == lang &&
+          other.profileTag == profileTag);
+
+  @dart.override
+  int get hashCode => Object.hash(appId, pushkey, appDisplayName, data,
+      deviceDisplayName, kind, lang, profileTag);
 }
 
 ///
@@ -2202,6 +2831,20 @@ class PushCondition {
   /// A non-compound [canonical JSON](https://spec.matrix.org/unstable/appendices#canonical-json) value to match
   /// against.
   Object? value;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PushCondition &&
+          other.runtimeType == runtimeType &&
+          other.is$ == is$ &&
+          other.key == key &&
+          other.kind == kind &&
+          other.pattern == pattern &&
+          other.value == value);
+
+  @dart.override
+  int get hashCode => Object.hash(is$, key, kind, pattern, value);
 }
 
 ///
@@ -2261,6 +2904,22 @@ class PushRule {
 
   /// The ID of this rule.
   String ruleId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PushRule &&
+          other.runtimeType == runtimeType &&
+          other.actions == actions &&
+          other.conditions == conditions &&
+          other.default$ == default$ &&
+          other.enabled == enabled &&
+          other.pattern == pattern &&
+          other.ruleId == ruleId);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(actions, conditions, default$, enabled, pattern, ruleId);
 }
 
 ///
@@ -2331,6 +2990,20 @@ class PushRuleSet {
 
   ///
   List<PushRule>? underride;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PushRuleSet &&
+          other.runtimeType == runtimeType &&
+          other.content == content &&
+          other.override == override &&
+          other.room == room &&
+          other.sender == sender &&
+          other.underride == underride);
+
+  @dart.override
+  int get hashCode => Object.hash(content, override, room, sender, underride);
 }
 
 ///
@@ -2386,6 +3059,18 @@ class RefreshResponse {
   /// be refreshed again. If not given, the old refresh token can
   /// be re-used.
   String? refreshToken;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RefreshResponse &&
+          other.runtimeType == runtimeType &&
+          other.accessToken == accessToken &&
+          other.expiresInMs == expiresInMs &&
+          other.refreshToken == refreshToken);
+
+  @dart.override
+  int get hashCode => Object.hash(accessToken, expiresInMs, refreshToken);
 }
 
 ///
@@ -2477,6 +3162,22 @@ class RegisterResponse {
   /// Any user ID returned by this API must conform to the grammar given in the
   /// [Matrix specification](https://spec.matrix.org/unstable/appendices/#user-identifiers).
   String userId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RegisterResponse &&
+          other.runtimeType == runtimeType &&
+          other.accessToken == accessToken &&
+          other.deviceId == deviceId &&
+          other.expiresInMs == expiresInMs &&
+          other.homeServer == homeServer &&
+          other.refreshToken == refreshToken &&
+          other.userId == userId);
+
+  @dart.override
+  int get hashCode => Object.hash(
+      accessToken, deviceId, expiresInMs, homeServer, refreshToken, userId);
 }
 
 ///
@@ -2501,6 +3202,17 @@ class RoomKeysUpdateResponse {
   /// The new etag value representing stored keys in the backup.
   /// See `GET /room_keys/version/{version}` for more details.
   String etag;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomKeysUpdateResponse &&
+          other.runtimeType == runtimeType &&
+          other.count == count &&
+          other.etag == etag);
+
+  @dart.override
+  int get hashCode => Object.hash(count, etag);
 }
 
 /// The key data
@@ -2539,6 +3251,20 @@ class KeyBackupData {
   /// algorithms in [Server-side key backups](https://spec.matrix.org/unstable/client-server-api/#server-side-key-backups) for more information on the
   /// expected format of the data.
   Map<String, Object?> sessionData;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is KeyBackupData &&
+          other.runtimeType == runtimeType &&
+          other.firstMessageIndex == firstMessageIndex &&
+          other.forwardedCount == forwardedCount &&
+          other.isVerified == isVerified &&
+          other.sessionData == sessionData);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(firstMessageIndex, forwardedCount, isVerified, sessionData);
 }
 
 /// The backed up keys for a room.
@@ -2557,6 +3283,16 @@ class RoomKeyBackup {
 
   /// A map of session IDs to key data.
   Map<String, KeyBackupData> sessions;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomKeyBackup &&
+          other.runtimeType == runtimeType &&
+          other.sessions == sessions);
+
+  @dart.override
+  int get hashCode => sessions.hashCode;
 }
 
 ///
@@ -2575,6 +3311,16 @@ class RoomKeys {
 
   /// A map of room IDs to room key backup data.
   Map<String, RoomKeyBackup> rooms;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomKeys &&
+          other.runtimeType == runtimeType &&
+          other.rooms == rooms);
+
+  @dart.override
+  int get hashCode => rooms.hashCode;
 }
 
 ///
@@ -2630,6 +3376,20 @@ class GetRoomKeysVersionCurrentResponse {
 
   /// The backup version.
   String version;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRoomKeysVersionCurrentResponse &&
+          other.runtimeType == runtimeType &&
+          other.algorithm == algorithm &&
+          other.authData == authData &&
+          other.count == count &&
+          other.etag == etag &&
+          other.version == version);
+
+  @dart.override
+  int get hashCode => Object.hash(algorithm, authData, count, etag, version);
 }
 
 ///
@@ -2677,6 +3437,20 @@ class GetRoomKeysVersionResponse {
 
   /// The backup version.
   String version;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRoomKeysVersionResponse &&
+          other.runtimeType == runtimeType &&
+          other.algorithm == algorithm &&
+          other.authData == authData &&
+          other.count == count &&
+          other.etag == etag &&
+          other.version == version);
+
+  @dart.override
+  int get hashCode => Object.hash(algorithm, authData, count, etag, version);
 }
 
 /// The events and state surrounding the requested event.
@@ -2750,6 +3524,22 @@ class EventContext {
 
   /// The state of the room at the last event returned.
   List<MatrixEvent>? state;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EventContext &&
+          other.runtimeType == runtimeType &&
+          other.end == end &&
+          other.event == event &&
+          other.eventsAfter == eventsAfter &&
+          other.eventsBefore == eventsBefore &&
+          other.start == start &&
+          other.state == state);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(end, event, eventsAfter, eventsBefore, start, state);
 }
 
 ///
@@ -2779,6 +3569,17 @@ class RoomMember {
 
   /// The display name of the user this object is representing.
   String? displayName;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomMember &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.displayName == displayName);
+
+  @dart.override
+  int get hashCode => Object.hash(avatarUrl, displayName);
 }
 
 ///
@@ -2861,6 +3662,19 @@ class GetRoomEventsResponse {
   /// sent to the client in prior calls to this endpoint, assuming
   /// the membership of those members has not changed.
   List<MatrixEvent>? state;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRoomEventsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.end == end &&
+          other.start == start &&
+          other.state == state);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, end, start, state);
 }
 
 ///
@@ -2914,6 +3728,18 @@ class IncludeEventContext {
   /// that sent the events that were returned.
   /// By default, this is `false`.
   bool? includeProfile;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IncludeEventContext &&
+          other.runtimeType == runtimeType &&
+          other.afterLimit == afterLimit &&
+          other.beforeLimit == beforeLimit &&
+          other.includeProfile == includeProfile);
+
+  @dart.override
+  int get hashCode => Object.hash(afterLimit, beforeLimit, includeProfile);
 }
 
 ///
@@ -2974,6 +3800,20 @@ class EventFilter {
 
   /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
   List<String>? types;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EventFilter &&
+          other.runtimeType == runtimeType &&
+          other.limit == limit &&
+          other.notSenders == notSenders &&
+          other.notTypes == notTypes &&
+          other.senders == senders &&
+          other.types == types);
+
+  @dart.override
+  int get hashCode => Object.hash(limit, notSenders, notTypes, senders, types);
 }
 
 ///
@@ -3046,6 +3886,22 @@ class RoomEventFilter {
   /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
   bool? unreadThreadNotifications;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomEventFilter &&
+          other.runtimeType == runtimeType &&
+          other.containsUrl == containsUrl &&
+          other.includeRedundantMembers == includeRedundantMembers &&
+          other.lazyLoadMembers == lazyLoadMembers &&
+          other.notRooms == notRooms &&
+          other.rooms == rooms &&
+          other.unreadThreadNotifications == unreadThreadNotifications);
+
+  @dart.override
+  int get hashCode => Object.hash(containsUrl, includeRedundantMembers,
+      lazyLoadMembers, notRooms, rooms, unreadThreadNotifications);
 }
 
 ///
@@ -3177,6 +4033,37 @@ class SearchFilter implements EventFilter, RoomEventFilter {
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
   @override
   bool? unreadThreadNotifications;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SearchFilter &&
+          other.runtimeType == runtimeType &&
+          other.limit == limit &&
+          other.notSenders == notSenders &&
+          other.notTypes == notTypes &&
+          other.senders == senders &&
+          other.types == types &&
+          other.containsUrl == containsUrl &&
+          other.includeRedundantMembers == includeRedundantMembers &&
+          other.lazyLoadMembers == lazyLoadMembers &&
+          other.notRooms == notRooms &&
+          other.rooms == rooms &&
+          other.unreadThreadNotifications == unreadThreadNotifications);
+
+  @dart.override
+  int get hashCode => Object.hash(
+      limit,
+      notSenders,
+      notTypes,
+      senders,
+      types,
+      containsUrl,
+      includeRedundantMembers,
+      lazyLoadMembers,
+      notRooms,
+      rooms,
+      unreadThreadNotifications);
 }
 
 ///
@@ -3209,6 +4096,14 @@ class Group {
 
   /// Key that defines the group.
   GroupKey? key;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Group && other.runtimeType == runtimeType && other.key == key);
+
+  @dart.override
+  int get hashCode => key.hashCode;
 }
 
 ///
@@ -3233,6 +4128,16 @@ class Groupings {
 
   /// List of groups to request.
   List<Group>? groupBy;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Groupings &&
+          other.runtimeType == runtimeType &&
+          other.groupBy == groupBy);
+
+  @dart.override
+  int get hashCode => groupBy.hashCode;
 }
 
 ///
@@ -3333,6 +4238,23 @@ class RoomEventsCriteria {
 
   /// The string to search events for
   String searchTerm;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomEventsCriteria &&
+          other.runtimeType == runtimeType &&
+          other.eventContext == eventContext &&
+          other.filter == filter &&
+          other.groupings == groupings &&
+          other.includeState == includeState &&
+          other.keys == keys &&
+          other.orderBy == orderBy &&
+          other.searchTerm == searchTerm);
+
+  @dart.override
+  int get hashCode => Object.hash(
+      eventContext, filter, groupings, includeState, keys, orderBy, searchTerm);
 }
 
 ///
@@ -3355,6 +4277,16 @@ class Categories {
 
   /// Mapping of category name to search criteria.
   RoomEventsCriteria? roomEvents;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Categories &&
+          other.runtimeType == runtimeType &&
+          other.roomEvents == roomEvents);
+
+  @dart.override
+  int get hashCode => roomEvents.hashCode;
 }
 
 /// The results for a particular group value.
@@ -3396,6 +4328,18 @@ class GroupValue {
 
   /// Which results are in this group.
   List<String>? results;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GroupValue &&
+          other.runtimeType == runtimeType &&
+          other.nextBatch == nextBatch &&
+          other.order == order &&
+          other.results == results);
+
+  @dart.override
+  int get hashCode => Object.hash(nextBatch, order, results);
 }
 
 ///
@@ -3425,6 +4369,17 @@ class UserProfile {
 
   ///
   String? displayname;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is UserProfile &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.displayname == displayname);
+
+  @dart.override
+  int get hashCode => Object.hash(avatarUrl, displayname);
 }
 
 ///
@@ -3491,6 +4446,21 @@ class SearchResultsEventContext {
 
   /// Pagination token for the start of the chunk
   String? start;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SearchResultsEventContext &&
+          other.runtimeType == runtimeType &&
+          other.end == end &&
+          other.eventsAfter == eventsAfter &&
+          other.eventsBefore == eventsBefore &&
+          other.profileInfo == profileInfo &&
+          other.start == start);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(end, eventsAfter, eventsBefore, profileInfo, start);
 }
 
 /// The result object.
@@ -3529,6 +4499,18 @@ class Result {
 
   /// The event that matched.
   MatrixEvent? result;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Result &&
+          other.runtimeType == runtimeType &&
+          other.context == context &&
+          other.rank == rank &&
+          other.result == result);
+
+  @dart.override
+  int get hashCode => Object.hash(context, rank, result);
 }
 
 ///
@@ -3617,6 +4599,22 @@ class ResultRoomEvents {
   /// The key is the room ID for which the `State
   /// Event` array belongs to.
   Map<String, List<MatrixEvent>>? state;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ResultRoomEvents &&
+          other.runtimeType == runtimeType &&
+          other.count == count &&
+          other.groups == groups &&
+          other.highlights == highlights &&
+          other.nextBatch == nextBatch &&
+          other.results == results &&
+          other.state == state);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(count, groups, highlights, nextBatch, results, state);
 }
 
 ///
@@ -3639,6 +4637,16 @@ class ResultCategories {
 
   /// Mapping of category name to search criteria.
   ResultRoomEvents? roomEvents;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ResultCategories &&
+          other.runtimeType == runtimeType &&
+          other.roomEvents == roomEvents);
+
+  @dart.override
+  int get hashCode => roomEvents.hashCode;
 }
 
 ///
@@ -3657,6 +4665,16 @@ class SearchResults {
 
   /// Describes which categories to search in and their criteria.
   ResultCategories searchCategories;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SearchResults &&
+          other.runtimeType == runtimeType &&
+          other.searchCategories == searchCategories);
+
+  @dart.override
+  int get hashCode => searchCategories.hashCode;
 }
 
 ///
@@ -3686,6 +4704,18 @@ class Location {
 
   /// The protocol ID that the third-party location is a part of.
   String protocol;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Location &&
+          other.runtimeType == runtimeType &&
+          other.alias == alias &&
+          other.fields == fields &&
+          other.protocol == protocol);
+
+  @dart.override
+  int get hashCode => Object.hash(alias, fields, protocol);
 }
 
 /// Definition of valid values for a field.
@@ -3711,6 +4741,17 @@ class FieldType {
   /// coarse to verify the value as the application service providing this protocol
   /// may apply additional validation or filtering.
   String regexp;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FieldType &&
+          other.runtimeType == runtimeType &&
+          other.placeholder == placeholder &&
+          other.regexp == regexp);
+
+  @dart.override
+  int get hashCode => Object.hash(placeholder, regexp);
 }
 
 ///
@@ -3750,6 +4791,19 @@ class ProtocolInstance {
 
   /// A unique identifier across all instances.
   String networkId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProtocolInstance &&
+          other.runtimeType == runtimeType &&
+          other.desc == desc &&
+          other.fields == fields &&
+          other.icon == icon &&
+          other.networkId == networkId);
+
+  @dart.override
+  int get hashCode => Object.hash(desc, fields, icon, networkId);
 }
 
 ///
@@ -3808,6 +4862,21 @@ class Protocol {
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the nickname of a user.
   List<String> userFields;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Protocol &&
+          other.runtimeType == runtimeType &&
+          other.fieldTypes == fieldTypes &&
+          other.icon == icon &&
+          other.instances == instances &&
+          other.locationFields == locationFields &&
+          other.userFields == userFields);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(fieldTypes, icon, instances, locationFields, userFields);
 }
 
 ///
@@ -3837,6 +4906,18 @@ class ThirdPartyUser {
 
   /// A Matrix User ID represting a third-party user.
   String userid;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ThirdPartyUser &&
+          other.runtimeType == runtimeType &&
+          other.fields == fields &&
+          other.protocol == protocol &&
+          other.userid == userid);
+
+  @dart.override
+  int get hashCode => Object.hash(fields, protocol, userid);
 }
 
 ///
@@ -3978,6 +5059,37 @@ class StateFilter implements EventFilter, RoomEventFilter {
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
   @override
   bool? unreadThreadNotifications;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StateFilter &&
+          other.runtimeType == runtimeType &&
+          other.limit == limit &&
+          other.notSenders == notSenders &&
+          other.notTypes == notTypes &&
+          other.senders == senders &&
+          other.types == types &&
+          other.containsUrl == containsUrl &&
+          other.includeRedundantMembers == includeRedundantMembers &&
+          other.lazyLoadMembers == lazyLoadMembers &&
+          other.notRooms == notRooms &&
+          other.rooms == rooms &&
+          other.unreadThreadNotifications == unreadThreadNotifications);
+
+  @dart.override
+  int get hashCode => Object.hash(
+      limit,
+      notSenders,
+      notTypes,
+      senders,
+      types,
+      containsUrl,
+      includeRedundantMembers,
+      lazyLoadMembers,
+      notRooms,
+      rooms,
+      unreadThreadNotifications);
 }
 
 ///
@@ -4053,6 +5165,23 @@ class RoomFilter {
 
   /// The message and state update events to include for rooms.
   StateFilter? timeline;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomFilter &&
+          other.runtimeType == runtimeType &&
+          other.accountData == accountData &&
+          other.ephemeral == ephemeral &&
+          other.includeLeave == includeLeave &&
+          other.notRooms == notRooms &&
+          other.rooms == rooms &&
+          other.state == state &&
+          other.timeline == timeline);
+
+  @dart.override
+  int get hashCode => Object.hash(
+      accountData, ephemeral, includeLeave, notRooms, rooms, state, timeline);
 }
 
 ///
@@ -4112,6 +5241,21 @@ class Filter {
 
   /// Filters to be applied to room data.
   RoomFilter? room;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Filter &&
+          other.runtimeType == runtimeType &&
+          other.accountData == accountData &&
+          other.eventFields == eventFields &&
+          other.eventFormat == eventFormat &&
+          other.presence == presence &&
+          other.room == room);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(accountData, eventFields, eventFormat, presence, room);
 }
 
 ///
@@ -4151,6 +5295,20 @@ class OpenIdCredentials {
 
   /// The string `Bearer`.
   String tokenType;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OpenIdCredentials &&
+          other.runtimeType == runtimeType &&
+          other.accessToken == accessToken &&
+          other.expiresIn == expiresIn &&
+          other.matrixServerName == matrixServerName &&
+          other.tokenType == tokenType);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(accessToken, expiresIn, matrixServerName, tokenType);
 }
 
 ///
@@ -4180,6 +5338,16 @@ class Tag {
   double? order;
 
   Map<String, Object?> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Tag &&
+          other.runtimeType == runtimeType &&
+          other.order == order);
+
+  @dart.override
+  int get hashCode => order.hashCode;
 }
 
 ///
@@ -4215,6 +5383,18 @@ class Profile {
 
   /// The user's matrix user ID.
   String userId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Profile &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.displayName == displayName &&
+          other.userId == userId);
+
+  @dart.override
+  int get hashCode => Object.hash(avatarUrl, displayName, userId);
 }
 
 ///
@@ -4240,6 +5420,17 @@ class SearchUserDirectoryResponse {
 
   /// Ordered by rank and then whether or not profile info is available.
   List<Profile> results;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SearchUserDirectoryResponse &&
+          other.runtimeType == runtimeType &&
+          other.limited == limited &&
+          other.results == results);
+
+  @dart.override
+  int get hashCode => Object.hash(limited, results);
 }
 
 ///
@@ -4275,6 +5466,19 @@ class TurnServerCredentials {
 
   /// The username to use.
   String username;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TurnServerCredentials &&
+          other.runtimeType == runtimeType &&
+          other.password == password &&
+          other.ttl == ttl &&
+          other.uris == uris &&
+          other.username == username);
+
+  @dart.override
+  int get hashCode => Object.hash(password, ttl, uris, username);
 }
 
 ///
@@ -4306,6 +5510,17 @@ class GetVersionsResponse {
 
   /// The supported versions.
   List<String> versions;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetVersionsResponse &&
+          other.runtimeType == runtimeType &&
+          other.unstableFeatures == unstableFeatures &&
+          other.versions == versions);
+
+  @dart.override
+  int get hashCode => Object.hash(unstableFeatures, versions);
 }
 
 ///
@@ -4337,4 +5552,15 @@ class CreateContentResponse {
   /// The timestamp (in milliseconds since the unix epoch) when the
   /// generated media id will expire, if media is not uploaded.
   int? unusedExpiresAt;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CreateContentResponse &&
+          other.runtimeType == runtimeType &&
+          other.contentUri == contentUri &&
+          other.unusedExpiresAt == unusedExpiresAt);
+
+  @dart.override
+  int get hashCode => Object.hash(contentUri, unusedExpiresAt);
 }

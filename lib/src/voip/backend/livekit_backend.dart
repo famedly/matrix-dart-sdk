@@ -456,10 +456,10 @@ class LiveKitBackend extends CallBackend {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is LiveKitBackend &&
+      (other is LiveKitBackend &&
           type == other.type &&
           livekitServiceUrl == other.livekitServiceUrl &&
-          livekitAlias == other.livekitAlias;
+          livekitAlias == other.livekitAlias);
 
   @override
   int get hashCode => Object.hash(
