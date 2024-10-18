@@ -1240,8 +1240,9 @@ class Room {
 
     final storeInDatabase = !isArchived;
 
-    if (prev_batch == null) {
-      throw 'Tried to request history without a prev_batch token';
+    if (prev_batch == null &&
+        historyVisibility != HistoryVisibility.worldReadable) {
+      throw 'Tried to request history without a prev_batch token and room previews are disabled.';
     }
     final resp = await client.getRoomEvents(
       id,
