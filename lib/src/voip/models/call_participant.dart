@@ -30,9 +30,9 @@ class CallParticipant {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is CallParticipant &&
+      (other is CallParticipant &&
           userId == other.userId &&
-          deviceId == other.deviceId;
+          deviceId == other.deviceId);
 
   @override
   int get hashCode => Object.hash(userId.hashCode, deviceId.hashCode);

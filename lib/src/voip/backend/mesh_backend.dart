@@ -843,7 +843,7 @@ class MeshBackend extends CallBackend {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is MeshBackend && type == other.type;
+      identical(this, other) || (other is MeshBackend && type == other.type);
   @override
   int get hashCode => type.hashCode;
 
