@@ -1001,37 +1001,55 @@ class Event extends MatrixEvent {
       content['formatted_body'] is String;
 
   // regexes to fetch the number of emotes, including emoji, and if the message consists of only those
-  // to match an emoji we can use the following regex:
-  // (?:\x{00a9}|\x{00ae}|[\x{2600}-\x{27bf}]|[\x{2b00}-\x{2bff}]|\x{d83c}[\x{d000}-\x{dfff}]|\x{d83d}[\x{d000}-\x{dfff}]|\x{d83e}[\x{d000}-\x{dfff}])[\x{fe00}-\x{fe0f}]?
-  // we need to replace \x{0000} with \u0000, the comment is left in the other format to be able to paste into regex101.com
+  // to match an emoji we can use the following regularly updated regex : https://stackoverflow.com/a/67705964
   // to see if there is a custom emote, we use the following regex: <img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>
-  // now we combind the two to have four regexes:
+  // now we combined the two to have four regexes and one helper:
+  // 0. the raw components
+  //   - the pure unicode sequence from the link above and
+  //   - the padded sequence with whitespace, option selection and copyright/tm sign
+  //   - the matrix emoticon sequence
   // 1. are there only emoji, or whitespace
   // 2. are there only emoji, emotes, or whitespace
   // 3. count number of emoji
-  // 4- count number of emoji or emotes
+  // 4. count number of emoji or emotes
+
+  // update from : https://stackoverflow.com/a/67705964
+  static const _unicodeSequences =
+      r'\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]';
+  // the above sequence but with copyright, trade mark sign and option selection
+  static const _paddedUnicodeSequence =
+      r'(?:\u00a9|\u00ae|' + _unicodeSequences + r')[\ufe00-\ufe0f]?';
+  // should match a <img> tag with the matrix emote/emoticon attribute set
+  static const _matrixEmoticonSequence =
+      r'<img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>';
+
   static final RegExp _onlyEmojiRegex = RegExp(
-      r'^((?:\u00a9|\u00ae|[\u2600-\u27bf]|[\u2b00-\u2bff]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])[\ufe00-\ufe0f]?|\s)*$',
-      caseSensitive: false,
-      multiLine: false);
+    r'^(' + _paddedUnicodeSequence + r'|\s)*$',
+    caseSensitive: false,
+    multiLine: false,
+  );
   static final RegExp _onlyEmojiEmoteRegex = RegExp(
-      r'^((?:\u00a9|\u00ae|[\u2600-\u27bf]|[\u2b00-\u2bff]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])[\ufe00-\ufe0f]?|<img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>|\s)*$',
-      caseSensitive: false,
-      multiLine: false);
+    r'^(' + _paddedUnicodeSequence + r'|' + _matrixEmoticonSequence + r'|\s)*$',
+    caseSensitive: false,
+    multiLine: false,
+  );
   static final RegExp _countEmojiRegex = RegExp(
-      r'((?:\u00a9|\u00ae|[\u2600-\u27bf]|[\u2b00-\u2bff]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])[\ufe00-\ufe0f]?)',
-      caseSensitive: false,
-      multiLine: false);
+    r'(' + _paddedUnicodeSequence + r')',
+    caseSensitive: false,
+    multiLine: false,
+  );
   static final RegExp _countEmojiEmoteRegex = RegExp(
-      r'((?:\u00a9|\u00ae|[\u2600-\u27bf]|[\u2b00-\u2bff]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])[\ufe00-\ufe0f]?|<img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>)',
-      caseSensitive: false,
-      multiLine: false);
+    r'(' + _paddedUnicodeSequence + r'|' + _matrixEmoticonSequence + r')',
+    caseSensitive: false,
+    multiLine: false,
+  );
 
   /// Returns if a given event only has emotes, emojis or whitespace as content.
   /// If the body contains a reply then it is stripped.
   /// This is useful to determine if stand-alone emotes should be displayed bigger.
   bool get onlyEmotes {
     if (isRichMessage) {
+      // calcUnlocalizedBody strips out the <img /> tags in favor of a :placeholder:
       final formattedTextStripped = formattedText.replaceAll(
           RegExp('<mx-reply>.*</mx-reply>',
               caseSensitive: false, multiLine: false, dotAll: true),
@@ -1048,6 +1066,7 @@ class Event extends MatrixEvent {
   /// WARNING: This does **not** test if there are only emotes. Use `event.onlyEmotes` for that!
   int get numberEmotes {
     if (isRichMessage) {
+      // calcUnlocalizedBody strips out the <img /> tags in favor of a :placeholder:
       final formattedTextStripped = formattedText.replaceAll(
           RegExp('<mx-reply>.*</mx-reply>',
               caseSensitive: false, multiLine: false, dotAll: true),
