@@ -3369,7 +3369,6 @@ class Client extends MatrixApi {
 
   Future<void> setMuteAllPushNotifications(bool muted) async {
     await setPushRuleEnabled(
-      'global',
       PushRuleKind.override,
       '.m.rule.master',
       muted,
