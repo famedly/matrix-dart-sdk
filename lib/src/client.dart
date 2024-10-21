@@ -43,6 +43,7 @@ import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:matrix/src/utils/try_get_push_rule.dart';
 import 'package:matrix/src/utils/versions_comparator.dart';
+import 'package:matrix/src/voip/utils/async_cache_try_fetch.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -1212,7 +1213,7 @@ class Client extends MatrixApi {
       AsyncCache<GetVersionsResponse>(const Duration(hours: 1));
 
   Future<bool> authenticatedMediaSupported() async {
-    final versionsResponse = await _versionsCache.fetch(() => getVersions());
+    final versionsResponse = await _versionsCache.tryFetch(() => getVersions());
     return versionsResponse.versions.any(
           (v) => isVersionGreaterThanOrEqualTo(v, 'v1.11'),
         ) ||
@@ -1232,8 +1233,8 @@ class Client extends MatrixApi {
   /// repository APIs, for example, proxies may enforce a lower upload size limit
   /// than is advertised by the server on this endpoint.
   @override
-  Future<MediaConfig> getConfig() =>
-      _serverConfigCache.fetch(() async => (await authenticatedMediaSupported())
+  Future<MediaConfig> getConfig() => _serverConfigCache
+      .tryFetch(() async => (await authenticatedMediaSupported())
           ? getConfigAuthed()
           // ignore: deprecated_member_use_from_same_package
           : super.getConfig());
