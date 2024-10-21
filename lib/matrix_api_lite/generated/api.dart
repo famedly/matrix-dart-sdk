@@ -119,7 +119,7 @@ class Api {
   ///
   /// Clients, both authenticated and unauthenticated, might wish to hide user interface which exposes
   /// this feature if the server is not offering it. Authenticated clients can check for support on
-  /// a per-user basis with the `m.get_login_token` [capability](https://spec.matrix.org/unstable/client-server-api/#capabilities-negotiation),
+  /// a per-user basis with the [`m.get_login_token`](https://spec.matrix.org/unstable/client-server-api/#mget_login_token-capability) capability,
   /// while unauthenticated clients can detect server support by looking for an `m.login.token` login
   /// flow with `get_login_token: true` on [`GET /login`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3login).
   ///
@@ -1982,6 +1982,9 @@ class Api {
   /// [serverName] The servers to attempt to join the room through. One of the servers
   /// must be participating in the room.
   ///
+  /// [via] The servers to attempt to join the room through. One of the servers
+  /// must be participating in the room.
+  ///
   /// [reason] Optional reason to be included as the `reason` on the subsequent
   /// membership event.
   ///
@@ -1993,12 +1996,14 @@ class Api {
   /// The joined room ID.
   Future<String> joinRoom(String roomIdOrAlias,
       {List<String>? serverName,
+      List<String>? via,
       String? reason,
       ThirdPartySigned? thirdPartySigned}) async {
     final requestUri = Uri(
         path: '_matrix/client/v3/join/${Uri.encodeComponent(roomIdOrAlias)}',
         queryParameters: {
           if (serverName != null) 'server_name': serverName,
+          if (via != null) 'via': via,
         });
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -2286,17 +2291,21 @@ class Api {
   /// [serverName] The servers to attempt to knock on the room through. One of the servers
   /// must be participating in the room.
   ///
+  /// [via] The servers to attempt to knock on the room through. One of the servers
+  /// must be participating in the room.
+  ///
   /// [reason] Optional reason to be included as the `reason` on the subsequent
   /// membership event.
   ///
   /// returns `room_id`:
   /// The knocked room ID.
   Future<String> knockRoom(String roomIdOrAlias,
-      {List<String>? serverName, String? reason}) async {
+      {List<String>? serverName, List<String>? via, String? reason}) async {
     final requestUri = Uri(
         path: '_matrix/client/v3/knock/${Uri.encodeComponent(roomIdOrAlias)}',
         queryParameters: {
           if (serverName != null) 'server_name': serverName,
+          if (via != null) 'via': via,
         });
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -2523,8 +2532,7 @@ class Api {
 
   /// Get the combined profile information for this user. This API may be used
   /// to fetch the user's own profile information or other users; either
-  /// locally or on remote homeservers. This API may return keys which are not
-  /// limited to `displayname` or `avatar_url`.
+  /// locally or on remote homeservers.
   ///
   /// [userId] The user whose profile information to get.
   Future<ProfileInformation> getUserProfile(String userId) async {
@@ -2734,10 +2742,8 @@ class Api {
         : null)(json['pushers']);
   }
 
-  /// Retrieve all push rulesets for this user. Clients can "drill-down" on
-  /// the rulesets by suffixing a `scope` to this path e.g.
-  /// `/pushrules/global/`. This will return a subset of this data under the
-  /// specified key e.g. the `global` key.
+  /// Retrieve all push rulesets for this user. Currently the only push ruleset
+  /// defined is `global`.
   ///
   /// returns `global`:
   /// The global ruleset.
@@ -2753,20 +2759,30 @@ class Api {
     return PushRuleSet.fromJson(json['global'] as Map<String, Object?>);
   }
 
+  /// Retrieve all push rules for this user.
+  Future<GetPushRulesGlobalResponse> getPushRulesGlobal() async {
+    final requestUri = Uri(path: '_matrix/client/v3/pushrules/global/');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetPushRulesGlobalResponse.fromJson(json as Map<String, Object?>);
+  }
+
   /// This endpoint removes the push rule defined in the path.
-  ///
-  /// [scope] `global` to specify global rules.
   ///
   /// [kind] The kind of rule
   ///
   ///
   /// [ruleId] The identifier for the rule.
   ///
-  Future<void> deletePushRule(
-      String scope, PushRuleKind kind, String ruleId) async {
+  Future<void> deletePushRule(PushRuleKind kind, String ruleId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}');
+            '_matrix/client/v3/pushrules/global/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}');
     final request = Request('DELETE', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2779,18 +2795,15 @@ class Api {
 
   /// Retrieve a single specified push rule.
   ///
-  /// [scope] `global` to specify global rules.
-  ///
   /// [kind] The kind of rule
   ///
   ///
   /// [ruleId] The identifier for the rule.
   ///
-  Future<PushRule> getPushRule(
-      String scope, PushRuleKind kind, String ruleId) async {
+  Future<PushRule> getPushRule(PushRuleKind kind, String ruleId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}');
+            '_matrix/client/v3/pushrules/global/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2818,8 +2831,6 @@ class Api {
   ///
   /// When creating push rules, they MUST be enabled by default.
   ///
-  /// [scope] `global` to specify global rules.
-  ///
   /// [kind] The kind of rule
   ///
   ///
@@ -2844,14 +2855,14 @@ class Api {
   ///
   /// [pattern] Only applicable to `content` rules. The glob-style pattern to match against.
   Future<void> setPushRule(
-      String scope, PushRuleKind kind, String ruleId, List<Object?> actions,
+      PushRuleKind kind, String ruleId, List<Object?> actions,
       {String? before,
       String? after,
       List<PushCondition>? conditions,
       String? pattern}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}',
+            '_matrix/client/v3/pushrules/global/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}',
         queryParameters: {
           if (before != null) 'before': before,
           if (after != null) 'after': after,
@@ -2875,9 +2886,6 @@ class Api {
 
   /// This endpoint get the actions for the specified push rule.
   ///
-  /// [scope] Either `global` or `device/<profile_tag>` to specify global
-  /// rules or device rules for the given `profile_tag`.
-  ///
   /// [kind] The kind of rule
   ///
   ///
@@ -2887,10 +2895,10 @@ class Api {
   /// returns `actions`:
   /// The action(s) to perform for this rule.
   Future<List<Object?>> getPushRuleActions(
-      String scope, PushRuleKind kind, String ruleId) async {
+      PushRuleKind kind, String ruleId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/actions');
+            '_matrix/client/v3/pushrules/global/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/actions');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2904,8 +2912,6 @@ class Api {
   /// This endpoint allows clients to change the actions of a push rule.
   /// This can be used to change the actions of builtin rules.
   ///
-  /// [scope] `global` to specify global rules.
-  ///
   /// [kind] The kind of rule
   ///
   ///
@@ -2913,11 +2919,11 @@ class Api {
   ///
   ///
   /// [actions] The action(s) to perform for this rule.
-  Future<void> setPushRuleActions(String scope, PushRuleKind kind,
-      String ruleId, List<Object?> actions) async {
+  Future<void> setPushRuleActions(
+      PushRuleKind kind, String ruleId, List<Object?> actions) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/actions');
+            '_matrix/client/v3/pushrules/global/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/actions');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -2934,9 +2940,6 @@ class Api {
 
   /// This endpoint gets whether the specified push rule is enabled.
   ///
-  /// [scope] Either `global` or `device/<profile_tag>` to specify global
-  /// rules or device rules for the given `profile_tag`.
-  ///
   /// [kind] The kind of rule
   ///
   ///
@@ -2945,11 +2948,10 @@ class Api {
   ///
   /// returns `enabled`:
   /// Whether the push rule is enabled or not.
-  Future<bool> isPushRuleEnabled(
-      String scope, PushRuleKind kind, String ruleId) async {
+  Future<bool> isPushRuleEnabled(PushRuleKind kind, String ruleId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/enabled');
+            '_matrix/client/v3/pushrules/global/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/enabled');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2962,8 +2964,6 @@ class Api {
 
   /// This endpoint allows clients to enable or disable the specified push rule.
   ///
-  /// [scope] `global` to specify global rules.
-  ///
   /// [kind] The kind of rule
   ///
   ///
@@ -2972,10 +2972,10 @@ class Api {
   ///
   /// [enabled] Whether the push rule is enabled or not.
   Future<void> setPushRuleEnabled(
-      String scope, PushRuleKind kind, String ruleId, bool enabled) async {
+      PushRuleKind kind, String ruleId, bool enabled) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/enabled');
+            '_matrix/client/v3/pushrules/global/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/enabled');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -5386,7 +5386,12 @@ class Api {
   ///
   /// [body]
   ///
-  /// [contentType] The content type of the file being uploaded
+  /// [contentType] **Optional.** The content type of the file being uploaded.
+  ///
+  /// Clients SHOULD always supply this header.
+  ///
+  /// Defaults to `application/octet-stream` if it is not set.
+  ///
   ///
   /// returns `content_uri`:
   /// The [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the uploaded content.
@@ -5422,7 +5427,12 @@ class Api {
   ///
   /// [body]
   ///
-  /// [contentType] The content type of the file being uploaded
+  /// [contentType] **Optional.** The content type of the file being uploaded.
+  ///
+  /// Clients SHOULD always supply this header.
+  ///
+  /// Defaults to `application/octet-stream` if it is not set.
+  ///
   Future<Map<String, Object?>> uploadContentToMXC(
       String serverName, String mediaId, Uint8List body,
       {String? filename, String? contentType}) async {
