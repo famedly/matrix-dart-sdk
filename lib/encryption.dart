@@ -17,7 +17,7 @@
  */
 
 /// Matrix SDK encryption specific extension
-library encryption;
+library;
 
 export 'encryption/encryption.dart';
 export 'encryption/key_manager.dart';

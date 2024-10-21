@@ -24,7 +24,7 @@ dependencies:
   image: ^4.0.15
   js: ^0.6.3
   markdown: ^7.1.1
-  mime: ^1.0.0
+  mime: ">=1.0.0 <3.0.0"
   olm: ^2.0.2
   random_string: ^2.3.1
   sdp_transform: ^0.3.2
@@ -40,7 +40,7 @@ dev_dependencies:
   enhanced_enum_generator: ^0.2.4
   file: ">=6.1.1 <8.0.0"
   import_sorter: ^4.6.0
-  lints: ^4.0.0
+  lints: ^5.0.0
   path: ^1.9.0
-  sqflite_common_ffi: 2.3.2+1 # v2.3.3 doesn't support dart v3.2.x
+  sqflite_common_ffi: ^2.3.2+1 # sqflite_common_ffi aggressively requires newer dart versions
   test: ^1.15.7
