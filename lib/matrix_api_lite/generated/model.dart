@@ -2116,15 +2116,20 @@ class LoginFlow {
   LoginFlow({
     this.getLoginToken,
     required this.type,
+    this.additionalProperties = const {},
   });
 
   LoginFlow.fromJson(Map<String, Object?> json)
       : getLoginToken =
             ((v) => v != null ? v as bool : null)(json['get_login_token']),
-        type = json['type'] as String;
+        type = json['type'] as String,
+        additionalProperties = Map.fromEntries(json.entries
+            .where((e) => !['get_login_token', 'type'].contains(e.key))
+            .map((e) => MapEntry(e.key, e.value)));
   Map<String, Object?> toJson() {
     final getLoginToken = this.getLoginToken;
     return {
+      ...additionalProperties,
       if (getLoginToken != null) 'get_login_token': getLoginToken,
       'type': type,
     };
@@ -2141,6 +2146,8 @@ class LoginFlow {
   /// The login type. This is supplied as the `type` when
   /// logging in.
   String type;
+
+  Map<String, Object?> additionalProperties;
 
   @dart.override
   bool operator ==(Object other) =>
