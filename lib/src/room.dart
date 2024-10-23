@@ -2091,24 +2091,22 @@ class Room {
       // All push notifications should be sent to the user
       case PushRuleState.notify:
         if (pushRuleState == PushRuleState.dontNotify) {
-          await client.deletePushRule('global', PushRuleKind.override, id);
+          await client.deletePushRule(PushRuleKind.override, id);
         } else if (pushRuleState == PushRuleState.mentionsOnly) {
-          await client.deletePushRule('global', PushRuleKind.room, id);
+          await client.deletePushRule(PushRuleKind.room, id);
         }
         break;
       // Only when someone mentions the user, a push notification should be sent
       case PushRuleState.mentionsOnly:
         if (pushRuleState == PushRuleState.dontNotify) {
-          await client.deletePushRule('global', PushRuleKind.override, id);
+          await client.deletePushRule(PushRuleKind.override, id);
           await client.setPushRule(
-            'global',
             PushRuleKind.room,
             id,
             [PushRuleAction.dontNotify],
           );
         } else if (pushRuleState == PushRuleState.notify) {
           await client.setPushRule(
-            'global',
             PushRuleKind.room,
             id,
             [PushRuleAction.dontNotify],
@@ -2118,10 +2116,9 @@ class Room {
       // No push notification should be ever sent for this room.
       case PushRuleState.dontNotify:
         if (pushRuleState == PushRuleState.mentionsOnly) {
-          await client.deletePushRule('global', PushRuleKind.room, id);
+          await client.deletePushRule(PushRuleKind.room, id);
         }
         await client.setPushRule(
-          'global',
           PushRuleKind.override,
           id,
           [PushRuleAction.dontNotify],

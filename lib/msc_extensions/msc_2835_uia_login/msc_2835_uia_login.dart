@@ -1,4 +1,5 @@
-library msc_2835_uia_login;
+/// Experimental login method using User Interactive Authentication
+library;
 
 import 'dart:convert';
 

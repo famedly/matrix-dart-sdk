@@ -1,4 +1,6 @@
-library msc_3814_dehydrated_devices;
+/// Extensions for the experimental dehydrated devices MSC, which allows
+/// receiving encrypted messages while you have no devices signed in.
+library;
 
 import 'dart:convert';
 import 'dart:math';

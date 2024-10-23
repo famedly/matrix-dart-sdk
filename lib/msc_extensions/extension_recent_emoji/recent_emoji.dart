@@ -1,4 +1,5 @@
-library extension_recent_emoji;
+/// Extension to synchronize the recently used widgets with Element clients
+library;
 
 import 'package:matrix/matrix.dart';
 
