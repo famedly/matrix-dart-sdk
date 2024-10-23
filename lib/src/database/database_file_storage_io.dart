@@ -33,6 +33,20 @@ mixin DatabaseFileStorage {
     return null;
   }
 
+  Future<bool> deleteFile(Uri mxcUri) async {
+    final fileStorageLocation = this.fileStorageLocation;
+    if (!supportsFileStoring || fileStorageLocation == null) return false;
+
+    final dir = Directory.fromUri(fileStorageLocation);
+
+    final file = File('${dir.path}/${mxcUri.toString().split('/').last}');
+
+    if (await file.exists() == false) return false;
+
+    await file.delete();
+    return true;
+  }
+
   Future<void> deleteOldFiles(int savedAt) async {
     final dirUri = fileStorageLocation;
     final deleteFilesAfterDuration = this.deleteFilesAfterDuration;

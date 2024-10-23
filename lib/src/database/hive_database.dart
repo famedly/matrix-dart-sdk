@@ -462,6 +462,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   }
 
   @override
+  Future<bool> deleteFile(Uri mxcUri) async {
+    return false;
+  }
+
+  @override
   Future<StoredInboundGroupSession?> getInboundGroupSession(
     String roomId,
     String sessionId,
