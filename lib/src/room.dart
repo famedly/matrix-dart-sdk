@@ -600,22 +600,29 @@ class Room {
 
   /// Sends a normal text message to this room. Returns the event ID generated
   /// by the server for this message.
-  Future<String?> sendTextEvent(String message,
-      {String? txid,
-      Event? inReplyTo,
-      String? editEventId,
-      bool parseMarkdown = true,
-      bool parseCommands = true,
-      String msgtype = MessageTypes.Text,
-      String? threadRootEventId,
-      String? threadLastEventId}) {
+  Future<String?> sendTextEvent(
+    String message, {
+    String? txid,
+    Event? inReplyTo,
+    String? editEventId,
+    bool parseMarkdown = true,
+    bool parseCommands = true,
+    String msgtype = MessageTypes.Text,
+    String? threadRootEventId,
+    String? threadLastEventId,
+    StringBuffer? commandStdout,
+  }) {
     if (parseCommands) {
-      return client.parseAndRunCommand(this, message,
-          inReplyTo: inReplyTo,
-          editEventId: editEventId,
-          txid: txid,
-          threadRootEventId: threadRootEventId,
-          threadLastEventId: threadLastEventId);
+      return client.parseAndRunCommand(
+        this,
+        message,
+        inReplyTo: inReplyTo,
+        editEventId: editEventId,
+        txid: txid,
+        threadRootEventId: threadRootEventId,
+        threadLastEventId: threadLastEventId,
+        stdout: commandStdout,
+      );
     }
     final event = <String, dynamic>{
       'msgtype': msgtype,
