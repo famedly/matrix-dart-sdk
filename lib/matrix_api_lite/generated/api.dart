@@ -2539,6 +2539,9 @@ class Api {
     final requestUri =
         Uri(path: '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
+    if (bearerToken != null) {
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    }
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -2560,6 +2563,9 @@ class Api {
         path:
             '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/avatar_url');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
+    if (bearerToken != null) {
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    }
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -2606,6 +2612,9 @@ class Api {
         path:
             '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/displayname');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
+    if (bearerToken != null) {
+      request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    }
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
