@@ -78,7 +78,7 @@ void main() {
         final toDeviceQueue = await database.getToDeviceEventQueue();
         expect(toDeviceQueue.isEmpty, true);
       });
-      test('storeFile', () async {
+      test('storeFile and deleteFile', () async {
         await database.storeFile(
           Uri.parse('mxc://test'),
           Uint8List.fromList([0]),
@@ -86,6 +86,13 @@ void main() {
         );
         final file = await database.getFile(Uri.parse('mxc://test'));
         expect(file != null, database.supportsFileStoring);
+
+        final result = await database.deleteFile(Uri.parse('mxc://test'));
+        expect(result, database.supportsFileStoring);
+        if (result) {
+          final file = await database.getFile(Uri.parse('mxc://test'));
+          expect(file, null);
+        }
       });
       test('getFile', () async {
         await database.getFile(Uri.parse('mxc://test'));
