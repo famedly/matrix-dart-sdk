@@ -4,7 +4,7 @@ import 'dart:convert';
 class PushNotification {
   final Map<String, dynamic>? content;
   final PushNotificationCounts? counts;
-  final List<PushNotificationDevice> devices;
+  final List<PushNotificationDevice>? devices;
   final String? eventId;
   final String? prio;
   final String? roomAlias;
@@ -17,7 +17,7 @@ class PushNotification {
   const PushNotification({
     this.content,
     this.counts,
-    required this.devices,
+    this.devices,
     this.eventId,
     this.prio,
     this.roomAlias,
@@ -62,7 +62,8 @@ class PushNotification {
   Map<String, dynamic> toJson() => {
         if (content != null) 'content': content,
         if (counts != null) 'counts': counts?.toJson(),
-        'devices': devices.map((i) => i.toJson()).toList(),
+        if (devices != null)
+          'devices': devices?.map((i) => i.toJson()).toList(),
         if (eventId != null) 'event_id': eventId,
         if (prio != null) 'prio': prio,
         if (roomAlias != null) 'room_alias': roomAlias,
