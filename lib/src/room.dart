@@ -86,7 +86,11 @@ class Room {
         'last_event': lastEvent?.toJson(),
       };
 
-  factory Room.fromJson(Map<String, dynamic> json, Client client) {
+  factory Room.fromJson(
+    Map<String, dynamic> json,
+    Client client, {
+    includeLastEvent = true,
+  }) {
     final room = Room(
       client: client,
       id: json['id'],
@@ -99,7 +103,7 @@ class Room {
       prev_batch: json['prev_batch'],
       summary: RoomSummary.fromJson(Map<String, dynamic>.from(json['summary'])),
     );
-    if (json['last_event'] != null) {
+    if (json['last_event'] != null && includeLastEvent) {
       room.lastEvent = Event.fromJson(json['last_event'], room);
     }
     return room;

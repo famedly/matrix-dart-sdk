@@ -1257,11 +1257,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
                   lastEvent: lastEvent,
                 ).toJson());
     } else if (roomUpdate is JoinedRoomUpdate) {
-      // The presense of a last_event in this JSON (with sending status -1) is causing an infinite
-      // recursion bug which freezes the client. The room's lastEvent is being replaced later in this
-      // function, so here we remove it from the data currently stored in the database to prevent the bug.
-      currentRawRoom.remove('last_event');
-      final currentRoom = Room.fromJson(copyMap(currentRawRoom), client);
+      final currentRoom = Room.fromJson(
+        copyMap(currentRawRoom),
+        client,
+        includeLastEvent: false,
+      );
       await _roomsBox.put(
           roomId,
           Room(
