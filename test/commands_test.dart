@@ -156,6 +156,45 @@ void main() {
       });
     });
 
+    test('react_custom_emote', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      room.setState(Event(
+        type: 'im.ponies.room_emotes',
+        content: {
+          'images': {
+            'room_plain': {'url': 'mxc://room_plain'}
+          }
+        },
+        room: room,
+        stateKey: '',
+        senderId: '@fakeuser:fakeServer.notExisting',
+        eventId: '\$fakeid5:fakeServer.notExisting',
+        originServerTs: DateTime.now(),
+      ));
+      await room.sendTextEvent('/react :room_plain:',
+          inReplyTo: Event(
+            eventId: '\$event',
+            type: 'm.room.message',
+            content: {
+              'msgtype': 'm.text',
+              'body': '<b>yay</b>',
+              'format': 'org.matrix.custom.html',
+              'formatted_body': '<b>yay</b>',
+            },
+            originServerTs: DateTime.now(),
+            senderId: client.userID!,
+            room: room,
+          ));
+      final sent = getLastMessagePayload('m.reaction');
+      expect(sent, {
+        'm.relates_to': {
+          'rel_type': 'm.annotation',
+          'event_id': '\$event',
+          'key': 'mxc://room_plain',
+        },
+      });
+    });
+
     test('thread', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent(
