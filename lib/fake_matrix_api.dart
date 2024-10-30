@@ -91,6 +91,12 @@ class FakeMatrixApi extends BaseClient {
     return completer.future;
   }
 
+  Set<String> servers = {
+    'https://fakeserver.notexisting',
+    'https://fakeserver.notexisting:1337',
+    'https://fakeserverpriortoauthmedia.notexisting'
+  };
+
   FutureOr<Response> mockIntercept(Request request) async {
     // Collect data from Request
     var action = request.url.path;
@@ -121,14 +127,10 @@ class FakeMatrixApi extends BaseClient {
 
     //print('\$method request to $action with Data: $data');
 
-    // Sync requests with timeout
-    if (data is Map<String, dynamic> && data['timeout'] is String) {
-      await Future.delayed(Duration(seconds: 5));
-    }
-
-    if (request.url.origin != 'https://fakeserver.notexisting') {
+    if (!servers.contains(request.url.origin)) {
       return Response(
-          '<html><head></head><body>Not found...</body></html>', 404);
+          '<html><head></head><body>Not found ${request.url.origin}...</body></html>',
+          404);
     }
 
     if (!{
@@ -150,88 +152,116 @@ class FakeMatrixApi extends BaseClient {
 
     // Call API
     (_calledEndpoints[action] ??= <dynamic>[]).add(data);
-    final act = api[method]?[action];
-    if (act != null) {
-      res = act(data);
-      if (res is Map && res.containsKey('errcode')) {
-        if (res['errcode'] == 'M_NOT_FOUND') {
-          statusCode = 404;
-        } else {
-          statusCode = 405;
-        }
-      }
-    } else if (method == 'PUT' && action.contains('/client/v3/sendToDevice/')) {
-      res = {};
-      if (_failToDevice) {
-        statusCode = 500;
-      }
-    } else if (method == 'GET' &&
-        action.contains('/client/v3/rooms/') &&
-        action.contains('/state/m.room.member/') &&
-        !action.endsWith('%40alicyy%3Aexample.com') &&
-        !action.contains('%40getme')) {
-      res = {'displayname': '', 'membership': 'ban'};
-    } else if (method == 'PUT' &&
-        action.contains(
-            '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/')) {
-      res = {'event_id': '\$event${_eventCounter++}'};
-    } else if (method == 'PUT' &&
-        action.contains(
-            '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/')) {
-      res = {'event_id': '\$event${_eventCounter++}'};
-    } else if (action.contains('/client/v3/sync')) {
+    if (request.url.origin ==
+            'https://fakeserverpriortoauthmedia.notexisting' &&
+        action.contains('/client/versions')) {
       res = {
-        'next_batch': DateTime.now().millisecondsSinceEpoch.toString(),
+        'versions': [
+          'r0.0.1',
+          'ra.b.c',
+          'v0.1',
+          'v1.1',
+          'v1.9',
+          'v1.10.1',
+        ],
+        'unstable_features': {'m.lazy_load_members': true},
       };
-    } else if (method == 'PUT' &&
-        _client != null &&
-        action.contains('/account_data/') &&
-        !action.contains('/rooms/')) {
-      final type = Uri.decodeComponent(action.split('/').last);
-      final syncUpdate = sdk.SyncUpdate(
-        nextBatch: '',
-        accountData: [sdk.BasicEvent(content: decodeJson(data), type: type)],
-      );
-      if (_client?.database != null) {
-        await _client?.database?.transaction(() async {
-          await _client?.handleSync(syncUpdate);
-        });
-      } else {
-        await _client?.handleSync(syncUpdate);
-      }
-      res = {};
-    } else if (method == 'PUT' &&
-        _client != null &&
-        action.contains('/account_data/') &&
-        action.contains('/rooms/')) {
-      final segments = action.split('/');
-      final type = Uri.decodeComponent(segments.last);
-      final roomId = Uri.decodeComponent(segments[segments.length - 3]);
-      final syncUpdate = sdk.SyncUpdate(
-        nextBatch: '',
-        rooms: RoomsUpdate(
-          join: {
-            roomId: JoinedRoomUpdate(accountData: [
-              sdk.BasicRoomEvent(
-                  content: decodeJson(data), type: type, roomId: roomId)
-            ])
-          },
-        ),
-      );
-      if (_client?.database != null) {
-        await _client?.database?.transaction(() async {
-          await _client?.handleSync(syncUpdate);
-        });
-      } else {
-        await _client?.handleSync(syncUpdate);
-      }
-      res = {};
     } else {
-      res = {
-        'errcode': 'M_UNRECOGNIZED',
-        'error': 'Unrecognized request: $action'
-      };
-      statusCode = 405;
+      final act = api[method]?[action];
+      if (act != null) {
+        res = act(data);
+        if (res is Map && res.containsKey('errcode')) {
+          if (res['errcode'] == 'M_NOT_FOUND') {
+            statusCode = 404;
+          } else {
+            statusCode = 405;
+          }
+        }
+      } else if (method == 'PUT' &&
+          action.contains('/client/v3/sendToDevice/')) {
+        res = {};
+        if (_failToDevice) {
+          statusCode = 500;
+        }
+      } else if (method == 'GET' &&
+          action.contains('/client/v3/rooms/') &&
+          action.contains('/state/m.room.member/') &&
+          !action.endsWith('%40alicyy%3Aexample.com') &&
+          !action.contains('%40getme')) {
+        res = {'displayname': '', 'membership': 'ban'};
+      } else if (method == 'PUT' &&
+          action.contains(
+              '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/')) {
+        res = {'event_id': '\$event${_eventCounter++}'};
+      } else if (method == 'PUT' &&
+          action.contains(
+              '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/')) {
+        res = {'event_id': '\$event${_eventCounter++}'};
+      } else if (action.contains('/client/v3/sync')) {
+        // Sync requests with timeout
+        final timeout = request.url.queryParameters['timeout'];
+        if (timeout != null && timeout != '0') {
+          await Future.delayed(Duration(milliseconds: 50));
+        }
+        res = {
+          // So that it is clear which sync we are processing prefix it with 'empty_'
+          'next_batch': 'empty_${DateTime.now().millisecondsSinceEpoch}',
+          // ensure we don't generate new keys for no reason
+          'device_one_time_keys_count': {
+            'curve25519': 10,
+            'signed_curve25519': 100
+          },
+        };
+      } else if (method == 'PUT' &&
+          _client != null &&
+          action.contains('/account_data/') &&
+          !action.contains('/rooms/')) {
+        final type = Uri.decodeComponent(action.split('/').last);
+        final syncUpdate = sdk.SyncUpdate(
+          nextBatch: '',
+          accountData: [sdk.BasicEvent(content: decodeJson(data), type: type)],
+        );
+        if (_client?.database != null) {
+          await _client?.database?.transaction(() async {
+            await _client?.handleSync(syncUpdate);
+          });
+        } else {
+          await _client?.handleSync(syncUpdate);
+        }
+        res = {};
+      } else if (method == 'PUT' &&
+          _client != null &&
+          action.contains('/account_data/') &&
+          action.contains('/rooms/')) {
+        final segments = action.split('/');
+        final type = Uri.decodeComponent(segments.last);
+        final roomId = Uri.decodeComponent(segments[segments.length - 3]);
+        final syncUpdate = sdk.SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(
+            join: {
+              roomId: JoinedRoomUpdate(accountData: [
+                sdk.BasicRoomEvent(
+                    content: decodeJson(data), type: type, roomId: roomId)
+              ])
+            },
+          ),
+        );
+        if (_client?.database != null) {
+          await _client?.database?.transaction(() async {
+            await _client?.handleSync(syncUpdate);
+          });
+        } else {
+          await _client?.handleSync(syncUpdate);
+        }
+        res = {};
+      } else {
+        res = {
+          'errcode': 'M_UNRECOGNIZED',
+          'error': 'Unrecognized request: $action'
+        };
+        statusCode = 405;
+      }
     }
 
     unawaited(Future.delayed(Duration(milliseconds: 1)).then((_) async {
@@ -1014,7 +1044,7 @@ class FakeMatrixApi extends BaseClient {
         '@bob:example.com',
       ],
     },
-    'device_one_time_keys_count': {'curve25519': 10, 'signed_curve25519': 20},
+    'device_one_time_keys_count': {'curve25519': 10, 'signed_curve25519': 100},
   };
 
   static Map<String, dynamic> archiveSyncResponse = {
@@ -1122,9 +1152,21 @@ class FakeMatrixApi extends BaseClient {
             'og:image:width': 48,
             'matrix:image:size': 102400
           },
+      '/client/v1/media/preview_url?url=https%3A%2F%2Fmatrix.org&ts=10':
+          (var req) => {
+                'og:title': 'Matrix Blog Post',
+                'og:description':
+                    'This is a really cool blog post from matrix.org',
+                'og:image': 'mxc://example.com/ascERGshawAWawugaAcauga',
+                'og:image:type': 'image/png',
+                'og:image:height': 48,
+                'og:image:width': 48,
+                'matrix:image:size': 102400
+              },
       '/media/v3/config': (var req) => {'m.upload.size': 50000000},
+      '/client/v1/media/config': (var req) => {'m.upload.size': 50000000},
       '/.well-known/matrix/client': (var req) => {
-            'm.homeserver': {'base_url': 'https://matrix.example.com'},
+            'm.homeserver': {'base_url': 'https://fakeserver.notexisting'},
             'm.identity_server': {'base_url': 'https://identity.example.com'},
             'org.example.custom.property': {
               'app_url': 'https://custom.app.example.org'
@@ -1690,10 +1732,7 @@ class FakeMatrixApi extends BaseClient {
       '/client/v3/rooms/!5345234234%3Aexample.com/messages?from=t_1234a&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => archivesMessageResponse,
       '/client/versions': (var req) => {
-            'versions': [
-              'v1.1',
-              'v1.2',
-            ],
+            'versions': ['v1.1', 'v1.2', 'v1.11'],
             'unstable_features': {'m.lazy_load_members': true},
           },
       '/client/v3/login': (var req) => {
@@ -1940,7 +1979,7 @@ class FakeMatrixApi extends BaseClient {
               ]
             }
           },
-      '/client/v3/sync?filter=%7B%22room%22%3A%7B%22include_leave%22%3Atrue%2C%22timeline%22%3A%7B%22limit%22%3A10%7D%7D%7D&timeout=0':
+      '/client/v3/sync?filter=%7B%22room%22%3A%7B%22include_leave%22%3Atrue%2C%22state%22%3A%7B%22lazy_load_members%22%3Atrue%7D%2C%22timeline%22%3A%7B%22limit%22%3A10%7D%7D%7D&timeout=0':
           (var req) => archiveSyncResponse,
       '/client/v3/sync?filter=1234&timeout=0': (var req) => syncResponse,
       '/client/v3/sync?filter=1234&since=1234&full_state=false&set_presence=unavailable&timeout=15':
@@ -2558,7 +2597,7 @@ class FakeMatrixApi extends BaseClient {
           (var req) => {},
       '/client/v3/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
           (var req) => {},
-      '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/account_data/com.famedly.marked_unread':
+      '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/account_data/m.marked_unread':
           (var req) => {},
       '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct':
           (var req) => {},

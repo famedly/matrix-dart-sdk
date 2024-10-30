@@ -32,6 +32,7 @@ Future<Client> getClient({
   String? databasePath,
 }) async {
   final client = Client(
+    logLevel: Level.verbose,
     'testclient',
     httpClient: FakeMatrixApi(),
     databaseBuilder: (client) =>
@@ -52,6 +53,7 @@ Future<Client> getClient({
     newOlmAccount: pickledOlmAccount,
   );
   await Future.delayed(Duration(milliseconds: 10));
+  await client.abortSync();
   return client;
 }
 

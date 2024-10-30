@@ -16,6 +16,7 @@ void main() {
     Logs().level = Level.info;
     setUp(() async {
       matrix = await getClient();
+      await matrix.abortSync();
 
       voip = VoIP(matrix, MockWebRTCDelegate());
       VoIP.customTxid = '1234';

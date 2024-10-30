@@ -150,27 +150,6 @@ class MatrixApi extends Api {
     return jsonResp!;
   }
 
-  /// Publishes end-to-end encryption keys for the device.
-  /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-query
-  Future<Map<String, int>> uploadKeys(
-      {MatrixDeviceKeys? deviceKeys,
-      Map<String, Object?>? oneTimeKeys,
-      Map<String, Object?>? fallbackKeys}) async {
-    final response = await request(
-      RequestType.POST,
-      '/client/v3/keys/upload',
-      data: {
-        if (deviceKeys != null) 'device_keys': deviceKeys.toJson(),
-        if (oneTimeKeys != null) 'one_time_keys': oneTimeKeys,
-        if (fallbackKeys != null) ...{
-          'fallback_keys': fallbackKeys,
-          'org.matrix.msc2732.fallback_keys': fallbackKeys,
-        },
-      },
-    );
-    return Map<String, int>.from(response['one_time_key_counts'] as Map);
-  }
-
   /// This endpoint allows the creation, modification and deletion of pushers
   /// for this user ID. The behaviour of this endpoint varies depending on the
   /// values in the JSON body.

@@ -225,6 +225,7 @@ class Event extends MatrixEvent {
     if (originalSource != null) {
       data['original_source'] = originalSource?.toJson();
     }
+    data['status'] = status.intValue;
     return data;
   }
 
@@ -291,15 +292,18 @@ class Event extends MatrixEvent {
   String get body {
     if (redacted) return 'Redacted';
     if (text != '') return text;
-    if (formattedText != '') return formattedText;
     return type;
   }
 
   /// Use this to get a plain-text representation of the event, stripping things
   /// like spoilers and thelike. Useful for plain text notifications.
-  String get plaintextBody => content['format'] == 'org.matrix.custom.html'
-      ? HtmlToText.convert(formattedText)
-      : body;
+  String get plaintextBody => switch (formattedText) {
+        // if the formattedText is empty, fallback to body
+        '' => body,
+        final String s when content['format'] == 'org.matrix.custom.html' =>
+          HtmlToText.convert(s),
+        _ => body,
+      };
 
   /// Returns a list of [Receipt] instances for this event.
   List<Receipt> get receipts {
@@ -349,12 +353,42 @@ class Event extends MatrixEvent {
   /// Removes an unsent or yet-to-send event from the database and timeline.
   /// These are events marked with the status `SENDING` or `ERROR`.
   /// Throws an exception if used for an already sent event!
+  ///
   Future<void> cancelSend() async {
     if (status.isSent) {
       throw Exception('Can only delete events which are not sent yet!');
     }
 
     await room.client.database?.removeEvent(eventId, room.id);
+
+    if (room.lastEvent != null && room.lastEvent!.eventId == eventId) {
+      final redactedBecause = Event.fromMatrixEvent(
+        MatrixEvent(
+          type: EventTypes.Redaction,
+          content: {'redacts': eventId},
+          redacts: eventId,
+          senderId: senderId,
+          eventId: '${eventId}_cancel_send',
+          originServerTs: DateTime.now(),
+        ),
+        room,
+      );
+
+      await room.client.handleSync(
+        SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [redactedBecause],
+                ),
+              )
+            },
+          ),
+        ),
+      );
+    }
     room.client.onCancelSendEvent.add(eventId);
   }
 
@@ -513,6 +547,66 @@ class Event extends MatrixEvent {
   /// [minNoThumbSize] is the minimum size that an original image may be to not fetch its thumbnail, defaults to 80k
   /// [useThumbnailMxcUrl] says weather to use the mxc url of the thumbnail, rather than the original attachment.
   ///  [animated] says weather the thumbnail is animated
+  ///
+  /// Throws an exception if the scheme is not `mxc` or the homeserver is not
+  /// set.
+  ///
+  /// Important! To use this link you have to set a http header like this:
+  /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
+  Future<Uri?> getAttachmentUri(
+      {bool getThumbnail = false,
+      bool useThumbnailMxcUrl = false,
+      double width = 800.0,
+      double height = 800.0,
+      ThumbnailMethod method = ThumbnailMethod.scale,
+      int minNoThumbSize = _minNoThumbSize,
+      bool animated = false}) async {
+    if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
+        !hasAttachment ||
+        isAttachmentEncrypted) {
+      return null; // can't url-thumbnail in encrypted rooms
+    }
+    if (useThumbnailMxcUrl && !hasThumbnail) {
+      return null; // can't fetch from thumbnail
+    }
+    final thisInfoMap = useThumbnailMxcUrl ? thumbnailInfoMap : infoMap;
+    final thisMxcUrl =
+        useThumbnailMxcUrl ? infoMap['thumbnail_url'] : content['url'];
+    // if we have as method scale, we can return safely the original image, should it be small enough
+    if (getThumbnail &&
+        method == ThumbnailMethod.scale &&
+        thisInfoMap['size'] is int &&
+        thisInfoMap['size'] < minNoThumbSize) {
+      getThumbnail = false;
+    }
+    // now generate the actual URLs
+    if (getThumbnail) {
+      return await Uri.parse(thisMxcUrl).getThumbnailUri(
+        room.client,
+        width: width,
+        height: height,
+        method: method,
+        animated: animated,
+      );
+    } else {
+      return await Uri.parse(thisMxcUrl).getDownloadUri(room.client);
+    }
+  }
+
+  /// Gets the attachment https URL to display in the timeline, taking into account if the original image is tiny.
+  /// Returns null for encrypted rooms, if the image can't be fetched via http url or if the event does not contain an attachment.
+  /// Set [getThumbnail] to true to fetch the thumbnail, set [width], [height] and [method]
+  /// for the respective thumbnailing properties.
+  /// [minNoThumbSize] is the minimum size that an original image may be to not fetch its thumbnail, defaults to 80k
+  /// [useThumbnailMxcUrl] says weather to use the mxc url of the thumbnail, rather than the original attachment.
+  ///  [animated] says weather the thumbnail is animated
+  ///
+  /// Throws an exception if the scheme is not `mxc` or the homeserver is not
+  /// set.
+  ///
+  /// Important! To use this link you have to set a http header like this:
+  /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
+  @Deprecated('Use getAttachmentUri() instead')
   Uri? getAttachmentUrl(
       {bool getThumbnail = false,
       bool useThumbnailMxcUrl = false,
@@ -624,9 +718,13 @@ class Event extends MatrixEvent {
     final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
     if (canDownloadFileFromServer) {
       final httpClient = room.client.httpClient;
-      downloadCallback ??=
-          (Uri url) async => (await httpClient.get(url)).bodyBytes;
-      uint8list = await downloadCallback(mxcUrl.getDownloadLink(room.client));
+      downloadCallback ??= (Uri url) async => (await httpClient.get(
+            url,
+            headers: {'authorization': 'Bearer ${room.client.accessToken}'},
+          ))
+              .bodyBytes;
+      uint8list =
+          await downloadCallback(await mxcUrl.getDownloadUri(room.client));
       storeable = database != null &&
           storeable &&
           uint8list.lengthInBytes < database.maxFileSize;
@@ -667,7 +765,10 @@ class Event extends MatrixEvent {
   /// Returns a localized String representation of this event. For a
   /// room list you may find [withSenderNamePrefix] useful. Set [hideReply] to
   /// crop all lines starting with '>'. With [plaintextBody] it'll use the
-  /// plaintextBody instead of the normal body.
+  /// plaintextBody instead of the normal body which in practice will convert
+  /// the html body to a plain text body before falling back to the body. In
+  /// either case this function won't return the html body without converting
+  /// it to plain text.
   /// [removeMarkdown] allow to remove the markdown formating from the event body.
   /// Usefull form message preview or notifications text.
   Future<String> calcLocalizedBody(MatrixLocalizations i18n,
@@ -687,12 +788,14 @@ class Event extends MatrixEvent {
       await fetchSenderUser();
     }
 
-    return calcLocalizedBodyFallback(i18n,
-        withSenderNamePrefix: withSenderNamePrefix,
-        hideReply: hideReply,
-        hideEdit: hideEdit,
-        plaintextBody: plaintextBody,
-        removeMarkdown: removeMarkdown);
+    return calcLocalizedBodyFallback(
+      i18n,
+      withSenderNamePrefix: withSenderNamePrefix,
+      hideReply: hideReply,
+      hideEdit: hideEdit,
+      plaintextBody: plaintextBody,
+      removeMarkdown: removeMarkdown,
+    );
   }
 
   @Deprecated('Use calcLocalizedBody or calcLocalizedBodyFallback')
@@ -721,6 +824,9 @@ class Event extends MatrixEvent {
       bool plaintextBody = false,
       bool removeMarkdown = false}) {
     if (redacted) {
+      if (status.intValue < EventStatus.synced.intValue) {
+        return i18n.cancelledSend;
+      }
       return i18n.removedBy(this);
     }
 
@@ -751,37 +857,44 @@ class Event extends MatrixEvent {
   }
 
   /// Calculating the body of an event regardless of localization.
-  String calcUnlocalizedBody(
-      {bool hideReply = false,
-      bool hideEdit = false,
-      bool plaintextBody = false,
-      bool removeMarkdown = false}) {
+  String calcUnlocalizedBody({
+    bool hideReply = false,
+    bool hideEdit = false,
+    bool plaintextBody = false,
+    bool removeMarkdown = false,
+  }) {
     if (redacted) {
       return 'Removed by ${senderFromMemoryOrFallback.displayName ?? senderId}';
     }
     var body = plaintextBody ? this.plaintextBody : this.body;
 
-    // we need to know if the message is an html message to be able to determine
-    // if we need to strip the reply fallback.
-    var htmlMessage = content['format'] != 'org.matrix.custom.html';
+    // Html messages will already have their reply fallback removed during the Html to Text conversion.
+    var mayHaveReplyFallback = !plaintextBody ||
+        (content['format'] != 'org.matrix.custom.html' ||
+            formattedText.isEmpty);
+
     // If we have an edit, we want to operate on the new content
     final newContent = content.tryGetMap<String, Object?>('m.new_content');
     if (hideEdit &&
         relationshipType == RelationshipTypes.edit &&
         newContent != null) {
-      if (plaintextBody && newContent['format'] == 'org.matrix.custom.html') {
-        htmlMessage = true;
-        body = HtmlToText.convert(
-            newContent.tryGet<String>('formatted_body') ?? formattedText);
+      final newBody =
+          newContent.tryGet<String>('formatted_body', TryGet.silent);
+      if (plaintextBody &&
+          newContent['format'] == 'org.matrix.custom.html' &&
+          newBody != null &&
+          newBody.isNotEmpty) {
+        mayHaveReplyFallback = false;
+        body = HtmlToText.convert(newBody);
       } else {
-        htmlMessage = false;
+        mayHaveReplyFallback = true;
         body = newContent.tryGet<String>('body') ?? body;
       }
     }
     // Hide reply fallback
     // Be sure that the plaintextBody already stripped teh reply fallback,
     // if the message is formatted
-    if (hideReply && (!plaintextBody || htmlMessage)) {
+    if (hideReply && mayHaveReplyFallback) {
       body = body.replaceFirst(
           RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'), '');
     }
@@ -888,37 +1001,55 @@ class Event extends MatrixEvent {
       content['formatted_body'] is String;
 
   // regexes to fetch the number of emotes, including emoji, and if the message consists of only those
-  // to match an emoji we can use the following regex:
-  // (?:\x{00a9}|\x{00ae}|[\x{2600}-\x{27bf}]|[\x{2b00}-\x{2bff}]|\x{d83c}[\x{d000}-\x{dfff}]|\x{d83d}[\x{d000}-\x{dfff}]|\x{d83e}[\x{d000}-\x{dfff}])[\x{fe00}-\x{fe0f}]?
-  // we need to replace \x{0000} with \u0000, the comment is left in the other format to be able to paste into regex101.com
+  // to match an emoji we can use the following regularly updated regex : https://stackoverflow.com/a/67705964
   // to see if there is a custom emote, we use the following regex: <img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>
-  // now we combind the two to have four regexes:
+  // now we combined the two to have four regexes and one helper:
+  // 0. the raw components
+  //   - the pure unicode sequence from the link above and
+  //   - the padded sequence with whitespace, option selection and copyright/tm sign
+  //   - the matrix emoticon sequence
   // 1. are there only emoji, or whitespace
   // 2. are there only emoji, emotes, or whitespace
   // 3. count number of emoji
-  // 4- count number of emoji or emotes
+  // 4. count number of emoji or emotes
+
+  // update from : https://stackoverflow.com/a/67705964
+  static const _unicodeSequences =
+      r'\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]';
+  // the above sequence but with copyright, trade mark sign and option selection
+  static const _paddedUnicodeSequence =
+      r'(?:\u00a9|\u00ae|' + _unicodeSequences + r')[\ufe00-\ufe0f]?';
+  // should match a <img> tag with the matrix emote/emoticon attribute set
+  static const _matrixEmoticonSequence =
+      r'<img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>';
+
   static final RegExp _onlyEmojiRegex = RegExp(
-      r'^((?:\u00a9|\u00ae|[\u2600-\u27bf]|[\u2b00-\u2bff]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])[\ufe00-\ufe0f]?|\s)*$',
-      caseSensitive: false,
-      multiLine: false);
+    r'^(' + _paddedUnicodeSequence + r'|\s)*$',
+    caseSensitive: false,
+    multiLine: false,
+  );
   static final RegExp _onlyEmojiEmoteRegex = RegExp(
-      r'^((?:\u00a9|\u00ae|[\u2600-\u27bf]|[\u2b00-\u2bff]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])[\ufe00-\ufe0f]?|<img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>|\s)*$',
-      caseSensitive: false,
-      multiLine: false);
+    r'^(' + _paddedUnicodeSequence + r'|' + _matrixEmoticonSequence + r'|\s)*$',
+    caseSensitive: false,
+    multiLine: false,
+  );
   static final RegExp _countEmojiRegex = RegExp(
-      r'((?:\u00a9|\u00ae|[\u2600-\u27bf]|[\u2b00-\u2bff]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])[\ufe00-\ufe0f]?)',
-      caseSensitive: false,
-      multiLine: false);
+    r'(' + _paddedUnicodeSequence + r')',
+    caseSensitive: false,
+    multiLine: false,
+  );
   static final RegExp _countEmojiEmoteRegex = RegExp(
-      r'((?:\u00a9|\u00ae|[\u2600-\u27bf]|[\u2b00-\u2bff]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])[\ufe00-\ufe0f]?|<img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>)',
-      caseSensitive: false,
-      multiLine: false);
+    r'(' + _paddedUnicodeSequence + r'|' + _matrixEmoticonSequence + r')',
+    caseSensitive: false,
+    multiLine: false,
+  );
 
   /// Returns if a given event only has emotes, emojis or whitespace as content.
   /// If the body contains a reply then it is stripped.
   /// This is useful to determine if stand-alone emotes should be displayed bigger.
   bool get onlyEmotes {
     if (isRichMessage) {
+      // calcUnlocalizedBody strips out the <img /> tags in favor of a :placeholder:
       final formattedTextStripped = formattedText.replaceAll(
           RegExp('<mx-reply>.*</mx-reply>',
               caseSensitive: false, multiLine: false, dotAll: true),
@@ -935,6 +1066,7 @@ class Event extends MatrixEvent {
   /// WARNING: This does **not** test if there are only emotes. Use `event.onlyEmotes` for that!
   int get numberEmotes {
     if (isRichMessage) {
+      // calcUnlocalizedBody strips out the <img /> tags in favor of a :placeholder:
       final formattedTextStripped = formattedText.replaceAll(
           RegExp('<mx-reply>.*</mx-reply>',
               caseSensitive: false, multiLine: false, dotAll: true),

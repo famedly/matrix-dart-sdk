@@ -95,8 +95,13 @@ void main() async {
         KeyVerificationMethod.reciprocate
       };
 
+      // cancel sync to reduce background load and prevent sync overwriting which keys are tracked.
+      await client1.abortSync();
+      await client2.abortSync();
+
       // get client2 device keys to start verification
       await client1.updateUserDeviceKeys(additionalUsers: {client2.userID!});
+      await client2.updateUserDeviceKeys(additionalUsers: {client1.userID!});
     });
 
     tearDown(() async {

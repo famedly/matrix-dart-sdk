@@ -450,11 +450,12 @@ class Room {
 
   /// Add a tag to the room.
   Future<void> addTag(String tag, {double? order}) => client.setRoomTag(
-        client.userID!,
-        id,
-        tag,
+      client.userID!,
+      id,
+      tag,
+      Tag(
         order: order,
-      );
+      ));
 
   /// Removes a tag from the room.
   Future<void> removeTag(String tag) => client.deleteRoomTag(
@@ -469,8 +470,9 @@ class Room {
   static Tag _tryTagFromJson(Object o) {
     if (o is Map<String, dynamic>) {
       return Tag(
-          order: o.tryGet<num>('order', TryGet.silent)?.toDouble(),
-          additionalProperties: Map.from(o)..remove('order'));
+        order: o.tryGet<num>('order', TryGet.silent)?.toDouble(),
+        additionalProperties: Map.from(o)..remove('order'),
+      );
     }
     return Tag();
   }
@@ -491,7 +493,9 @@ class Room {
 
   bool get markedUnread {
     return MarkedUnread.fromJson(
-            roomAccountData[EventType.markedUnread]?.content ?? {})
+            roomAccountData[EventType.markedUnread]?.content ??
+                roomAccountData[EventType.oldMarkedUnread]?.content ??
+                {})
         .unread;
   }
 
@@ -1185,22 +1189,31 @@ class Room {
   /// Set the power level of the user with the [userID] to the value [power].
   /// Returns the event ID of the new state event. If there is no known
   /// power level event, there might something broken and this returns null.
-  Future<String> setPower(String userID, int power) async {
-    final powerMap = Map<String, Object?>.from(
-      getState(EventTypes.RoomPowerLevels)?.content ?? {},
-    );
+  /// Please note, that you need to await the power level state from sync before
+  /// the changes are actually applied. Especially if you want to set multiple
+  /// power levels at once, you need to await each change in the sync, to not
+  /// override those.
+  Future<String> setPower(String userId, int power) async {
+    final powerLevelMapCopy =
+        getState(EventTypes.RoomPowerLevels)?.content.copy() ?? {};
 
-    final usersPowerMap = powerMap['users'] is Map<String, Object?>
-        ? powerMap['users'] as Map<String, Object?>
-        : (powerMap['users'] = <String, Object?>{});
+    var users = powerLevelMapCopy['users'];
 
-    usersPowerMap[userID] = power;
+    if (users is! Map<String, Object?>) {
+      if (users != null) {
+        Logs().v(
+            'Repairing Power Level "users" has the wrong type "${powerLevelMapCopy['users'].runtimeType}"');
+      }
+      users = powerLevelMapCopy['users'] = <String, Object?>{};
+    }
+
+    users[userId] = power;
 
     return await client.setRoomStateWithKey(
       id,
       EventTypes.RoomPowerLevels,
       '',
-      powerMap,
+      powerLevelMapCopy,
     );
   }
 
@@ -1641,9 +1654,7 @@ class Room {
     required bool ignoreErrors,
   }) async {
     try {
-      Logs().v(
-        'Request missing user $mxID in room ${getLocalizedDisplayname()} from the server...',
-      );
+      Logs().v('Request missing user $mxID in room $id from the server...');
       final resp = await client.getRoomStateWithKey(
         id,
         EventTypes.RoomMember,
@@ -1696,10 +1707,9 @@ class Room {
     required bool requestProfile,
   }) async {
     // Is user already in cache?
-    final userFromState = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     // If not in cache, try the database
-    var foundUser = userFromState;
+    User? foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     // If the room is not postloaded, check the database
     if (partial && foundUser == null) {
@@ -1708,8 +1718,10 @@ class Room {
 
     // If not in the database, try fetching the member from the server
     if (requestState && foundUser == null) {
-      foundUser = await _requestSingleParticipantViaState(mxID,
-          ignoreErrors: ignoreErrors);
+      foundUser = await _requestSingleParticipantViaState(
+        mxID,
+        ignoreErrors: ignoreErrors,
+      );
     }
 
     // If the user isn't found or they have left and no displayname set anymore, request their profile from the server
@@ -1741,11 +1753,14 @@ class Room {
     }
 
     if (foundUser == null) return null;
+    // make sure we didn't actually store anything by the time we did those requests
+    final userFromCurrentState =
+        getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     // Set user in the local state if the state changed.
     // If we set the state unconditionally, we might end up with a client calling this over and over thinking the user changed.
-    if (userFromState == null ||
-        userFromState.displayName != foundUser.displayName) {
+    if (userFromCurrentState == null ||
+        userFromCurrentState.displayName != foundUser.displayName) {
       setState(foundUser);
       // ignore: deprecated_member_use_from_same_package
       onUpdate.add(id);
@@ -2052,24 +2067,22 @@ class Room {
       // All push notifications should be sent to the user
       case PushRuleState.notify:
         if (pushRuleState == PushRuleState.dontNotify) {
-          await client.deletePushRule('global', PushRuleKind.override, id);
+          await client.deletePushRule(PushRuleKind.override, id);
         } else if (pushRuleState == PushRuleState.mentionsOnly) {
-          await client.deletePushRule('global', PushRuleKind.room, id);
+          await client.deletePushRule(PushRuleKind.room, id);
         }
         break;
       // Only when someone mentions the user, a push notification should be sent
       case PushRuleState.mentionsOnly:
         if (pushRuleState == PushRuleState.dontNotify) {
-          await client.deletePushRule('global', PushRuleKind.override, id);
+          await client.deletePushRule(PushRuleKind.override, id);
           await client.setPushRule(
-            'global',
             PushRuleKind.room,
             id,
             [PushRuleAction.dontNotify],
           );
         } else if (pushRuleState == PushRuleState.notify) {
           await client.setPushRule(
-            'global',
             PushRuleKind.room,
             id,
             [PushRuleAction.dontNotify],
@@ -2079,10 +2092,9 @@ class Room {
       // No push notification should be ever sent for this room.
       case PushRuleState.dontNotify:
         if (pushRuleState == PushRuleState.mentionsOnly) {
-          await client.deletePushRule('global', PushRuleKind.room, id);
+          await client.deletePushRule(PushRuleKind.room, id);
         }
         await client.setPushRule(
-          'global',
           PushRuleKind.override,
           id,
           [PushRuleAction.dontNotify],

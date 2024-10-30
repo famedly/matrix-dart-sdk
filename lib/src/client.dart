@@ -31,6 +31,7 @@ import 'package:random_string/random_string.dart';
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/matrix_api_lite/generated/fixed_model.dart';
 import 'package:matrix/msc_extensions/msc_unpublished_custom_refresh_token_lifetime/msc_unpublished_custom_refresh_token_lifetime.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
@@ -41,6 +42,8 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:matrix/src/utils/try_get_push_rule.dart';
+import 'package:matrix/src/utils/versions_comparator.dart';
+import 'package:matrix/src/voip/utils/async_cache_try_fetch.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -120,6 +123,24 @@ class Client extends MatrixApi {
 
   /// The timeout until a typing indicator gets removed automatically.
   final Duration typingIndicatorTimeout;
+
+  DiscoveryInformation? _wellKnown;
+
+  /// the cached .well-known file updated using [getWellknown]
+  DiscoveryInformation? get wellKnown => _wellKnown;
+
+  /// The homeserver this client is communicating with.
+  ///
+  /// In case the [homeserver]'s host differs from the previous value, the
+  /// [wellKnown] cache will be invalidated.
+  @override
+  set homeserver(Uri? homeserver) {
+    if (homeserver?.host != this.homeserver?.host) {
+      _wellKnown = null;
+      unawaited(database?.storeWellKnown(null));
+    }
+    super.homeserver = homeserver;
+  }
 
   Future<MatrixImageFileResizedResponse?> Function(
       MatrixImageFileResizeArguments)? customImageResizer;
@@ -518,7 +539,7 @@ class Client extends MatrixApi {
       final loginTypes = await getLoginFlows() ?? [];
       if (!loginTypes.any((f) => supportedLoginTypes.contains(f.type))) {
         throw BadServerLoginTypesException(
-            loginTypes.map((f) => f.type ?? '').toSet(), supportedLoginTypes);
+            loginTypes.map((f) => f.type).toSet(), supportedLoginTypes);
       }
 
       return (wellKnown, versions, loginTypes);
@@ -526,6 +547,27 @@ class Client extends MatrixApi {
       homeserver = null;
       rethrow;
     }
+  }
+
+  /// Gets discovery information about the domain. The file may include
+  /// additional keys, which MUST follow the Java package naming convention,
+  /// e.g. `com.example.myapp.property`. This ensures property names are
+  /// suitably namespaced for each application and reduces the risk of
+  /// clashes.
+  ///
+  /// Note that this endpoint is not necessarily handled by the homeserver,
+  /// but by another webserver, to be used for discovering the homeserver URL.
+  ///
+  /// The result of this call is stored in [wellKnown] for later use at runtime.
+  @override
+  Future<DiscoveryInformation> getWellknown() async {
+    final wellKnown = await super.getWellknown();
+
+    // do not reset the well known here, so super call
+    super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
+    _wellKnown = wellKnown;
+    await database?.storeWellKnown(wellKnown);
+    return wellKnown;
   }
 
   /// Checks to see if a username is available, and valid, for the server.
@@ -587,7 +629,7 @@ class Client extends MatrixApi {
   /// older server versions.
   @override
   Future<LoginResponse> login(
-    LoginType type, {
+    String type, {
     AuthenticationIdentifier? identifier,
     String? password,
     String? token,
@@ -1068,8 +1110,17 @@ class Client extends MatrixApi {
   /// [ArchivedRoom] objects containing the [Room] and the associated [Timeline].
   Future<List<ArchivedRoom>> loadArchiveWithTimeline() async {
     _archivedRooms.clear();
+
+    final filter = jsonEncode(Filter(
+      room: RoomFilter(
+        state: StateFilter(lazyLoadMembers: true),
+        includeLeave: true,
+        timeline: StateFilter(limit: 10),
+      ),
+    ).toJson());
+
     final syncResp = await sync(
-      filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
+      filter: filter,
       timeout: _archiveCacheBusterTimeout,
       setPresence: syncPresence,
     );
@@ -1158,15 +1209,257 @@ class Client extends MatrixApi {
     _archivedRooms.add(ArchivedRoom(room: archivedRoom, timeline: timeline));
   }
 
-  final _serverConfigCache = AsyncCache<ServerConfig>(const Duration(hours: 1));
+  final _versionsCache =
+      AsyncCache<GetVersionsResponse>(const Duration(hours: 1));
 
-  /// Gets the config of the content repository, such as upload limit.
+  Future<bool> authenticatedMediaSupported() async {
+    final versionsResponse = await _versionsCache.tryFetch(() => getVersions());
+    return versionsResponse.versions.any(
+          (v) => isVersionGreaterThanOrEqualTo(v, 'v1.11'),
+        ) ||
+        versionsResponse.unstableFeatures?['org.matrix.msc3916.stable'] == true;
+  }
+
+  final _serverConfigCache = AsyncCache<MediaConfig>(const Duration(hours: 1));
+
+  /// This endpoint allows clients to retrieve the configuration of the content
+  /// repository, such as upload limitations.
+  /// Clients SHOULD use this as a guide when using content repository endpoints.
+  /// All values are intentionally left optional. Clients SHOULD follow
+  /// the advice given in the field description when the field is not available.
+  ///
+  /// **NOTE:** Both clients and server administrators should be aware that proxies
+  /// between the client and the server may affect the apparent behaviour of content
+  /// repository APIs, for example, proxies may enforce a lower upload size limit
+  /// than is advertised by the server on this endpoint.
   @override
-  Future<ServerConfig> getConfig() =>
-      _serverConfigCache.fetch(() => super.getConfig());
+  Future<MediaConfig> getConfig() => _serverConfigCache
+      .tryFetch(() async => (await authenticatedMediaSupported())
+          ? getConfigAuthed()
+          // ignore: deprecated_member_use_from_same_package
+          : super.getConfig());
 
-  /// Uploads a file and automatically caches it in the database, if it is small enough
-  /// and returns the mxc url.
+  ///
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  ///
+  ///
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if
+  /// it is deemed remote. This is to prevent routing loops where the server
+  /// contacts itself.
+  ///
+  /// Defaults to `true` if not provided.
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  ///
+  /// [allowRedirect] Indicates to the server that it may return a 307 or 308 redirect
+  /// response that points at the relevant media content. When not explicitly
+  /// set to `true` the server must return the media content itself.
+  ///
+  @override
+  Future<FileResponse> getContent(
+    String serverName,
+    String mediaId, {
+    bool? allowRemote,
+    int? timeoutMs,
+    bool? allowRedirect,
+  }) async {
+    return (await authenticatedMediaSupported())
+        ? getContentAuthed(
+            serverName,
+            mediaId,
+            timeoutMs: timeoutMs,
+          )
+        // ignore: deprecated_member_use_from_same_package
+        : super.getContent(
+            serverName,
+            mediaId,
+            allowRemote: allowRemote,
+            timeoutMs: timeoutMs,
+            allowRedirect: allowRedirect,
+          );
+  }
+
+  /// This will download content from the content repository (same as
+  /// the previous endpoint) but replace the target file name with the one
+  /// provided by the caller.
+  ///
+  /// {{% boxes/warning %}}
+  /// {{< changed-in v="1.11" >}} This endpoint MAY return `404 M_NOT_FOUND`
+  /// for media which exists, but is after the server froze unauthenticated
+  /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
+  /// information.
+  /// {{% /boxes/warning %}}
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authority component).
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component).
+  ///
+  ///
+  /// [fileName] A filename to give in the `Content-Disposition` header.
+  ///
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if
+  /// it is deemed remote. This is to prevent routing loops where the server
+  /// contacts itself.
+  ///
+  /// Defaults to `true` if not provided.
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  ///
+  /// [allowRedirect] Indicates to the server that it may return a 307 or 308 redirect
+  /// response that points at the relevant media content. When not explicitly
+  /// set to `true` the server must return the media content itself.
+  @override
+  Future<FileResponse> getContentOverrideName(
+    String serverName,
+    String mediaId,
+    String fileName, {
+    bool? allowRemote,
+    int? timeoutMs,
+    bool? allowRedirect,
+  }) async {
+    return (await authenticatedMediaSupported())
+        ? getContentOverrideNameAuthed(
+            serverName,
+            mediaId,
+            fileName,
+            timeoutMs: timeoutMs,
+          )
+        // ignore: deprecated_member_use_from_same_package
+        : super.getContentOverrideName(
+            serverName,
+            mediaId,
+            fileName,
+            allowRemote: allowRemote,
+            timeoutMs: timeoutMs,
+            allowRedirect: allowRedirect,
+          );
+  }
+
+  /// Download a thumbnail of content from the content repository.
+  /// See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails) section for more information.
+  ///
+  /// {{% boxes/note %}}
+  /// Clients SHOULD NOT generate or use URLs which supply the access token in
+  /// the query string. These URLs may be copied by users verbatim and provided
+  /// in a chat message to another user, disclosing the sender's access token.
+  /// {{% /boxes/note %}}
+  ///
+  /// Clients MAY be redirected using the 307/308 responses below to download
+  /// the request object. This is typical when the homeserver uses a Content
+  /// Delivery Network (CDN).
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authority component).
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component).
+  ///
+  ///
+  /// [width] The *desired* width of the thumbnail. The actual thumbnail may be
+  /// larger than the size specified.
+  ///
+  /// [height] The *desired* height of the thumbnail. The actual thumbnail may be
+  /// larger than the size specified.
+  ///
+  /// [method] The desired resizing method. See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails)
+  /// section for more information.
+  ///
+  /// [timeoutMs] The maximum number of milliseconds that the client is willing to wait to
+  /// start receiving data, in the case that the content has not yet been
+  /// uploaded. The default value is 20000 (20 seconds). The content
+  /// repository SHOULD impose a maximum value for this parameter. The
+  /// content repository MAY respond before the timeout.
+  ///
+  ///
+  /// [animated] Indicates preference for an animated thumbnail from the server, if possible. Animated
+  /// thumbnails typically use the content types `image/gif`, `image/png` (with APNG format),
+  /// `image/apng`, and `image/webp` instead of the common static `image/png` or `image/jpeg`
+  /// content types.
+  ///
+  /// When `true`, the server SHOULD return an animated thumbnail if possible and supported.
+  /// When `false`, the server MUST NOT return an animated thumbnail. For example, returning a
+  /// static `image/png` or `image/jpeg` thumbnail. When not provided, the server SHOULD NOT
+  /// return an animated thumbnail.
+  ///
+  /// Servers SHOULD prefer to return `image/webp` thumbnails when supporting animation.
+  ///
+  /// When `true` and the media cannot be animated, such as in the case of a JPEG or PDF, the
+  /// server SHOULD behave as though `animated` is `false`.
+  @override
+  Future<FileResponse> getContentThumbnail(
+    String serverName,
+    String mediaId,
+    int width,
+    int height, {
+    Method? method,
+    bool? allowRemote,
+    int? timeoutMs,
+    bool? allowRedirect,
+    bool? animated,
+  }) async {
+    return (await authenticatedMediaSupported())
+        ? getContentThumbnailAuthed(
+            serverName,
+            mediaId,
+            width,
+            height,
+            method: method,
+            timeoutMs: timeoutMs,
+            animated: animated,
+          )
+        // ignore: deprecated_member_use_from_same_package
+        : super.getContentThumbnail(
+            serverName,
+            mediaId,
+            width,
+            height,
+            method: method,
+            timeoutMs: timeoutMs,
+            animated: animated,
+          );
+  }
+
+  /// Get information about a URL for the client. Typically this is called when a
+  /// client sees a URL in a message and wants to render a preview for the user.
+  ///
+  /// {{% boxes/note %}}
+  /// Clients should consider avoiding this endpoint for URLs posted in encrypted
+  /// rooms. Encrypted rooms often contain more sensitive information the users
+  /// do not want to share with the homeserver, and this can mean that the URLs
+  /// being shared should also not be shared with the homeserver.
+  /// {{% /boxes/note %}}
+  ///
+  /// [url] The URL to get a preview of.
+  ///
+  /// [ts] The preferred point in time to return a preview for. The server may
+  /// return a newer version if it does not have the requested version
+  /// available.
+  @override
+  Future<PreviewForUrl> getUrlPreview(Uri url, {int? ts}) async {
+    return (await authenticatedMediaSupported())
+        ? getUrlPreviewAuthed(url, ts: ts)
+        // ignore: deprecated_member_use_from_same_package
+        : super.getUrlPreview(url, ts: ts);
+  }
+
+  /// Uploads a file into the Media Repository of the server and also caches it
+  /// in the local database, if it is small enough.
+  /// Returns the mxc url. Please note, that this does **not** encrypt
+  /// the content. Use `Room.sendFileEvent()` for end to end encryption.
   @override
   Future<Uri> uploadContent(Uint8List file,
       {String? filename, String? contentType}) async {
@@ -1353,7 +1646,7 @@ class Client extends MatrixApi {
   final CachedStreamController<KeyVerification> onKeyVerificationRequest =
       CachedStreamController();
 
-  /// When the library calls an endpoint that needs UIA the `UiaRequest` is passed down this screen.
+  /// When the library calls an endpoint that needs UIA the `UiaRequest` is passed down this stream.
   /// The client can open a UIA prompt based on this.
   final CachedStreamController<UiaRequest> onUiaRequest =
       CachedStreamController();
@@ -1619,11 +1912,21 @@ class Client extends MatrixApi {
       }
 
       _groupCallSessionId = randomAlpha(12);
+
+      /// while I would like to move these to a onLoginStateChanged stream listener
+      /// that might be too much overhead and you don't have any use of these
+      /// when you are logged out anyway. So we just invalidate them on next login
       _serverConfigCache.invalidate();
+      _versionsCache.invalidate();
 
       final account = await this.database?.getClient(clientName);
       newRefreshToken ??= account?.tryGet<String>('refresh_token');
-      if (account != null) {
+      // can have discovery_information so make sure it also has the proper
+      // account creds
+      if (account != null &&
+          account['homeserver_url'] != null &&
+          account['user_id'] != null &&
+          account['token'] != null) {
         _id = account['client_id'];
         homeserver = Uri.parse(account['homeserver_url']);
         accessToken = this.accessToken = account['token'];
@@ -1743,12 +2046,16 @@ class Client extends MatrixApi {
           _accountData = data;
           _updatePushrules();
         });
+        _discoveryDataLoading = database.getWellKnown().then((data) {
+          _wellKnown = data;
+        });
         // ignore: deprecated_member_use_from_same_package
         presences.clear();
         if (waitUntilLoadCompletedLoaded) {
           await userDeviceKeysLoading;
           await roomsLoading;
           await _accountDataLoading;
+          await _discoveryDataLoading;
         }
       }
       _initLock = false;
@@ -1866,7 +2173,10 @@ class Client extends MatrixApi {
 
   Future<void> _handleSoftLogout() async {
     final onSoftLogout = this.onSoftLogout;
-    if (onSoftLogout == null) return;
+    if (onSoftLogout == null) {
+      await logout();
+      return;
+    }
 
     _handleSoftLogoutFuture ??= () async {
       onLoginStateChanged.add(LoginState.softLoggedOut);
@@ -1875,7 +2185,7 @@ class Client extends MatrixApi {
         onLoginStateChanged.add(LoginState.loggedIn);
       } catch (e, s) {
         Logs().w('Unable to refresh session after soft logout', e, s);
-        await clear();
+        await logout();
         rethrow;
       }
     }();
@@ -1991,10 +2301,10 @@ class Client extends MatrixApi {
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.error,
           error: SdkError(exception: e, stackTrace: s)));
       if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
-        final onSoftLogout = this.onSoftLogout;
-        if (e.raw.tryGet<bool>('soft_logout') == true && onSoftLogout != null) {
-          Logs().w('The user has been soft logged out! Try to login again...');
-
+        if (e.raw.tryGet<bool>('soft_logout') == true) {
+          Logs().w(
+            'The user has been soft logged out! Calling client.onSoftLogout() if present.',
+          );
           await _handleSoftLogout();
         } else {
           Logs().w('The user has been logged out!');
@@ -2034,13 +2344,17 @@ class Client extends MatrixApi {
       if (join != null) {
         await _handleRooms(join, direction: direction);
       }
-      final invite = sync.rooms?.invite;
-      if (invite != null) {
-        await _handleRooms(invite, direction: direction);
-      }
+      // We need to handle leave before invite. If you decline an invite and
+      // then get another invite to the same room, Synapse will include the
+      // room both in invite and leave. If you get an invite and then leave, it
+      // will only be included in leave.
       final leave = sync.rooms?.leave;
       if (leave != null) {
         await _handleRooms(leave, direction: direction);
+      }
+      final invite = sync.rooms?.invite;
+      if (invite != null) {
+        await _handleRooms(invite, direction: direction);
       }
     }
     for (final newPresence in sync.presence ?? <Presence>[]) {
@@ -2564,9 +2878,12 @@ class Client extends MatrixApi {
   Future? userDeviceKeysLoading;
   Future? roomsLoading;
   Future? _accountDataLoading;
+  Future? _discoveryDataLoading;
   Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
+
+  Future? get wellKnownLoading => _discoveryDataLoading;
 
   /// A map of known device keys per user.
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
@@ -3053,7 +3370,6 @@ class Client extends MatrixApi {
 
   Future<void> setMuteAllPushNotifications(bool muted) async {
     await setPushRuleEnabled(
-      'global',
       PushRuleKind.override,
       '.m.rule.master',
       muted,
@@ -3061,12 +3377,30 @@ class Client extends MatrixApi {
     return;
   }
 
+  /// preference is always given to via over serverName, irrespective of what field
+  /// you are trying to use
+  @override
+  Future<String> joinRoom(String roomIdOrAlias,
+          {List<String>? serverName,
+          List<String>? via,
+          String? reason,
+          ThirdPartySigned? thirdPartySigned}) =>
+      super.joinRoom(
+        roomIdOrAlias,
+        serverName: via ?? serverName,
+        via: via ?? serverName,
+        reason: reason,
+        thirdPartySigned: thirdPartySigned,
+      );
+
   /// Changes the password. You should either set oldPasswort or another authentication flow.
   @override
-  Future<void> changePassword(String newPassword,
-      {String? oldPassword,
-      AuthenticationData? auth,
-      bool? logoutDevices}) async {
+  Future<void> changePassword(
+    String newPassword, {
+    String? oldPassword,
+    AuthenticationData? auth,
+    bool? logoutDevices,
+  }) async {
     final userID = this.userID;
     try {
       if (oldPassword != null && userID != null) {
@@ -3373,6 +3707,7 @@ class SdkError {
 
 class SyncConnectionException implements Exception {
   final Object originalException;
+
   SyncConnectionException(this.originalException);
 }
 

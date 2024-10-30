@@ -80,7 +80,8 @@ class BoxCollection with ZoneTransactionMixin {
 
   Future<void> close() async {
     assert(_txnCache == null, 'Database closed while in transaction!');
-    return _db.close();
+    // Note, zoneTransaction and txnCache are different kinds of transactions.
+    return zoneTransaction(() async => _db.close());
   }
 
   @Deprecated('use collection.deleteDatabase now')

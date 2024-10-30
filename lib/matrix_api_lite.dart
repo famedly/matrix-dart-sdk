@@ -21,7 +21,8 @@
 * SOFTWARE.
 */
 
-library matrix_api_lite;
+/// Lightweight wrapper around the raw matrix API.
+library;
 
 export 'matrix_api_lite/generated/model.dart';
 export 'matrix_api_lite/matrix_api.dart';

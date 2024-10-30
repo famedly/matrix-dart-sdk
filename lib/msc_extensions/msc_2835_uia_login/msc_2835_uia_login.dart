@@ -1,4 +1,5 @@
-library msc_2835_uia_login;
+/// Experimental login method using User Interactive Authentication
+library;
 
 import 'dart:convert';
 
@@ -12,7 +13,7 @@ extension UiaLogin on Client {
   /// Set `pathVersion` to `r0` if you need to use the previous
   /// version of the login endpoint.
   Future<LoginResponse> uiaLogin(
-    LoginType type, {
+    String type, {
     String? address,
     String? deviceId,
     AuthenticationIdentifier? identifier,
@@ -37,10 +38,7 @@ extension UiaLogin on Client {
       if (medium != null) 'medium': medium,
       if (password != null) 'password': password,
       if (token != null) 'token': token,
-      'type': {
-        LoginType.mLoginPassword: 'm.login.password',
-        LoginType.mLoginToken: 'm.login.token'
-      }[type]!,
+      'type': type,
       if (user != null) 'user': user,
       if (auth != null) 'auth': auth.toJson(),
       if (refreshToken != null) 'refresh_token': refreshToken,
