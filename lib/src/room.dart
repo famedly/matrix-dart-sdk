@@ -1412,6 +1412,8 @@ class Room {
   /// Is the room archived
   bool get isArchived => membership == Membership.leave;
 
+  Timeline? _timeline;
+
   /// Creates a timeline from the store. Returns a [Timeline] object. If you
   /// just want to update the whole timeline on every change, use the [onUpdate]
   /// callback. For updating only the parts that have changed, use the
@@ -1460,14 +1462,21 @@ class Room {
       }
     }
 
-    final timeline = Timeline(
-        room: this,
-        chunk: chunk,
-        onChange: onChange,
-        onRemove: onRemove,
-        onInsert: onInsert,
-        onNewEvent: onNewEvent,
-        onUpdate: onUpdate);
+    Timeline timeline;
+    if (_timeline != null && _timeline!.chunk == chunk) {
+      timeline = _timeline!;
+      chunk = _timeline!.chunk;
+    } else {
+      timeline = Timeline(
+          room: this,
+          chunk: chunk,
+          onChange: onChange,
+          onRemove: onRemove,
+          onInsert: onInsert,
+          onNewEvent: onNewEvent,
+          onUpdate: onUpdate);
+      _timeline = timeline;
+    }
 
     // Fetch all users from database we have got here.
     if (eventContextId == null) {
