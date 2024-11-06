@@ -89,6 +89,8 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   late CollectionBox<String> _seenDeviceKeysBox;
 
+  late CollectionBox<GetSpaceHierarchyResponse> _spacesHierarchyBox;
+
   String get _clientBoxName => 'box_client';
 
   String get _accountDataBoxName => 'box_account_data';
@@ -127,6 +129,8 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   String get _seenDeviceKeysBoxName => 'box_seen_device_keys';
 
+  static const String _spacesHierarchyBoxName = 'box_spaces_hierarchy';
+
   HiveCollectionsDatabase(
     this.name,
     this.path, {
@@ -160,6 +164,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
         _eventsBoxName,
         _seenDeviceIdsBoxName,
         _seenDeviceKeysBoxName,
+        _spacesHierarchyBoxName,
       },
       key: key,
       path: path,
@@ -226,6 +231,9 @@ class HiveCollectionsDatabase extends DatabaseApi {
     _seenDeviceKeysBox = await _collection.openBox(
       _seenDeviceKeysBoxName,
     );
+    _spacesHierarchyBox = await _collection.openBox(
+      _spacesHierarchyBoxName,
+    );
 
     // Check version and check if we need a migration
     final currentVersion = int.tryParse(await _clientBox.get('version') ?? '');
@@ -280,6 +288,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
         await _outboundGroupSessionsBox.clear();
         await _presencesBox.clear();
         await _clientBox.delete('prev_batch');
+        await _spacesHierarchyBox.clear();
       });
 
   @override
@@ -325,6 +334,11 @@ class HiveCollectionsDatabase extends DatabaseApi {
           final multiKey = TupleKey.fromString(key);
           if (multiKey.parts.first != roomId) continue;
           await _roomAccountDataBox.delete(key);
+        }
+        final spaceHierarchyKeys = await _spacesHierarchyBox.getAllKeys();
+        for (final key in spaceHierarchyKeys) {
+          if (key != roomId) continue;
+          await _spacesHierarchyBox.delete(key);
         }
         await _roomsBox.delete(roomId);
       });
@@ -1517,6 +1531,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
       _eventsBoxName: await _eventsBox.getAllValues(),
       _seenDeviceIdsBoxName: await _seenDeviceIdsBox.getAllValues(),
       _seenDeviceKeysBoxName: await _seenDeviceKeysBox.getAllValues(),
+      _spacesHierarchyBoxName: await _spacesHierarchyBox.getAllValues(),
     };
     final json = jsonEncode(dataMap);
     await clear();
@@ -1588,12 +1603,29 @@ class HiveCollectionsDatabase extends DatabaseApi {
       for (final key in json[_seenDeviceKeysBoxName]!.keys) {
         await _seenDeviceKeysBox.put(key, json[_seenDeviceKeysBoxName]![key]);
       }
+      for (final key in json[_spacesHierarchyBoxName]!.keys) {
+        await _spacesHierarchyBox.put(key, json[_spacesHierarchyBoxName]![key]);
+      }
       return true;
     } catch (e, s) {
       Logs().e('Database import error: ', e, s);
       return false;
     }
   }
+
+  @override
+  Future<GetSpaceHierarchyResponse?> getSpaceHierarchy(String spaceId) async {
+    return await _spacesHierarchyBox.get(spaceId);
+  }
+
+  @override
+  Future<void> storeSpaceHierarchy(
+          String spaceId, GetSpaceHierarchyResponse hierarchy) =>
+      _spacesHierarchyBox.put(spaceId, hierarchy);
+
+  @override
+  Future<void> removeSpaceHierarchy(String spaceId) =>
+      _spacesHierarchyBox.delete(spaceId);
 
   @override
   Future<void> delete() => _collection.deleteFromDisk();
