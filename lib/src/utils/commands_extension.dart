@@ -38,6 +38,8 @@ extension CommandsClientExtension on Client {
 
   /// Parse and execute a string, `msg` is the input. Optionally `inReplyTo` is the event being
   /// replied to and `editEventId` is the eventId of the event being replied to
+  /// The [room] parameter can be null unless you execute a command strictly
+  /// requiring a [Room] to run hon.
   Future<String?> parseAndRunCommand(
     Room? room,
     String msg, {
@@ -140,10 +142,12 @@ extension CommandsClientExtension on Client {
         mxid,
         enableEncryption: !parts.any((part) => part == '--no-encryption'),
       );
-      stdout?.write(DefaultCommandOutput(
-        rooms: [roomId],
-        users: [mxid],
-      ).toString());
+      stdout?.write(
+        DefaultCommandOutput(
+          rooms: [roomId],
+          users: [mxid],
+        ).toString(),
+      );
       return null;
     });
     addCommand('create', (args, stdout) async {
@@ -152,7 +156,7 @@ extension CommandsClientExtension on Client {
       final parts = args.msg.split(' ');
 
       final roomId = await args.client.createGroupChat(
-        groupName: groupName,
+        groupName: groupName.isNotEmpty ? groupName : null,
         enableEncryption: !parts.any((part) => part == '--no-encryption'),
       );
       stdout?.write(DefaultCommandOutput(rooms: [roomId]).toString());
@@ -235,7 +239,8 @@ extension CommandsClientExtension on Client {
         pl = int.tryParse(parts[1]);
         if (pl == null) {
           throw CommandException(
-              'Invalid power level ${parts[1]} when using /op');
+            'Invalid power level ${parts[1]} when using /op',
+          );
         }
       }
       final mxid = parts.first;
@@ -293,7 +298,8 @@ extension CommandsClientExtension on Client {
       final mxid = parts.first;
       if (!mxid.isValidMatrixId) {
         throw CommandException(
-            'You must enter a valid mxid when using /invite');
+          'You must enter a valid mxid when using /invite',
+        );
       }
       await room.invite(mxid);
       stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
@@ -361,7 +367,8 @@ extension CommandsClientExtension on Client {
       final mxid = args.msg.split(' ').first;
       if (!mxid.isValidMatrixId) {
         throw CommandException(
-            'You must enter a valid mxid when using /maskasdm');
+          'You must enter a valid mxid when using /maskasdm',
+        );
       }
       if (await room.requestUser(mxid, requestProfile: false) == null) {
         throw CommandException('User $mxid is not in this room');
