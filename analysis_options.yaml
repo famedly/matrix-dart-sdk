@@ -36,6 +36,7 @@ linter:
     prefer_single_quotes: true
     sort_child_properties_last: true
     sort_pub_dependencies: true
+    require_trailing_commas: true
 
     # Be nice to our users and allow them to configure what gets logged.
     avoid_print: true

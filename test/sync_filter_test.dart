@@ -48,7 +48,7 @@ const updates = {
             'last_active_ago': 2478593,
             'presence': 'online',
             'currently_active': false,
-            'status_msg': 'Making cupcakes'
+            'status_msg': 'Making cupcakes',
           },
           'type': 'm.presence',
           'sender': '@example:localhost',

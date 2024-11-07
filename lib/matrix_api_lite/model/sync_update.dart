@@ -61,7 +61,8 @@ class SyncUpdate {
         toDevice = json
             .tryGetMap<String, List<Object?>>('to_device')?['events']
             ?.map(
-                (i) => BasicEventWithSender.fromJson(i as Map<String, Object?>))
+              (i) => BasicEventWithSender.fromJson(i as Map<String, Object?>),
+            )
             .toList(),
         deviceLists = (() {
           final temp = json.tryGetMap<String, Object?>('device_lists');
@@ -72,7 +73,8 @@ class SyncUpdate {
         deviceUnusedFallbackKeyTypes =
             json.tryGetList<String>('device_unused_fallback_key_types') ??
                 json.tryGetList<String>(
-                    'org.matrix.msc2732.device_unused_fallback_key_types');
+                  'org.matrix.msc2732.device_unused_fallback_key_types',
+                );
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};
@@ -124,14 +126,24 @@ class RoomsUpdate {
   });
 
   RoomsUpdate.fromJson(Map<String, Object?> json) {
-    join = json.tryGetMap<String, Object?>('join')?.catchMap((k, v) =>
-        MapEntry(k, JoinedRoomUpdate.fromJson(v as Map<String, Object?>)));
-    invite = json.tryGetMap<String, Object?>('invite')?.catchMap((k, v) =>
-        MapEntry(k, InvitedRoomUpdate.fromJson(v as Map<String, Object?>)));
-    leave = json.tryGetMap<String, Object?>('leave')?.catchMap((k, v) =>
-        MapEntry(k, LeftRoomUpdate.fromJson(v as Map<String, Object?>)));
-    knock = json.tryGetMap<String, Object?>('knock')?.catchMap((k, v) =>
-        MapEntry(k, KnockRoomUpdate.fromJson(v as Map<String, Object?>)));
+    join = json.tryGetMap<String, Object?>('join')?.catchMap(
+          (k, v) =>
+              MapEntry(k, JoinedRoomUpdate.fromJson(v as Map<String, Object?>)),
+        );
+    invite = json.tryGetMap<String, Object?>('invite')?.catchMap(
+          (k, v) => MapEntry(
+            k,
+            InvitedRoomUpdate.fromJson(v as Map<String, Object?>),
+          ),
+        );
+    leave = json.tryGetMap<String, Object?>('leave')?.catchMap(
+          (k, v) =>
+              MapEntry(k, LeftRoomUpdate.fromJson(v as Map<String, Object?>)),
+        );
+    knock = json.tryGetMap<String, Object?>('knock')?.catchMap(
+          (k, v) =>
+              MapEntry(k, KnockRoomUpdate.fromJson(v as Map<String, Object?>)),
+        );
   }
 
   Map<String, Object?> toJson() {
@@ -187,7 +199,9 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
             ?.map((i) => BasicRoomEvent.fromJson(i as Map<String, Object?>))
             .toList(),
         unreadNotifications = json.tryGetFromJson(
-            'unread_notifications', UnreadNotificationCounts.fromJson);
+          'unread_notifications',
+          UnreadNotificationCounts.fromJson,
+        );
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};

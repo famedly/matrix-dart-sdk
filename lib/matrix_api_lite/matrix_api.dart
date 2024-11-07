@@ -202,19 +202,29 @@ class MatrixApi extends Api {
 
   @Deprecated('Use [deleteRoomKeyBySessionId] instead')
   Future<RoomKeysUpdateResponse> deleteRoomKeysBySessionId(
-      String roomId, String sessionId, String version) async {
+    String roomId,
+    String sessionId,
+    String version,
+  ) async {
     return deleteRoomKeyBySessionId(roomId, sessionId, version);
   }
 
   @Deprecated('Use [deleteRoomKeyBySessionId] instead')
-  Future<RoomKeysUpdateResponse> putRoomKeysBySessionId(String roomId,
-      String sessionId, String version, KeyBackupData data) async {
+  Future<RoomKeysUpdateResponse> putRoomKeysBySessionId(
+    String roomId,
+    String sessionId,
+    String version,
+    KeyBackupData data,
+  ) async {
     return putRoomKeyBySessionId(roomId, sessionId, version, data);
   }
 
   @Deprecated('Use [getRoomKeyBySessionId] instead')
   Future<KeyBackupData> getRoomKeysBySessionId(
-      String roomId, String sessionId, String version) async {
+    String roomId,
+    String sessionId,
+    String version,
+  ) async {
     return getRoomKeyBySessionId(roomId, sessionId, version);
   }
 }

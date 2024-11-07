@@ -94,7 +94,7 @@ class FakeMatrixApi extends BaseClient {
   Set<String> servers = {
     'https://fakeserver.notexisting',
     'https://fakeserver.notexisting:1337',
-    'https://fakeserverpriortoauthmedia.notexisting'
+    'https://fakeserverpriortoauthmedia.notexisting',
   };
 
   FutureOr<Response> mockIntercept(Request request) async {
@@ -129,8 +129,9 @@ class FakeMatrixApi extends BaseClient {
 
     if (!servers.contains(request.url.origin)) {
       return Response(
-          '<html><head></head><body>Not found ${request.url.origin}...</body></html>',
-          404);
+        '<html><head></head><body>Not found ${request.url.origin}...</body></html>',
+        404,
+      );
     }
 
     if (!{
@@ -191,11 +192,13 @@ class FakeMatrixApi extends BaseClient {
         res = {'displayname': '', 'membership': 'ban'};
       } else if (method == 'PUT' &&
           action.contains(
-              '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/')) {
+            '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/',
+          )) {
         res = {'event_id': '\$event${_eventCounter++}'};
       } else if (method == 'PUT' &&
           action.contains(
-              '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/')) {
+            '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/',
+          )) {
         res = {'event_id': '\$event${_eventCounter++}'};
       } else if (action.contains('/client/v3/sync')) {
         // Sync requests with timeout
@@ -209,7 +212,7 @@ class FakeMatrixApi extends BaseClient {
           // ensure we don't generate new keys for no reason
           'device_one_time_keys_count': {
             'curve25519': 10,
-            'signed_curve25519': 100
+            'signed_curve25519': 100,
           },
         };
       } else if (method == 'PUT' &&
@@ -240,10 +243,15 @@ class FakeMatrixApi extends BaseClient {
           nextBatch: '',
           rooms: RoomsUpdate(
             join: {
-              roomId: JoinedRoomUpdate(accountData: [
-                sdk.BasicRoomEvent(
-                    content: decodeJson(data), type: type, roomId: roomId)
-              ])
+              roomId: JoinedRoomUpdate(
+                accountData: [
+                  sdk.BasicRoomEvent(
+                    content: decodeJson(data),
+                    type: type,
+                    roomId: roomId,
+                  ),
+                ],
+              ),
             },
           ),
         );
@@ -258,15 +266,17 @@ class FakeMatrixApi extends BaseClient {
       } else {
         res = {
           'errcode': 'M_UNRECOGNIZED',
-          'error': 'Unrecognized request: $action'
+          'error': 'Unrecognized request: $action',
         };
         statusCode = 405;
       }
     }
 
-    unawaited(Future.delayed(Duration(milliseconds: 1)).then((_) async {
-      _apiCallStream.add(action);
-    }));
+    unawaited(
+      Future.delayed(Duration(milliseconds: 1)).then((_) async {
+        _apiCallStream.add(action);
+      }),
+    );
     return Response.bytes(utf8.encode(json.encode(res)), statusCode);
   }
 
@@ -303,7 +313,7 @@ class FakeMatrixApi extends BaseClient {
         for (final keyType in {
           'master_key',
           'self_signing_key',
-          'user_signing_key'
+          'user_signing_key',
         }) {
           if (jsonBody[keyType] != null) {
             final key =
@@ -331,14 +341,14 @@ class FakeMatrixApi extends BaseClient {
           'body': 'This is an example text message',
           'msgtype': 'm.text',
           'format': 'org.matrix.custom.html',
-          'formatted_body': '<b>This is an example text message</b>'
+          'formatted_body': '<b>This is an example text message</b>',
         },
         'type': 'm.room.message',
         'event_id': '3143273582443PhrSn:example.org',
         'room_id': '!1234:example.com',
         'sender': '@example:example.org',
         'origin_server_ts': 1432735824653,
-        'unsigned': {'age': 1234}
+        'unsigned': {'age': 1234},
       },
       {
         'content': {'name': 'The room name'},
@@ -348,7 +358,7 @@ class FakeMatrixApi extends BaseClient {
         'sender': '@example:example.org',
         'origin_server_ts': 1432735824653,
         'unsigned': {'age': 1234},
-        'state_key': ''
+        'state_key': '',
       },
       {
         'content': {
@@ -360,22 +370,22 @@ class FakeMatrixApi extends BaseClient {
               'mimetype': 'image/jpeg',
               'size': 46144,
               'w': 300,
-              'h': 300
+              'h': 300,
             },
             'w': 480,
             'h': 320,
             'duration': 2140786,
             'size': 1563685,
-            'mimetype': 'video/mp4'
+            'mimetype': 'video/mp4',
           },
-          'msgtype': 'm.video'
+          'msgtype': 'm.video',
         },
         'type': 'm.room.message',
         'event_id': '1143273582443PhrSn:example.org',
         'room_id': '!1234:example.com',
         'sender': '@example:example.org',
         'origin_server_ts': 1432735824653,
-        'unsigned': {'age': 1234}
+        'unsigned': {'age': 1234},
       }
     ],
     'state': [],
@@ -394,22 +404,22 @@ class FakeMatrixApi extends BaseClient {
               'mimetype': 'image/jpeg',
               'size': 46144,
               'w': 300,
-              'h': 300
+              'h': 300,
             },
             'w': 480,
             'h': 320,
             'duration': 2140786,
             'size': 1563685,
-            'mimetype': 'video/mp4'
+            'mimetype': 'video/mp4',
           },
-          'msgtype': 'm.video'
+          'msgtype': 'm.video',
         },
         'type': 'm.room.message',
         'event_id': '1143273582443PhrSn:example.org',
         'room_id': '!1234:example.com',
         'sender': '@example:example.org',
         'origin_server_ts': 1432735824653,
-        'unsigned': {'age': 1234}
+        'unsigned': {'age': 1234},
       },
       {
         'content': {'name': 'The room name'},
@@ -419,21 +429,21 @@ class FakeMatrixApi extends BaseClient {
         'sender': '@example:example.org',
         'origin_server_ts': 1432735824653,
         'unsigned': {'age': 1234},
-        'state_key': ''
+        'state_key': '',
       },
       {
         'content': {
           'body': 'This is an example text message',
           'msgtype': 'm.text',
           'format': 'org.matrix.custom.html',
-          'formatted_body': '<b>This is an example text message</b>'
+          'formatted_body': '<b>This is an example text message</b>',
         },
         'type': 'm.room.message',
         'event_id': '3143273582443PhrSn:example.org',
         'room_id': '!1234:example.com',
         'sender': '@example:example.org',
         'origin_server_ts': 1432735824653,
-        'unsigned': {'age': 1234}
+        'unsigned': {'age': 1234},
       }
     ],
     'state': [],
@@ -454,14 +464,14 @@ class FakeMatrixApi extends BaseClient {
           'body': 'This is an example text message',
           'msgtype': 'm.text',
           'format': 'org.matrix.custom.html',
-          'formatted_body': '<b>This is an example text message</b>'
+          'formatted_body': '<b>This is an example text message</b>',
         },
         'type': 'm.room.message',
         'event_id': '3143273582443PhrSn:example.org',
         'room_id': '!5345234234:example.com',
         'sender': '@example:example.org',
         'origin_server_ts': 1432735824653,
-        'unsigned': {'age': 1234}
+        'unsigned': {'age': 1234},
       },
       {
         'content': {'name': 'The room name'},
@@ -471,7 +481,7 @@ class FakeMatrixApi extends BaseClient {
         'sender': '@example:example.org',
         'origin_server_ts': 1432735824653,
         'unsigned': {'age': 1234},
-        'state_key': ''
+        'state_key': '',
       },
       {
         'content': {
@@ -483,22 +493,22 @@ class FakeMatrixApi extends BaseClient {
               'mimetype': 'image/jpeg',
               'size': 46144,
               'w': 300,
-              'h': 300
+              'h': 300,
             },
             'w': 480,
             'h': 320,
             'duration': 2140786,
             'size': 1563685,
-            'mimetype': 'video/mp4'
+            'mimetype': 'video/mp4',
           },
-          'msgtype': 'm.video'
+          'msgtype': 'm.video',
         },
         'type': 'm.room.message',
         'event_id': '1143273582466PhrSn:example.org',
         'room_id': '!5345234234:example.com',
         'sender': '@example:example.org',
         'origin_server_ts': 1432735824654,
-        'unsigned': {'age': 1234}
+        'unsigned': {'age': 1234},
       }
     ],
     'state': [],
@@ -512,7 +522,7 @@ class FakeMatrixApi extends BaseClient {
           'summary': {
             'm.heroes': ['@alice:example.com'],
             'm.joined_member_count': 1,
-            'm.invited_member_count': 0
+            'm.invited_member_count': 0,
           },
           'unread_notifications': {
             'highlight_count': 2,
@@ -530,17 +540,17 @@ class FakeMatrixApi extends BaseClient {
                   'displayname': 'Alice Margatroid',
                 },
                 'origin_server_ts': 1417731086795,
-                'event_id': '66697273743031:example.com'
+                'event_id': '66697273743031:example.com',
               },
               {
                 'sender': '@alice:example.com',
                 'type': 'm.room.canonical_alias',
                 'content': {
-                  'alias': '#famedlyContactDiscovery:fakeServer.notExisting'
+                  'alias': '#famedlyContactDiscovery:fakeServer.notExisting',
                 },
                 'state_key': '',
                 'origin_server_ts': 1417731086796,
-                'event_id': '66697273743032:example.com'
+                'event_id': '66697273743032:example.com',
               },
               {
                 'sender': '@alice:example.com',
@@ -548,11 +558,11 @@ class FakeMatrixApi extends BaseClient {
                 'state_key': '',
                 'content': {'algorithm': AlgorithmTypes.megolmV1AesSha2},
                 'origin_server_ts': 1417731086795,
-                'event_id': '666972737430353:example.com'
+                'event_id': '666972737430353:example.com',
               },
               {
                 'content': {
-                  'pinned': ['1234:bla']
+                  'pinned': ['1234:bla'],
                 },
                 'type': 'm.room.pinned_events',
                 'event_id': '21432735824443PhrSn:example.org',
@@ -560,9 +570,9 @@ class FakeMatrixApi extends BaseClient {
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
                 'unsigned': {'age': 1234},
-                'state_key': ''
+                'state_key': '',
               },
-            ]
+            ],
           },
           'timeline': {
             'events': [
@@ -574,39 +584,39 @@ class FakeMatrixApi extends BaseClient {
                 'prev_content': {'membership': 'invite'},
                 'origin_server_ts': 1417731086795,
                 'event_id': '\$7365636s6r6432:example.com',
-                'unsigned': {'foo': 'bar'}
+                'unsigned': {'foo': 'bar'},
               },
               {
                 'sender': '@alice:example.com',
                 'type': 'm.room.message',
                 'content': {'body': 'I am a fish', 'msgtype': 'm.text'},
                 'origin_server_ts': 1417731086797,
-                'event_id': '74686972643033:example.com'
+                'event_id': '74686972643033:example.com',
               }
             ],
             'limited': true,
-            'prev_batch': 't34-23535_0_0'
+            'prev_batch': 't34-23535_0_0',
           },
           'ephemeral': {
             'events': [
               {
                 'type': 'm.typing',
                 'content': {
-                  'user_ids': ['@alice:example.com']
-                }
+                  'user_ids': ['@alice:example.com'],
+                },
               },
               {
                 'content': {
                   '\$7365636s6r6432:example.com': {
                     'm.read': {
-                      '@alice:example.com': {'ts': 1436451550453}
-                    }
-                  }
+                      '@alice:example.com': {'ts': 1436451550453},
+                    },
+                  },
                 },
                 'room_id': '!726s6s6q:example.com',
-                'type': 'm.receipt'
+                'type': 'm.receipt',
               }
-            ]
+            ],
           },
           'account_data': {
             'events': [
@@ -614,16 +624,16 @@ class FakeMatrixApi extends BaseClient {
                 'type': 'm.tag',
                 'content': {
                   'tags': {
-                    'work': {'order': 1}
-                  }
-                }
+                    'work': {'order': 1},
+                  },
+                },
               },
               {
                 'type': 'org.example.custom.room.config',
-                'content': {'custom_config_key': 'custom_config_value'}
+                'content': {'custom_config_key': 'custom_config_value'},
               }
-            ]
-          }
+            ],
+          },
         },
         '!calls:example.com': {
           'state': {
@@ -638,7 +648,7 @@ class FakeMatrixApi extends BaseClient {
                   'displayname': 'Test User',
                 },
                 'origin_server_ts': 1417731086795,
-                'event_id': 'calls_1:example.com'
+                'event_id': 'calls_1:example.com',
               },
               {
                 'sender': '@alice:example.com',
@@ -650,9 +660,9 @@ class FakeMatrixApi extends BaseClient {
                   'displayname': 'Alice Margatroid',
                 },
                 'origin_server_ts': 1417731086795,
-                'event_id': 'calls_2:example.com'
+                'event_id': 'calls_2:example.com',
               },
-            ]
+            ],
           },
         },
       },
@@ -664,17 +674,17 @@ class FakeMatrixApi extends BaseClient {
                 'sender': '@alice:example.com',
                 'type': 'm.room.name',
                 'state_key': '',
-                'content': {'name': 'My Room Name'}
+                'content': {'name': 'My Room Name'},
               },
               {
                 'sender': '@alice:example.com',
                 'type': 'm.room.member',
                 'state_key': '@bob:example.com',
-                'content': {'membership': 'invite'}
+                'content': {'membership': 'invite'},
               }
-            ]
-          }
-        }
+            ],
+          },
+        },
       },
       'leave': {
         '!726s6s6f:example.com': {
@@ -686,9 +696,9 @@ class FakeMatrixApi extends BaseClient {
                 'state_key': '',
                 'content': {'name': 'left room'},
                 'origin_server_ts': 1417731086795,
-                'event_id': '66697273743031:example.com'
+                'event_id': '66697273743031:example.com',
               },
-            ]
+            ],
           },
           'timeline': {
             'events': [
@@ -698,11 +708,11 @@ class FakeMatrixApi extends BaseClient {
                 'content': {'text': 'Hallo'},
                 'origin_server_ts': 1417731086795,
                 'event_id': '7365636s6r64300:example.com',
-                'unsigned': {'foo': 'bar'}
+                'unsigned': {'foo': 'bar'},
               },
             ],
             'limited': true,
-            'prev_batch': 't34-23535_0_0'
+            'prev_batch': 't34-23535_0_0',
           },
           'account_data': {
             'events': [
@@ -710,17 +720,17 @@ class FakeMatrixApi extends BaseClient {
                 'type': 'm.tag',
                 'content': {
                   'tags': {
-                    'work': {'order': 1}
-                  }
-                }
+                    'work': {'order': 1},
+                  },
+                },
               },
               {
                 'type': 'org.example.custom.room.config',
-                'content': {'custom_config_key': 'custom_config_value'}
+                'content': {'custom_config_key': 'custom_config_value'},
               }
-            ]
-          }
-        }
+            ],
+          },
+        },
       },
     },
     'presence': {
@@ -728,9 +738,9 @@ class FakeMatrixApi extends BaseClient {
         {
           'sender': '@alice:example.com',
           'type': 'm.presence',
-          'content': {'presence': 'online'}
+          'content': {'presence': 'online'},
         }
-      ]
+      ],
     },
     'account_data': {
       'events': [
@@ -742,12 +752,12 @@ class FakeMatrixApi extends BaseClient {
                   'actions': [
                     'notify',
                     {'set_tweak': 'sound', 'value': 'default'},
-                    {'set_tweak': 'highlight'}
+                    {'set_tweak': 'highlight'},
                   ],
                   'default': true,
                   'enabled': true,
                   'pattern': 'alice',
-                  'rule_id': '.m.rule.contains_user_name'
+                  'rule_id': '.m.rule.contains_user_name',
                 }
               ],
               'override': [
@@ -756,7 +766,7 @@ class FakeMatrixApi extends BaseClient {
                   'conditions': [],
                   'default': true,
                   'enabled': false,
-                  'rule_id': '.m.rule.master'
+                  'rule_id': '.m.rule.master',
                 },
                 {
                   'actions': ['dont_notify'],
@@ -764,12 +774,12 @@ class FakeMatrixApi extends BaseClient {
                     {
                       'key': 'content.msgtype',
                       'kind': 'event_match',
-                      'pattern': 'm.notice'
+                      'pattern': 'm.notice',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.suppress_notices'
+                  'rule_id': '.m.rule.suppress_notices',
                 }
               ],
               'room': [
@@ -784,7 +794,7 @@ class FakeMatrixApi extends BaseClient {
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '!localpart:server.abc'
+                  'rule_id': '!localpart:server.abc',
                 }
               ],
               'sender': [],
@@ -793,130 +803,130 @@ class FakeMatrixApi extends BaseClient {
                   'actions': [
                     'notify',
                     {'set_tweak': 'sound', 'value': 'ring'},
-                    {'set_tweak': 'highlight', 'value': false}
+                    {'set_tweak': 'highlight', 'value': false},
                   ],
                   'conditions': [
                     {
                       'key': 'type',
                       'kind': 'event_match',
-                      'pattern': 'm.call.invite'
+                      'pattern': 'm.call.invite',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.call'
+                  'rule_id': '.m.rule.call',
                 },
                 {
                   'actions': [
                     'notify',
                     {'set_tweak': 'sound', 'value': 'default'},
-                    {'set_tweak': 'highlight'}
+                    {'set_tweak': 'highlight'},
                   ],
                   'conditions': [
-                    {'kind': 'contains_display_name'}
+                    {'kind': 'contains_display_name'},
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.contains_display_name'
+                  'rule_id': '.m.rule.contains_display_name',
                 },
                 {
                   'actions': [
                     'notify',
                     {'set_tweak': 'sound', 'value': 'default'},
-                    {'set_tweak': 'highlight', 'value': false}
+                    {'set_tweak': 'highlight', 'value': false},
                   ],
                   'conditions': [
                     {'is': '2', 'kind': 'room_member_count'},
                     {
                       'key': 'type',
                       'kind': 'event_match',
-                      'pattern': 'm.room.message'
+                      'pattern': 'm.room.message',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.room_one_to_one'
+                  'rule_id': '.m.rule.room_one_to_one',
                 },
                 {
                   'actions': [
                     'notify',
                     {'set_tweak': 'sound', 'value': 'default'},
-                    {'set_tweak': 'highlight', 'value': false}
+                    {'set_tweak': 'highlight', 'value': false},
                   ],
                   'conditions': [
                     {
                       'key': 'type',
                       'kind': 'event_match',
-                      'pattern': 'm.room.member'
+                      'pattern': 'm.room.member',
                     },
                     {
                       'key': 'content.membership',
                       'kind': 'event_match',
-                      'pattern': 'invite'
+                      'pattern': 'invite',
                     },
                     {
                       'key': 'state_key',
                       'kind': 'event_match',
-                      'pattern': '@alice:example.com'
+                      'pattern': '@alice:example.com',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.invite_for_me'
+                  'rule_id': '.m.rule.invite_for_me',
                 },
                 {
                   'actions': [
                     'notify',
-                    {'set_tweak': 'highlight', 'value': false}
+                    {'set_tweak': 'highlight', 'value': false},
                   ],
                   'conditions': [
                     {
                       'key': 'type',
                       'kind': 'event_match',
-                      'pattern': 'm.room.member'
+                      'pattern': 'm.room.member',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.member_event'
+                  'rule_id': '.m.rule.member_event',
                 },
                 {
                   'actions': [
                     'notify',
-                    {'set_tweak': 'highlight', 'value': false}
+                    {'set_tweak': 'highlight', 'value': false},
                   ],
                   'conditions': [
                     {
                       'key': 'type',
                       'kind': 'event_match',
-                      'pattern': 'm.room.message'
+                      'pattern': 'm.room.message',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.message'
+                  'rule_id': '.m.rule.message',
                 }
-              ]
-            }
+              ],
+            },
           },
-          'type': 'm.push_rules'
+          'type': 'm.push_rules',
         },
         {
           'type': 'org.example.custom.config',
-          'content': {'custom_config_key': 'custom_config_value'}
+          'content': {'custom_config_key': 'custom_config_value'},
         },
         {
           'content': {
             '@bob:example.com': [
               '!726s6s6q:example.com',
-              '!hgfedcba:example.com'
-            ]
+              '!hgfedcba:example.com',
+            ],
           },
-          'type': 'm.direct'
+          'type': 'm.direct',
         },
         {
           'type': EventTypes.SecretStorageDefaultKey,
-          'content': {'key': '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3'}
+          'content': {'key': '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3'},
         },
         {
           'type': 'm.secret_storage.key.0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3',
@@ -925,11 +935,11 @@ class FakeMatrixApi extends BaseClient {
             'passphrase': {
               'algorithm': AlgorithmTypes.pbkdf2,
               'iterations': 500000,
-              'salt': 'F4jJ80mr0Fc8mRwU9JgA3lQDyjPuZXQL'
+              'salt': 'F4jJ80mr0Fc8mRwU9JgA3lQDyjPuZXQL',
             },
             'iv': 'HjbTgIoQH2pI7jQo19NUzA==',
-            'mac': 'QbJjQzDnAggU0cM4RBnDxw2XyarRGjdahcKukP9xVlk='
-          }
+            'mac': 'QbJjQzDnAggU0cM4RBnDxw2XyarRGjdahcKukP9xVlk=',
+          },
         },
         {
           'type': 'm.cross_signing.master',
@@ -939,10 +949,10 @@ class FakeMatrixApi extends BaseClient {
                 'iv': 'eIb2IITxtmcq+1TrT8D5eQ==',
                 'ciphertext':
                     'lWRTPo5qxf4LAVwVPzGHOyMcP181n7bb9/B0lvkLDC2Oy4DvAL0eLx2x3bY=',
-                'mac': 'Ynx89tIxPkx0o6ljMgxszww17JOgB4tg4etmNnMC9XI='
-              }
-            }
-          }
+                'mac': 'Ynx89tIxPkx0o6ljMgxszww17JOgB4tg4etmNnMC9XI=',
+              },
+            },
+          },
         },
         {
           'type': EventTypes.CrossSigningSelfSigning,
@@ -952,10 +962,10 @@ class FakeMatrixApi extends BaseClient {
                 'iv': 'YqU2XIjYulYZl+bkZtGgVw==',
                 'ciphertext':
                     'kM2TSoy/jR/4d357ZoRPbpPypxQl6XRLo3FsEXz+f7vIOp82GeRp28RYb3k=',
-                'mac': 'F+DZa5tAFmWsYSryw5EuEpzTmmABRab4GETkM85bGGo='
-              }
-            }
-          }
+                'mac': 'F+DZa5tAFmWsYSryw5EuEpzTmmABRab4GETkM85bGGo=',
+              },
+            },
+          },
         },
         {
           'type': EventTypes.CrossSigningUserSigning,
@@ -965,10 +975,10 @@ class FakeMatrixApi extends BaseClient {
                 'iv': 'D7AM3LXFu7ZlyGOkR+OeqQ==',
                 'ciphertext':
                     'bYA2+OMgsO6QB1E31aY+ESAWrT0fUBTXqajy4qmL7bVDSZY4Uj64EXNbHuA=',
-                'mac': 'j2UtyPo/UBSoiaQCWfzCiRZXp3IRt0ZZujuXgUMjnw4='
-              }
-            }
-          }
+                'mac': 'j2UtyPo/UBSoiaQCWfzCiRZXp3IRt0ZZujuXgUMjnw4=',
+              },
+            },
+          },
         },
         {
           'type': EventTypes.MegolmBackup,
@@ -978,10 +988,10 @@ class FakeMatrixApi extends BaseClient {
                 'iv': 'cL/0MJZaiEd3fNU+I9oJrw==',
                 'ciphertext':
                     'WL73Pzdk5wZdaaSpaeRH0uZYKcxkuV8IS6Qa2FEfA1+vMeRLuHcWlXbMX0w=',
-                'mac': '+xozp909S6oDX8KRV8D8ZFVRyh7eEYQpPP76f+DOsnw='
-              }
-            }
-          }
+                'mac': '+xozp909S6oDX8KRV8D8ZFVRyh7eEYQpPP76f+DOsnw=',
+              },
+            },
+          },
         },
         {
           'type': 'io.element.recent_emoji',
@@ -991,11 +1001,11 @@ class FakeMatrixApi extends BaseClient {
               ['🖇️', 0],
               ['🙃', 'error'],
               [null, null],
-              [1, '']
-            ]
-          }
+              [1, ''],
+            ],
+          },
         }
-      ]
+      ],
     },
     'to_device': {
       'events': [
@@ -1004,8 +1014,8 @@ class FakeMatrixApi extends BaseClient {
           'type': 'm.new_device',
           'content': {
             'device_id': 'XYZABCDE',
-            'rooms': ['!726s6s6q:example.com']
-          }
+            'rooms': ['!726s6s6q:example.com'],
+          },
         },
 //        {
 //          'sender': '@othertest:fakeServer.notExisting',
@@ -1034,7 +1044,7 @@ class FakeMatrixApi extends BaseClient {
           },
           'type': 'm.room.encrypted',
         },
-      ]
+      ],
     },
     'device_lists': {
       'changed': [
@@ -1065,14 +1075,14 @@ class FakeMatrixApi extends BaseClient {
                   'msgtype': 'm.text',
                   'format': 'org.matrix.custom.html',
                   'formatted_body':
-                      '<b>This is a second text example message</b>'
+                      '<b>This is a second text example message</b>',
                 },
                 'type': 'm.room.message',
                 'event_id': '143274597446PhrSn:example.org',
                 'room_id': '!5345234234:example.com',
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824654,
-                'unsigned': {'age': 1234}
+                'unsigned': {'age': 1234},
               },
               {
                 'content': {
@@ -1080,17 +1090,17 @@ class FakeMatrixApi extends BaseClient {
                   'msgtype': 'm.text',
                   'format': 'org.matrix.custom.html',
                   'formatted_body':
-                      '<b>This is a first text example message</b>'
+                      '<b>This is a first text example message</b>',
                 },
                 'type': 'm.room.message',
                 'event_id': '143274597443PhrSn:example.org',
                 'room_id': '!5345234234:example.com',
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
-                'unsigned': {'age': 1234}
+                'unsigned': {'age': 1234},
               }
             ],
-            'prev_batch': 't_1234a'
+            'prev_batch': 't_1234a',
           },
           'state': {
             'events': [
@@ -1102,9 +1112,9 @@ class FakeMatrixApi extends BaseClient {
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
                 'unsigned': {'age': 1234},
-                'state_key': ''
+                'state_key': '',
               },
-            ]
+            ],
           },
           'account_data': {
             'events': [
@@ -1127,14 +1137,14 @@ class FakeMatrixApi extends BaseClient {
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
                 'unsigned': {'age': 1234},
-                'state_key': ''
+                'state_key': '',
               },
-            ]
+            ],
           },
-          'prev_batch': 't_1234b'
+          'prev_batch': 't_1234b',
         },
       },
-    }
+    },
   };
 
   Map<String, Map<String, dynamic>> api = {
@@ -1150,7 +1160,7 @@ class FakeMatrixApi extends BaseClient {
             'og:image:type': 'image/png',
             'og:image:height': 48,
             'og:image:width': 48,
-            'matrix:image:size': 102400
+            'matrix:image:size': 102400,
           },
       '/client/v1/media/preview_url?url=https%3A%2F%2Fmatrix.org&ts=10':
           (var req) => {
@@ -1161,7 +1171,7 @@ class FakeMatrixApi extends BaseClient {
                 'og:image:type': 'image/png',
                 'og:image:height': 48,
                 'og:image:width': 48,
-                'matrix:image:size': 102400
+                'matrix:image:size': 102400,
               },
       '/media/v3/config': (var req) => {'m.upload.size': 50000000},
       '/client/v1/media/config': (var req) => {'m.upload.size': 50000000},
@@ -1169,16 +1179,16 @@ class FakeMatrixApi extends BaseClient {
             'm.homeserver': {'base_url': 'https://fakeserver.notexisting'},
             'm.identity_server': {'base_url': 'https://identity.example.com'},
             'org.example.custom.property': {
-              'app_url': 'https://custom.app.example.org'
-            }
+              'app_url': 'https://custom.app.example.org',
+            },
           },
       '/client/v3/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags':
           (var req) => {
                 'tags': {
                   'm.favourite': {'order': 0.1},
                   'u.Work': {'order': 0.7},
-                  'u.Customers': {}
-                }
+                  'u.Customers': {},
+                },
               },
       '/client/v3/events?from=1234&timeout=10&roomId=%211234': (var req) => {
             'start': 's3456_9_0',
@@ -1189,43 +1199,43 @@ class FakeMatrixApi extends BaseClient {
                   'body': 'This is an example text message',
                   'msgtype': 'm.text',
                   'format': 'org.matrix.custom.html',
-                  'formatted_body': '<b>This is an example text message</b>'
+                  'formatted_body': '<b>This is an example text message</b>',
                 },
                 'type': 'm.room.message',
                 'event_id': '\$143273582443PhrSn:example.org',
                 'room_id': '!somewhere:over.the.rainbow',
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
-                'unsigned': {'age': 1234}
+                'unsigned': {'age': 1234},
               }
-            ]
+            ],
           },
       '/client/v3/thirdparty/location?alias=1234': (var req) => [
             {
               'alias': '#freenode_#matrix:matrix.org',
               'protocol': 'irc',
-              'fields': {'network': 'freenode', 'channel': '#matrix'}
+              'fields': {'network': 'freenode', 'channel': '#matrix'},
             }
           ],
       '/client/v3/thirdparty/location/irc': (var req) => [
             {
               'alias': '#freenode_#matrix:matrix.org',
               'protocol': 'irc',
-              'fields': {'network': 'freenode', 'channel': '#matrix'}
+              'fields': {'network': 'freenode', 'channel': '#matrix'},
             }
           ],
       '/client/v3/thirdparty/user/irc': (var req) => [
             {
               'userid': '@_gitter_jim:matrix.org',
               'protocol': 'gitter',
-              'fields': {'user': 'jim'}
+              'fields': {'user': 'jim'},
             }
           ],
       '/client/v3/thirdparty/user?userid=1234': (var req) => [
             {
               'userid': '@_gitter_jim:matrix.org',
               'protocol': 'gitter',
-              'fields': {'user': 'jim'}
+              'fields': {'user': 'jim'},
             }
           ],
       '/client/v3/thirdparty/protocol/irc': (var req) => {
@@ -1235,19 +1245,19 @@ class FakeMatrixApi extends BaseClient {
             'field_types': {
               'network': {
                 'regexp': '([a-z0-9]+\\.)*[a-z0-9]+',
-                'placeholder': 'irc.example.org'
+                'placeholder': 'irc.example.org',
               },
               'nickname': {'regexp': '[^\\s#]+', 'placeholder': 'username'},
-              'channel': {'regexp': '#[^\\s]+', 'placeholder': '#foobar'}
+              'channel': {'regexp': '#[^\\s]+', 'placeholder': '#foobar'},
             },
             'instances': [
               {
                 'desc': 'Freenode',
                 'icon': 'mxc://example.org/JkLmNoPq',
                 'fields': {'network': 'freenode'},
-                'network_id': 'freenode'
+                'network_id': 'freenode',
               }
-            ]
+            ],
           },
       '/client/v3/thirdparty/protocols': (var req) => {
             'irc': {
@@ -1257,19 +1267,19 @@ class FakeMatrixApi extends BaseClient {
               'field_types': {
                 'network': {
                   'regexp': '([a-z0-9]+\\.)*[a-z0-9]+',
-                  'placeholder': 'irc.example.org'
+                  'placeholder': 'irc.example.org',
                 },
                 'nickname': {'regexp': '[^\\s]+', 'placeholder': 'username'},
-                'channel': {'regexp': '#[^\\s]+', 'placeholder': '#foobar'}
+                'channel': {'regexp': '#[^\\s]+', 'placeholder': '#foobar'},
               },
               'instances': [
                 {
                   'network_id': 'freenode',
                   'desc': 'Freenode',
                   'icon': 'mxc://example.org/JkLmNoPq',
-                  'fields': {'network': 'freenode.net'}
+                  'fields': {'network': 'freenode.net'},
                 }
-              ]
+              ],
             },
             'gitter': {
               'user_fields': ['username'],
@@ -1279,18 +1289,18 @@ class FakeMatrixApi extends BaseClient {
                 'username': {'regexp': '@[^\\s]+', 'placeholder': '@username'},
                 'room': {
                   'regexp': '[^\\s]+\\/[^\\s]+',
-                  'placeholder': 'matrix-org/matrix-doc'
-                }
+                  'placeholder': 'matrix-org/matrix-doc',
+                },
               },
               'instances': [
                 {
                   'network_id': 'gitter',
                   'desc': 'Gitter',
                   'icon': 'mxc://example.org/zXyWvUt',
-                  'fields': {}
+                  'fields': {},
                 }
-              ]
-            }
+              ],
+            },
           },
       '/client/v3/account/whoami': (var req) =>
           {'user_id': 'alice@example.com'},
@@ -1303,11 +1313,11 @@ class FakeMatrixApi extends BaseClient {
                   '1': 'stable',
                   '2': 'stable',
                   '3': 'unstable',
-                  'test-version': 'unstable'
-                }
+                  'test-version': 'unstable',
+                },
               },
-              'com.example.custom.ratelimit': {'max_requests_per_hour': 600}
-            }
+              'com.example.custom.ratelimit': {'max_requests_per_hour': 600},
+            },
           },
       '/client/v3/rooms/1234/context/1234?filter=%7B%7D&limit=10': (var req) =>
           {
@@ -1318,14 +1328,14 @@ class FakeMatrixApi extends BaseClient {
                   'body': 'This is an example text message',
                   'msgtype': 'm.text',
                   'format': 'org.matrix.custom.html',
-                  'formatted_body': '<b>This is an example text message</b>'
+                  'formatted_body': '<b>This is an example text message</b>',
                 },
                 'type': 'm.room.message',
                 'event_id': '\$143273582443PhrSn:example.org',
                 'room_id': '!636q39766251:example.com',
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
-                'unsigned': {'age': 1234}
+                'unsigned': {'age': 1234},
               }
             ],
             'event': {
@@ -1335,17 +1345,17 @@ class FakeMatrixApi extends BaseClient {
                   'h': 398,
                   'w': 394,
                   'mimetype': 'image/jpeg',
-                  'size': 31037
+                  'size': 31037,
                 },
                 'url': 'mxc://example.org/JWEIFJgwEIhweiWJE',
-                'msgtype': 'm.image'
+                'msgtype': 'm.image',
               },
               'type': 'm.room.message',
               'event_id': '\$f3h4d129462ha:example.com',
               'room_id': '!636q39766251:example.com',
               'sender': '@example:example.org',
               'origin_server_ts': 1432735824653,
-              'unsigned': {'age': 1234}
+              'unsigned': {'age': 1234},
             },
             'events_before': [
               {
@@ -1354,14 +1364,14 @@ class FakeMatrixApi extends BaseClient {
                   'filename': 'something-important.doc',
                   'info': {'mimetype': 'application/msword', 'size': 46144},
                   'msgtype': 'm.file',
-                  'url': 'mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe'
+                  'url': 'mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe',
                 },
                 'type': 'm.room.message',
                 'event_id': '\$143273582443PhrSn:example.org',
                 'room_id': '!636q39766251:example.com',
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
-                'unsigned': {'age': 1234}
+                'unsigned': {'age': 1234},
               }
             ],
             'start': 't27-54_2_0_2',
@@ -1373,8 +1383,8 @@ class FakeMatrixApi extends BaseClient {
                   'm.federate': true,
                   'predecessor': {
                     'event_id': '\$something:example.org',
-                    'room_id': '!oldroom:example.org'
-                  }
+                    'room_id': '!oldroom:example.org',
+                  },
                 },
                 'type': 'm.room.create',
                 'event_id': '\$143273582443PhrSn:example.org',
@@ -1382,13 +1392,13 @@ class FakeMatrixApi extends BaseClient {
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
                 'unsigned': {'age': 1234},
-                'state_key': ''
+                'state_key': '',
               },
               {
                 'content': {
                   'membership': 'join',
                   'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
-                  'displayname': 'Alice Margatroid'
+                  'displayname': 'Alice Margatroid',
                 },
                 'type': 'm.room.member',
                 'event_id': '\$143273582443PhrSn:example.org',
@@ -1396,9 +1406,9 @@ class FakeMatrixApi extends BaseClient {
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
                 'unsigned': {'age': 1234},
-                'state_key': '@alice:example.org'
+                'state_key': '@alice:example.org',
               }
-            ]
+            ],
           },
       '/client/v3/admin/whois/%40alice%3Aexample.com': (var req) => {
             'user_id': '@peter:rabbit.rocks',
@@ -1410,19 +1420,19 @@ class FakeMatrixApi extends BaseClient {
                       {
                         'ip': '127.0.0.1',
                         'last_seen': 1411996332123,
-                        'user_agent': 'curl/7.31.0-DEV'
+                        'user_agent': 'curl/7.31.0-DEV',
                       },
                       {
                         'ip': '10.0.0.2',
                         'last_seen': 1411996332123,
                         'user_agent':
-                            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36'
+                            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36',
                       }
-                    ]
+                    ],
                   }
-                ]
-              }
-            }
+                ],
+              },
+            },
           },
       '/client/v3/user/%40alice%3Aexample.com/account_data/test.account.data':
           (var req) => {'foo': 'bar'},
@@ -1430,7 +1440,7 @@ class FakeMatrixApi extends BaseClient {
           (var req) => {'foo': 'bar'},
       '/client/v3/directory/room/%23testalias%3Aexample.com': (var reqI) => {
             'room_id': '!abnjk1jdasj98:capuchins.com',
-            'servers': ['capuchins.com', 'matrix.org', 'another.com']
+            'servers': ['capuchins.com', 'matrix.org', 'another.com'],
           },
       '/client/v3/account/3pid': (var req) => {
             'threepids': [
@@ -1438,9 +1448,9 @@ class FakeMatrixApi extends BaseClient {
                 'medium': 'email',
                 'address': 'monkey@banana.island',
                 'validated_at': 1535176800000,
-                'added_at': 1535336848756
+                'added_at': 1535336848756,
               }
-            ]
+            ],
           },
       '/client/v3/devices': (var req) => {
             'devices': [
@@ -1448,9 +1458,9 @@ class FakeMatrixApi extends BaseClient {
                 'device_id': 'QBUAZIFURK',
                 'display_name': 'android',
                 'last_seen_ip': '1.2.3.4',
-                'last_seen_ts': 1474491775024
+                'last_seen_ts': 1474491775024,
               }
-            ]
+            ],
           },
       '/client/v3/notifications?from=1234&limit=10&only=1234': (var req) => {
             'next_token': 'abcdef',
@@ -1466,23 +1476,23 @@ class FakeMatrixApi extends BaseClient {
                     'body': 'This is an example text message',
                     'msgtype': 'm.text',
                     'format': 'org.matrix.custom.html',
-                    'formatted_body': '<b>This is an example text message</b>'
+                    'formatted_body': '<b>This is an example text message</b>',
                   },
                   'type': 'm.room.message',
                   'event_id': '\$143273582443PhrSn:example.org',
                   'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
                   'sender': '@example:example.org',
                   'origin_server_ts': 1432735824653,
-                  'unsigned': {'age': 1234}
-                }
+                  'unsigned': {'age': 1234},
+                },
               }
-            ]
+            ],
           },
       '/client/v3/devices/QBUAZIFURK': (var req) => {
             'device_id': 'QBUAZIFURK',
             'display_name': 'android',
             'last_seen_ip': '1.2.3.4',
-            'last_seen_ts': 1474491775024
+            'last_seen_ts': 1474491775024,
           },
       '/client/v3/profile/%40test%3AfakeServer.notExisting': (var reqI) =>
           {'displayname': 'Some First Name Some Last Name'},
@@ -1500,20 +1510,20 @@ class FakeMatrixApi extends BaseClient {
             'uris': [
               'turn:turn.example.com:3478?transport=udp',
               'turn:10.20.30.40:3478?transport=tcp',
-              'turns:10.20.30.40:443?transport=tcp'
+              'turns:10.20.30.40:443?transport=tcp',
             ],
-            'ttl': 86400
+            'ttl': 86400,
           },
       '/client/v3/presence/${Uri.encodeComponent('@alice:example.com')}/status':
           (var req) => {
                 'presence': 'unavailable',
                 'last_active_ago': 420845,
                 'status_msg': 'test',
-                'currently_active': false
+                'currently_active': false,
               },
       '/client/v3/keys/changes?from=1234&to=1234': (var req) => {
             'changed': ['@alice:example.com', '@bob:example.org'],
-            'left': ['@clara:example.com', '@doug:example.org']
+            'left': ['@clara:example.com', '@doug:example.org'],
           },
       '/client/v3/pushers': (var req) => {
             'pushers': [
@@ -1528,9 +1538,9 @@ class FakeMatrixApi extends BaseClient {
                 'data': {
                   'url': 'https://example.com/_matrix/push/v1/notify',
                   'format': 'event_id_only',
-                }
+                },
               }
-            ]
+            ],
           },
       '/client/v3/publicRooms?limit=10&since=1234&server=example.com':
           (var req) => {
@@ -1544,22 +1554,22 @@ class FakeMatrixApi extends BaseClient {
                     'num_joined_members': 37,
                     'room_id': '!ol19s:bleecker.street',
                     'topic': 'Tasty tasty cheese',
-                    'world_readable': true
+                    'world_readable': true,
                   }
                 ],
                 'next_batch': 'p190q',
                 'prev_batch': 'p1902',
-                'total_room_count_estimate': 115
+                'total_room_count_estimate': 115,
               },
       '/client/v3/room/!localpart%3Aexample.com/aliases': (var req) => {
             'aliases': [
               '#somewhere:example.com',
               '#another:example.com',
-              '#hat_trick:example.com'
-            ]
+              '#hat_trick:example.com',
+            ],
           },
       '/client/v3/joined_rooms': (var req) => {
-            'joined_rooms': ['!foo:example.com']
+            'joined_rooms': ['!foo:example.com'],
           },
       '/client/v3/directory/list/room/!localpart%3Aexample.com': (var req) =>
           {'visibility': 'public'},
@@ -1596,13 +1606,13 @@ class FakeMatrixApi extends BaseClient {
               'sender': '@example:example.org',
               'origin_server_ts': 1432735824653,
               'unsigned': {'age': 1234},
-              'state_key': ''
+              'state_key': '',
             },
             {
               'content': {
                 'membership': 'join',
                 'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
-                'displayname': 'Alice Margatroid'
+                'displayname': 'Alice Margatroid',
               },
               'type': 'm.room.member',
               'event_id': '\$143273582443PhrSn:example.org',
@@ -1610,7 +1620,7 @@ class FakeMatrixApi extends BaseClient {
               'sender': '@example:example.org',
               'origin_server_ts': 1432735824653,
               'unsigned': {'age': 1234},
-              'state_key': '@alice:example.org'
+              'state_key': '@alice:example.org',
             },
             {
               'content': {
@@ -1619,8 +1629,8 @@ class FakeMatrixApi extends BaseClient {
                 'm.federate': true,
                 'predecessor': {
                   'event_id': '\$something:example.org',
-                  'room_id': '!oldroom:example.org'
-                }
+                  'room_id': '!oldroom:example.org',
+                },
               },
               'type': 'm.room.create',
               'event_id': '\$143273582443PhrSn:example.org',
@@ -1628,7 +1638,7 @@ class FakeMatrixApi extends BaseClient {
               'sender': '@example:example.org',
               'origin_server_ts': 1432735824653,
               'unsigned': {'age': 1234},
-              'state_key': ''
+              'state_key': '',
             },
             {
               'content': {
@@ -1641,7 +1651,7 @@ class FakeMatrixApi extends BaseClient {
                 'state_default': 50,
                 'users': {'@example:localhost': 100},
                 'users_default': 0,
-                'notifications': {'room': 20}
+                'notifications': {'room': 20},
               },
               'type': 'm.room.power_levels',
               'event_id': '\$143273582443PhrSn:example.org',
@@ -1649,7 +1659,7 @@ class FakeMatrixApi extends BaseClient {
               'sender': '@example:example.org',
               'origin_server_ts': 1432735824653,
               'unsigned': {'age': 1234},
-              'state_key': ''
+              'state_key': '',
             }
           ],
       '/client/v3/rooms/!localpart:server.abc/event/1234': (var req) => {
@@ -1657,28 +1667,28 @@ class FakeMatrixApi extends BaseClient {
               'body': 'This is an example text message',
               'msgtype': 'm.text',
               'format': 'org.matrix.custom.html',
-              'formatted_body': '<b>This is an example text message</b>'
+              'formatted_body': '<b>This is an example text message</b>',
             },
             'type': 'm.room.message',
             'event_id': '143273582443PhrSn:example.org',
             'room_id': '!localpart:server.abc',
             'sender': '@example:example.org',
             'origin_server_ts': 1432735824653,
-            'unsigned': {'age': 1234}
+            'unsigned': {'age': 1234},
           },
       '/client/v3/rooms/!localpart%3Aserver.abc/event/1234': (var req) => {
             'content': {
               'body': 'This is an example text message',
               'msgtype': 'm.text',
               'format': 'org.matrix.custom.html',
-              'formatted_body': '<b>This is an example text message</b>'
+              'formatted_body': '<b>This is an example text message</b>',
             },
             'type': 'm.room.message',
             'event_id': '143273582443PhrSn:example.org',
             'room_id': '!localpart:server.abc',
             'sender': '@example:example.org',
             'origin_server_ts': 1432735824653,
-            'unsigned': {'age': 1234}
+            'unsigned': {'age': 1234},
           },
       '/client/v3/rooms/!1234%3Aexample.com/event/not_found': (var req) => {
             'errcode': 'M_NOT_FOUND',
@@ -1690,14 +1700,14 @@ class FakeMatrixApi extends BaseClient {
                   'body': 'This is an example text message',
                   'msgtype': 'm.text',
                   'format': 'org.matrix.custom.html',
-                  'formatted_body': '<b>This is an example text message</b>'
+                  'formatted_body': '<b>This is an example text message</b>',
                 },
                 'type': 'm.room.message',
                 'event_id': '143273582443PhrSn:example.org',
                 'room_id': '!localpart:server.abc',
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
-                'unsigned': {'age': 1234}
+                'unsigned': {'age': 1234},
               },
       '/client/v3/rooms/!1234%3Aexample.com/event/encrypted_event': (var req) =>
           {
@@ -1706,14 +1716,14 @@ class FakeMatrixApi extends BaseClient {
               'ciphertext': 'invalid',
               'device_id': 'SOME_DEVICE',
               'sender_key': 'invalid',
-              'session_id': 'not_found'
+              'session_id': 'not_found',
             },
             'type': 'm.room.encrypted',
             'event_id': '143273582443PhrSn:example.org',
             'room_id': '!localpart:server.abc',
             'sender': '@example:example.org',
             'origin_server_ts': 1432735824653,
-            'unsigned': {'age': 1234}
+            'unsigned': {'age': 1234},
           },
       '/client/v3/rooms/!localpart%3Aserver.abc/messages?from=1234&dir=b&to=1234&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponsePast,
@@ -1737,16 +1747,16 @@ class FakeMatrixApi extends BaseClient {
           },
       '/client/v3/login': (var req) => {
             'flows': [
-              {'type': 'm.login.password'}
-            ]
+              {'type': 'm.login.password'},
+            ],
           },
       '/client/v3/rooms/!localpart%3Aserver.abc/joined_members': (var req) => {
             'joined': {
               '@bar:example.com': {
                 'display_name': 'Bar',
-                'avatar_url': 'mxc://riot.ovh/printErCATzZijQsSDWorRaK'
-              }
-            }
+                'avatar_url': 'mxc://riot.ovh/printErCATzZijQsSDWorRaK',
+              },
+            },
           },
       '/client/v3/rooms/!localpart%3Aserver.abc/members?at=1234&membership=join&not_membership=leave':
           (var req) => {
@@ -1755,7 +1765,7 @@ class FakeMatrixApi extends BaseClient {
                     'content': {
                       'membership': 'join',
                       'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
-                      'displayname': 'Alice Margatroid'
+                      'displayname': 'Alice Margatroid',
                     },
                     'type': 'm.room.member',
                     'event_id': '§143273582443PhrSn:example.org',
@@ -1763,9 +1773,9 @@ class FakeMatrixApi extends BaseClient {
                     'sender': '@alice:example.com',
                     'origin_server_ts': 1432735824653,
                     'unsigned': {'age': 1234},
-                    'state_key': '@alice:example.com'
+                    'state_key': '@alice:example.com',
                   }
-                ]
+                ],
               },
       '/client/v3/rooms/!696r7674:example.com/members': (var req) => {
             'chunk': [
@@ -1773,7 +1783,7 @@ class FakeMatrixApi extends BaseClient {
                 'content': {
                   'membership': 'join',
                   'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
-                  'displayname': 'Alice Margatroid'
+                  'displayname': 'Alice Margatroid',
                 },
                 'type': 'm.room.member',
                 'event_id': '§143273582443PhrSn:example.org',
@@ -1781,9 +1791,9 @@ class FakeMatrixApi extends BaseClient {
                 'sender': '@alice:example.com',
                 'origin_server_ts': 1432735824653,
                 'unsigned': {'age': 1234},
-                'state_key': '@alice:example.com'
+                'state_key': '@alice:example.com',
               }
-            ]
+            ],
           },
       '/client/v3/rooms/!726s6s6q%3Aexample.com/members': (var req) => {
             'chunk': [
@@ -1791,7 +1801,7 @@ class FakeMatrixApi extends BaseClient {
                 'content': {
                   'membership': 'join',
                   'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
-                  'displayname': 'Alice Margatroid'
+                  'displayname': 'Alice Margatroid',
                 },
                 'type': 'm.room.member',
                 'event_id': '§143273582443PhrSn:example.org',
@@ -1799,9 +1809,9 @@ class FakeMatrixApi extends BaseClient {
                 'sender': '@alice:example.com',
                 'origin_server_ts': 1432735824653,
                 'unsigned': {'age': 1234},
-                'state_key': '@alice:example.com'
+                'state_key': '@alice:example.com',
               }
-            ]
+            ],
           },
       '/client/v3/rooms/!localpart%3Aserver.abc/members': (var req) => {
             'chunk': [
@@ -1809,7 +1819,7 @@ class FakeMatrixApi extends BaseClient {
                 'content': {
                   'membership': 'join',
                   'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
-                  'displayname': 'Alice Margatroid'
+                  'displayname': 'Alice Margatroid',
                 },
                 'type': 'm.room.member',
                 'event_id': '§143273582443PhrSn:example.org',
@@ -1817,22 +1827,22 @@ class FakeMatrixApi extends BaseClient {
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
                 'unsigned': {'age': 1234},
-                'state_key': '@alice:example.org'
+                'state_key': '@alice:example.org',
               }
-            ]
+            ],
           },
       '/client/v3/pushrules/global/content/nocake': (var req) => {
             'actions': ['dont_notify'],
             'pattern': 'cake*lie',
             'rule_id': 'nocake',
             'enabled': true,
-            'default': false
+            'default': false,
           },
       '/client/v3/pushrules/global/content/nocake/enabled': (var req) => {
             'enabled': true,
           },
       '/client/v3/pushrules/global/content/nocake/actions': (var req) => {
-            'actions': ['notify']
+            'actions': ['notify'],
           },
       '/client/v3/pushrules': (var req) => {
             'global': {
@@ -1841,12 +1851,12 @@ class FakeMatrixApi extends BaseClient {
                   'actions': [
                     'notify',
                     {'set_tweak': 'sound', 'value': 'default'},
-                    {'set_tweak': 'highlight'}
+                    {'set_tweak': 'highlight'},
                   ],
                   'default': true,
                   'enabled': true,
                   'pattern': 'alice',
-                  'rule_id': '.m.rule.contains_user_name'
+                  'rule_id': '.m.rule.contains_user_name',
                 }
               ],
               'override': [
@@ -1855,7 +1865,7 @@ class FakeMatrixApi extends BaseClient {
                   'conditions': [],
                   'default': true,
                   'enabled': false,
-                  'rule_id': '.m.rule.master'
+                  'rule_id': '.m.rule.master',
                 },
                 {
                   'actions': ['dont_notify'],
@@ -1863,12 +1873,12 @@ class FakeMatrixApi extends BaseClient {
                     {
                       'key': 'content.msgtype',
                       'kind': 'event_match',
-                      'pattern': 'm.notice'
+                      'pattern': 'm.notice',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.suppress_notices'
+                  'rule_id': '.m.rule.suppress_notices',
                 }
               ],
               'room': [],
@@ -1878,106 +1888,106 @@ class FakeMatrixApi extends BaseClient {
                   'actions': [
                     'notify',
                     {'set_tweak': 'sound', 'value': 'ring'},
-                    {'set_tweak': 'highlight', 'value': false}
+                    {'set_tweak': 'highlight', 'value': false},
                   ],
                   'conditions': [
                     {
                       'key': 'type',
                       'kind': 'event_match',
-                      'pattern': 'm.call.invite'
+                      'pattern': 'm.call.invite',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.call'
+                  'rule_id': '.m.rule.call',
                 },
                 {
                   'actions': [
                     'notify',
                     {'set_tweak': 'sound', 'value': 'default'},
-                    {'set_tweak': 'highlight'}
+                    {'set_tweak': 'highlight'},
                   ],
                   'conditions': [
-                    {'kind': 'contains_display_name'}
+                    {'kind': 'contains_display_name'},
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.contains_display_name'
+                  'rule_id': '.m.rule.contains_display_name',
                 },
                 {
                   'actions': [
                     'notify',
                     {'set_tweak': 'sound', 'value': 'default'},
-                    {'set_tweak': 'highlight', 'value': false}
+                    {'set_tweak': 'highlight', 'value': false},
                   ],
                   'conditions': [
-                    {'is': '2', 'kind': 'room_member_count'}
+                    {'is': '2', 'kind': 'room_member_count'},
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.room_one_to_one'
+                  'rule_id': '.m.rule.room_one_to_one',
                 },
                 {
                   'actions': [
                     'notify',
                     {'set_tweak': 'sound', 'value': 'default'},
-                    {'set_tweak': 'highlight', 'value': false}
+                    {'set_tweak': 'highlight', 'value': false},
                   ],
                   'conditions': [
                     {
                       'key': 'type',
                       'kind': 'event_match',
-                      'pattern': 'm.room.member'
+                      'pattern': 'm.room.member',
                     },
                     {
                       'key': 'content.membership',
                       'kind': 'event_match',
-                      'pattern': 'invite'
+                      'pattern': 'invite',
                     },
                     {
                       'key': 'state_key',
                       'kind': 'event_match',
-                      'pattern': '@alice:example.com'
+                      'pattern': '@alice:example.com',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.invite_for_me'
+                  'rule_id': '.m.rule.invite_for_me',
                 },
                 {
                   'actions': [
                     'notify',
-                    {'set_tweak': 'highlight', 'value': false}
+                    {'set_tweak': 'highlight', 'value': false},
                   ],
                   'conditions': [
                     {
                       'key': 'type',
                       'kind': 'event_match',
-                      'pattern': 'm.room.member'
+                      'pattern': 'm.room.member',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.member_event'
+                  'rule_id': '.m.rule.member_event',
                 },
                 {
                   'actions': [
                     'notify',
-                    {'set_tweak': 'highlight', 'value': false}
+                    {'set_tweak': 'highlight', 'value': false},
                   ],
                   'conditions': [
                     {
                       'key': 'type',
                       'kind': 'event_match',
-                      'pattern': 'm.room.message'
+                      'pattern': 'm.room.message',
                     }
                   ],
                   'default': true,
                   'enabled': true,
-                  'rule_id': '.m.rule.message'
+                  'rule_id': '.m.rule.message',
                 }
-              ]
-            }
+              ],
+            },
           },
       '/client/v3/sync?filter=%7B%22room%22%3A%7B%22include_leave%22%3Atrue%2C%22state%22%3A%7B%22lazy_load_members%22%3Atrue%7D%2C%22timeline%22%3A%7B%22limit%22%3A10%7D%7D%7D&timeout=0':
           (var req) => archiveSyncResponse,
@@ -1991,31 +2001,31 @@ class FakeMatrixApi extends BaseClient {
                 'room': {
                   'state': {
                     'types': ['m.room.*'],
-                    'not_rooms': ['!726s6s6q:example.com']
+                    'not_rooms': ['!726s6s6q:example.com'],
                   },
                   'timeline': {
                     'limit': 10,
                     'types': ['m.room.message'],
                     'not_rooms': ['!726s6s6q:example.com'],
-                    'not_senders': ['@spam:example.com']
+                    'not_senders': ['@spam:example.com'],
                   },
                   'ephemeral': {
                     'types': ['m.receipt', 'm.typing'],
                     'not_rooms': ['!726s6s6q:example.com'],
-                    'not_senders': ['@spam:example.com']
+                    'not_senders': ['@spam:example.com'],
                   },
                   'account_data': {
                     'types': ['m.receipt', 'm.typing'],
                     'not_rooms': ['!726s6s6q:example.com'],
-                    'not_senders': ['@spam:example.com']
-                  }
+                    'not_senders': ['@spam:example.com'],
+                  },
                 },
                 'presence': {
                   'types': ['m.presence'],
-                  'not_senders': ['@alice:example.com']
+                  'not_senders': ['@alice:example.com'],
                 },
                 'event_format': 'client',
-                'event_fields': ['type', 'content', 'sender']
+                'event_fields': ['type', 'content', 'sender'],
               },
       '/client/v3/room_keys/version': (var req) => {
             'algorithm': AlgorithmTypes.megolmBackupV1Curve25519AesSha2,
@@ -2085,7 +2095,7 @@ class FakeMatrixApi extends BaseClient {
       '/client/v3/refresh': (var req) => {
             'access_token': 'a_new_token',
             'expires_in_ms': 1000 * 60 * 5,
-            'refresh_token': 'another_new_token'
+            'refresh_token': 'another_new_token',
           },
       '/client/v3/delete_devices': (var req) => {},
       '/client/v3/account/3pid/add': (var req) => {},
@@ -2104,9 +2114,9 @@ class FakeMatrixApi extends BaseClient {
                     '!qPewotXpIctQySfjSy:localhost': {
                       'order': 1,
                       'next_batch': 'BdgFsdfHSf-dsFD',
-                      'results': ['\$144429830826TWwbB:localhost']
-                    }
-                  }
+                      'results': ['\$144429830826TWwbB:localhost'],
+                    },
+                  },
                 },
                 'highlights': ['martians', 'men'],
                 'next_batch': '5FdgFsd234dfgsdfFD',
@@ -2120,19 +2130,19 @@ class FakeMatrixApi extends BaseClient {
                         'msgtype': 'm.text',
                         'format': 'org.matrix.custom.html',
                         'formatted_body':
-                            '<b>This is an example text message</b>'
+                            '<b>This is an example text message</b>',
                       },
                       'type': 'm.room.message',
                       'event_id': '\$144429830826TWwbB:localhost',
                       'room_id': '!qPewotXpIctQySfjSy:localhost',
                       'sender': '@example:example.org',
                       'origin_server_ts': 1432735824653,
-                      'unsigned': {'age': 1234}
-                    }
+                      'unsigned': {'age': 1234},
+                    },
                   }
-                ]
-              }
-            }
+                ],
+              },
+            },
           },
       '/client/v3/account/deactivate': (var req) =>
           {'id_server_unbind_result': 'success'},
@@ -2141,34 +2151,34 @@ class FakeMatrixApi extends BaseClient {
               {
                 'user_id': '@foo:bar.com',
                 'display_name': 'Foo',
-                'avatar_url': 'mxc://bar.com/foo'
+                'avatar_url': 'mxc://bar.com/foo',
               }
             ],
-            'limited': false
+            'limited': false,
           },
       '/client/v3/register/email/requestToken': (var req) => {
             'sid': '123abc',
-            'submit_url': 'https://example.org/path/to/submitToken'
+            'submit_url': 'https://example.org/path/to/submitToken',
           },
       '/client/v3/register/msisdn/requestToken': (var req) => {
             'sid': '123abc',
-            'submit_url': 'https://example.org/path/to/submitToken'
+            'submit_url': 'https://example.org/path/to/submitToken',
           },
       '/client/v3/account/password/email/requestToken': (var req) => {
             'sid': '123abc',
-            'submit_url': 'https://example.org/path/to/submitToken'
+            'submit_url': 'https://example.org/path/to/submitToken',
           },
       '/client/v3/account/password/msisdn/requestToken': (var req) => {
             'sid': '123abc',
-            'submit_url': 'https://example.org/path/to/submitToken'
+            'submit_url': 'https://example.org/path/to/submitToken',
           },
       '/client/v3/account/3pid/email/requestToken': (var req) => {
             'sid': '123abc',
-            'submit_url': 'https://example.org/path/to/submitToken'
+            'submit_url': 'https://example.org/path/to/submitToken',
           },
       '/client/v3/account/3pid/msisdn/requestToken': (var req) => {
             'sid': '123abc',
-            'submit_url': 'https://example.org/path/to/submitToken'
+            'submit_url': 'https://example.org/path/to/submitToken',
           },
       '/client/v3/rooms/!localpart%3Aexample.com/receipt/m.read/%241234%3Aexample.com':
           (var req) => {},
@@ -2189,12 +2199,12 @@ class FakeMatrixApi extends BaseClient {
                 'num_joined_members': 37,
                 'room_id': '!ol19s:bleecker.street',
                 'topic': 'Tasty tasty cheese',
-                'world_readable': true
+                'world_readable': true,
               }
             ],
             'next_batch': 'p190q',
             'prev_batch': 'p1902',
-            'total_room_count_estimate': 115
+            'total_room_count_estimate': 115,
           },
       '/client/v3/keys/claim': (var req) => {
             'failures': {},
@@ -2208,11 +2218,11 @@ class FakeMatrixApi extends BaseClient {
                       'signatures': {
                         '@alice:example.com': {
                           'ed25519:JLAFKJWSCS':
-                              'XdboCa0Ljoh0Y0i/IVnmMqy/+T1hJyu8BA/nRYniJMQ7QWh/pGS5AsWswdARD+MAX+r4u98Qzk0y27HUddZXDA'
-                        }
-                      }
-                    }
-                  }
+                              'XdboCa0Ljoh0Y0i/IVnmMqy/+T1hJyu8BA/nRYniJMQ7QWh/pGS5AsWswdARD+MAX+r4u98Qzk0y27HUddZXDA',
+                        },
+                      },
+                    },
+                  },
                 },
               if (decodeJson(req)['one_time_keys']
                       ['@test:fakeServer.notExisting'] !=
@@ -2230,7 +2240,7 @@ class FakeMatrixApi extends BaseClient {
                     },
                   },
                 },
-            }
+            },
           },
       '/client/v3/rooms/!localpart%3Aexample.com/invite': (var req) => {},
       '/client/v3/rooms/!1234%3AfakeServer.notExisting/invite': (var req) => {},
@@ -2259,7 +2269,7 @@ class FakeMatrixApi extends BaseClient {
                           ?.keys
                           .length ??
                       0,
-            }
+            },
           },
       '/client/v3/keys/query': (var req) => {
             'failures': {},
@@ -2270,40 +2280,40 @@ class FakeMatrixApi extends BaseClient {
                   'device_id': 'JLAFKJWSCS',
                   'algorithms': [
                     AlgorithmTypes.olmV1Curve25519AesSha2,
-                    AlgorithmTypes.megolmV1AesSha2
+                    AlgorithmTypes.megolmV1AesSha2,
                   ],
                   'keys': {
                     'curve25519:JLAFKJWSCS':
                         'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
                     'ed25519:JLAFKJWSCS':
-                        'rUFJftIWpFF/jqqz3bexGGYiG8UobKhzkeabqw1v0zM'
+                        'rUFJftIWpFF/jqqz3bexGGYiG8UobKhzkeabqw1v0zM',
                   },
                   'signatures': {
                     '@alice:example.com': {
                       'ed25519:JLAFKJWSCS':
-                          'go3mi5o3Ile+Ik+lCEpHmBmyJmKWfnRDCBBvfaVlKsMyha5IORuYcxwEUrAeLyAeeeHvkWDFX+No5eY1jYeKBw'
-                    }
+                          'go3mi5o3Ile+Ik+lCEpHmBmyJmKWfnRDCBBvfaVlKsMyha5IORuYcxwEUrAeLyAeeeHvkWDFX+No5eY1jYeKBw',
+                    },
                   },
-                  'unsigned': {'device_display_name': 'Alices mobile phone'}
+                  'unsigned': {'device_display_name': 'Alices mobile phone'},
                 },
                 'OTHERDEVICE': {
                   'user_id': '@alice:example.com',
                   'device_id': 'OTHERDEVICE',
                   'algorithms': [
                     AlgorithmTypes.olmV1Curve25519AesSha2,
-                    AlgorithmTypes.megolmV1AesSha2
+                    AlgorithmTypes.megolmV1AesSha2,
                   ],
                   'keys': {
                     'curve25519:OTHERDEVICE':
                         'wMIDhiQl5jEXQrTB03ePOSQfR8sA/KMrW0CIfFfXKEE',
                     'ed25519:OTHERDEVICE':
-                        '2Lyaj5NB7HPqKZMjZpA/pECXuQ+9wi8AGFdw33y3DuQ'
+                        '2Lyaj5NB7HPqKZMjZpA/pECXuQ+9wi8AGFdw33y3DuQ',
                   },
                   'signatures': {
                     '@alice:example.com': {
                       'ed25519:OTHERDEVICE':
                           'bwHd6ylISP13AICdDPd0HQd4V6dvvd4vno8/OwUNdm9UAprr3YjkDqVw425I74u2UQAarq9bytBqVqFyD6trAw',
-                    }
+                    },
                   },
                 },
               },
@@ -2313,13 +2323,13 @@ class FakeMatrixApi extends BaseClient {
                   'device_id': 'GHTYAJCE',
                   'algorithms': [
                     AlgorithmTypes.olmV1Curve25519AesSha2,
-                    AlgorithmTypes.megolmV1AesSha2
+                    AlgorithmTypes.megolmV1AesSha2,
                   ],
                   'keys': {
                     'curve25519:GHTYAJCE':
                         '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk',
                     'ed25519:GHTYAJCE':
-                        'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo'
+                        'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo',
                   },
                   'signatures': {
                     '@test:fakeServer.notExisting': {
@@ -2335,13 +2345,13 @@ class FakeMatrixApi extends BaseClient {
                   'device_id': 'OTHERDEVICE',
                   'algorithms': [
                     AlgorithmTypes.olmV1Curve25519AesSha2,
-                    AlgorithmTypes.megolmV1AesSha2
+                    AlgorithmTypes.megolmV1AesSha2,
                   ],
                   'keys': {
                     'curve25519:OTHERDEVICE':
                         'R96BA0qE1+QAWLp7E1jyWSTJ1VXMLpEdiM2SZHlKMXM',
                     'ed25519:OTHERDEVICE':
-                        'EQo9eYbSygIbOR+tVJziqAY1NI6Gga+JQOVIqJe4mr4'
+                        'EQo9eYbSygIbOR+tVJziqAY1NI6Gga+JQOVIqJe4mr4',
                   },
                   'signatures': {
                     '@test:fakeServer.notExisting': {
@@ -2359,7 +2369,7 @@ class FakeMatrixApi extends BaseClient {
                   'device_id': 'FOXDEVICE',
                   'algorithms': [
                     AlgorithmTypes.olmV1Curve25519AesSha2,
-                    AlgorithmTypes.megolmV1AesSha2
+                    AlgorithmTypes.megolmV1AesSha2,
                   ],
                   'keys': {
                     'curve25519:FOXDEVICE':
@@ -2459,14 +2469,14 @@ class FakeMatrixApi extends BaseClient {
             'access_token': 'SomeT0kenHere',
             'token_type': 'Bearer',
             'matrix_server_name': 'example.com',
-            'expires_in': 3600.0
+            'expires_in': 3600.0,
           },
       '/client/v3/user/@test:fakeServer.notExisting/openid/request_token':
           (var req) => {
                 'access_token': 'SomeT0kenHere',
                 'token_type': 'Bearer',
                 'matrix_server_name': 'example.com',
-                'expires_in': 3600
+                'expires_in': 3600,
               },
       '/client/v3/login': (var req) => {
             'user_id': '@test:fakeServer.notExisting',
@@ -2475,8 +2485,8 @@ class FakeMatrixApi extends BaseClient {
             'device_id': 'GHTYAJCE',
             'well_known': {
               'm.homeserver': {'base_url': 'https://example.org'},
-              'm.identity_server': {'base_url': 'https://id.example.org'}
-            }
+              'm.identity_server': {'base_url': 'https://id.example.org'},
+            },
           },
       '/media/v3/upload?filename=file.jpeg': (var req) =>
           {'content_uri': 'mxc://example.com/AQwafuaFswefuhsfAFAgsw'},
@@ -2654,7 +2664,7 @@ class FakeMatrixApi extends BaseClient {
           },
       '/client/unstable/org.matrix.msc3814.v1/dehydrated_device': (var _) => {
             'device_id': 'DEHYDDEV',
-          }
+          },
     },
     'DELETE': {
       '/unknown/token': (var req) => {'errcode': 'M_UNKNOWN_TOKEN'},

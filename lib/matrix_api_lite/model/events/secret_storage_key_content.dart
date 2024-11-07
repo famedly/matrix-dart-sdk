@@ -63,11 +63,12 @@ class PassphraseInfo {
   int? iterations;
   int? bits;
 
-  PassphraseInfo(
-      {required this.algorithm,
-      required this.salt,
-      required this.iterations,
-      this.bits});
+  PassphraseInfo({
+    required this.algorithm,
+    required this.salt,
+    required this.iterations,
+    this.bits,
+  });
 
   PassphraseInfo.fromJson(Map<String, Object?> json)
       : algorithm = json.tryGet('algorithm', TryGet.required),

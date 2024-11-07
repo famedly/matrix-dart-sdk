@@ -59,8 +59,11 @@ abstract class DatabaseApi {
 
   Future<List<Room>> getRoomList(Client client);
 
-  Future<Room?> getSingleRoom(Client client, String roomId,
-      {bool loadImportantStates = true});
+  Future<Room?> getSingleRoom(
+    Client client,
+    String roomId, {
+    bool loadImportantStates = true,
+  });
 
   Future<Map<String, BasicEvent>> getAccountData();
 
@@ -86,7 +89,9 @@ abstract class DatabaseApi {
   Future<CachedProfileInformation?> getUserProfile(String userId);
 
   Future<void> storeUserProfile(
-      String userId, CachedProfileInformation profile);
+    String userId,
+    CachedProfileInformation profile,
+  );
 
   Future<void> markUserProfileAsOutdated(String userId);
 
@@ -316,7 +321,10 @@ abstract class DatabaseApi {
   Future<List<StoredInboundGroupSession>> getInboundGroupSessionsToUpload();
 
   Future<void> addSeenDeviceId(
-      String userId, String deviceId, String publicKeys);
+    String userId,
+    String deviceId,
+    String publicKeys,
+  );
 
   Future<void> addSeenPublicKey(String publicKey, String deviceId);
 

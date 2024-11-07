@@ -25,7 +25,9 @@ extension CommandsClientExtension on Client {
   /// Add a command to the command handler. `command` is its name, and `callback` is the
   /// callback to invoke
   void addCommand(
-      String command, FutureOr<String?> Function(CommandArgs) callback) {
+    String command,
+    FutureOr<String?> Function(CommandArgs) callback,
+  ) {
     commands[command.toLowerCase()] = callback;
   }
 
@@ -313,12 +315,13 @@ class CommandArgs {
   String? threadRootEventId;
   String? threadLastEventId;
 
-  CommandArgs(
-      {required this.msg,
-      this.editEventId,
-      this.inReplyTo,
-      required this.room,
-      this.txid,
-      this.threadRootEventId,
-      this.threadLastEventId});
+  CommandArgs({
+    required this.msg,
+    this.editEventId,
+    this.inReplyTo,
+    required this.room,
+    this.txid,
+    this.threadRootEventId,
+    this.threadLastEventId,
+  });
 }

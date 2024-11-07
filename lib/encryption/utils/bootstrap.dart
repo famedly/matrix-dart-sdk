@@ -164,7 +164,8 @@ class Bootstrap {
   Set<String> allNeededKeys() {
     final secrets = analyzeSecrets();
     secrets.removeWhere(
-        (k, v) => v.isEmpty); // we don't care about the failed secrets here
+      (k, v) => v.isEmpty,
+    ); // we don't care about the failed secrets here
     final keys = <String>{};
     final defaultKeyId = encryption.ssss.defaultKeyId;
     int removeKey(String key) {
@@ -297,7 +298,8 @@ class Bootstrap {
       await encryption.ssss.setDefaultKeyId(newSsssKey!.keyId);
       while (encryption.ssss.defaultKeyId != newSsssKey!.keyId) {
         Logs().v(
-            'Waiting accountData to have the correct m.secret_storage.default_key');
+          'Waiting accountData to have the correct m.secret_storage.default_key',
+        );
         await client.oneShotSync();
       }
       if (oldSsssKeys != null) {
@@ -354,10 +356,11 @@ class Bootstrap {
     }
   }
 
-  Future<void> askSetupCrossSigning(
-      {bool setupMasterKey = false,
-      bool setupSelfSigningKey = false,
-      bool setupUserSigningKey = false}) async {
+  Future<void> askSetupCrossSigning({
+    bool setupMasterKey = false,
+    bool setupSelfSigningKey = false,
+    bool setupUserSigningKey = false,
+  }) async {
     if (state != BootstrapState.askSetupCrossSigning) {
       throw BootstrapBadStateException();
     }
@@ -395,8 +398,8 @@ class Bootstrap {
       } else {
         Logs().v('Get stored key...');
         masterSigningKey = base64decodeUnpadded(
-            await newSsssKey?.getStored(EventTypes.CrossSigningMasterKey) ??
-                '');
+          await newSsssKey?.getStored(EventTypes.CrossSigningMasterKey) ?? '',
+        );
         if (masterSigningKey.isEmpty) {
           // no master signing key :(
           throw BootstrapBadStateException('No master key');
@@ -473,12 +476,13 @@ class Bootstrap {
       state = BootstrapState.loading;
       Logs().v('Upload device signing keys.');
       await client.uiaRequestBackground(
-          (AuthenticationData? auth) => client.uploadCrossSigningKeys(
-                masterKey: masterKey,
-                selfSigningKey: selfSigningKey,
-                userSigningKey: userSigningKey,
-                auth: auth,
-              ));
+        (AuthenticationData? auth) => client.uploadCrossSigningKeys(
+          masterKey: masterKey,
+          selfSigningKey: selfSigningKey,
+          userSigningKey: userSigningKey,
+          auth: auth,
+        ),
+      );
       Logs().v('Device signing keys have been uploaded.');
       // aaaand set the SSSS secrets
       if (masterKey != null) {
@@ -503,7 +507,8 @@ class Bootstrap {
         if (client.userDeviceKeys[client.userID]?.masterKey?.ed25519Key !=
             masterKey.publicKey) {
           throw BootstrapBadStateException(
-              'ERROR: New master key does not match up!');
+            'ERROR: New master key does not match up!',
+          );
         }
         Logs().v('Set own master key to verified...');
         await client.userDeviceKeys[client.userID]!.masterKey!
@@ -512,7 +517,8 @@ class Bootstrap {
       }
       if (selfSigningKey != null) {
         keysToSign.add(
-            client.userDeviceKeys[client.userID]!.deviceKeys[client.deviceID]!);
+          client.userDeviceKeys[client.userID]!.deviceKeys[client.deviceID]!,
+        );
       }
       Logs().v('Sign ourself...');
       await encryption.crossSigning.sign(keysToSign);
@@ -575,7 +581,8 @@ class Bootstrap {
       await newSsssKey?.store(megolmKey, base64.encode(privKey));
 
       Logs().v(
-          'And finally set all megolm keys as needing to be uploaded again...');
+        'And finally set all megolm keys as needing to be uploaded again...',
+      );
       await client.database?.markInboundGroupSessionsAsNeedingUpload();
       Logs().v('And uploading keys...');
       await client.encryption?.keyManager.uploadInboundGroupSessions();

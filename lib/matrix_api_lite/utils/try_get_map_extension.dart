@@ -39,7 +39,8 @@ class _RequiredLog implements TryGet {
   const _RequiredLog();
   @override
   void call(String key, Type expected, Type actual) => Logs().w(
-      'Expected required "$expected" in event content for the Key "$key" but got "$actual" at ${StackTrace.current.firstLine}');
+        'Expected required "$expected" in event content for the Key "$key" but got "$actual" at ${StackTrace.current.firstLine}',
+      );
 }
 
 class _OptionalLog implements TryGet {
@@ -48,7 +49,8 @@ class _OptionalLog implements TryGet {
   void call(String key, Type expected, Type actual) {
     if (actual != Null) {
       Logs().w(
-          'Expected optional "$expected" in event content for the Key "$key" but got "$actual" at ${StackTrace.current.firstLine}');
+        'Expected optional "$expected" in event content for the Key "$key" but got "$actual" at ${StackTrace.current.firstLine}',
+      );
     }
   }
 }
@@ -80,7 +82,8 @@ extension TryGetMapExtension on Map<String, Object?> {
       return value.cast<T>().toList();
     } catch (_) {
       Logs().v(
-          'Unable to create "List<$T>" in event content for the key "$key" at ${StackTrace.current.firstLine}');
+        'Unable to create "List<$T>" in event content for the key "$key" at ${StackTrace.current.firstLine}',
+      );
       return null;
     }
   }
@@ -96,13 +99,17 @@ extension TryGetMapExtension on Map<String, Object?> {
       return Map.from(value.cast<A, B>());
     } catch (_) {
       Logs().v(
-          'Unable to create "Map<$A,$B>" in event content for the key "$key" at ${StackTrace.current.firstLine}');
+        'Unable to create "Map<$A,$B>" in event content for the key "$key" at ${StackTrace.current.firstLine}',
+      );
       return null;
     }
   }
 
-  A? tryGetFromJson<A>(String key, A Function(Map<String, Object?>) fromJson,
-      [TryGet log = TryGet.optional]) {
+  A? tryGetFromJson<A>(
+    String key,
+    A Function(Map<String, Object?>) fromJson, [
+    TryGet log = TryGet.optional,
+  ]) {
     final value = tryGetMap<String, Object?>(key, log);
 
     return value != null ? fromJson(value) : null;

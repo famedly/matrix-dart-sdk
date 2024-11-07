@@ -80,7 +80,10 @@ void main() {
       });
       test('storeFile', () async {
         await database.storeFile(
-            Uri.parse('mxc://test'), Uint8List.fromList([0]), 0);
+          Uri.parse('mxc://test'),
+          Uint8List.fromList([0]),
+          0,
+        );
         final file = await database.getFile(Uri.parse('mxc://test'));
         expect(file != null, database.supportsFileStoring);
       });
@@ -189,7 +192,9 @@ void main() {
         await database.storeAccountData('m.abc+de', '{"foo":"bar"}');
         final events2 = await database.getAccountData();
         expect(
-            events2.values.any((element) => element.type == 'm.abc+de'), true);
+          events2.values.any((element) => element.type == 'm.abc+de'),
+          true,
+        );
       });
       test('Database can write and read 5MB data', () async {
         final hugeDataObject = {'foo': createLargeString('A', 5 * 1024 * 1024)};
@@ -208,28 +213,29 @@ void main() {
       });
       test('storeEventUpdate', () async {
         await database.storeEventUpdate(
-            EventUpdate(
-              roomID: '!testroom:example.com',
-              type: EventUpdateType.timeline,
-              content: {
-                'type': EventTypes.Message,
-                'content': {
-                  'body': '* edit 3',
+          EventUpdate(
+            roomID: '!testroom:example.com',
+            type: EventUpdateType.timeline,
+            content: {
+              'type': EventTypes.Message,
+              'content': {
+                'body': '* edit 3',
+                'msgtype': 'm.text',
+                'm.new_content': {
+                  'body': 'edit 3',
                   'msgtype': 'm.text',
-                  'm.new_content': {
-                    'body': 'edit 3',
-                    'msgtype': 'm.text',
-                  },
-                  'm.relates_to': {
-                    'event_id': '\$source',
-                    'rel_type': RelationshipTypes.edit,
-                  },
                 },
-                'event_id': '\$event:example.com',
-                'sender': '@bob:example.org',
+                'm.relates_to': {
+                  'event_id': '\$source',
+                  'rel_type': RelationshipTypes.edit,
+                },
               },
-            ),
-            Client('testclient'));
+              'event_id': '\$event:example.com',
+              'sender': '@bob:example.org',
+            },
+          ),
+          Client('testclient'),
+        );
       });
       test('storeEventUpdate (state)', () async {
         final roomid = '!testrooma:example.com';
@@ -350,8 +356,10 @@ void main() {
         expect(room?.name, 'update3');
       });
       test('getEventById', () async {
-        final event = await database.getEventById('\$event:example.com',
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+        final event = await database.getEventById(
+          '\$event:example.com',
+          Room(id: '!testroom:example.com', client: Client('testclient')),
+        );
         expect(event?.type, EventTypes.Message);
       });
       test('getEventList', () async {
@@ -361,20 +369,27 @@ void main() {
         expect(events.single.type, EventTypes.Message);
       });
       test('getUser', () async {
-        final user = await database.getUser('@bob:example.org',
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+        final user = await database.getUser(
+          '@bob:example.org',
+          Room(id: '!testroom:example.com', client: Client('testclient')),
+        );
         expect(user, null);
       });
       test('getUsers', () async {
         final users = await database.getUsers(
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+          Room(id: '!testroom:example.com', client: Client('testclient')),
+        );
         expect(users.isEmpty, true);
       });
       test('removeEvent', () async {
         await database.removeEvent(
-            '\$event:example.com', '!testroom:example.com');
-        final event = await database.getEventById('\$event:example.com',
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+          '\$event:example.com',
+          '!testroom:example.com',
+        );
+        final event = await database.getEventById(
+          '\$event:example.com',
+          Room(id: '!testroom:example.com', client: Client('testclient')),
+        );
         expect(event, null);
       });
       test('getAllInboundGroupSessions', () async {
@@ -383,7 +398,9 @@ void main() {
       });
       test('getInboundGroupSession', () async {
         await database.getInboundGroupSession(
-            '!testroom:example.com', 'sessionId');
+          '!testroom:example.com',
+          'sessionId',
+        );
       });
       test('getInboundGroupSessionsToUpload', () async {
         await database.getInboundGroupSessionsToUpload();
@@ -407,7 +424,9 @@ void main() {
       });
       test('markInboundGroupSessionAsUploaded', () async {
         await database.markInboundGroupSessionAsUploaded(
-            '!testroom:example.com', 'sessionId');
+          '!testroom:example.com',
+          'sessionId',
+        );
       });
       test('markInboundGroupSessionsAsNeedingUpload', () async {
         await database.markInboundGroupSessionsAsNeedingUpload();
@@ -469,15 +488,15 @@ void main() {
                 'identity_key': 'identityKey',
                 'pickle': 'pickle',
                 'session_id': 'sessionId',
-                'last_received': 0
+                'last_received': 0,
               },
               'sessionId2': {
                 'identity_key': 'identityKey',
                 'pickle': 'pickle',
                 'session_id': 'sessionId2',
-                'last_received': 0
-              }
-            }
+                'last_received': 0,
+              },
+            },
           },
         );
       });
@@ -626,7 +645,9 @@ void main() {
             '@alice:example.com',
             CachedProfileInformation.fromProfile(
               ProfileInformation(
-                  avatarUrl: Uri.parse('mxc://test'), displayname: 'Alice M'),
+                avatarUrl: Uri.parse('mxc://test'),
+                displayname: 'Alice M',
+              ),
               outdated: false,
               updated: DateTime.now(),
             ),

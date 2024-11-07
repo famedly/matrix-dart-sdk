@@ -41,8 +41,10 @@ Future<Client> getClient({
     sendTimelineEventTimeout: sendTimelineEventTimeout,
   );
   FakeMatrixApi.client = client;
-  await client.checkHomeserver(Uri.parse('https://fakeServer.notExisting'),
-      checkWellKnown: false);
+  await client.checkHomeserver(
+    Uri.parse('https://fakeServer.notExisting'),
+    checkWellKnown: false,
+  );
   await client.init(
     newToken: 'abcd',
     newRefreshToken: 'refresh_abcd',
@@ -64,8 +66,10 @@ Future<Client> getOtherClient() async {
     databaseBuilder: getDatabase,
   );
   FakeMatrixApi.client = client;
-  await client.checkHomeserver(Uri.parse('https://fakeServer.notExisting'),
-      checkWellKnown: false);
+  await client.checkHomeserver(
+    Uri.parse('https://fakeServer.notExisting'),
+    checkWellKnown: false,
+  );
   await client.init(
     newToken: '1234',
     newUserID: '@test:fakeServer.notExisting',

@@ -39,7 +39,8 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 ///
 /// This database does not support file caching!
 @Deprecated(
-    'Use [MatrixSdkDatabase] instead. Don\'t forget to properly migrate!')
+  'Use [MatrixSdkDatabase] instead. Don\'t forget to properly migrate!',
+)
 class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   static const int version = 6;
   final String name;
@@ -254,11 +255,16 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
             convertToJson(raw),
             Client(''),
           );
-          await addSeenDeviceId(deviceKeys.userId, deviceKeys.deviceId!,
-              deviceKeys.curve25519Key! + deviceKeys.ed25519Key!);
+          await addSeenDeviceId(
+            deviceKeys.userId,
+            deviceKeys.deviceId!,
+            deviceKeys.curve25519Key! + deviceKeys.ed25519Key!,
+          );
           await addSeenPublicKey(deviceKeys.ed25519Key!, deviceKeys.deviceId!);
           await addSeenPublicKey(
-              deviceKeys.curve25519Key!, deviceKeys.deviceId!);
+            deviceKeys.curve25519Key!,
+            deviceKeys.deviceId!,
+          );
         } catch (e) {
           Logs().w('Can not migrate device $key', e);
         }
@@ -344,18 +350,21 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<Map<String, BasicEvent>> getAccountData() =>
-      runBenchmarked<Map<String, BasicEvent>>('Get all account data from Hive',
-          () async {
-        final accountData = <String, BasicEvent>{};
-        for (final key in _accountDataBox.keys) {
-          final raw = await _accountDataBox.get(key);
-          accountData[key.toString().fromHiveKey] = BasicEvent(
-            type: key.toString().fromHiveKey,
-            content: convertToJson(raw),
-          );
-        }
-        return accountData;
-      }, _accountDataBox.keys.length);
+      runBenchmarked<Map<String, BasicEvent>>(
+        'Get all account data from Hive',
+        () async {
+          final accountData = <String, BasicEvent>{};
+          for (final key in _accountDataBox.keys) {
+            final raw = await _accountDataBox.get(key);
+            accountData[key.toString().fromHiveKey] = BasicEvent(
+              type: key.toString().fromHiveKey,
+              content: convertToJson(raw),
+            );
+          }
+          return accountData;
+        },
+        _accountDataBox.keys.length,
+      );
 
   @override
   Future<Map<String, dynamic>?> getClient(String name) =>
@@ -378,10 +387,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   /// Loads a whole list of events at once from the store for a specific room
   Future<List<Event>> _getEventsByIds(List<String> eventIds, Room room) async {
-    final events = await Future.wait(eventIds.map((String eventId) async {
-      final entry = await _eventsBox.get(MultiKey(room.id, eventId).toString());
-      return entry is Map ? Event.fromJson(convertToJson(entry), room) : null;
-    }));
+    final events = await Future.wait(
+      eventIds.map((String eventId) async {
+        final entry =
+            await _eventsBox.get(MultiKey(room.id, eventId).toString());
+        return entry is Map ? Event.fromJson(convertToJson(entry), room) : null;
+      }),
+    );
 
     return events.whereType<Event>().toList();
   }
@@ -397,7 +409,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
         // Get the synced event IDs from the store
         final timelineKey = MultiKey(room.id, '').toString();
         final timelineEventIds = List<String>.from(
-            (await _timelineFragmentsBox.get(timelineKey)) ?? []);
+          (await _timelineFragmentsBox.get(timelineKey)) ?? [],
+        );
         // Get the local stored SENDING events from the store
         late final List sendingEventIds;
         if (start != 0) {
@@ -405,18 +418,21 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
         } else {
           final sendingTimelineKey = MultiKey(room.id, 'SENDING').toString();
           sendingEventIds = List<String>.from(
-              (await _timelineFragmentsBox.get(sendingTimelineKey)) ?? []);
+            (await _timelineFragmentsBox.get(sendingTimelineKey)) ?? [],
+          );
         }
 
         // Combine those two lists while respecting the start and limit parameters.
-        final end = min(timelineEventIds.length,
-            start + (limit ?? timelineEventIds.length));
+        final end = min(
+          timelineEventIds.length,
+          start + (limit ?? timelineEventIds.length),
+        );
         final eventIds = List<String>.from(
           [
             ...sendingEventIds,
             ...(start < timelineEventIds.length && !onlySending
                 ? timelineEventIds.getRange(start, end).toList()
-                : [])
+                : []),
           ],
         );
 
@@ -435,7 +451,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
         final timelineKey = MultiKey(room.id, '').toString();
 
         final timelineEventIds = List<String>.from(
-            (await _timelineFragmentsBox.get(timelineKey)) ?? []);
+          (await _timelineFragmentsBox.get(timelineKey)) ?? [],
+        );
 
         // Get the local stored SENDING events from the store
         late final List<String> sendingEventIds;
@@ -444,7 +461,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
         } else {
           final sendingTimelineKey = MultiKey(room.id, 'SENDING').toString();
           sendingEventIds = List<String>.from(
-              (await _timelineFragmentsBox.get(sendingTimelineKey)) ?? []);
+            (await _timelineFragmentsBox.get(sendingTimelineKey)) ?? [],
+          );
         }
 
         // Combine those two lists while respecting the start and limit parameters.
@@ -474,9 +492,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   @override
   Future<List<StoredInboundGroupSession>>
       getInboundGroupSessionsToUpload() async {
-    final sessions = (await Future.wait(_inboundGroupSessionsBox.keys.map(
-            (sessionId) async =>
-                await _inboundGroupSessionsBox.get(sessionId))))
+    final sessions = (await Future.wait(
+      _inboundGroupSessionsBox.keys.map(
+        (sessionId) async => await _inboundGroupSessionsBox.get(sessionId),
+      ),
+    ))
         .where((rawSession) => rawSession['uploaded'] == false)
         .take(500)
         .map(
@@ -490,7 +510,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<List<String>> getLastSentMessageUserDeviceKey(
-      String userId, String deviceId) async {
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(MultiKey(userId, deviceId).toString());
     if (raw == null) return <String>[];
@@ -498,8 +520,12 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   }
 
   @override
-  Future<void> storeOlmSession(String identityKey, String sessionId,
-      String pickle, int lastReceived) async {
+  Future<void> storeOlmSession(
+    String identityKey,
+    String sessionId,
+    String pickle,
+    int lastReceived,
+  ) async {
     final rawSessions =
         (await _olmSessionsBox.get(identityKey.toHiveKey) as Map?) ?? {};
     rawSessions[sessionId] = <String, dynamic>{
@@ -514,7 +540,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<List<OlmSession>> getOlmSessions(
-      String identityKey, String userId) async {
+    String identityKey,
+    String userId,
+  ) async {
     final rawSessions =
         await _olmSessionsBox.get(identityKey.toHiveKey) as Map? ?? {};
 
@@ -540,23 +568,31 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<List<OlmSession>> getOlmSessionsForDevices(
-      List<String> identityKeys, String userId) async {
+    List<String> identityKeys,
+    String userId,
+  ) async {
     final sessions = await Future.wait(
-        identityKeys.map((identityKey) => getOlmSessions(identityKey, userId)));
+      identityKeys.map((identityKey) => getOlmSessions(identityKey, userId)),
+    );
     return <OlmSession>[for (final sublist in sessions) ...sublist];
   }
 
   @override
   Future<OutboundGroupSession?> getOutboundGroupSession(
-      String roomId, String userId) async {
+    String roomId,
+    String userId,
+  ) async {
     final raw = await _outboundGroupSessionsBox.get(roomId.toHiveKey);
     if (raw == null) return null;
     return OutboundGroupSession.fromJson(convertToJson(raw), userId);
   }
 
   @override
-  Future<Room?> getSingleRoom(Client client, String roomId,
-      {bool loadImportantStates = true}) async {
+  Future<Room?> getSingleRoom(
+    Client client,
+    String roomId, {
+    bool loadImportantStates = true,
+  }) async {
     // Get raw room from database:
     final roomData = await _roomsBox.get(roomId);
     if (roomData == null) return null;
@@ -580,88 +616,96 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   }
 
   @override
-  Future<List<Room>> getRoomList(Client client) =>
-      runBenchmarked<List<Room>>('Get room list from hive', () async {
-        final rooms = <String, Room>{};
-        final userID = client.userID;
-        final importantRoomStates = client.importantStateEvents;
-        for (final key in _roomsBox.keys) {
-          // Get the room
-          final raw = await _roomsBox.get(key);
-          final room = Room.fromJson(convertToJson(raw), client);
+  Future<List<Room>> getRoomList(Client client) => runBenchmarked<List<Room>>(
+        'Get room list from hive',
+        () async {
+          final rooms = <String, Room>{};
+          final userID = client.userID;
+          final importantRoomStates = client.importantStateEvents;
+          for (final key in _roomsBox.keys) {
+            // Get the room
+            final raw = await _roomsBox.get(key);
+            final room = Room.fromJson(convertToJson(raw), client);
 
-          // let's see if we need any m.room.member events
-          // We always need the member event for ourself
-          final membersToPostload = <String>{if (userID != null) userID};
-          // If the room is a direct chat, those IDs should be there too
-          if (room.isDirectChat) {
-            membersToPostload.add(room.directChatMatrixID!);
-          }
-          // the lastEvent message preview might have an author we need to fetch, if it is a group chat
-          final lastEvent = room.getState(EventTypes.Message);
-          if (lastEvent != null && !room.isDirectChat) {
-            membersToPostload.add(lastEvent.senderId);
-          }
-          // if the room has no name and no canonical alias, its name is calculated
-          // based on the heroes of the room
-          if (room.getState(EventTypes.RoomName) == null &&
-              room.getState(EventTypes.RoomCanonicalAlias) == null) {
-            // we don't have a name and no canonical alias, so we'll need to
-            // post-load the heroes
-            membersToPostload.addAll(room.summary.mHeroes ?? []);
-          }
-          // Load members
-          for (final userId in membersToPostload) {
-            final state =
-                await _roomMembersBox.get(MultiKey(room.id, userId).toString());
-            if (state == null) {
-              Logs().w('Unable to post load member $userId');
-              continue;
+            // let's see if we need any m.room.member events
+            // We always need the member event for ourself
+            final membersToPostload = <String>{if (userID != null) userID};
+            // If the room is a direct chat, those IDs should be there too
+            if (room.isDirectChat) {
+              membersToPostload.add(room.directChatMatrixID!);
             }
-            room.setState(room.membership == Membership.invite
-                ? StrippedStateEvent.fromJson(copyMap(raw))
-                : Event.fromJson(convertToJson(state), room));
-          }
-
-          // Get the "important" room states. All other states will be loaded once
-          // `getUnimportantRoomStates()` is called.
-          for (final type in importantRoomStates) {
-            final states = await _roomStateBox
-                .get(MultiKey(room.id, type).toString()) as Map?;
-            if (states == null) continue;
-            final stateEvents = states.values
-                .map((raw) => room.membership == Membership.invite
+            // the lastEvent message preview might have an author we need to fetch, if it is a group chat
+            final lastEvent = room.getState(EventTypes.Message);
+            if (lastEvent != null && !room.isDirectChat) {
+              membersToPostload.add(lastEvent.senderId);
+            }
+            // if the room has no name and no canonical alias, its name is calculated
+            // based on the heroes of the room
+            if (room.getState(EventTypes.RoomName) == null &&
+                room.getState(EventTypes.RoomCanonicalAlias) == null) {
+              // we don't have a name and no canonical alias, so we'll need to
+              // post-load the heroes
+              membersToPostload.addAll(room.summary.mHeroes ?? []);
+            }
+            // Load members
+            for (final userId in membersToPostload) {
+              final state = await _roomMembersBox
+                  .get(MultiKey(room.id, userId).toString());
+              if (state == null) {
+                Logs().w('Unable to post load member $userId');
+                continue;
+              }
+              room.setState(
+                room.membership == Membership.invite
                     ? StrippedStateEvent.fromJson(copyMap(raw))
-                    : Event.fromJson(convertToJson(raw), room))
-                .toList();
-            for (final state in stateEvents) {
-              room.setState(state);
+                    : Event.fromJson(convertToJson(state), room),
+              );
+            }
+
+            // Get the "important" room states. All other states will be loaded once
+            // `getUnimportantRoomStates()` is called.
+            for (final type in importantRoomStates) {
+              final states = await _roomStateBox
+                  .get(MultiKey(room.id, type).toString()) as Map?;
+              if (states == null) continue;
+              final stateEvents = states.values
+                  .map(
+                    (raw) => room.membership == Membership.invite
+                        ? StrippedStateEvent.fromJson(copyMap(raw))
+                        : Event.fromJson(convertToJson(raw), room),
+                  )
+                  .toList();
+              for (final state in stateEvents) {
+                room.setState(state);
+              }
+            }
+
+            // Add to the list and continue.
+            rooms[room.id] = room;
+          }
+
+          // Get the room account data
+          for (final key in _roomAccountDataBox.keys) {
+            final roomId = MultiKey.fromString(key).parts.first;
+            if (rooms.containsKey(roomId)) {
+              final raw = await _roomAccountDataBox.get(key);
+              final basicRoomEvent = BasicRoomEvent.fromJson(
+                convertToJson(raw),
+              );
+              rooms[roomId]!.roomAccountData[basicRoomEvent.type] =
+                  basicRoomEvent;
+            } else {
+              Logs().w(
+                'Found account data for unknown room $roomId. Delete now...',
+              );
+              await _roomAccountDataBox.delete(key);
             }
           }
 
-          // Add to the list and continue.
-          rooms[room.id] = room;
-        }
-
-        // Get the room account data
-        for (final key in _roomAccountDataBox.keys) {
-          final roomId = MultiKey.fromString(key).parts.first;
-          if (rooms.containsKey(roomId)) {
-            final raw = await _roomAccountDataBox.get(key);
-            final basicRoomEvent = BasicRoomEvent.fromJson(
-              convertToJson(raw),
-            );
-            rooms[roomId]!.roomAccountData[basicRoomEvent.type] =
-                basicRoomEvent;
-          } else {
-            Logs().w(
-                'Found account data for unknown room $roomId. Delete now...');
-            await _roomAccountDataBox.delete(key);
-          }
-        }
-
-        return rooms.values.toList();
-      }, _roomsBox.keys.length);
+          return rooms.values.toList();
+        },
+        _roomsBox.keys.length,
+      );
 
   @override
   Future<SSSSCache?> getSSSSCache(String type) async {
@@ -672,15 +716,19 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<List<QueuedToDeviceEvent>> getToDeviceEventQueue() async =>
-      await Future.wait(_toDeviceQueueBox.keys.map((i) async {
-        final raw = await _toDeviceQueueBox.get(i);
-        raw['id'] = i;
-        return QueuedToDeviceEvent.fromJson(convertToJson(raw));
-      }).toList());
+      await Future.wait(
+        _toDeviceQueueBox.keys.map((i) async {
+          final raw = await _toDeviceQueueBox.get(i);
+          raw['id'] = i;
+          return QueuedToDeviceEvent.fromJson(convertToJson(raw));
+        }).toList(),
+      );
 
   @override
   Future<List<Event>> getUnimportantRoomEventStatesForRoom(
-      List<String> events, Room room) async {
+    List<String> events,
+    Room room,
+  ) async {
     final keys = _roomStateBox.keys.where((key) {
       final tuple = MultiKey.fromString(key);
       return tuple.parts.first == room.id && !events.contains(tuple.parts[1]);
@@ -690,7 +738,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
     for (final key in keys) {
       final Map states = await _roomStateBox.get(key);
       unimportantEvents.addAll(
-          states.values.map((raw) => Event.fromJson(convertToJson(raw), room)));
+        states.values.map((raw) => Event.fromJson(convertToJson(raw), room)),
+      );
     }
     return unimportantEvents.where((event) => event.stateKey != null).toList();
   }
@@ -706,36 +755,48 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   @override
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client) =>
       runBenchmarked<Map<String, DeviceKeysList>>(
-          'Get all user device keys from Hive', () async {
-        final deviceKeysOutdated = _userDeviceKeysOutdatedBox.keys;
-        if (deviceKeysOutdated.isEmpty) {
-          return {};
-        }
-        final res = <String, DeviceKeysList>{};
-        for (final userId in deviceKeysOutdated) {
-          final deviceKeysBoxKeys = _userDeviceKeysBox.keys.where((tuple) {
-            final tupleKey = MultiKey.fromString(tuple);
-            return tupleKey.parts.first == userId;
-          });
-          final crossSigningKeysBoxKeys =
-              _userCrossSigningKeysBox.keys.where((tuple) {
-            final tupleKey = MultiKey.fromString(tuple);
-            return tupleKey.parts.first == userId;
-          });
-          res[userId] = DeviceKeysList.fromDbJson(
+        'Get all user device keys from Hive',
+        () async {
+          final deviceKeysOutdated = _userDeviceKeysOutdatedBox.keys;
+          if (deviceKeysOutdated.isEmpty) {
+            return {};
+          }
+          final res = <String, DeviceKeysList>{};
+          for (final userId in deviceKeysOutdated) {
+            final deviceKeysBoxKeys = _userDeviceKeysBox.keys.where((tuple) {
+              final tupleKey = MultiKey.fromString(tuple);
+              return tupleKey.parts.first == userId;
+            });
+            final crossSigningKeysBoxKeys =
+                _userCrossSigningKeysBox.keys.where((tuple) {
+              final tupleKey = MultiKey.fromString(tuple);
+              return tupleKey.parts.first == userId;
+            });
+            res[userId] = DeviceKeysList.fromDbJson(
               {
                 'client_id': client.id,
                 'user_id': userId,
                 'outdated': await _userDeviceKeysOutdatedBox.get(userId),
               },
-              await Future.wait(deviceKeysBoxKeys.map((key) async =>
-                  convertToJson(await _userDeviceKeysBox.get(key)))),
-              await Future.wait(crossSigningKeysBoxKeys.map((key) async =>
-                  convertToJson(await _userCrossSigningKeysBox.get(key)))),
-              client);
-        }
-        return res;
-      }, _userDeviceKeysBox.keys.length);
+              await Future.wait(
+                deviceKeysBoxKeys.map(
+                  (key) async =>
+                      convertToJson(await _userDeviceKeysBox.get(key)),
+                ),
+              ),
+              await Future.wait(
+                crossSigningKeysBoxKeys.map(
+                  (key) async =>
+                      convertToJson(await _userCrossSigningKeysBox.get(key)),
+                ),
+              ),
+              client,
+            );
+          }
+          return res;
+        },
+        _userDeviceKeysBox.keys.length,
+      );
 
   @override
   Future<List<User>> getUsers(Room room) async {
@@ -751,20 +812,23 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> insertClient(
-      String name,
-      String homeserverUrl,
-      String token,
-      DateTime? tokenExpiresAt,
-      String? refreshToken,
-      String userId,
-      String? deviceId,
-      String? deviceName,
-      String? prevBatch,
-      String? olmAccount) async {
+    String name,
+    String homeserverUrl,
+    String token,
+    DateTime? tokenExpiresAt,
+    String? refreshToken,
+    String userId,
+    String? deviceId,
+    String? deviceName,
+    String? prevBatch,
+    String? olmAccount,
+  ) async {
     await _clientBox.put('homeserver_url', homeserverUrl);
     await _clientBox.put('token', token);
     await _clientBox.put(
-        'token_expires_at', tokenExpiresAt?.millisecondsSinceEpoch.toString());
+      'token_expires_at',
+      tokenExpiresAt?.millisecondsSinceEpoch.toString(),
+    );
     await _clientBox.put('refresh_token', refreshToken);
     await _clientBox.put('user_id', userId);
     await _clientBox.put('device_id', deviceId);
@@ -777,7 +841,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<int> insertIntoToDeviceQueue(
-      String type, String txnId, String content) async {
+    String type,
+    String txnId,
+    String content,
+  ) async {
     return await _toDeviceQueueBox.add(<String, dynamic>{
       'type': type,
       'txn_id': txnId,
@@ -787,11 +854,14 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> markInboundGroupSessionAsUploaded(
-      String roomId, String sessionId) async {
+    String roomId,
+    String sessionId,
+  ) async {
     final raw = await _inboundGroupSessionsBox.get(sessionId.toHiveKey);
     if (raw == null) {
       Logs().w(
-          'Tried to mark inbound group session as uploaded which was not found in the database!');
+        'Tried to mark inbound group session as uploaded which was not found in the database!',
+      );
       return;
     }
     raw['uploaded'] = true;
@@ -833,7 +903,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> removeUserCrossSigningKey(
-      String userId, String publicKey) async {
+    String userId,
+    String publicKey,
+  ) async {
     await _userCrossSigningKeysBox
         .delete(MultiKey(userId, publicKey).toString());
     return;
@@ -847,7 +919,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> setBlockedUserCrossSigningKey(
-      bool blocked, String userId, String publicKey) async {
+    bool blocked,
+    String userId,
+    String publicKey,
+  ) async {
     final raw = await _userCrossSigningKeysBox
         .get(MultiKey(userId, publicKey).toString());
     raw['blocked'] = blocked;
@@ -860,7 +935,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> setBlockedUserDeviceKey(
-      bool blocked, String userId, String deviceId) async {
+    bool blocked,
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(MultiKey(userId, deviceId).toString());
     raw['blocked'] = blocked;
@@ -873,7 +951,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> setLastActiveUserDeviceKey(
-      int lastActive, String userId, String deviceId) async {
+    int lastActive,
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(MultiKey(userId, deviceId).toString());
     raw['last_active'] = lastActive;
@@ -885,7 +966,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> setLastSentMessageUserDeviceKey(
-      String lastSentMessage, String userId, String deviceId) async {
+    String lastSentMessage,
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(MultiKey(userId, deviceId).toString());
     raw['last_sent_message'] = lastSentMessage;
@@ -897,7 +981,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> setRoomPrevBatch(
-      String? prevBatch, String roomId, Client client) async {
+    String? prevBatch,
+    String roomId,
+    Client client,
+  ) async {
     final raw = await _roomsBox.get(roomId.toHiveKey);
     if (raw == null) return;
     final room = Room.fromJson(convertToJson(raw), client);
@@ -908,7 +995,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> setVerifiedUserCrossSigningKey(
-      bool verified, String userId, String publicKey) async {
+    bool verified,
+    String userId,
+    String publicKey,
+  ) async {
     final raw = (await _userCrossSigningKeysBox
             .get(MultiKey(userId, publicKey).toString()) as Map?) ??
         {};
@@ -922,7 +1012,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> setVerifiedUserDeviceKey(
-      bool verified, String userId, String deviceId) async {
+    bool verified,
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(MultiKey(userId, deviceId).toString());
     raw['verified'] = verified;
@@ -936,7 +1029,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   @override
   Future<void> storeAccountData(String type, String content) async {
     await _accountDataBox.put(
-        type.toHiveKey, convertToJson(jsonDecode(content)));
+      type.toHiveKey,
+      convertToJson(jsonDecode(content)),
+    );
     return;
   }
 
@@ -955,8 +1050,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
       if (event != null) {
         event.setRedactionEvent(Event.fromJson(eventUpdate.content, tmpRoom));
         await _eventsBox.put(
-            MultiKey(eventUpdate.roomID, event.eventId).toString(),
-            event.toJson());
+          MultiKey(eventUpdate.roomID, event.eventId).toString(),
+          event.toJson(),
+        );
 
         if (tmpRoom.lastEvent?.eventId == event.eventId) {
           await _roomStateBox.put(
@@ -971,7 +1067,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
     if ({
       EventUpdateType.timeline,
       EventUpdateType.history,
-      EventUpdateType.decryptedTimelineQueue
+      EventUpdateType.decryptedTimelineQueue,
     }.contains(eventUpdate.type)) {
       final eventId = eventUpdate.content['event_id'];
       // Is this ID already in the store?
@@ -1020,8 +1116,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
           .tryGetMap<String, dynamic>('unsigned')
           ?.tryGet<String>('transaction_id');
 
-      await _eventsBox.put(MultiKey(eventUpdate.roomID, eventId).toString(),
-          eventUpdate.content);
+      await _eventsBox.put(
+        MultiKey(eventUpdate.roomID, eventId).toString(),
+        eventUpdate.content,
+      );
 
       // Update timeline fragments
       final key = MultiKey(eventUpdate.roomID, status.isSent ? '' : 'SENDING')
@@ -1070,11 +1168,12 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
             eventUpdate.type == EventUpdateType.inviteState)) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {
         await _roomMembersBox.put(
-            MultiKey(
-              eventUpdate.roomID,
-              eventUpdate.content['state_key'],
-            ).toString(),
-            eventUpdate.content);
+          MultiKey(
+            eventUpdate.roomID,
+            eventUpdate.content['state_key'],
+          ).toString(),
+          eventUpdate.content,
+        );
       } else {
         final key = MultiKey(
           eventUpdate.roomID,
@@ -1106,33 +1205,39 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> storeInboundGroupSession(
-      String roomId,
-      String sessionId,
-      String pickle,
-      String content,
-      String indexes,
-      String allowedAtIndex,
-      String senderKey,
-      String senderClaimedKey) async {
+    String roomId,
+    String sessionId,
+    String pickle,
+    String content,
+    String indexes,
+    String allowedAtIndex,
+    String senderKey,
+    String senderClaimedKey,
+  ) async {
     await _inboundGroupSessionsBox.put(
-        sessionId.toHiveKey,
-        StoredInboundGroupSession(
-          roomId: roomId,
-          sessionId: sessionId,
-          pickle: pickle,
-          content: content,
-          indexes: indexes,
-          allowedAtIndex: allowedAtIndex,
-          senderKey: senderKey,
-          senderClaimedKeys: senderClaimedKey,
-          uploaded: false,
-        ).toJson());
+      sessionId.toHiveKey,
+      StoredInboundGroupSession(
+        roomId: roomId,
+        sessionId: sessionId,
+        pickle: pickle,
+        content: content,
+        indexes: indexes,
+        allowedAtIndex: allowedAtIndex,
+        senderKey: senderKey,
+        senderClaimedKeys: senderClaimedKey,
+        uploaded: false,
+      ).toJson(),
+    );
     return;
   }
 
   @override
   Future<void> storeOutboundGroupSession(
-      String roomId, String pickle, String deviceIds, int creationTime) async {
+    String roomId,
+    String pickle,
+    String deviceIds,
+    int creationTime,
+  ) async {
     await _outboundGroupSessionsBox.put(roomId.toHiveKey, <String, dynamic>{
       'room_id': roomId,
       'pickle': pickle,
@@ -1152,8 +1257,12 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   }
 
   @override
-  Future<void> storeRoomUpdate(String roomId, SyncRoomUpdate roomUpdate,
-      Event? lastEvent, Client client) async {
+  Future<void> storeRoomUpdate(
+    String roomId,
+    SyncRoomUpdate roomUpdate,
+    Event? lastEvent,
+    Client client,
+  ) async {
     // Leave room if membership is leave
     if (roomUpdate is LeftRoomUpdate) {
       await forgetRoom(roomId);
@@ -1167,49 +1276,52 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
     // Make sure room exists
     if (!_roomsBox.containsKey(roomId.toHiveKey)) {
       await _roomsBox.put(
-          roomId.toHiveKey,
-          roomUpdate is JoinedRoomUpdate
-              ? Room(
-                  client: client,
-                  id: roomId,
-                  membership: membership,
-                  highlightCount:
-                      roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
-                          0,
-                  notificationCount: roomUpdate
-                          .unreadNotifications?.notificationCount
-                          ?.toInt() ??
-                      0,
-                  prev_batch: roomUpdate.timeline?.prevBatch,
-                  summary: roomUpdate.summary,
-                  lastEvent: lastEvent,
-                ).toJson()
-              : Room(
-                  client: client,
-                  id: roomId,
-                  membership: membership,
-                  lastEvent: lastEvent,
-                ).toJson());
+        roomId.toHiveKey,
+        roomUpdate is JoinedRoomUpdate
+            ? Room(
+                client: client,
+                id: roomId,
+                membership: membership,
+                highlightCount:
+                    roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
+                        0,
+                notificationCount: roomUpdate
+                        .unreadNotifications?.notificationCount
+                        ?.toInt() ??
+                    0,
+                prev_batch: roomUpdate.timeline?.prevBatch,
+                summary: roomUpdate.summary,
+                lastEvent: lastEvent,
+              ).toJson()
+            : Room(
+                client: client,
+                id: roomId,
+                membership: membership,
+                lastEvent: lastEvent,
+              ).toJson(),
+      );
     } else if (roomUpdate is JoinedRoomUpdate) {
       final currentRawRoom = await _roomsBox.get(roomId.toHiveKey);
       final currentRoom = Room.fromJson(convertToJson(currentRawRoom), client);
       await _roomsBox.put(
-          roomId.toHiveKey,
-          Room(
-            client: client,
-            id: roomId,
-            membership: membership,
-            highlightCount:
-                roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
-                    currentRoom.highlightCount,
-            notificationCount:
-                roomUpdate.unreadNotifications?.notificationCount?.toInt() ??
-                    currentRoom.notificationCount,
-            prev_batch:
-                roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch,
-            summary: RoomSummary.fromJson(currentRoom.summary.toJson()
-              ..addAll(roomUpdate.summary?.toJson() ?? {})),
-          ).toJson());
+        roomId.toHiveKey,
+        Room(
+          client: client,
+          id: roomId,
+          membership: membership,
+          highlightCount:
+              roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
+                  currentRoom.highlightCount,
+          notificationCount:
+              roomUpdate.unreadNotifications?.notificationCount?.toInt() ??
+                  currentRoom.notificationCount,
+          prev_batch: roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch,
+          summary: RoomSummary.fromJson(
+            currentRoom.summary.toJson()
+              ..addAll(roomUpdate.summary?.toJson() ?? {}),
+          ),
+        ).toJson(),
+      );
     }
   }
 
@@ -1219,15 +1331,20 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> storeSSSSCache(
-      String type, String keyId, String ciphertext, String content) async {
+    String type,
+    String keyId,
+    String ciphertext,
+    String content,
+  ) async {
     await _ssssCacheBox.put(
-        type,
-        SSSSCache(
-          type: type,
-          keyId: keyId,
-          ciphertext: ciphertext,
-          content: content,
-        ).toJson());
+      type,
+      SSSSCache(
+        type: type,
+        keyId: keyId,
+        ciphertext: ciphertext,
+        content: content,
+      ).toJson(),
+    );
   }
 
   @override
@@ -1238,8 +1355,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   }
 
   @override
-  Future<void> storeUserCrossSigningKey(String userId, String publicKey,
-      String content, bool verified, bool blocked) async {
+  Future<void> storeUserCrossSigningKey(
+    String userId,
+    String publicKey,
+    String content,
+    bool verified,
+    bool blocked,
+  ) async {
     await _userCrossSigningKeysBox.put(
       MultiKey(userId, publicKey).toString(),
       {
@@ -1253,8 +1375,14 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   }
 
   @override
-  Future<void> storeUserDeviceKey(String userId, String deviceId,
-      String content, bool verified, bool blocked, int lastActive) async {
+  Future<void> storeUserDeviceKey(
+    String userId,
+    String deviceId,
+    String content,
+    bool verified,
+    bool blocked,
+    int lastActive,
+  ) async {
     await _userDeviceKeysBox.put(MultiKey(userId, deviceId).toString(), {
       'user_id': userId,
       'device_id': deviceId,
@@ -1292,7 +1420,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
     await _clientBox.put('homeserver_url', homeserverUrl);
     await _clientBox.put('token', token);
     await _clientBox.put(
-        'token_expires_at', tokenExpiresAt?.millisecondsSinceEpoch.toString());
+      'token_expires_at',
+      tokenExpiresAt?.millisecondsSinceEpoch.toString(),
+    );
     await _clientBox.put('refresh_token', refreshToken);
     await _clientBox.put('user_id', userId);
     await _clientBox.put('device_id', deviceId);
@@ -1312,11 +1442,15 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> updateInboundGroupSessionAllowedAtIndex(
-      String allowedAtIndex, String roomId, String sessionId) async {
+    String allowedAtIndex,
+    String roomId,
+    String sessionId,
+  ) async {
     final raw = await _inboundGroupSessionsBox.get(sessionId.toHiveKey);
     if (raw == null) {
       Logs().w(
-          'Tried to update inbound group session as uploaded which wasnt found in the database!');
+        'Tried to update inbound group session as uploaded which wasnt found in the database!',
+      );
       return;
     }
     raw['allowed_at_index'] = allowedAtIndex;
@@ -1326,11 +1460,15 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> updateInboundGroupSessionIndexes(
-      String indexes, String roomId, String sessionId) async {
+    String indexes,
+    String roomId,
+    String sessionId,
+  ) async {
     final raw = await _inboundGroupSessionsBox.get(sessionId.toHiveKey);
     if (raw == null) {
       Logs().w(
-          'Tried to update inbound group session indexes of a session which was not found in the database!');
+        'Tried to update inbound group session indexes of a session which was not found in the database!',
+      );
       return;
     }
     raw['indexes'] = indexes;
@@ -1340,8 +1478,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<List<StoredInboundGroupSession>> getAllInboundGroupSessions() async {
-    final rawSessions = await Future.wait(_inboundGroupSessionsBox.keys
-        .map((key) => _inboundGroupSessionsBox.get(key)));
+    final rawSessions = await Future.wait(
+      _inboundGroupSessionsBox.keys
+          .map((key) => _inboundGroupSessionsBox.get(key)),
+    );
     return rawSessions
         .map((raw) => StoredInboundGroupSession.fromJson(convertToJson(raw)))
         .toList();
@@ -1435,7 +1575,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> storeUserProfile(
-      String userId, CachedProfileInformation profile) async {
+    String userId,
+    CachedProfileInformation profile,
+  ) async {
     return;
   }
 }

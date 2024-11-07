@@ -100,7 +100,9 @@ class UiaRequest<T> {
   }
 
   Set<String> getNextStages(
-      List<AuthenticationFlow> flows, List<String> completed) {
+    List<AuthenticationFlow> flows,
+    List<String> completed,
+  ) {
     final nextStages = <String>{};
     for (final flow in flows) {
       // check the flow starts with the completed stages

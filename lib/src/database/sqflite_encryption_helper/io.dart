@@ -111,7 +111,8 @@ class SQfLiteEncryptionHelper {
     }
 
     Logs().d(
-        'Warning: Found unencrypted sqlite database. Encrypting using SQLCipher.');
+      'Warning: Found unencrypted sqlite database. Encrypting using SQLCipher.',
+    );
 
     // hell, it's unencrypted. This should not happen. Time to encrypt it.
     final plainDb = await factory.openDatabase(path);
@@ -119,7 +120,8 @@ class SQfLiteEncryptionHelper {
     final encryptedPath = '$path.encrypted';
 
     await plainDb.execute(
-        "ATTACH DATABASE '$encryptedPath' AS encrypted KEY '$cipher';");
+      "ATTACH DATABASE '$encryptedPath' AS encrypted KEY '$cipher';",
+    );
     await plainDb.execute("SELECT sqlcipher_export('encrypted');");
     // ignore: prefer_single_quotes
     await plainDb.execute("DETACH DATABASE encrypted;");
@@ -164,7 +166,8 @@ class SQfLiteEncryptionHelper {
     } else {
       final version = cipherVersion.singleOrNull?['cipher_version'];
       Logs().d(
-          'PRAGMA supported by bundled SQLite. Encryption supported. SQLCipher version: $version.');
+        'PRAGMA supported by bundled SQLite. Encryption supported. SQLCipher version: $version.',
+      );
     }
 
     final result = await database.rawQuery("PRAGMA KEY='$cipher';");

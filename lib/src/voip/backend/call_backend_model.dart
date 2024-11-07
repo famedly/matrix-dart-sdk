@@ -24,7 +24,8 @@ abstract class CallBackend {
       );
     } else {
       throw MatrixSDKVoipException(
-          'Invalid type: $type in CallBackend.fromJson');
+        'Invalid type: $type in CallBackend.fromJson',
+      );
     }
   }
 

@@ -193,7 +193,7 @@ class OlmManager {
         'device_id': ourDeviceId,
         'algorithms': [
           AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2
+          AlgorithmTypes.megolmV1AesSha2,
         ],
         'keys': <String, dynamic>{},
       };
@@ -247,7 +247,8 @@ class OlmManager {
         if (dehydratedDeviceAlgorithm == null ||
             dehydratedDevicePickleKey == null) {
           throw Exception(
-              'You need to provide both the pickle key and the algorithm to use dehydrated devices!');
+            'You need to provide both the pickle key and the algorithm to use dehydrated devices!',
+          );
         }
 
         await client.uploadDehydratedDevice(
@@ -265,13 +266,14 @@ class OlmManager {
         );
         return true;
       }
-      final currentUpload =
-          this.currentUpload = CancelableOperation.fromFuture(client.uploadKeys(
-        deviceKeys:
-            uploadDeviceKeys ? MatrixDeviceKeys.fromJson(deviceKeys) : null,
-        oneTimeKeys: signedOneTimeKeys,
-        fallbackKeys: signedFallbackKeys,
-      ));
+      final currentUpload = this.currentUpload = CancelableOperation.fromFuture(
+        client.uploadKeys(
+          deviceKeys:
+              uploadDeviceKeys ? MatrixDeviceKeys.fromJson(deviceKeys) : null,
+          oneTimeKeys: signedOneTimeKeys,
+          fallbackKeys: signedFallbackKeys,
+        ),
+      );
       final response = await currentUpload.valueOrCancellation();
       if (response == null) {
         _uploadKeysLock = false;
@@ -314,11 +316,12 @@ class OlmManager {
         }
 
         await uploadKeys(
-            uploadDeviceKeys: uploadDeviceKeys,
-            oldKeyCount: oldKeyCount,
-            updateDatabase: updateDatabase,
-            unusedFallbackKey: unusedFallbackKey,
-            retry: retry - 1);
+          uploadDeviceKeys: uploadDeviceKeys,
+          oldKeyCount: oldKeyCount,
+          updateDatabase: updateDatabase,
+          unusedFallbackKey: unusedFallbackKey,
+          retry: retry - 1,
+        );
       }
     } finally {
       _uploadKeysLock = false;
@@ -330,47 +333,50 @@ class OlmManager {
   final _otkUpdateDedup = AsyncCache<void>.ephemeral();
 
   Future<void> handleDeviceOneTimeKeysCount(
-      Map<String, int>? countJson, List<String>? unusedFallbackKeyTypes) async {
+    Map<String, int>? countJson,
+    List<String>? unusedFallbackKeyTypes,
+  ) async {
     if (!enabled) {
       return;
     }
 
-    await _otkUpdateDedup.fetch(() =>
-        runBenchmarked('handleOtkUpdate', () async {
-          final haveFallbackKeys = encryption.isMinOlmVersion(3, 2, 0);
-          // Check if there are at least half of max_number_of_one_time_keys left on the server
-          // and generate and upload more if not.
+    await _otkUpdateDedup.fetch(
+      () => runBenchmarked('handleOtkUpdate', () async {
+        final haveFallbackKeys = encryption.isMinOlmVersion(3, 2, 0);
+        // Check if there are at least half of max_number_of_one_time_keys left on the server
+        // and generate and upload more if not.
 
-          // If the server did not send us a count, assume it is 0
-          final keyCount = countJson?.tryGet<int>('signed_curve25519') ?? 0;
+        // If the server did not send us a count, assume it is 0
+        final keyCount = countJson?.tryGet<int>('signed_curve25519') ?? 0;
 
-          // If the server does not support fallback keys, it will not tell us about them.
-          // If the server supports them but has no key, upload a new one.
-          var unusedFallbackKey = true;
-          if (unusedFallbackKeyTypes?.contains('signed_curve25519') == false) {
-            unusedFallbackKey = false;
-          }
+        // If the server does not support fallback keys, it will not tell us about them.
+        // If the server supports them but has no key, upload a new one.
+        var unusedFallbackKey = true;
+        if (unusedFallbackKeyTypes?.contains('signed_curve25519') == false) {
+          unusedFallbackKey = false;
+        }
 
-          // fixup accidental too many uploads. We delete only one of them so that the server has time to update the counts and because we will get rate limited anyway.
-          if (keyCount > _olmAccount!.max_number_of_one_time_keys()) {
-            final requestingKeysFrom = {
-              client.userID!: {ourDeviceId!: 'signed_curve25519'}
-            };
-            await client.claimKeys(requestingKeysFrom, timeout: 10000);
-          }
+        // fixup accidental too many uploads. We delete only one of them so that the server has time to update the counts and because we will get rate limited anyway.
+        if (keyCount > _olmAccount!.max_number_of_one_time_keys()) {
+          final requestingKeysFrom = {
+            client.userID!: {ourDeviceId!: 'signed_curve25519'},
+          };
+          await client.claimKeys(requestingKeysFrom, timeout: 10000);
+        }
 
-          // Only upload keys if they are less than half of the max or we have no unused fallback key
-          if (keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2) ||
-              !unusedFallbackKey) {
-            await uploadKeys(
-              oldKeyCount:
-                  keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2)
-                      ? keyCount
-                      : null,
-              unusedFallbackKey: haveFallbackKeys ? unusedFallbackKey : null,
-            );
-          }
-        }));
+        // Only upload keys if they are less than half of the max or we have no unused fallback key
+        if (keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2) ||
+            !unusedFallbackKey) {
+          await uploadKeys(
+            oldKeyCount:
+                keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2)
+                    ? keyCount
+                    : null,
+            unusedFallbackKey: haveFallbackKeys ? unusedFallbackKey : null,
+          );
+        }
+      }),
+    );
   }
 
   Future<void> storeOlmSession(OlmSession session) async {
@@ -389,11 +395,12 @@ class OlmManager {
       _olmSessions[session.identityKey]![ix] = session;
     }
     await encryption.olmDatabase?.storeOlmSession(
-        session.identityKey,
-        session.sessionId!,
-        session.pickledSession!,
-        session.lastReceived?.millisecondsSinceEpoch ??
-            DateTime.now().millisecondsSinceEpoch);
+      session.identityKey,
+      session.sessionId!,
+      session.pickledSession!,
+      session.lastReceived?.millisecondsSinceEpoch ??
+          DateTime.now().millisecondsSinceEpoch,
+    );
   }
 
   Future<ToDeviceEvent> _decryptToDeviceEvent(ToDeviceEvent event) async {
@@ -427,9 +434,10 @@ class OlmManager {
         if (device != null) {
           device.lastActive = DateTime.now();
           await encryption.olmDatabase?.setLastActiveUserDeviceKey(
-              device.lastActive.millisecondsSinceEpoch,
-              device.userId,
-              device.deviceId!);
+            device.lastActive.millisecondsSinceEpoch,
+            device.userId,
+            device.deviceId!,
+          );
         }
       } catch (e, s) {
         Logs().e('Error while updating olm session timestamp', e, s);
@@ -447,7 +455,9 @@ class OlmManager {
           } catch (e) {
             // The message was encrypted during this session, but is unable to decrypt
             throw DecryptException(
-                DecryptException.decryptionFailed, e.toString());
+              DecryptException.decryptionFailed,
+              e.toString(),
+            );
           }
           await updateSessionUsage(session);
           break;
@@ -475,13 +485,15 @@ class OlmManager {
 
         plaintext = newSession.decrypt(type, body);
 
-        await storeOlmSession(OlmSession(
-          key: client.userID!,
-          identityKey: senderKey,
-          sessionId: newSession.session_id(),
-          session: newSession,
-          lastReceived: DateTime.now(),
-        ));
+        await storeOlmSession(
+          OlmSession(
+            key: client.userID!,
+            identityKey: senderKey,
+            sessionId: newSession.session_id(),
+            session: newSession,
+            lastReceived: DateTime.now(),
+          ),
+        );
         await updateSessionUsage();
       } catch (e) {
         newSession.free();
@@ -515,7 +527,8 @@ class OlmManager {
   }
 
   Future<void> getOlmSessionsForDevicesFromDatabase(
-      List<String> senderKeys) async {
+    List<String> senderKeys,
+  ) async {
     final rows = await encryption.olmDatabase?.getOlmSessionsForDevices(
       senderKeys,
       client.userID!,
@@ -532,8 +545,10 @@ class OlmManager {
     }
   }
 
-  Future<List<OlmSession>> getOlmSessions(String senderKey,
-      {bool getFromDb = true}) async {
+  Future<List<OlmSession>> getOlmSessions(
+    String senderKey, {
+    bool getFromDb = true,
+  }) async {
     var sess = olmSessions[senderKey];
     if ((getFromDb) && (sess == null || sess.isEmpty)) {
       final sessions = await getOlmSessionsFromDatabase(senderKey);
@@ -545,10 +560,12 @@ class OlmManager {
     if (sess == null) {
       return [];
     }
-    sess.sort((a, b) => a.lastReceived == b.lastReceived
-        ? (a.sessionId ?? '').compareTo(b.sessionId ?? '')
-        : (b.lastReceived ?? DateTime(0))
-            .compareTo(a.lastReceived ?? DateTime(0)));
+    sess.sort(
+      (a, b) => a.lastReceived == b.lastReceived
+          ? (a.sessionId ?? '').compareTo(b.sessionId ?? '')
+          : (b.lastReceived ?? DateTime(0))
+              .compareTo(a.lastReceived ?? DateTime(0)),
+    );
     return sess;
   }
 
@@ -570,7 +587,8 @@ class OlmManager {
             .subtract(Duration(hours: 1))
             .isBefore(_restoredOlmSessionsTime[mapKey]!)) {
       Logs().w(
-          '[OlmManager] Skipping restore session, one was restored in the past hour');
+        '[OlmManager] Skipping restore session, one was restored in the past hour',
+      );
       return;
     }
     _restoredOlmSessionsTime[mapKey] = DateTime.now();
@@ -608,7 +626,8 @@ class OlmManager {
 
   Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys) async {
     Logs().v(
-        '[OlmManager] Starting session with ${deviceKeys.length} devices...');
+      '[OlmManager] Starting session with ${deviceKeys.length} devices...',
+    );
     final requestingKeysFrom = <String, Map<String, String>>{};
     for (final device in deviceKeys) {
       if (requestingKeysFrom[device.userId] == null) {
@@ -644,15 +663,20 @@ class OlmManager {
           final session = olm.Session();
           try {
             session.create_outbound(
-                _olmAccount!, identityKey, deviceKey.tryGet<String>('key')!);
-            await storeOlmSession(OlmSession(
-              key: client.userID!,
-              identityKey: identityKey,
-              sessionId: session.session_id(),
-              session: session,
-              lastReceived:
-                  DateTime.now(), // we want to use a newly created session
-            ));
+              _olmAccount!,
+              identityKey,
+              deviceKey.tryGet<String>('key')!,
+            );
+            await storeOlmSession(
+              OlmSession(
+                key: client.userID!,
+                identityKey: identityKey,
+                sessionId: session.session_id(),
+                session: session,
+                lastReceived:
+                    DateTime.now(), // we want to use a newly created session
+              ),
+            );
           } catch (e, s) {
             session.free();
             Logs()
@@ -668,8 +692,11 @@ class OlmManager {
   /// Throws `NoOlmSessionFoundException` if there is no olm session with this
   /// device and none could be created.
   Future<Map<String, dynamic>> encryptToDeviceMessagePayload(
-      DeviceKeys device, String type, Map<String, dynamic> payload,
-      {bool getFromDb = true}) async {
+    DeviceKeys device,
+    String type,
+    Map<String, dynamic> payload, {
+    bool getFromDb = true,
+  }) async {
     final sess =
         await getOlmSessions(device.curve25519Key!, getFromDb: getFromDb);
     if (sess.isEmpty) {
@@ -688,12 +715,13 @@ class OlmManager {
     if (encryption.olmDatabase != null) {
       try {
         await encryption.olmDatabase?.setLastSentMessageUserDeviceKey(
-            json.encode({
-              'type': type,
-              'content': payload,
-            }),
-            device.userId,
-            device.deviceId!);
+          json.encode({
+            'type': type,
+            'content': payload,
+          }),
+          device.userId,
+          device.deviceId!,
+        );
       } catch (e, s) {
         // we can ignore this error, since it would just make us use a different olm session possibly
         Logs().w('Error while updating olm usage timestamp', e, s);
@@ -712,18 +740,22 @@ class OlmManager {
   }
 
   Future<Map<String, Map<String, Map<String, dynamic>>>> encryptToDeviceMessage(
-      List<DeviceKeys> deviceKeys,
-      String type,
-      Map<String, dynamic> payload) async {
+    List<DeviceKeys> deviceKeys,
+    String type,
+    Map<String, dynamic> payload,
+  ) async {
     final data = <String, Map<String, Map<String, dynamic>>>{};
     // first check if any of our sessions we want to encrypt for are in the database
     if (encryption.olmDatabase != null) {
       await getOlmSessionsForDevicesFromDatabase(
-          deviceKeys.map((d) => d.curve25519Key!).toList());
+        deviceKeys.map((d) => d.curve25519Key!).toList(),
+      );
     }
     final deviceKeysWithoutSession = List<DeviceKeys>.from(deviceKeys);
-    deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
-        olmSessions[deviceKeys.curve25519Key]?.isNotEmpty ?? false);
+    deviceKeysWithoutSession.removeWhere(
+      (DeviceKeys deviceKeys) =>
+          olmSessions[deviceKeys.curve25519Key]?.isNotEmpty ?? false,
+    );
     if (deviceKeysWithoutSession.isNotEmpty) {
       await startOutgoingOlmSessions(deviceKeysWithoutSession);
     }
@@ -731,8 +763,11 @@ class OlmManager {
       final userData = data[device.userId] ??= {};
       try {
         userData[device.deviceId!] = await encryptToDeviceMessagePayload(
-            device, type, payload,
-            getFromDb: false);
+          device,
+          type,
+          payload,
+          getFromDb: false,
+        );
       } on NoOlmSessionFoundException catch (e) {
         Logs().d('[LibOlm] Error encrypting to-device event', e);
         continue;
@@ -753,12 +788,14 @@ class OlmManager {
         return;
       }
       final device = client.getUserDeviceKeysByCurve25519Key(
-          encryptedContent.tryGet<String>('sender_key') ?? '');
+        encryptedContent.tryGet<String>('sender_key') ?? '',
+      );
       if (device == null) {
         return; // device not found
       }
       Logs().v(
-          '[OlmManager] Device ${device.userId}:${device.deviceId} generated a new olm session, replaying last sent message...');
+        '[OlmManager] Device ${device.userId}:${device.deviceId} generated a new olm session, replaying last sent message...',
+      );
       final lastSentMessageRes = await encryption.olmDatabase
           ?.getLastSentMessageUserDeviceKey(device.userId, device.deviceId!);
       if (lastSentMessageRes == null ||
@@ -773,7 +810,10 @@ class OlmManager {
       if (lastSentMessage['type'] != EventTypes.Dummy) {
         // okay, time to send the message!
         await client.sendToDeviceEncrypted(
-            [device], lastSentMessage['type'], lastSentMessage['content']);
+          [device],
+          lastSentMessage['type'],
+          lastSentMessage['content'],
+        );
       }
     }
   }

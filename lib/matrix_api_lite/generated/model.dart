@@ -80,14 +80,18 @@ class DiscoveryInformation {
 
   DiscoveryInformation.fromJson(Map<String, Object?> json)
       : mHomeserver = HomeserverInformation.fromJson(
-            json['m.homeserver'] as Map<String, Object?>),
+          json['m.homeserver'] as Map<String, Object?>,
+        ),
         mIdentityServer = ((v) => v != null
             ? IdentityServerInformation.fromJson(v as Map<String, Object?>)
             : null)(json['m.identity_server']),
-        additionalProperties = Map.fromEntries(json.entries
-            .where(
-                (e) => !['m.homeserver', 'm.identity_server'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value)));
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where(
+                (e) => !['m.homeserver', 'm.identity_server'].contains(e.key),
+              )
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
     final mIdentityServer = this.mIdentityServer;
     return {
@@ -462,8 +466,18 @@ class PublicRoomsChunk {
           other.worldReadable == worldReadable);
 
   @dart.override
-  int get hashCode => Object.hash(avatarUrl, canonicalAlias, guestCanJoin,
-      joinRule, name, numJoinedMembers, roomId, roomType, topic, worldReadable);
+  int get hashCode => Object.hash(
+        avatarUrl,
+        canonicalAlias,
+        guestCanJoin,
+        joinRule,
+        name,
+        numJoinedMembers,
+        roomId,
+        roomType,
+        topic,
+        worldReadable,
+      );
 }
 
 ///
@@ -633,17 +647,18 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
 
   @dart.override
   int get hashCode => Object.hash(
-      avatarUrl,
-      canonicalAlias,
-      guestCanJoin,
-      joinRule,
-      name,
-      numJoinedMembers,
-      roomId,
-      roomType,
-      topic,
-      worldReadable,
-      childrenState);
+        avatarUrl,
+        canonicalAlias,
+        guestCanJoin,
+        joinRule,
+        name,
+        numJoinedMembers,
+        roomId,
+        roomType,
+        topic,
+        worldReadable,
+        childrenState,
+      );
 }
 
 ///
@@ -831,8 +846,8 @@ class GetRelatingEventsWithRelTypeAndEventTypeResponse {
   });
 
   GetRelatingEventsWithRelTypeAndEventTypeResponse.fromJson(
-      Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
+    Map<String, Object?> json,
+  )   : chunk = (json['chunk'] as List)
             .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
             .toList(),
         nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
@@ -1320,8 +1335,10 @@ class WhoIsInfo {
 
   WhoIsInfo.fromJson(Map<String, Object?> json)
       : devices = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) =>
-                MapEntry(k, DeviceInfo.fromJson(v as Map<String, Object?>)))
+            ? (v as Map<String, Object?>).map(
+                (k, v) =>
+                    MapEntry(k, DeviceInfo.fromJson(v as Map<String, Object?>)),
+              )
             : null)(json['devices']),
         userId = ((v) => v != null ? v as String : null)(json['user_id']);
   Map<String, Object?> toJson() {
@@ -1398,8 +1415,10 @@ class RoomVersionsCapability {
   });
 
   RoomVersionsCapability.fromJson(Map<String, Object?> json)
-      : available = (json['available'] as Map<String, Object?>).map((k, v) =>
-            MapEntry(k, RoomVersionAvailable.values.fromString(v as String)!)),
+      : available = (json['available'] as Map<String, Object?>).map(
+          (k, v) =>
+              MapEntry(k, RoomVersionAvailable.values.fromString(v as String)!),
+        ),
         default$ = json['default'] as String;
   Map<String, Object?> toJson() => {
         'available': available.map((k, v) => MapEntry(k, v.name)),
@@ -1456,16 +1475,20 @@ class Capabilities {
         mSetDisplayname = ((v) => v != null
             ? BooleanCapability.fromJson(v as Map<String, Object?>)
             : null)(json['m.set_displayname']),
-        additionalProperties = Map.fromEntries(json.entries
-            .where((e) => ![
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where(
+                (e) => ![
                   'm.3pid_changes',
                   'm.change_password',
                   'm.get_login_token',
                   'm.room_versions',
                   'm.set_avatar_url',
-                  'm.set_displayname'
-                ].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value)));
+                  'm.set_displayname',
+                ].contains(e.key),
+              )
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
     final m3pidChanges = this.m3pidChanges;
     final mChangePassword = this.mChangePassword;
@@ -1519,8 +1542,14 @@ class Capabilities {
           other.mSetDisplayname == mSetDisplayname);
 
   @dart.override
-  int get hashCode => Object.hash(m3pidChanges, mChangePassword, mGetLoginToken,
-      mRoomVersions, mSetAvatarUrl, mSetDisplayname);
+  int get hashCode => Object.hash(
+        m3pidChanges,
+        mChangePassword,
+        mGetLoginToken,
+        mRoomVersions,
+        mSetAvatarUrl,
+        mSetDisplayname,
+      );
 }
 
 ///
@@ -1858,11 +1887,12 @@ class ThirdPartySigned {
   ThirdPartySigned.fromJson(Map<String, Object?> json)
       : mxid = json['mxid'] as String,
         sender = json['sender'] as String,
-        signatures = (json['signatures'] as Map<String, Object?>).map((k, v) =>
-            MapEntry(
-                k,
-                (v as Map<String, Object?>)
-                    .map((k, v) => MapEntry(k, v as String)))),
+        signatures = (json['signatures'] as Map<String, Object?>).map(
+          (k, v) => MapEntry(
+            k,
+            (v as Map<String, Object?>).map((k, v) => MapEntry(k, v as String)),
+          ),
+        ),
         token = json['token'] as String;
   Map<String, Object?> toJson() => {
         'mxid': mxid,
@@ -1957,10 +1987,12 @@ class ClaimKeysResponse {
                 .map((k, v) => MapEntry(k, v as Map<String, Object?>))
             : null)(json['failures']),
         oneTimeKeys = (json['one_time_keys'] as Map<String, Object?>).map(
-            (k, v) => MapEntry(
-                k,
-                (v as Map<String, Object?>)
-                    .map((k, v) => MapEntry(k, v as Map<String, Object?>))));
+          (k, v) => MapEntry(
+            k,
+            (v as Map<String, Object?>)
+                .map((k, v) => MapEntry(k, v as Map<String, Object?>)),
+          ),
+        );
   Map<String, Object?> toJson() {
     final failures = this.failures;
     return {
@@ -2014,26 +2046,45 @@ class QueryKeysResponse {
 
   QueryKeysResponse.fromJson(Map<String, Object?> json)
       : deviceKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k,
-                (v as Map<String, Object?>).map((k, v) => MapEntry(
-                    k, MatrixDeviceKeys.fromJson(v as Map<String, Object?>)))))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  (v as Map<String, Object?>).map(
+                    (k, v) => MapEntry(
+                      k,
+                      MatrixDeviceKeys.fromJson(v as Map<String, Object?>),
+                    ),
+                  ),
+                ),
+              )
             : null)(json['device_keys']),
         failures = ((v) => v != null
             ? (v as Map<String, Object?>)
                 .map((k, v) => MapEntry(k, v as Map<String, Object?>))
             : null)(json['failures']),
         masterKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k, MatrixCrossSigningKey.fromJson(v as Map<String, Object?>)))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
+                ),
+              )
             : null)(json['master_keys']),
         selfSigningKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k, MatrixCrossSigningKey.fromJson(v as Map<String, Object?>)))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
+                ),
+              )
             : null)(json['self_signing_keys']),
         userSigningKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k, MatrixCrossSigningKey.fromJson(v as Map<String, Object?>)))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
+                ),
+              )
             : null)(json['user_signing_keys']);
   Map<String, Object?> toJson() {
     final deviceKeys = this.deviceKeys;
@@ -2044,7 +2095,8 @@ class QueryKeysResponse {
     return {
       if (deviceKeys != null)
         'device_keys': deviceKeys.map(
-            (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson())))),
+          (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson()))),
+        ),
       if (failures != null) 'failures': failures.map((k, v) => MapEntry(k, v)),
       if (masterKeys != null)
         'master_keys': masterKeys.map((k, v) => MapEntry(k, v.toJson())),
@@ -2107,7 +2159,12 @@ class QueryKeysResponse {
 
   @dart.override
   int get hashCode => Object.hash(
-      deviceKeys, failures, masterKeys, selfSigningKeys, userSigningKeys);
+        deviceKeys,
+        failures,
+        masterKeys,
+        selfSigningKeys,
+        userSigningKeys,
+      );
 }
 
 ///
@@ -2123,9 +2180,11 @@ class LoginFlow {
       : getLoginToken =
             ((v) => v != null ? v as bool : null)(json['get_login_token']),
         type = json['type'] as String,
-        additionalProperties = Map.fromEntries(json.entries
-            .where((e) => !['get_login_token', 'type'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value)));
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where((e) => !['get_login_token', 'type'].contains(e.key))
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
     final getLoginToken = this.getLoginToken;
     return {
@@ -2255,8 +2314,15 @@ class LoginResponse {
           other.wellKnown == wellKnown);
 
   @dart.override
-  int get hashCode => Object.hash(accessToken, deviceId, expiresInMs,
-      homeServer, refreshToken, userId, wellKnown);
+  int get hashCode => Object.hash(
+        accessToken,
+        deviceId,
+        expiresInMs,
+        homeServer,
+        refreshToken,
+        userId,
+        wellKnown,
+      );
 }
 
 ///
@@ -2663,9 +2729,11 @@ class PusherData {
   PusherData.fromJson(Map<String, Object?> json)
       : format = ((v) => v != null ? v as String : null)(json['format']),
         url = ((v) => v != null ? Uri.parse(v as String) : null)(json['url']),
-        additionalProperties = Map.fromEntries(json.entries
-            .where((e) => !['format', 'url'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value)));
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where((e) => !['format', 'url'].contains(e.key))
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
     final format = this.format;
     final url = this.url;
@@ -2824,8 +2892,16 @@ class Pusher implements PusherId {
           other.profileTag == profileTag);
 
   @dart.override
-  int get hashCode => Object.hash(appId, pushkey, appDisplayName, data,
-      deviceDisplayName, kind, lang, profileTag);
+  int get hashCode => Object.hash(
+        appId,
+        pushkey,
+        appDisplayName,
+        data,
+        deviceDisplayName,
+        kind,
+        lang,
+        profileTag,
+      );
 }
 
 ///
@@ -3316,7 +3392,13 @@ class RegisterResponse {
 
   @dart.override
   int get hashCode => Object.hash(
-      accessToken, deviceId, expiresInMs, homeServer, refreshToken, userId);
+        accessToken,
+        deviceId,
+        expiresInMs,
+        homeServer,
+        refreshToken,
+        userId,
+      );
 }
 
 ///
@@ -3414,8 +3496,10 @@ class RoomKeyBackup {
   });
 
   RoomKeyBackup.fromJson(Map<String, Object?> json)
-      : sessions = (json['sessions'] as Map<String, Object?>).map((k, v) =>
-            MapEntry(k, KeyBackupData.fromJson(v as Map<String, Object?>)));
+      : sessions = (json['sessions'] as Map<String, Object?>).map(
+          (k, v) =>
+              MapEntry(k, KeyBackupData.fromJson(v as Map<String, Object?>)),
+        );
   Map<String, Object?> toJson() => {
         'sessions': sessions.map((k, v) => MapEntry(k, v.toJson())),
       };
@@ -3442,8 +3526,10 @@ class RoomKeys {
   });
 
   RoomKeys.fromJson(Map<String, Object?> json)
-      : rooms = (json['rooms'] as Map<String, Object?>).map((k, v) =>
-            MapEntry(k, RoomKeyBackup.fromJson(v as Map<String, Object?>)));
+      : rooms = (json['rooms'] as Map<String, Object?>).map(
+          (k, v) =>
+              MapEntry(k, RoomKeyBackup.fromJson(v as Map<String, Object?>)),
+        );
   Map<String, Object?> toJson() => {
         'rooms': rooms.map((k, v) => MapEntry(k, v.toJson())),
       };
@@ -4039,8 +4125,14 @@ class RoomEventFilter {
           other.unreadThreadNotifications == unreadThreadNotifications);
 
   @dart.override
-  int get hashCode => Object.hash(containsUrl, includeRedundantMembers,
-      lazyLoadMembers, notRooms, rooms, unreadThreadNotifications);
+  int get hashCode => Object.hash(
+        containsUrl,
+        includeRedundantMembers,
+        lazyLoadMembers,
+        notRooms,
+        rooms,
+        unreadThreadNotifications,
+      );
 }
 
 ///
@@ -4192,17 +4284,18 @@ class SearchFilter implements EventFilter, RoomEventFilter {
 
   @dart.override
   int get hashCode => Object.hash(
-      limit,
-      notSenders,
-      notTypes,
-      senders,
-      types,
-      containsUrl,
-      includeRedundantMembers,
-      lazyLoadMembers,
-      notRooms,
-      rooms,
-      unreadThreadNotifications);
+        limit,
+        notSenders,
+        notTypes,
+        senders,
+        types,
+        containsUrl,
+        includeRedundantMembers,
+        lazyLoadMembers,
+        notRooms,
+        rooms,
+        unreadThreadNotifications,
+      );
 }
 
 ///
@@ -4393,7 +4486,14 @@ class RoomEventsCriteria {
 
   @dart.override
   int get hashCode => Object.hash(
-      eventContext, filter, groupings, includeState, keys, orderBy, searchTerm);
+        eventContext,
+        filter,
+        groupings,
+        includeState,
+        keys,
+        orderBy,
+        searchTerm,
+      );
 }
 
 ///
@@ -4545,8 +4645,12 @@ class SearchResultsEventContext {
                 .toList()
             : null)(json['events_before']),
         profileInfo = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) =>
-                MapEntry(k, UserProfile.fromJson(v as Map<String, Object?>)))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  UserProfile.fromJson(v as Map<String, Object?>),
+                ),
+              )
             : null)(json['profile_info']),
         start = ((v) => v != null ? v as String : null)(json['start']);
   Map<String, Object?> toJson() {
@@ -4667,10 +4771,17 @@ class ResultRoomEvents {
   ResultRoomEvents.fromJson(Map<String, Object?> json)
       : count = ((v) => v != null ? v as int : null)(json['count']),
         groups = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k,
-                (v as Map<String, Object?>).map((k, v) => MapEntry(
-                    k, GroupValue.fromJson(v as Map<String, Object?>)))))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  (v as Map<String, Object?>).map(
+                    (k, v) => MapEntry(
+                      k,
+                      GroupValue.fromJson(v as Map<String, Object?>),
+                    ),
+                  ),
+                ),
+              )
             : null)(json['groups']),
         highlights = ((v) => v != null
             ? (v as List).map((v) => v as String).toList()
@@ -4682,11 +4793,16 @@ class ResultRoomEvents {
                 .toList()
             : null)(json['results']),
         state = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k,
-                (v as List)
-                    .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-                    .toList()))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  (v as List)
+                      .map(
+                        (v) => MatrixEvent.fromJson(v as Map<String, Object?>),
+                      )
+                      .toList(),
+                ),
+              )
             : null)(json['state']);
   Map<String, Object?> toJson() {
     final count = this.count;
@@ -4699,7 +4815,8 @@ class ResultRoomEvents {
       if (count != null) 'count': count,
       if (groups != null)
         'groups': groups.map(
-            (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson())))),
+          (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson()))),
+        ),
       if (highlights != null) 'highlights': highlights.map((v) => v).toList(),
       if (nextBatch != null) 'next_batch': nextBatch,
       if (results != null) 'results': results.map((v) => v.toJson()).toList(),
@@ -4797,7 +4914,8 @@ class SearchResults {
 
   SearchResults.fromJson(Map<String, Object?> json)
       : searchCategories = ResultCategories.fromJson(
-            json['search_categories'] as Map<String, Object?>);
+          json['search_categories'] as Map<String, Object?>,
+        );
   Map<String, Object?> toJson() => {
         'search_categories': searchCategories.toJson(),
       };
@@ -4957,8 +5075,9 @@ class Protocol {
   });
 
   Protocol.fromJson(Map<String, Object?> json)
-      : fieldTypes = (json['field_types'] as Map<String, Object?>).map((k, v) =>
-            MapEntry(k, FieldType.fromJson(v as Map<String, Object?>))),
+      : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
+          (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
+        ),
         icon = json['icon'] as String,
         instances = (json['instances'] as List)
             .map((v) => ProtocolInstance.fromJson(v as Map<String, Object?>))
@@ -5218,17 +5337,18 @@ class StateFilter implements EventFilter, RoomEventFilter {
 
   @dart.override
   int get hashCode => Object.hash(
-      limit,
-      notSenders,
-      notTypes,
-      senders,
-      types,
-      containsUrl,
-      includeRedundantMembers,
-      lazyLoadMembers,
-      notRooms,
-      rooms,
-      unreadThreadNotifications);
+        limit,
+        notSenders,
+        notTypes,
+        senders,
+        types,
+        containsUrl,
+        includeRedundantMembers,
+        lazyLoadMembers,
+        notRooms,
+        rooms,
+        unreadThreadNotifications,
+      );
 }
 
 ///
@@ -5320,7 +5440,14 @@ class RoomFilter {
 
   @dart.override
   int get hashCode => Object.hash(
-      accountData, ephemeral, includeLeave, notRooms, rooms, state, timeline);
+        accountData,
+        ephemeral,
+        includeLeave,
+        notRooms,
+        rooms,
+        state,
+        timeline,
+      );
 }
 
 ///
@@ -5461,9 +5588,11 @@ class Tag {
   Tag.fromJson(Map<String, Object?> json)
       : order =
             ((v) => v != null ? (v as num).toDouble() : null)(json['order']),
-        additionalProperties = Map.fromEntries(json.entries
-            .where((e) => !['order'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value)));
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where((e) => !['order'].contains(e.key))
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
     final order = this.order;
     return {

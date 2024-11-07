@@ -28,46 +28,61 @@ abstract class EventLocalizations {
   // Thus, it seems easier to offload that logic into `Event.getLocalizedBody()` and pass the
   // `body` variable around here.
   static String _localizedBodyNormalMessage(
-      Event event, MatrixLocalizations i18n, String body) {
+    Event event,
+    MatrixLocalizations i18n,
+    String body,
+  ) {
     switch (event.messageType) {
       case MessageTypes.Image:
         return i18n.sentAPicture(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case MessageTypes.File:
         return i18n.sentAFile(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case MessageTypes.Audio:
         return i18n.sentAnAudio(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case MessageTypes.Video:
         return i18n.sentAVideo(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case MessageTypes.Location:
         return i18n.sharedTheLocation(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case MessageTypes.Sticker:
         return i18n.sentASticker(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case MessageTypes.Emote:
         return '* $body';
       case EventTypes.KeyVerificationRequest:
         return i18n.requestedKeyVerification(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case EventTypes.KeyVerificationCancel:
         return i18n.canceledKeyVerification(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case EventTypes.KeyVerificationDone:
         return i18n.completedKeyVerification(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case EventTypes.KeyVerificationReady:
         return i18n.isReadyForKeyVerification(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case EventTypes.KeyVerificationAccept:
         return i18n.acceptedKeyVerification(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case EventTypes.KeyVerificationStart:
         return i18n.startedKeyVerification(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case MessageTypes.BadEncrypted:
         String errorText;
         switch (event.body) {
@@ -102,27 +117,35 @@ abstract class EventLocalizations {
           String Function(Event event, MatrixLocalizations i18n, String body)?>
       localizationsMap = {
     EventTypes.Sticker: (event, i18n, body) => i18n.sentASticker(
-        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
     EventTypes.Redaction: (event, i18n, body) => i18n.redactedAnEvent(event),
     EventTypes.RoomAliases: (event, i18n, body) => i18n.changedTheRoomAliases(
-        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
     EventTypes.RoomCanonicalAlias: (event, i18n, body) =>
         i18n.changedTheRoomInvitationLink(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
     EventTypes.RoomCreate: (event, i18n, body) => i18n.createdTheChat(
-        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
     EventTypes.RoomTombstone: (event, i18n, body) => i18n.roomHasBeenUpgraded,
     EventTypes.RoomJoinRules: (event, i18n, body) {
-      final joinRules = JoinRules.values.firstWhereOrNull((r) =>
-          r.toString().replaceAll('JoinRules.', '') ==
-          event.content['join_rule']);
+      final joinRules = JoinRules.values.firstWhereOrNull(
+        (r) =>
+            r.toString().replaceAll('JoinRules.', '') ==
+            event.content['join_rule'],
+      );
       if (joinRules == null) {
         return i18n.changedTheJoinRules(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       } else {
         return i18n.changedTheJoinRulesTo(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
-            joinRules.getLocalizedString(i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+          joinRules.getLocalizedString(i18n),
+        );
       }
     },
     EventTypes.RoomMember: (event, i18n, body) {
@@ -188,58 +211,75 @@ abstract class EventLocalizations {
     },
     EventTypes.RoomPowerLevels: (event, i18n, body) =>
         i18n.changedTheChatPermissions(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
     EventTypes.RoomName: (event, i18n, body) => i18n.changedTheChatNameTo(
-        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
-        event.content.tryGet<String>('name') ?? ''),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+          event.content.tryGet<String>('name') ?? '',
+        ),
     EventTypes.RoomTopic: (event, i18n, body) =>
         i18n.changedTheChatDescriptionTo(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
-            event.content.tryGet<String>('topic') ?? ''),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+          event.content.tryGet<String>('topic') ?? '',
+        ),
     EventTypes.RoomAvatar: (event, i18n, body) => i18n.changedTheChatAvatar(
-        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
     EventTypes.GuestAccess: (event, i18n, body) {
-      final guestAccess = GuestAccess.values.firstWhereOrNull((r) =>
-          r.toString().replaceAll('GuestAccess.', '') ==
-          event.content['guest_access']);
+      final guestAccess = GuestAccess.values.firstWhereOrNull(
+        (r) =>
+            r.toString().replaceAll('GuestAccess.', '') ==
+            event.content['guest_access'],
+      );
       if (guestAccess == null) {
         return i18n.changedTheGuestAccessRules(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       } else {
         return i18n.changedTheGuestAccessRulesTo(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
-            guestAccess.getLocalizedString(i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+          guestAccess.getLocalizedString(i18n),
+        );
       }
     },
     EventTypes.HistoryVisibility: (event, i18n, body) {
-      final historyVisibility = HistoryVisibility.values.firstWhereOrNull((r) =>
-          r.toString().replaceAll('HistoryVisibility.', '') ==
-          event.content['history_visibility']);
+      final historyVisibility = HistoryVisibility.values.firstWhereOrNull(
+        (r) =>
+            r.toString().replaceAll('HistoryVisibility.', '') ==
+            event.content['history_visibility'],
+      );
       if (historyVisibility == null) {
         return i18n.changedTheHistoryVisibility(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       } else {
         return i18n.changedTheHistoryVisibilityTo(
-            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
-            historyVisibility.getLocalizedString(i18n));
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+          historyVisibility.getLocalizedString(i18n),
+        );
       }
     },
     EventTypes.Encryption: (event, i18n, body) {
       var localizedBody = i18n.activatedEndToEndEncryption(
-          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+      );
       if (event.room.client.encryptionEnabled == false) {
         localizedBody += '. ${i18n.needPantalaimonWarning}';
       }
       return localizedBody;
     },
     EventTypes.CallAnswer: (event, i18n, body) => i18n.answeredTheCall(
-        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
     EventTypes.CallHangup: (event, i18n, body) => i18n.endedTheCall(
-        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
     EventTypes.CallInvite: (event, i18n, body) => i18n.startedACall(
-        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
     EventTypes.CallCandidates: (event, i18n, body) => i18n.sentCallInformations(
-        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
     EventTypes.Encrypted: (event, i18n, body) =>
         _localizedBodyNormalMessage(event, i18n, body),
     EventTypes.Message: (event, i18n, body) =>

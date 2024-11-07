@@ -48,11 +48,16 @@ class MatrixFile {
 
   /// derivatives the MIME type from the [bytes] and correspondingly creates a
   /// [MatrixFile], [MatrixImageFile], [MatrixAudioFile] or a [MatrixVideoFile]
-  factory MatrixFile.fromMimeType(
-      {required Uint8List bytes, required String name, String? mimeType}) {
-    final msgType = msgTypeFromMime(mimeType ??
-        lookupMimeType(name, headerBytes: bytes) ??
-        'application/octet-stream');
+  factory MatrixFile.fromMimeType({
+    required Uint8List bytes,
+    required String name,
+    String? mimeType,
+  }) {
+    final msgType = msgTypeFromMime(
+      mimeType ??
+          lookupMimeType(name, headerBytes: bytes) ??
+          'application/octet-stream',
+    );
     if (msgType == MessageTypes.Image) {
       return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
     }
@@ -134,8 +139,8 @@ class MatrixImageFile extends MatrixFile {
     int maxDimension = 1600,
     String? mimeType,
     Future<MatrixImageFileResizedResponse?> Function(
-            MatrixImageFileResizeArguments)?
-        customImageResizer,
+      MatrixImageFileResizeArguments,
+    )? customImageResizer,
     @Deprecated('Use [nativeImplementations] instead') ComputeRunner? compute,
     NativeImplementations nativeImplementations = NativeImplementations.dummy,
   }) async {
@@ -146,9 +151,10 @@ class MatrixImageFile extends MatrixFile {
     final image = MatrixImageFile(name: name, mimeType: mimeType, bytes: bytes);
 
     return await image.generateThumbnail(
-            dimension: maxDimension,
-            customImageResizer: customImageResizer,
-            nativeImplementations: nativeImplementations) ??
+          dimension: maxDimension,
+          customImageResizer: customImageResizer,
+          nativeImplementations: nativeImplementations,
+        ) ??
         image;
   }
 
@@ -187,8 +193,8 @@ class MatrixImageFile extends MatrixFile {
   Future<MatrixImageFile?> generateThumbnail({
     int dimension = Client.defaultThumbnailSize,
     Future<MatrixImageFileResizedResponse?> Function(
-            MatrixImageFileResizeArguments)?
-        customImageResizer,
+      MatrixImageFileResizeArguments,
+    )? customImageResizer,
     @Deprecated('Use [nativeImplementations] instead') ComputeRunner? compute,
     NativeImplementations nativeImplementations = NativeImplementations.dummy,
   }) async {
@@ -212,7 +218,9 @@ class MatrixImageFile extends MatrixFile {
 
     // we should take the opportunity to update the image dimension
     setImageSizeIfNull(
-        width: resizedData.originalWidth, height: resizedData.originalHeight);
+      width: resizedData.originalWidth,
+      height: resizedData.originalHeight,
+    );
 
     // the thumbnail should rather return null than the enshrined image
     if (resizedData.width > dimension || resizedData.height > dimension) {
@@ -233,7 +241,8 @@ class MatrixImageFile extends MatrixFile {
   /// you would likely want to use [NativeImplementations] and
   /// [Client.nativeImplementations] instead
   static MatrixImageFileResizedResponse? calcMetadataImplementation(
-      Uint8List bytes) {
+    Uint8List bytes,
+  ) {
     final image = decodeImage(bytes);
     if (image == null) return null;
 
@@ -252,12 +261,15 @@ class MatrixImageFile extends MatrixFile {
   /// you would likely want to use [NativeImplementations] and
   /// [Client.nativeImplementations] instead
   static MatrixImageFileResizedResponse? resizeImplementation(
-      MatrixImageFileResizeArguments arguments) {
+    MatrixImageFileResizeArguments arguments,
+  ) {
     final image = decodeImage(arguments.bytes);
 
-    final resized = copyResize(image!,
-        height: image.height > image.width ? arguments.maxDimension : null,
-        width: image.width >= image.height ? arguments.maxDimension : null);
+    final resized = copyResize(
+      image!,
+      height: image.height > image.width ? arguments.maxDimension : null,
+      width: image.width >= image.height ? arguments.maxDimension : null,
+    );
 
     final encoded = encodeNamedImage(arguments.fileName, resized);
     if (encoded == null) return null;
@@ -302,7 +314,8 @@ class MatrixImageFileResizedResponse {
   ) =>
       MatrixImageFileResizedResponse(
         bytes: Uint8List.fromList(
-            (json['bytes'] as Iterable<dynamic>).whereType<int>().toList()),
+          (json['bytes'] as Iterable<dynamic>).whereType<int>().toList(),
+        ),
         width: json['width'],
         height: json['height'],
         originalHeight: json['originalHeight'],
@@ -354,13 +367,14 @@ class MatrixVideoFile extends MatrixFile {
   final int? height;
   final int? duration;
 
-  MatrixVideoFile(
-      {required super.bytes,
-      required super.name,
-      super.mimeType,
-      this.width,
-      this.height,
-      this.duration});
+  MatrixVideoFile({
+    required super.bytes,
+    required super.name,
+    super.mimeType,
+    this.width,
+    this.height,
+    this.duration,
+  });
 
   @override
   String get msgType => 'm.video';
@@ -377,11 +391,12 @@ class MatrixVideoFile extends MatrixFile {
 class MatrixAudioFile extends MatrixFile {
   final int? duration;
 
-  MatrixAudioFile(
-      {required super.bytes,
-      required super.name,
-      super.mimeType,
-      this.duration});
+  MatrixAudioFile({
+    required super.bytes,
+    required super.name,
+    super.mimeType,
+    this.duration,
+  });
 
   @override
   String get msgType => 'm.audio';

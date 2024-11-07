@@ -22,15 +22,18 @@ class BoxCollection with ZoneTransactionMixin {
     int version = 1,
   }) async {
     idbFactory ??= window.indexedDB!;
-    final db = await idbFactory.open(name, version: version,
-        onUpgradeNeeded: (VersionChangeEvent event) {
-      final db = event.target.result;
-      for (final name in boxNames) {
-        if (db.objectStoreNames.contains(name)) continue;
+    final db = await idbFactory.open(
+      name,
+      version: version,
+      onUpgradeNeeded: (VersionChangeEvent event) {
+        final db = event.target.result;
+        for (final name in boxNames) {
+          if (db.objectStoreNames.contains(name)) continue;
 
-        db.createObjectStore(name, autoIncrement: true);
-      }
-    });
+          db.createObjectStore(name, autoIncrement: true);
+        }
+      },
+    );
     return BoxCollection(db, boxNames, name);
   }
 
@@ -147,7 +150,8 @@ class Box<V> {
     txn ??= boxCollection._db.transaction(name, 'readonly');
     final store = txn.objectStore(name);
     final list = await Future.wait(
-        keys.map((key) => store.getObject(key).then(_fromValue)));
+      keys.map((key) => store.getObject(key).then(_fromValue)),
+    );
     for (var i = 0; i < keys.length; i++) {
       _cache[keys[i]] = list[i];
     }
