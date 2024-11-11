@@ -657,14 +657,17 @@ void main() {
     });
 
     test('requestParticipants', () async {
-      final participants = await room.requestParticipants();
-      expect(participants.length, 4);
-      final user = participants.singleWhere((u) => u.id == '@alice:matrix.org');
-      expect(user.id, '@alice:matrix.org');
-      expect(user.displayName, 'Alice Margatroid');
-      expect(user.membership, Membership.join);
-      //expect(user.avatarUrl.toString(), 'mxc://example.org/SEsfnsuifSDFSSEF');
-      expect(user.room.id, '!localpart:server.abc');
+      final oldParticipants = room.getParticipants();
+      expect(oldParticipants.length, 4);
+      room.summary.mJoinedMemberCount = 5;
+      final fetchedParticipants = await room.requestParticipants(
+        const [Membership.join, Membership.invite, Membership.knock],
+        true,
+        true,
+      );
+      final newParticipants = room.getParticipants();
+      expect(oldParticipants.length < newParticipants.length, true);
+      expect(fetchedParticipants.length, newParticipants.length);
     });
 
     test('calcEncryptionHealthState', () async {
@@ -823,7 +826,7 @@ void main() {
 
     test('getParticipants', () async {
       var userList = room.getParticipants();
-      expect(userList.length, 4);
+      expect(userList.length, 5);
       // add new user
       room.setState(
         Event(
@@ -837,8 +840,8 @@ void main() {
         ),
       );
       userList = room.getParticipants();
-      expect(userList.length, 5);
-      expect(userList[4].displayName, 'alice');
+      expect(userList.length, 6);
+      expect(userList[5].displayName, 'alice');
     });
 
     test('addToDirectChat', () async {
@@ -1660,7 +1663,7 @@ void main() {
       matrixToLink = await room.matrixToInviteLink();
       expect(
         matrixToLink.toString(),
-        'https://matrix.to/#/!localpart%3Aserver.abc?via=fakeServer.notExisting&via=matrix.org&via=test.abc',
+        'https://matrix.to/#/!localpart%3Aserver.abc?via=fakeServer.notExisting&via=matrix.org&via=example.org',
       );
     });
 
