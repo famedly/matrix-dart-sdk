@@ -28,7 +28,9 @@ import '../fake_client.dart';
 void main() async {
   // need to mock to pass correct data to handleToDeviceEvent
   Future<void> ingestCorrectReadyEvent(
-      KeyVerification req1, KeyVerification req2) async {
+    KeyVerification req1,
+    KeyVerification req2,
+  ) async {
     final copyKnownVerificationMethods =
         List.from(req2.knownVerificationMethods);
 
@@ -55,7 +57,7 @@ void main() async {
         content: {
           'from_device': req2.client.deviceID,
           'methods': copyKnownVerificationMethods,
-          'transaction_id': req2.transactionId
+          'transaction_id': req2.transactionId,
         },
       ),
     );
@@ -76,13 +78,13 @@ void main() async {
         KeyVerificationMethod.emoji,
         KeyVerificationMethod.numbers,
         KeyVerificationMethod.qrScan,
-        KeyVerificationMethod.reciprocate
+        KeyVerificationMethod.reciprocate,
       };
       client2.verificationMethods = {
         KeyVerificationMethod.emoji,
         KeyVerificationMethod.numbers,
         KeyVerificationMethod.qrShow,
-        KeyVerificationMethod.reciprocate
+        KeyVerificationMethod.reciprocate,
       };
     });
     tearDown(() async {
@@ -92,17 +94,23 @@ void main() async {
 
     test('Run qr verification mode 1', () async {
       expect(
-          client1.userDeviceKeys[client2.userID]?.masterKey!.verified, false);
+        client1.userDeviceKeys[client2.userID]?.masterKey!.verified,
+        false,
+      );
       expect(
-          client2.userDeviceKeys[client1.userID]?.masterKey!.verified, false);
+        client2.userDeviceKeys[client1.userID]?.masterKey!.verified,
+        false,
+      );
       expect(
-          client1.userDeviceKeys[client2.userID]?.deviceKeys[client2.deviceID]
-              ?.verified,
-          false);
+        client1.userDeviceKeys[client2.userID]?.deviceKeys[client2.deviceID]
+            ?.verified,
+        false,
+      );
       expect(
-          client2.userDeviceKeys[client1.userID]?.deviceKeys[client1.deviceID]
-              ?.verified,
-          false);
+        client2.userDeviceKeys[client1.userID]?.deviceKeys[client1.deviceID]
+            ?.verified,
+        false,
+      );
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(true);
@@ -130,7 +138,7 @@ void main() async {
             'from_device': req1.client.deviceID,
             'methods': req1.knownVerificationMethods,
             'timestamp': DateTime.now().millisecondsSinceEpoch,
-            'transaction_id': req1.transactionId
+            'transaction_id': req1.transactionId,
           },
         ),
       );
@@ -139,19 +147,24 @@ void main() async {
       await sub.cancel();
 
       expect(
-          client2.encryption!.keyVerificationManager
-              .getRequest(req2.transactionId!),
-          req2);
+        client2.encryption!.keyVerificationManager
+            .getRequest(req2.transactionId!),
+        req2,
+      );
 
       expect(req1.possibleMethods, []);
       await req2.acceptVerification();
 
       expect(req2.state, KeyVerificationState.askChoice);
       await ingestCorrectReadyEvent(req1, req2);
-      expect(req1.possibleMethods,
-          [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRScan]);
-      expect(req2.possibleMethods,
-          [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRShow]);
+      expect(
+        req1.possibleMethods,
+        [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRScan],
+      );
+      expect(
+        req2.possibleMethods,
+        [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRShow],
+      );
 
       expect(req1.state, KeyVerificationState.askChoice);
 
@@ -159,9 +172,10 @@ void main() async {
       expect(req2.getOurQRMode(), QRMode.verifySelfUntrusted);
 
       // send start
-      await req1.continueVerification(EventTypes.Reciprocate,
-          qrDataRawBytes:
-              Uint8List.fromList(req2.qrCode?.qrDataRawBytes ?? []));
+      await req1.continueVerification(
+        EventTypes.Reciprocate,
+        qrDataRawBytes: Uint8List.fromList(req2.qrCode?.qrDataRawBytes ?? []),
+      );
 
       expect(req2.qrCode!.randomSharedSecret, req1.randomSharedSecretForQRCode);
       expect(req1.state, KeyVerificationState.showQRSuccess);
@@ -174,7 +188,7 @@ void main() async {
             'from_device': req1.client.deviceID,
             'm.relates_to': {
               'event_id': req1.transactionId,
-              'rel_type': 'm.reference'
+              'rel_type': 'm.reference',
             },
             'method': EventTypes.Reciprocate,
             'secret': req1.randomSharedSecretForQRCode,
@@ -204,13 +218,15 @@ void main() async {
       expect(client2.userDeviceKeys[client1.userID]?.masterKey!.verified, true);
 
       expect(
-          client1.userDeviceKeys[client2.userID]?.deviceKeys[client2.deviceID]
-              ?.verified,
-          true);
+        client1.userDeviceKeys[client2.userID]?.deviceKeys[client2.deviceID]
+            ?.verified,
+        true,
+      );
       expect(
-          client2.userDeviceKeys[client1.userID]?.deviceKeys[client1.deviceID]
-              ?.verified,
-          true);
+        client2.userDeviceKeys[client1.userID]?.deviceKeys[client1.deviceID]
+            ?.verified,
+        true,
+      );
 
       // let any background box usage from ssss signing finish
       await Future.delayed(Duration(seconds: 1));
@@ -220,17 +236,23 @@ void main() async {
 
     test('Run qr verification mode 2', () async {
       expect(
-          client1.userDeviceKeys[client2.userID]?.masterKey!.verified, false);
+        client1.userDeviceKeys[client2.userID]?.masterKey!.verified,
+        false,
+      );
       expect(
-          client2.userDeviceKeys[client1.userID]?.masterKey!.verified, false);
+        client2.userDeviceKeys[client1.userID]?.masterKey!.verified,
+        false,
+      );
       expect(
-          client1.userDeviceKeys[client2.userID]?.deviceKeys[client2.deviceID]
-              ?.verified,
-          false);
+        client1.userDeviceKeys[client2.userID]?.deviceKeys[client2.deviceID]
+            ?.verified,
+        false,
+      );
       expect(
-          client2.userDeviceKeys[client1.userID]?.deviceKeys[client1.deviceID]
-              ?.verified,
-          false);
+        client2.userDeviceKeys[client1.userID]?.deviceKeys[client1.deviceID]
+            ?.verified,
+        false,
+      );
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(false);
@@ -256,7 +278,7 @@ void main() async {
             'from_device': req1.client.deviceID,
             'methods': req1.knownVerificationMethods,
             'timestamp': DateTime.now().millisecondsSinceEpoch,
-            'transaction_id': req1.transactionId
+            'transaction_id': req1.transactionId,
           },
         ),
       );
@@ -265,9 +287,10 @@ void main() async {
       await sub.cancel();
 
       expect(
-          client2.encryption!.keyVerificationManager
-              .getRequest(req2.transactionId!),
-          req2);
+        client2.encryption!.keyVerificationManager
+            .getRequest(req2.transactionId!),
+        req2,
+      );
 
       expect(req1.possibleMethods, []);
       await req2.acceptVerification();
@@ -275,10 +298,14 @@ void main() async {
       expect(req2.state, KeyVerificationState.askChoice);
       await ingestCorrectReadyEvent(req1, req2);
 
-      expect(req1.possibleMethods,
-          [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRScan]);
-      expect(req2.possibleMethods,
-          [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRShow]);
+      expect(
+        req1.possibleMethods,
+        [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRScan],
+      );
+      expect(
+        req2.possibleMethods,
+        [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRShow],
+      );
 
       expect(req1.state, KeyVerificationState.askChoice);
 
@@ -286,9 +313,10 @@ void main() async {
       expect(req2.getOurQRMode(), QRMode.verifySelfTrusted);
 
       // send start
-      await req1.continueVerification(EventTypes.Reciprocate,
-          qrDataRawBytes:
-              Uint8List.fromList(req2.qrCode?.qrDataRawBytes ?? []));
+      await req1.continueVerification(
+        EventTypes.Reciprocate,
+        qrDataRawBytes: Uint8List.fromList(req2.qrCode?.qrDataRawBytes ?? []),
+      );
 
       expect(req2.qrCode!.randomSharedSecret, req1.randomSharedSecretForQRCode);
       expect(req1.state, KeyVerificationState.showQRSuccess);
@@ -301,7 +329,7 @@ void main() async {
             'from_device': req1.client.deviceID,
             'm.relates_to': {
               'event_id': req1.transactionId,
-              'rel_type': 'm.reference'
+              'rel_type': 'm.reference',
             },
             'method': EventTypes.Reciprocate,
             'secret': req1.randomSharedSecretForQRCode,
@@ -333,13 +361,15 @@ void main() async {
       expect(client2.userDeviceKeys[client1.userID]?.masterKey!.verified, true);
 
       expect(
-          client1.userDeviceKeys[client2.userID]?.deviceKeys[client2.deviceID]
-              ?.verified,
-          true);
+        client1.userDeviceKeys[client2.userID]?.deviceKeys[client2.deviceID]
+            ?.verified,
+        true,
+      );
       expect(
-          client2.userDeviceKeys[client1.userID]?.deviceKeys[client1.deviceID]
-              ?.verified,
-          true);
+        client2.userDeviceKeys[client1.userID]?.deviceKeys[client1.deviceID]
+            ?.verified,
+        true,
+      );
 
       await client1.encryption!.keyVerificationManager.cleanup();
       await client2.encryption!.keyVerificationManager.cleanup();
@@ -376,7 +406,7 @@ void main() async {
             'from_device': req1.client.deviceID,
             'methods': req1.knownVerificationMethods,
             'timestamp': DateTime.now().millisecondsSinceEpoch,
-            'transaction_id': req1.transactionId
+            'transaction_id': req1.transactionId,
           },
         ),
       );
@@ -385,21 +415,26 @@ void main() async {
       await sub.cancel();
 
       expect(
-          client2.encryption!.keyVerificationManager
-              .getRequest(req2.transactionId!),
-          req2);
+        client2.encryption!.keyVerificationManager
+            .getRequest(req2.transactionId!),
+        req2,
+      );
 
       expect(req1.possibleMethods, []);
       await req2.acceptVerification();
 
-      expect(req2.possibleMethods,
-          [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRShow]);
+      expect(
+        req2.possibleMethods,
+        [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRShow],
+      );
 
       expect(req2.state, KeyVerificationState.askChoice);
       await ingestCorrectReadyEvent(req1, req2);
 
-      expect(req1.possibleMethods,
-          [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRScan]);
+      expect(
+        req1.possibleMethods,
+        [EventTypes.Sas, EventTypes.Reciprocate, EventTypes.QRScan],
+      );
 
       expect(req1.state, KeyVerificationState.askChoice);
 
@@ -407,9 +442,10 @@ void main() async {
       expect(req2.getOurQRMode(), QRMode.verifySelfUntrusted);
 
       // send start
-      await req1.continueVerification(EventTypes.Reciprocate,
-          qrDataRawBytes:
-              Uint8List.fromList(req2.qrCode?.qrDataRawBytes ?? []));
+      await req1.continueVerification(
+        EventTypes.Reciprocate,
+        qrDataRawBytes: Uint8List.fromList(req2.qrCode?.qrDataRawBytes ?? []),
+      );
 
       expect(req2.qrCode!.randomSharedSecret, req1.randomSharedSecretForQRCode);
       expect(req1.state, KeyVerificationState.showQRSuccess);
@@ -422,7 +458,7 @@ void main() async {
             'from_device': req1.client.deviceID,
             'm.relates_to': {
               'event_id': req1.transactionId,
-              'rel_type': 'm.reference'
+              'rel_type': 'm.reference',
             },
             'method': EventTypes.Reciprocate,
             'secret': 'fake_secret',
@@ -463,7 +499,7 @@ void main() async {
             'from_device': req1.client.deviceID,
             'methods': req1.knownVerificationMethods,
             'timestamp': DateTime.now().millisecondsSinceEpoch,
-            'transaction_id': req1.transactionId
+            'transaction_id': req1.transactionId,
           },
         ),
       );
@@ -472,9 +508,10 @@ void main() async {
       await sub.cancel();
 
       expect(
-          client2.encryption!.keyVerificationManager
-              .getRequest(req2.transactionId!),
-          req2);
+        client2.encryption!.keyVerificationManager
+            .getRequest(req2.transactionId!),
+        req2,
+      );
 
       await req2.acceptVerification();
       expect(req2.possibleMethods, [EventTypes.Sas]);
@@ -490,9 +527,10 @@ void main() async {
       expect(req2.getOurQRMode(), QRMode.verifySelfUntrusted);
 
       // send start
-      await req1.continueVerification(EventTypes.Reciprocate,
-          qrDataRawBytes:
-              Uint8List.fromList(req2.qrCode?.qrDataRawBytes ?? []));
+      await req1.continueVerification(
+        EventTypes.Reciprocate,
+        qrDataRawBytes: Uint8List.fromList(req2.qrCode?.qrDataRawBytes ?? []),
+      );
 
       expect(req1.state, KeyVerificationState.error);
 
@@ -504,7 +542,7 @@ void main() async {
             'from_device': req1.client.deviceID,
             'm.relates_to': {
               'event_id': req1.transactionId,
-              'rel_type': 'm.reference'
+              'rel_type': 'm.reference',
             },
             'method': EventTypes.Reciprocate,
             'secret': 'stub_incorrect_secret_here',

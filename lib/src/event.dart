@@ -44,7 +44,8 @@ class Event extends MatrixEvent {
       );
 
   @Deprecated(
-      'Use eventSender instead or senderFromMemoryOrFallback for a synchronous alternative')
+    'Use eventSender instead or senderFromMemoryOrFallback for a synchronous alternative',
+  )
   User get sender => senderFromMemoryOrFallback;
 
   User get senderFromMemoryOrFallback =>
@@ -138,7 +139,7 @@ class Event extends MatrixEvent {
                   timeline: TimelineUpdate(
                     events: [MatrixEvent.fromJson(json)],
                   ),
-                )
+                ),
               },
             ),
           ),
@@ -188,22 +189,25 @@ class Event extends MatrixEvent {
     final originalSource =
         Event.getMapFromPayload(jsonPayload['original_source']);
     return Event(
-        status: eventStatusFromInt(jsonPayload['status'] ??
+      status: eventStatusFromInt(
+        jsonPayload['status'] ??
             unsigned[messageSendingStatusKey] ??
-            defaultStatus.intValue),
-        stateKey: jsonPayload['state_key'],
-        prevContent: prevContent,
-        content: content,
-        type: jsonPayload['type'],
-        eventId: jsonPayload['event_id'] ?? '',
-        senderId: jsonPayload['sender'],
-        originServerTs: DateTime.fromMillisecondsSinceEpoch(
-            jsonPayload['origin_server_ts'] ?? 0),
-        unsigned: unsigned,
-        room: room,
-        originalSource: originalSource.isEmpty
-            ? null
-            : MatrixEvent.fromJson(originalSource));
+            defaultStatus.intValue,
+      ),
+      stateKey: jsonPayload['state_key'],
+      prevContent: prevContent,
+      content: content,
+      type: jsonPayload['type'],
+      eventId: jsonPayload['event_id'] ?? '',
+      senderId: jsonPayload['sender'],
+      originServerTs: DateTime.fromMillisecondsSinceEpoch(
+        jsonPayload['origin_server_ts'] ?? 0,
+      ),
+      unsigned: unsigned,
+      room: room,
+      originalSource:
+          originalSource.isEmpty ? null : MatrixEvent.fromJson(originalSource),
+    );
   }
 
   @override
@@ -311,9 +315,12 @@ class Event extends MatrixEvent {
     final receipts = room.receiptState;
     final receiptsList = receipts.global.otherUsers.entries
         .where((entry) => entry.value.eventId == eventId)
-        .map((entry) => Receipt(
+        .map(
+          (entry) => Receipt(
             room.unsafeGetUserFromMemoryOrFallback(entry.key),
-            entry.value.timestamp))
+            entry.value.timestamp,
+          ),
+        )
         .toList();
 
     // add your own only once
@@ -321,21 +328,31 @@ class Event extends MatrixEvent {
         receipts.mainThread?.latestOwnReceipt;
     if (own != null && own.eventId == eventId) {
       receiptsList.add(
-        Receipt(room.unsafeGetUserFromMemoryOrFallback(room.client.userID!),
-            own.timestamp),
+        Receipt(
+          room.unsafeGetUserFromMemoryOrFallback(room.client.userID!),
+          own.timestamp,
+        ),
       );
     }
 
     // also add main thread. https://github.com/famedly/product-management/issues/1020
     // also deduplicate.
-    receiptsList.addAll(receipts.mainThread?.otherUsers.entries
-            .where((entry) =>
-                entry.value.eventId == eventId &&
-                receiptsList.every((element) => element.user.id != entry.key))
-            .map((entry) => Receipt(
-                room.unsafeGetUserFromMemoryOrFallback(entry.key),
-                entry.value.timestamp)) ??
-        []);
+    receiptsList.addAll(
+      receipts.mainThread?.otherUsers.entries
+              .where(
+                (entry) =>
+                    entry.value.eventId == eventId &&
+                    receiptsList
+                        .every((element) => element.user.id != entry.key),
+              )
+              .map(
+                (entry) => Receipt(
+                  room.unsafeGetUserFromMemoryOrFallback(entry.key),
+                  entry.value.timestamp,
+                ),
+              ) ??
+          [],
+    );
 
     return receiptsList;
   }
@@ -383,7 +400,7 @@ class Event extends MatrixEvent {
                 timeline: TimelineUpdate(
                   events: [redactedBecause],
                 ),
-              )
+              ),
             },
           ),
         ),
@@ -553,14 +570,15 @@ class Event extends MatrixEvent {
   ///
   /// Important! To use this link you have to set a http header like this:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
-  Future<Uri?> getAttachmentUri(
-      {bool getThumbnail = false,
-      bool useThumbnailMxcUrl = false,
-      double width = 800.0,
-      double height = 800.0,
-      ThumbnailMethod method = ThumbnailMethod.scale,
-      int minNoThumbSize = _minNoThumbSize,
-      bool animated = false}) async {
+  Future<Uri?> getAttachmentUri({
+    bool getThumbnail = false,
+    bool useThumbnailMxcUrl = false,
+    double width = 800.0,
+    double height = 800.0,
+    ThumbnailMethod method = ThumbnailMethod.scale,
+    int minNoThumbSize = _minNoThumbSize,
+    bool animated = false,
+  }) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
         !hasAttachment ||
         isAttachmentEncrypted) {
@@ -607,14 +625,15 @@ class Event extends MatrixEvent {
   /// Important! To use this link you have to set a http header like this:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
   @Deprecated('Use getAttachmentUri() instead')
-  Uri? getAttachmentUrl(
-      {bool getThumbnail = false,
-      bool useThumbnailMxcUrl = false,
-      double width = 800.0,
-      double height = 800.0,
-      ThumbnailMethod method = ThumbnailMethod.scale,
-      int minNoThumbSize = _minNoThumbSize,
-      bool animated = false}) {
+  Uri? getAttachmentUrl({
+    bool getThumbnail = false,
+    bool useThumbnailMxcUrl = false,
+    double width = 800.0,
+    double height = 800.0,
+    ThumbnailMethod method = ThumbnailMethod.scale,
+    int minNoThumbSize = _minNoThumbSize,
+    bool animated = false,
+  }) {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
         !hasAttachment ||
         isAttachmentEncrypted) {
@@ -680,10 +699,11 @@ class Event extends MatrixEvent {
   /// true to download the thumbnail instead. Set [fromLocalStoreOnly] to true
   /// if you want to retrieve the attachment from the local store only without
   /// making http request.
-  Future<MatrixFile> downloadAndDecryptAttachment(
-      {bool getThumbnail = false,
-      Future<Uint8List> Function(Uri)? downloadCallback,
-      bool fromLocalStoreOnly = false}) async {
+  Future<MatrixFile> downloadAndDecryptAttachment({
+    bool getThumbnail = false,
+    Future<Uint8List> Function(Uri)? downloadCallback,
+    bool fromLocalStoreOnly = false,
+  }) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
@@ -730,7 +750,10 @@ class Event extends MatrixEvent {
           uint8list.lengthInBytes < database.maxFileSize;
       if (storeable) {
         await database.storeFile(
-            mxcUrl, uint8list, DateTime.now().millisecondsSinceEpoch);
+          mxcUrl,
+          uint8list,
+          DateTime.now().millisecondsSinceEpoch,
+        );
       }
     } else if (uint8list == null) {
       throw ('Unable to download file from local store.');
@@ -771,12 +794,14 @@ class Event extends MatrixEvent {
   /// it to plain text.
   /// [removeMarkdown] allow to remove the markdown formating from the event body.
   /// Usefull form message preview or notifications text.
-  Future<String> calcLocalizedBody(MatrixLocalizations i18n,
-      {bool withSenderNamePrefix = false,
-      bool hideReply = false,
-      bool hideEdit = false,
-      bool plaintextBody = false,
-      bool removeMarkdown = false}) async {
+  Future<String> calcLocalizedBody(
+    MatrixLocalizations i18n, {
+    bool withSenderNamePrefix = false,
+    bool hideReply = false,
+    bool hideEdit = false,
+    bool plaintextBody = false,
+    bool removeMarkdown = false,
+  }) async {
     if (redacted) {
       await redactedBecause?.fetchSenderUser();
     }
@@ -799,30 +824,36 @@ class Event extends MatrixEvent {
   }
 
   @Deprecated('Use calcLocalizedBody or calcLocalizedBodyFallback')
-  String getLocalizedBody(MatrixLocalizations i18n,
-          {bool withSenderNamePrefix = false,
-          bool hideReply = false,
-          bool hideEdit = false,
-          bool plaintextBody = false,
-          bool removeMarkdown = false}) =>
-      calcLocalizedBodyFallback(i18n,
-          withSenderNamePrefix: withSenderNamePrefix,
-          hideReply: hideReply,
-          hideEdit: hideEdit,
-          plaintextBody: plaintextBody,
-          removeMarkdown: removeMarkdown);
+  String getLocalizedBody(
+    MatrixLocalizations i18n, {
+    bool withSenderNamePrefix = false,
+    bool hideReply = false,
+    bool hideEdit = false,
+    bool plaintextBody = false,
+    bool removeMarkdown = false,
+  }) =>
+      calcLocalizedBodyFallback(
+        i18n,
+        withSenderNamePrefix: withSenderNamePrefix,
+        hideReply: hideReply,
+        hideEdit: hideEdit,
+        plaintextBody: plaintextBody,
+        removeMarkdown: removeMarkdown,
+      );
 
   /// Works similar to `calcLocalizedBody()` but does not wait for the sender
   /// user to be fetched. If it is not in the cache it will just use the
   /// fallback and display the localpart of the MXID according to the
   /// values of `formatLocalpart` and `mxidLocalPartFallback` in the `Client`
   /// class.
-  String calcLocalizedBodyFallback(MatrixLocalizations i18n,
-      {bool withSenderNamePrefix = false,
-      bool hideReply = false,
-      bool hideEdit = false,
-      bool plaintextBody = false,
-      bool removeMarkdown = false}) {
+  String calcLocalizedBodyFallback(
+    MatrixLocalizations i18n, {
+    bool withSenderNamePrefix = false,
+    bool hideReply = false,
+    bool hideEdit = false,
+    bool plaintextBody = false,
+    bool removeMarkdown = false,
+  }) {
     if (redacted) {
       if (status.intValue < EventStatus.synced.intValue) {
         return i18n.cancelledSend;
@@ -896,7 +927,9 @@ class Event extends MatrixEvent {
     // if the message is formatted
     if (hideReply && mayHaveReplyFallback) {
       body = body.replaceFirst(
-          RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'), '');
+        RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'),
+        '',
+      );
     }
 
     // return the html tags free body
@@ -979,11 +1012,13 @@ class Event extends MatrixEvent {
       // we need to check again if it isn't empty, as we potentially removed all
       // aggregated edits
       if (allEditEvents.isNotEmpty) {
-        allEditEvents.sort((a, b) => a.originServerTs.millisecondsSinceEpoch -
-                    b.originServerTs.millisecondsSinceEpoch >
-                0
-            ? 1
-            : -1);
+        allEditEvents.sort(
+          (a, b) => a.originServerTs.millisecondsSinceEpoch -
+                      b.originServerTs.millisecondsSinceEpoch >
+                  0
+              ? 1
+              : -1,
+        );
         final rawEvent = allEditEvents.last.toJson();
         // update the content of the new event to render
         if (rawEvent['content']['m.new_content'] is Map) {
@@ -1051,9 +1086,14 @@ class Event extends MatrixEvent {
     if (isRichMessage) {
       // calcUnlocalizedBody strips out the <img /> tags in favor of a :placeholder:
       final formattedTextStripped = formattedText.replaceAll(
-          RegExp('<mx-reply>.*</mx-reply>',
-              caseSensitive: false, multiLine: false, dotAll: true),
-          '');
+        RegExp(
+          '<mx-reply>.*</mx-reply>',
+          caseSensitive: false,
+          multiLine: false,
+          dotAll: true,
+        ),
+        '',
+      );
       return _onlyEmojiEmoteRegex.hasMatch(formattedTextStripped);
     } else {
       return _onlyEmojiRegex.hasMatch(plaintextBody);
@@ -1068,9 +1108,14 @@ class Event extends MatrixEvent {
     if (isRichMessage) {
       // calcUnlocalizedBody strips out the <img /> tags in favor of a :placeholder:
       final formattedTextStripped = formattedText.replaceAll(
-          RegExp('<mx-reply>.*</mx-reply>',
-              caseSensitive: false, multiLine: false, dotAll: true),
-          '');
+        RegExp(
+          '<mx-reply>.*</mx-reply>',
+          caseSensitive: false,
+          multiLine: false,
+          dotAll: true,
+        ),
+        '',
+      );
       return _countEmojiEmoteRegex.allMatches(formattedTextStripped).length;
     } else {
       return _countEmojiRegex.allMatches(plaintextBody).length;
@@ -1083,7 +1128,8 @@ class Event extends MatrixEvent {
     final status = unsigned?.tryGet<String>(fileSendingStatusKey);
     if (status == null) return null;
     return FileSendingStatus.values.singleWhereOrNull(
-        (fileSendingStatus) => fileSendingStatus.name == status);
+      (fileSendingStatus) => fileSendingStatus.name == status,
+    );
   }
 }
 

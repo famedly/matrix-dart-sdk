@@ -43,11 +43,15 @@ void main() {
     room.setState(user1);
     room.setState(user2);
     setUp(() async {
-      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
-          checkWellKnown: false);
-      await client.login(LoginType.mLoginPassword,
-          identifier: AuthenticationUserIdentifier(user: 'test'),
-          password: '1234');
+      await client.checkHomeserver(
+        Uri.parse('https://fakeserver.notexisting'),
+        checkWellKnown: false,
+      );
+      await client.login(
+        LoginType.mLoginPassword,
+        identifier: AuthenticationUserIdentifier(user: 'test'),
+        password: '1234',
+      );
       await client.abortSync();
     });
     tearDown(() async {
@@ -71,7 +75,7 @@ void main() {
         'content': {
           'membership': 'join',
           'avatar_url': avatarUrl,
-          'displayname': displayName
+          'displayname': displayName,
         },
         'type': 'm.room.member',
         'event_id': '143273582443PhrSn:example.org',
@@ -79,7 +83,7 @@ void main() {
         'sender': id,
         'origin_server_ts': 1432735824653,
         'unsigned': {'age': 1234},
-        'state_key': id
+        'state_key': id,
       };
 
       final user = Event.fromJson(jsonObj, room).asUser;
@@ -100,7 +104,9 @@ void main() {
       expect(user3.calcDisplayname(), 'Alice Mep');
       expect(user3.calcDisplayname(formatLocalpart: false), 'alice_mep');
       expect(
-          user3.calcDisplayname(mxidLocalPartFallback: false), 'Unknown user');
+        user3.calcDisplayname(mxidLocalPartFallback: false),
+        'Unknown user',
+      );
     });
     test('kick', () async {
       await user1.kick();
@@ -118,20 +124,24 @@ void main() {
       await user1.startDirectChat(waitForSync: false);
     });
     test('getPresence', () async {
-      await client.handleSync(SyncUpdate.fromJson({
-        'next_batch': 'fake',
-        'presence': {
-          'events': [
-            {
-              'sender': '@alice:example.com',
-              'type': 'm.presence',
-              'content': {'presence': 'online'}
-            }
-          ]
-        }
-      }));
+      await client.handleSync(
+        SyncUpdate.fromJson({
+          'next_batch': 'fake',
+          'presence': {
+            'events': [
+              {
+                'sender': '@alice:example.com',
+                'type': 'm.presence',
+                'content': {'presence': 'online'},
+              }
+            ],
+          },
+        }),
+      );
       expect(
-          (await user1.fetchCurrentPresence()).presence, PresenceType.online);
+        (await user1.fetchCurrentPresence()).presence,
+        PresenceType.online,
+      );
     });
     test('canBan', () async {
       expect(user1.canBan, false);

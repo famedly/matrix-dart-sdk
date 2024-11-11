@@ -127,7 +127,8 @@ class Box<V> {
     if (value == null) return null;
     if (value is! String) {
       throw Exception(
-          'Wrong database type! Expected String but got one of type ${value.runtimeType}');
+        'Wrong database type! Expected String but got one of type ${value.runtimeType}',
+      );
     }
     switch (V) {
       case const (int):

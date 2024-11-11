@@ -80,7 +80,8 @@ extension FamedlyCallMemberEventsExtension on Room {
 
   /// passing no `CallMembership` removes it from the state event.
   Future<void> updateFamedlyCallMemberStateEvent(
-      CallMembership callMembership) async {
+    CallMembership callMembership,
+  ) async {
     final ownMemberships = getCallMembershipsForUser(client.userID!);
 
     // do not bother removing other deviceId expired events because we have no
@@ -93,7 +94,7 @@ extension FamedlyCallMemberEventsExtension on Room {
     ownMemberships.add(callMembership);
 
     final newContent = {
-      'memberships': List.from(ownMemberships.map((e) => e.toJson()))
+      'memberships': List.from(ownMemberships.map((e) => e.toJson())),
     };
 
     await setFamedlyCallMemberEvent(newContent);
@@ -107,14 +108,16 @@ extension FamedlyCallMemberEventsExtension on Room {
   }) async {
     final ownMemberships = getCallMembershipsForUser(client.userID!);
 
-    ownMemberships.removeWhere((mem) =>
-        mem.callId == groupCallId &&
-        mem.deviceId == deviceId &&
-        mem.application == application &&
-        mem.scope == scope);
+    ownMemberships.removeWhere(
+      (mem) =>
+          mem.callId == groupCallId &&
+          mem.deviceId == deviceId &&
+          mem.application == application &&
+          mem.scope == scope,
+    );
 
     final newContent = {
-      'memberships': List.from(ownMemberships.map((e) => e.toJson()))
+      'memberships': List.from(ownMemberships.map((e) => e.toJson())),
     };
     await setFamedlyCallMemberEvent(newContent);
   }
@@ -145,12 +148,18 @@ extension FamedlyCallMemberEventsExtension on Room {
   List<CallMembership> getCallMembershipsFromEvent(MatrixEvent event) {
     if (event.roomId != id) return [];
     return getCallMembershipsFromEventContent(
-        event.content, event.senderId, event.roomId!);
+      event.content,
+      event.senderId,
+      event.roomId!,
+    );
   }
 
   /// returns a list of memberships from a famedly call matrix event
   List<CallMembership> getCallMembershipsFromEventContent(
-      Map<String, Object?> content, String senderId, String roomId) {
+    Map<String, Object?> content,
+    String senderId,
+    String roomId,
+  ) {
     final mems = content.tryGetList<Map>('memberships');
     final callMems = <CallMembership>[];
     for (final m in mems ?? []) {

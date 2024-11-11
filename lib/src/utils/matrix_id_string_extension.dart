@@ -82,14 +82,16 @@ extension MatrixIdExtension on String {
       return uri.replace(pathSegments: identifiers);
     } else if (toLowerCase().startsWith(matrixToPrefix)) {
       return Uri.tryParse(
-          '//${substring(matrixToPrefix.length - 1).replaceAllMapped(RegExp(r'(?<=/)[#!@+][^:]*:|(\?.*$)'), (m) => m[0]!.replaceAllMapped(RegExp(m.group(1) != null ? '' : '[/?]'), (m) => Uri.encodeComponent(m.group(0)!))).replaceAll('#', '%23')}');
+        '//${substring(matrixToPrefix.length - 1).replaceAllMapped(RegExp(r'(?<=/)[#!@+][^:]*:|(\?.*$)'), (m) => m[0]!.replaceAllMapped(RegExp(m.group(1) != null ? '' : '[/?]'), (m) => Uri.encodeComponent(m.group(0)!))).replaceAll('#', '%23')}',
+      );
     } else {
       return Uri(
-          pathSegments: RegExp(r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?')
-              .allMatches('/$this')
-              .map((m) => m[1]!),
-          query: RegExp(r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)')
-              .firstMatch('/$this')?[1]);
+        pathSegments: RegExp(r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?')
+            .allMatches('/$this')
+            .map((m) => m[1]!),
+        query: RegExp(r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)')
+            .firstMatch('/$this')?[1],
+      );
     }
   }
 
@@ -121,10 +123,11 @@ class MatrixIdentifierStringExtensionResults {
   final Set<String> via;
   final String? action;
 
-  MatrixIdentifierStringExtensionResults(
-      {required this.primaryIdentifier,
-      this.secondaryIdentifier,
-      this.queryString,
-      this.via = const {},
-      this.action});
+  MatrixIdentifierStringExtensionResults({
+    required this.primaryIdentifier,
+    this.secondaryIdentifier,
+    this.queryString,
+    this.via = const {},
+    this.action,
+  });
 }

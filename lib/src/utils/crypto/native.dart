@@ -90,7 +90,12 @@ class _AesCtr extends Cipher {
 }
 
 FutureOr<Uint8List> pbkdf2(
-    Uint8List passphrase, Uint8List salt, Hash hash, int iterations, int bits) {
+  Uint8List passphrase,
+  Uint8List salt,
+  Hash hash,
+  int iterations,
+  int bits,
+) {
   final outLen = bits ~/ 8;
   final mem = malloc.call<Uint8>(passphrase.length + salt.length + outLen);
   final saltMem = mem.elementAt(passphrase.length);
@@ -98,8 +103,16 @@ FutureOr<Uint8List> pbkdf2(
   try {
     mem.asTypedList(passphrase.length).setAll(0, passphrase);
     saltMem.asTypedList(salt.length).setAll(0, salt);
-    PKCS5_PBKDF2_HMAC(mem, passphrase.length, saltMem, salt.length, iterations,
-        hash.ptr, outLen, outMem);
+    PKCS5_PBKDF2_HMAC(
+      mem,
+      passphrase.length,
+      saltMem,
+      salt.length,
+      iterations,
+      hash.ptr,
+      outLen,
+      outMem,
+    );
     return Uint8List.fromList(outMem.asTypedList(outLen));
   } finally {
     malloc.free(mem);

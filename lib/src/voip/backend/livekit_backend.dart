@@ -75,7 +75,9 @@ class LiveKitBackend extends CallBackend {
   ///
   /// also does the sending for you
   Future<void> _makeNewSenderKey(
-      GroupCallSession groupCall, bool delayBeforeUsingKeyOurself) async {
+    GroupCallSession groupCall,
+    bool delayBeforeUsingKeyOurself,
+  ) async {
     final key = secureRandomBytes(32);
     final keyIndex = _getNewEncryptionKeyIndex();
     Logs().i('[VOIP E2EE] Generated new key $key at index $keyIndex');
@@ -99,7 +101,8 @@ class LiveKitBackend extends CallBackend {
 
     if (keyProvider == null) {
       throw MatrixSDKVoipException(
-          '_ratchetKey called but KeyProvider was null');
+        '_ratchetKey called but KeyProvider was null',
+      );
     }
 
     final myKeys = _encryptionKeysMap[groupCall.localParticipant];
@@ -120,7 +123,8 @@ class LiveKitBackend extends CallBackend {
     }
 
     Logs().i(
-        '[VOIP E2EE] Ratched latest key to $ratchetedKey at idx $latestLocalKeyIndex');
+      '[VOIP E2EE] Ratched latest key to $ratchetedKey at idx $latestLocalKeyIndex',
+    );
 
     await _setEncryptionKey(
       groupCall,
@@ -179,9 +183,13 @@ class LiveKitBackend extends CallBackend {
       // stil decrypt everything
       final useKeyTimeout = Future.delayed(useKeyDelay, () async {
         Logs().i(
-            '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin');
+          '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
+        );
         await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
-            participant, encryptionKeyBin, encryptionKeyIndex);
+          participant,
+          encryptionKeyBin,
+          encryptionKeyIndex,
+        );
         if (participant.isLocal) {
           _currentLocalKeyIndex = encryptionKeyIndex;
         }
@@ -189,9 +197,13 @@ class LiveKitBackend extends CallBackend {
       _setNewKeyTimeouts.add(useKeyTimeout);
     } else {
       Logs().i(
-          '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin');
+        '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
+      );
       await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
-          participant, encryptionKeyBin, encryptionKeyIndex);
+        participant,
+        encryptionKeyBin,
+        encryptionKeyIndex,
+      );
       if (participant.isLocal) {
         _currentLocalKeyIndex = encryptionKeyIndex;
       }
@@ -214,7 +226,8 @@ class LiveKitBackend extends CallBackend {
 
     if (myKeys == null || myLatestKey == null) {
       Logs().w(
-          '[VOIP E2EE] _sendEncryptionKeysEvent Tried to send encryption keys event but no keys found!');
+        '[VOIP E2EE] _sendEncryptionKeysEvent Tried to send encryption keys event but no keys found!',
+      );
       await _makeNewSenderKey(groupCall, false);
       await _sendEncryptionKeysEvent(
         groupCall,
@@ -261,7 +274,8 @@ class LiveKitBackend extends CallBackend {
   ) async {
     if (remoteParticipants.isEmpty) return;
     Logs().v(
-        '[VOIP] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ');
+      '[VOIP] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ',
+    );
     final txid =
         VoIP.customTxid ?? groupCall.client.generateUniqueTransactionId();
     final mustEncrypt =
@@ -284,7 +298,7 @@ class LiveKitBackend extends CallBackend {
         }
       } else {
         unencryptedDataToSend.addAll({
-          participant.userId: {participant.deviceId!: data}
+          participant.userId: {participant.deviceId!: data},
         });
       }
     }
@@ -352,11 +366,13 @@ class LiveKitBackend extends CallBackend {
 
     if (keyContent.keys.isEmpty) {
       Logs().w(
-          '[VOIP E2EE] Received m.call.encryption_keys where keys is empty: callId=$callId');
+        '[VOIP E2EE] Received m.call.encryption_keys where keys is empty: callId=$callId',
+      );
       return;
     } else {
       Logs().i(
-          '[VOIP E2EE]: onCallEncryption, got keys from ${p.id} ${keyContent.toJson()}');
+        '[VOIP E2EE]: onCallEncryption, got keys from ${p.id} ${keyContent.toJson()}',
+      );
     }
 
     for (final key in keyContent.keys) {
@@ -400,7 +416,8 @@ class LiveKitBackend extends CallBackend {
         )
         .isNotEmpty) {
       Logs().d(
-          '[VOIP] onCallEncryptionKeyRequest: request checks out, sending key on index: $latestLocalKeyIndex to $userId:$deviceId');
+        '[VOIP] onCallEncryptionKeyRequest: request checks out, sending key on index: $latestLocalKeyIndex to $userId:$deviceId',
+      );
       await _sendEncryptionKeysEvent(
         groupCall,
         _latestLocalKeyIndex,
@@ -409,7 +426,7 @@ class LiveKitBackend extends CallBackend {
             groupCall.voip,
             userId: userId,
             deviceId: deviceId,
-          )
+          ),
         ],
       );
     }
@@ -470,8 +487,10 @@ class LiveKitBackend extends CallBackend {
 
   /// get everything else from your livekit sdk in your client
   @override
-  Future<WrappedMediaStream?> initLocalStream(GroupCallSession groupCall,
-      {WrappedMediaStream? stream}) async {
+  Future<WrappedMediaStream?> initLocalStream(
+    GroupCallSession groupCall, {
+    WrappedMediaStream? stream,
+  }) async {
     return null;
   }
 
@@ -506,25 +525,35 @@ class LiveKitBackend extends CallBackend {
 
   @override
   Future<void> setDeviceMuted(
-      GroupCallSession groupCall, bool muted, MediaInputKind kind) async {
+    GroupCallSession groupCall,
+    bool muted,
+    MediaInputKind kind,
+  ) async {
     return;
   }
 
   @override
-  Future<void> setScreensharingEnabled(GroupCallSession groupCall, bool enabled,
-      String desktopCapturerSourceId) async {
+  Future<void> setScreensharingEnabled(
+    GroupCallSession groupCall,
+    bool enabled,
+    String desktopCapturerSourceId,
+  ) async {
     return;
   }
 
   @override
-  Future<void> setupP2PCallWithNewMember(GroupCallSession groupCall,
-      CallParticipant rp, CallMembership mem) async {
+  Future<void> setupP2PCallWithNewMember(
+    GroupCallSession groupCall,
+    CallParticipant rp,
+    CallMembership mem,
+  ) async {
     return;
   }
 
   @override
   Future<void> setupP2PCallsWithExistingMembers(
-      GroupCallSession groupCall) async {
+    GroupCallSession groupCall,
+  ) async {
     return;
   }
 

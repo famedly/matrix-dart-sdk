@@ -252,19 +252,23 @@ class KeyManager {
       // do e2ee recovery
       _requestedSessionIds.add(requestIdent);
 
-      runInRoot(() async => request(
-            room,
-            sessionId,
-            senderKey,
-            tryOnlineBackup: tryOnlineBackup,
-            onlineKeyBackupOnly: onlineKeyBackupOnly,
-          ));
+      runInRoot(
+        () async => request(
+          room,
+          sessionId,
+          senderKey,
+          tryOnlineBackup: tryOnlineBackup,
+          onlineKeyBackupOnly: onlineKeyBackupOnly,
+        ),
+      );
     }
   }
 
   /// Loads an inbound group session
   Future<SessionKey?> loadInboundGroupSession(
-      String roomId, String sessionId) async {
+    String roomId,
+    String sessionId,
+  ) async {
     final sess = _inboundGroupSessions[roomId]?[sessionId];
     if (sess != null) {
       if (sess.sessionId != sessionId && sess.sessionId.isNotEmpty) {
@@ -290,7 +294,8 @@ class KeyManager {
   }
 
   Map<String, Map<String, bool>> _getDeviceKeyIdMap(
-      List<DeviceKeys> deviceKeys) {
+    List<DeviceKeys> deviceKeys,
+  ) {
     final deviceKeyIds = <String, Map<String, bool>>{};
     for (final device in deviceKeys) {
       final deviceId = device.deviceId;
@@ -312,8 +317,11 @@ class KeyManager {
   /// Clears the existing outboundGroupSession but first checks if the participating
   /// devices have been changed. Returns false if the session has not been cleared because
   /// it wasn't necessary. Otherwise returns true.
-  Future<bool> clearOrUseOutboundGroupSession(String roomId,
-      {bool wipe = false, bool use = true}) async {
+  Future<bool> clearOrUseOutboundGroupSession(
+    String roomId, {
+    bool wipe = false,
+    bool use = true,
+  }) async {
     final room = client.getRoomById(roomId);
     final sess = getOutboundGroupSession(roomId);
     if (room == null || sess == null || sess.outboundGroupSession == null) {
@@ -336,7 +344,9 @@ class KeyManager {
     }
 
     final inboundSess = await loadInboundGroupSession(
-        room.id, sess.outboundGroupSession!.session_id());
+      room.id,
+      sess.outboundGroupSession!.session_id(),
+    );
     if (inboundSess == null) {
       wipe = true;
     }
@@ -365,15 +375,19 @@ class KeyManager {
         // we also know that all the old user IDs appear in the old one, else we have already wiped the session
         for (final userId in oldUserIds) {
           final oldBlockedDevices = sess.devices.containsKey(userId)
-              ? Set.from(sess.devices[userId]!.entries
-                  .where((e) => e.value)
-                  .map((e) => e.key))
+              ? Set.from(
+                  sess.devices[userId]!.entries
+                      .where((e) => e.value)
+                      .map((e) => e.key),
+                )
               : <String>{};
           final newBlockedDevices = newDeviceKeyIds.containsKey(userId)
-              ? Set.from(newDeviceKeyIds[userId]!
-                  .entries
-                  .where((e) => e.value)
-                  .map((e) => e.key))
+              ? Set.from(
+                  newDeviceKeyIds[userId]!
+                      .entries
+                      .where((e) => e.value)
+                      .map((e) => e.key),
+                )
               : <String>{};
           // we don't really care about old devices that got dropped (deleted), we only care if new ones got added and if new ones got blocked
           // check if new devices got blocked
@@ -383,15 +397,19 @@ class KeyManager {
           }
           // and now add all the new devices!
           final oldDeviceIds = sess.devices.containsKey(userId)
-              ? Set.from(sess.devices[userId]!.entries
-                  .where((e) => !e.value)
-                  .map((e) => e.key))
+              ? Set.from(
+                  sess.devices[userId]!.entries
+                      .where((e) => !e.value)
+                      .map((e) => e.key),
+                )
               : <String>{};
           final newDeviceIds = newDeviceKeyIds.containsKey(userId)
-              ? Set.from(newDeviceKeyIds[userId]!
-                  .entries
-                  .where((e) => !e.value)
-                  .map((e) => e.key))
+              ? Set.from(
+                  newDeviceKeyIds[userId]!
+                      .entries
+                      .where((e) => !e.value)
+                      .map((e) => e.key),
+                )
               : <String>{};
 
           // check if a device got removed
@@ -403,8 +421,11 @@ class KeyManager {
           // check if any new devices need keys
           final newDevices = newDeviceIds.difference(oldDeviceIds);
           if (newDeviceIds.isNotEmpty) {
-            devicesToReceive.addAll(newDeviceKeys.where(
-                (d) => d.userId == userId && newDevices.contains(d.deviceId)));
+            devicesToReceive.addAll(
+              newDeviceKeys.where(
+                (d) => d.userId == userId && newDevices.contains(d.deviceId),
+              ),
+            );
           }
         }
       }
@@ -438,18 +459,23 @@ class KeyManager {
               }
             }
             await client.database?.updateInboundGroupSessionAllowedAtIndex(
-                json.encode(inboundSess!.allowedAtIndex),
-                room.id,
-                sess.outboundGroupSession!.session_id());
+              json.encode(inboundSess!.allowedAtIndex),
+              room.id,
+              sess.outboundGroupSession!.session_id(),
+            );
             // send out the key
             await client.sendToDeviceEncryptedChunked(
-                devicesToReceive, EventTypes.RoomKey, rawSession);
+              devicesToReceive,
+              EventTypes.RoomKey,
+              rawSession,
+            );
           }
         } catch (e, s) {
           Logs().e(
-              '[LibOlm] Unable to re-send the session key at later index to new devices',
-              e,
-              s);
+            '[LibOlm] Unable to re-send the session key at later index to new devices',
+            e,
+            s,
+          );
         }
         return false;
       }
@@ -462,14 +488,17 @@ class KeyManager {
 
   /// Store an outbound group session in the database
   Future<void> storeOutboundGroupSession(
-      String roomId, OutboundGroupSession sess) async {
+    String roomId,
+    OutboundGroupSession sess,
+  ) async {
     final userID = client.userID;
     if (userID == null) return;
     await client.database?.storeOutboundGroupSession(
-        roomId,
-        sess.outboundGroupSession!.pickle(userID),
-        json.encode(sess.devices),
-        sess.creationTime.millisecondsSinceEpoch);
+      roomId,
+      sess.outboundGroupSession!.pickle(userID),
+      json.encode(sess.devices),
+      sess.creationTime.millisecondsSinceEpoch,
+    );
   }
 
   final Map<String, Future<OutboundGroupSession>>
@@ -507,18 +536,21 @@ class KeyManager {
   }
 
   Future<OutboundGroupSession> _createOutboundGroupSession(
-      String roomId) async {
+    String roomId,
+  ) async {
     await clearOrUseOutboundGroupSession(roomId, wipe: true);
     await client.firstSyncReceived;
     final room = client.getRoomById(roomId);
     if (room == null) {
       throw Exception(
-          'Tried to create a megolm session in a non-existing room ($roomId)!');
+        'Tried to create a megolm session in a non-existing room ($roomId)!',
+      );
     }
     final userID = client.userID;
     if (userID == null) {
       throw Exception(
-          'Tried to create a megolm session without being logged in!');
+        'Tried to create a megolm session without being logged in!',
+      );
     }
 
     final deviceKeys = await room.getUserDeviceKeys();
@@ -549,8 +581,12 @@ class KeyManager {
           outboundGroupSession.message_index();
     }
     await setInboundGroupSession(
-        roomId, rawSession['session_id'], encryption.identityKey!, rawSession,
-        allowedAtIndex: allowedAtIndex);
+      roomId,
+      rawSession['session_id'],
+      encryption.identityKey!,
+      rawSession,
+      allowedAtIndex: allowedAtIndex,
+    );
     final sess = OutboundGroupSession(
       devices: deviceKeyIds,
       creationTime: DateTime.now(),
@@ -559,14 +595,18 @@ class KeyManager {
     );
     try {
       await client.sendToDeviceEncryptedChunked(
-          deviceKeys, EventTypes.RoomKey, rawSession);
+        deviceKeys,
+        EventTypes.RoomKey,
+        rawSession,
+      );
       await storeOutboundGroupSession(roomId, sess);
       _outboundGroupSessions[roomId] = sess;
     } catch (e, s) {
       Logs().e(
-          '[LibOlm] Unable to send the session key to the participating devices',
-          e,
-          s);
+        '[LibOlm] Unable to send the session key to the participating devices',
+        e,
+        s,
+      );
       sess.dispose();
       rethrow;
     }
@@ -611,8 +651,9 @@ class KeyManager {
   GetRoomKeysVersionCurrentResponse? _roomKeysVersionCache;
   DateTime? _roomKeysVersionCacheDate;
 
-  Future<GetRoomKeysVersionCurrentResponse> getRoomKeysBackupInfo(
-      [bool useCache = true]) async {
+  Future<GetRoomKeysVersionCurrentResponse> getRoomKeysBackupInfo([
+    bool useCache = true,
+  ]) async {
     if (_roomKeysVersionCache != null &&
         _roomKeysVersionCacheDate != null &&
         useCache &&
@@ -650,10 +691,13 @@ class KeyManager {
           final sessionData = session.sessionData;
           Map<String, Object?>? decrypted;
           try {
-            decrypted = json.decode(decryption.decrypt(
+            decrypted = json.decode(
+              decryption.decrypt(
                 sessionData['ephemeral'] as String,
                 sessionData['mac'] as String,
-                sessionData['ciphertext'] as String));
+                sessionData['ciphertext'] as String,
+              ),
+            );
           } catch (e, s) {
             Logs().e('[LibOlm] Error decrypting room key', e, s);
           }
@@ -662,12 +706,16 @@ class KeyManager {
             decrypted['session_id'] = sessionId;
             decrypted['room_id'] = roomId;
             await setInboundGroupSession(
-                roomId, sessionId, senderKey, decrypted,
-                forwarded: true,
-                senderClaimedKeys: decrypted
-                        .tryGetMap<String, String>('sender_claimed_keys') ??
-                    <String, String>{},
-                uploaded: true);
+              roomId,
+              sessionId,
+              senderKey,
+              decrypted,
+              forwarded: true,
+              senderClaimedKeys:
+                  decrypted.tryGetMap<String, String>('sender_claimed_keys') ??
+                      <String, String>{},
+              uploaded: true,
+            );
           }
         }
       }
@@ -733,10 +781,14 @@ class KeyManager {
       } catch (err, stacktrace) {
         if (err is MatrixException && err.errcode == 'M_NOT_FOUND') {
           Logs().i(
-              '[KeyManager] Key not in online key backup, requesting it from other devices...');
+            '[KeyManager] Key not in online key backup, requesting it from other devices...',
+          );
         } else {
-          Logs().e('[KeyManager] Failed to access online key backup', err,
-              stacktrace);
+          Logs().e(
+            '[KeyManager] Failed to access online key backup',
+            err,
+            stacktrace,
+          );
         }
       }
       // TODO: also don't request from others if we have an index of 0 now
@@ -785,15 +837,17 @@ class KeyManager {
 
   void startAutoUploadKeys() {
     _uploadKeysOnSync = encryption.client.onSync.stream.listen(
-        (_) async => uploadInboundGroupSessions(skipIfInProgress: true));
+      (_) async => uploadInboundGroupSessions(skipIfInProgress: true),
+    );
   }
 
   /// This task should be performed after sync processing but should not block
   /// the sync. To make sure that it never gets executed multiple times, it is
   /// skipped when an upload task is already in progress. Set `skipIfInProgress`
   /// to `false` to await the pending upload task instead.
-  Future<void> uploadInboundGroupSessions(
-      {bool skipIfInProgress = false}) async {
+  Future<void> uploadInboundGroupSessions({
+    bool skipIfInProgress = false,
+  }) async {
     final database = client.database;
     final userID = client.userID;
     if (database == null || userID == null) {
@@ -849,10 +903,12 @@ class KeyManager {
           for (final dbSession in dbSessions) {
             final device =
                 client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
-            args.dbSessions.add(DbInboundGroupSessionBundle(
-              dbSession: dbSession,
-              verified: device?.verified ?? false,
-            ));
+            args.dbSessions.add(
+              DbInboundGroupSessionBundle(
+                dbSession: dbSession,
+                verified: device?.verified ?? false,
+              ),
+            );
             i++;
             if (i > 10) {
               await Future.delayed(Duration(milliseconds: 1));
@@ -868,7 +924,9 @@ class KeyManager {
           // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
           for (final dbSession in dbSessions) {
             await database.markInboundGroupSessionAsUploaded(
-                dbSession.roomId, dbSession.sessionId);
+              dbSession.roomId,
+              dbSession.sessionId,
+            );
           }
         } finally {
           decryption.free();
@@ -895,7 +953,8 @@ class KeyManager {
       if (event.content['action'] == 'request') {
         // we are *receiving* a request
         Logs().i(
-            '[KeyManager] Received key sharing request from ${event.sender}:${event.content['requesting_device_id']}...');
+          '[KeyManager] Received key sharing request from ${event.sender}:${event.content['requesting_device_id']}...',
+        );
         if (!event.content.containsKey('body')) {
           Logs().w('[KeyManager] No body, doing nothing');
           return; // no body
@@ -908,7 +967,8 @@ class KeyManager {
         final roomId = body.tryGet<String>('room_id');
         if (roomId == null) {
           Logs().w(
-              '[KeyManager] Wrong type for room_id or no room_id, doing nothing');
+            '[KeyManager] Wrong type for room_id or no room_id, doing nothing',
+          );
           return; // wrong type for roomId or no roomId found
         }
         final device = client.userDeviceKeys[event.sender]
@@ -930,7 +990,8 @@ class KeyManager {
         final sessionId = body.tryGet<String>('session_id');
         if (sessionId == null) {
           Logs().w(
-              '[KeyManager] Wrong type for session_id or no session_id, doing nothing');
+            '[KeyManager] Wrong type for session_id or no session_id, doing nothing',
+          );
           return; // wrong type for session_id
         }
         // okay, let's see if we have this session at all
@@ -941,7 +1002,8 @@ class KeyManager {
         }
         if (event.content['request_id'] is! String) {
           Logs().w(
-              '[KeyManager] Wrong type for request_id or no request_id, doing nothing');
+            '[KeyManager] Wrong type for request_id or no request_id, doing nothing',
+          );
           return; // wrong type for request_id
         }
         final request = KeyManagerKeyShareRequest(
@@ -974,7 +1036,8 @@ class KeyManager {
           final index =
               session.allowedAtIndex[device.userId]![device.curve25519Key]!;
           Logs().i(
-              '[KeyManager] Valid foreign request, forwarding key at index $index...');
+            '[KeyManager] Valid foreign request, forwarding key at index $index...',
+          );
           await roomKeyRequest.forwardKey(index);
         } else {
           Logs()
@@ -1002,15 +1065,19 @@ class KeyManager {
         );
         return;
       }
-      final request = outgoingShareRequests.values.firstWhereOrNull((r) =>
-          r.room.id == event.content['room_id'] &&
-          r.sessionId == event.content['session_id']);
+      final request = outgoingShareRequests.values.firstWhereOrNull(
+        (r) =>
+            r.room.id == event.content['room_id'] &&
+            r.sessionId == event.content['session_id'],
+      );
       if (request == null || request.canceled) {
         return; // no associated request found or it got canceled
       }
-      final device = request.devices.firstWhereOrNull((d) =>
-          d.userId == event.sender &&
-          d.curve25519Key == encryptedContent['sender_key']);
+      final device = request.devices.firstWhereOrNull(
+        (d) =>
+            d.userId == event.sender &&
+            d.curve25519Key == encryptedContent['sender_key'],
+      );
       if (device == null) {
         return; // someone we didn't send our request to replied....better ignore this
       }
@@ -1026,14 +1093,19 @@ class KeyManager {
       }
       // TODO: verify that the keys work to decrypt a message
       // alright, all checks out, let's go ahead and store this session
-      await setInboundGroupSession(request.room.id, request.sessionId,
-          device.curve25519Key!, event.content,
-          forwarded: true,
-          senderClaimedKeys: {
-            'ed25519': event.content['sender_claimed_ed25519_key'] as String,
-          });
+      await setInboundGroupSession(
+        request.room.id,
+        request.sessionId,
+        device.curve25519Key!,
+        event.content,
+        forwarded: true,
+        senderClaimedKeys: {
+          'ed25519': event.content['sender_claimed_ed25519_key'] as String,
+        },
+      );
       request.devices.removeWhere(
-          (k) => k.userId == device.userId && k.deviceId == device.deviceId);
+        (k) => k.userId == device.userId && k.deviceId == device.deviceId,
+      );
       outgoingShareRequests.remove(request.requestId);
       // send cancel to all other devices
       if (request.devices.isEmpty) {
@@ -1057,7 +1129,8 @@ class KeyManager {
       );
     } else if (event.type == EventTypes.RoomKey) {
       Logs().v(
-          '[KeyManager] Received room key with session ${event.content['session_id']}');
+        '[KeyManager] Received room key with session ${event.content['session_id']}',
+      );
       final encryptedContent = event.encryptedContent;
       if (encryptedContent == null) {
         Logs().v('[KeyManager] not encrypted, ignoring...');
@@ -1067,7 +1140,8 @@ class KeyManager {
       final sessionId = event.content.tryGet<String>('session_id');
       if (roomId == null || sessionId == null) {
         Logs().w(
-            'Either room_id or session_id are not the expected type or missing');
+          'Either room_id or session_id are not the expected type or missing',
+        );
         return;
       }
       final sender_ed25519 = client.userDeviceKeys[event.sender]
@@ -1077,8 +1151,12 @@ class KeyManager {
       }
       Logs().v('[KeyManager] Keeping room key');
       await setInboundGroupSession(
-          roomId, sessionId, encryptedContent['sender_key'], event.content,
-          forwarded: false);
+        roomId,
+        sessionId,
+        encryptedContent['sender_key'],
+        event.content,
+        forwarded: false,
+      );
     }
   }
 
@@ -1105,13 +1183,13 @@ class KeyManagerKeyShareRequest {
   final String sessionId;
   bool canceled;
 
-  KeyManagerKeyShareRequest(
-      {required this.requestId,
-      List<DeviceKeys>? devices,
-      required this.room,
-      required this.sessionId,
-      this.canceled = false})
-      : devices = devices ?? [];
+  KeyManagerKeyShareRequest({
+    required this.requestId,
+    List<DeviceKeys>? devices,
+    required this.room,
+    required this.sessionId,
+    this.canceled = false,
+  }) : devices = devices ?? [];
 }
 
 class RoomKeyRequest extends ToDeviceEvent {
@@ -1119,11 +1197,14 @@ class RoomKeyRequest extends ToDeviceEvent {
   KeyManagerKeyShareRequest request;
 
   RoomKeyRequest.fromToDeviceEvent(
-      ToDeviceEvent toDeviceEvent, this.keyManager, this.request)
-      : super(
-            sender: toDeviceEvent.sender,
-            content: toDeviceEvent.content,
-            type: toDeviceEvent.type);
+    ToDeviceEvent toDeviceEvent,
+    this.keyManager,
+    this.request,
+  ) : super(
+          sender: toDeviceEvent.sender,
+          content: toDeviceEvent.content,
+          type: toDeviceEvent.type,
+        );
 
   Room get room => request.room;
 
@@ -1155,7 +1236,8 @@ class RoomKeyRequest extends ToDeviceEvent {
                 ? keyManager.encryption.fingerprintKey
                 : null);
     message['session_key'] = session.inboundGroupSession!.export_session(
-        index ?? session.inboundGroupSession!.first_known_index());
+      index ?? session.inboundGroupSession!.first_known_index(),
+    );
     // send the actual reply of the key back to the requester
     await keyManager.client.sendToDeviceEncrypted(
       [requestingDevice],
@@ -1217,8 +1299,10 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
 }
 
 class DbInboundGroupSessionBundle {
-  DbInboundGroupSessionBundle(
-      {required this.dbSession, required this.verified});
+  DbInboundGroupSessionBundle({
+    required this.dbSession,
+    required this.verified,
+  });
 
   factory DbInboundGroupSessionBundle.fromJson(Map<dynamic, dynamic> json) =>
       DbInboundGroupSessionBundle(
@@ -1236,8 +1320,11 @@ class DbInboundGroupSessionBundle {
 }
 
 class GenerateUploadKeysArgs {
-  GenerateUploadKeysArgs(
-      {required this.pubkey, required this.dbSessions, required this.userId});
+  GenerateUploadKeysArgs({
+    required this.pubkey,
+    required this.dbSessions,
+    required this.userId,
+  });
 
   factory GenerateUploadKeysArgs.fromJson(Map<dynamic, dynamic> json) =>
       GenerateUploadKeysArgs(

@@ -35,7 +35,10 @@ abstract class Cipher {
   String name;
   Object params(Uint8List iv);
   Future<Uint8List> encrypt(
-      Uint8List input, Uint8List key, Uint8List iv) async {
+    Uint8List input,
+    Uint8List key,
+    Uint8List iv,
+  ) async {
     final subtleKey = await importKey('raw', key, name, false, ['encrypt']);
     return (await subtle.encrypt(params(iv), subtleKey, input)).asUint8List();
   }
@@ -51,14 +54,24 @@ class _AesCtr extends Cipher {
       AesCtrParams(name: name, counter: iv, length: 64);
 }
 
-Future<Uint8List> pbkdf2(Uint8List passphrase, Uint8List salt, Hash hash,
-    int iterations, int bits) async {
+Future<Uint8List> pbkdf2(
+  Uint8List passphrase,
+  Uint8List salt,
+  Hash hash,
+  int iterations,
+  int bits,
+) async {
   final raw =
       await importKey('raw', passphrase, 'PBKDF2', false, ['deriveBits']);
   final res = await deriveBits(
-      Pbkdf2Params(
-          name: 'PBKDF2', hash: hash.name, salt: salt, iterations: iterations),
-      raw,
-      bits);
+    Pbkdf2Params(
+      name: 'PBKDF2',
+      hash: hash.name,
+      salt: salt,
+      iterations: iterations,
+    ),
+    raw,
+    bits,
+  );
   return Uint8List.view(res);
 }

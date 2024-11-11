@@ -52,8 +52,11 @@ void main() {
       final matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com')!;
       await matrix.encryption!.keyManager.request(
-          requestRoom, 'sessionId', validSenderKey,
-          tryOnlineBackup: false);
+        requestRoom,
+        'sessionId',
+        validSenderKey,
+        tryOnlineBackup: false,
+      );
       var foundEvent = false;
       for (final entry in FakeMatrixApi.calledEndpoints.entries) {
         final payload = jsonDecode(entry.value.first);
@@ -90,25 +93,28 @@ void main() {
           .loadInboundGroupSession('!726s6s6q:example.com', validSessionId);
       // test a successful share
       var event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.room_key_request',
-          content: {
-            'action': 'request',
-            'body': {
-              'algorithm': AlgorithmTypes.megolmV1AesSha2,
-              'room_id': '!726s6s6q:example.com',
-              'sender_key': validSenderKey,
-              'session_id': validSessionId,
-            },
-            'request_id': 'request_1',
-            'requesting_device_id': 'OTHERDEVICE',
-          });
+        sender: '@alice:example.com',
+        type: 'm.room_key_request',
+        content: {
+          'action': 'request',
+          'body': {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'room_id': '!726s6s6q:example.com',
+            'sender_key': validSenderKey,
+            'session_id': validSessionId,
+          },
+          'request_id': 'request_1',
+          'requesting_device_id': 'OTHERDEVICE',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          true);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        true,
+      );
 
       // test a successful foreign share
       FakeMatrixApi.calledEndpoints.clear();
@@ -117,25 +123,28 @@ void main() {
             .deviceKeys['OTHERDEVICE']!.curve25519Key!: 0,
       };
       event = ToDeviceEvent(
-          sender: '@test:fakeServer.notExisting',
-          type: 'm.room_key_request',
-          content: {
-            'action': 'request',
-            'body': {
-              'algorithm': AlgorithmTypes.megolmV1AesSha2,
-              'room_id': '!726s6s6q:example.com',
-              'sender_key': validSenderKey,
-              'session_id': validSessionId,
-            },
-            'request_id': 'request_a1',
-            'requesting_device_id': 'OTHERDEVICE',
-          });
+        sender: '@test:fakeServer.notExisting',
+        type: 'm.room_key_request',
+        content: {
+          'action': 'request',
+          'body': {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'room_id': '!726s6s6q:example.com',
+            'sender_key': validSenderKey,
+            'session_id': validSessionId,
+          },
+          'request_id': 'request_a1',
+          'requesting_device_id': 'OTHERDEVICE',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          true);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        true,
+      );
       session.allowedAtIndex.remove('@test:fakeServer.notExisting');
 
       // test various fail scenarios
@@ -143,129 +152,147 @@ void main() {
       // unknown person
       FakeMatrixApi.calledEndpoints.clear();
       event = ToDeviceEvent(
-          sender: '@test:fakeServer.notExisting',
-          type: 'm.room_key_request',
-          content: {
-            'action': 'request',
-            'body': {
-              'algorithm': AlgorithmTypes.megolmV1AesSha2,
-              'room_id': '!726s6s6q:example.com',
-              'sender_key': validSenderKey,
-              'session_id': validSessionId,
-            },
-            'request_id': 'request_a2',
-            'requesting_device_id': 'OTHERDEVICE',
-          });
+        sender: '@test:fakeServer.notExisting',
+        type: 'm.room_key_request',
+        content: {
+          'action': 'request',
+          'body': {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'room_id': '!726s6s6q:example.com',
+            'sender_key': validSenderKey,
+            'session_id': validSessionId,
+          },
+          'request_id': 'request_a2',
+          'requesting_device_id': 'OTHERDEVICE',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          false);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        false,
+      );
 
       // no body
       FakeMatrixApi.calledEndpoints.clear();
       event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.room_key_request',
-          content: {
-            'action': 'request',
-            'request_id': 'request_2',
-            'requesting_device_id': 'OTHERDEVICE',
-          });
+        sender: '@alice:example.com',
+        type: 'm.room_key_request',
+        content: {
+          'action': 'request',
+          'request_id': 'request_2',
+          'requesting_device_id': 'OTHERDEVICE',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          false);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        false,
+      );
 
       // request by ourself
       FakeMatrixApi.calledEndpoints.clear();
       event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.room_key_request',
-          content: {
-            'action': 'request',
-            'body': {
-              'algorithm': AlgorithmTypes.megolmV1AesSha2,
-              'room_id': '!726s6s6q:example.com',
-              'sender_key': validSenderKey,
-              'session_id': validSessionId,
-            },
-            'request_id': 'request_3',
-            'requesting_device_id': 'JLAFKJWSCS',
-          });
+        sender: '@alice:example.com',
+        type: 'm.room_key_request',
+        content: {
+          'action': 'request',
+          'body': {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'room_id': '!726s6s6q:example.com',
+            'sender_key': validSenderKey,
+            'session_id': validSessionId,
+          },
+          'request_id': 'request_3',
+          'requesting_device_id': 'JLAFKJWSCS',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          false);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        false,
+      );
 
       // device not found
       FakeMatrixApi.calledEndpoints.clear();
       event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.room_key_request',
-          content: {
-            'action': 'request',
-            'body': {
-              'algorithm': AlgorithmTypes.megolmV1AesSha2,
-              'room_id': '!726s6s6q:example.com',
-              'sender_key': validSenderKey,
-              'session_id': validSessionId,
-            },
-            'request_id': 'request_4',
-            'requesting_device_id': 'blubb',
-          });
+        sender: '@alice:example.com',
+        type: 'm.room_key_request',
+        content: {
+          'action': 'request',
+          'body': {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'room_id': '!726s6s6q:example.com',
+            'sender_key': validSenderKey,
+            'session_id': validSessionId,
+          },
+          'request_id': 'request_4',
+          'requesting_device_id': 'blubb',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          false);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        false,
+      );
 
       // unknown room
       FakeMatrixApi.calledEndpoints.clear();
       event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.room_key_request',
-          content: {
-            'action': 'request',
-            'body': {
-              'algorithm': AlgorithmTypes.megolmV1AesSha2,
-              'room_id': '!invalid:example.com',
-              'sender_key': validSenderKey,
-              'session_id': validSessionId,
-            },
-            'request_id': 'request_5',
-            'requesting_device_id': 'OTHERDEVICE',
-          });
+        sender: '@alice:example.com',
+        type: 'm.room_key_request',
+        content: {
+          'action': 'request',
+          'body': {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'room_id': '!invalid:example.com',
+            'sender_key': validSenderKey,
+            'session_id': validSessionId,
+          },
+          'request_id': 'request_5',
+          'requesting_device_id': 'OTHERDEVICE',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          false);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        false,
+      );
 
       // unknwon session
       FakeMatrixApi.calledEndpoints.clear();
       event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.room_key_request',
-          content: {
-            'action': 'request',
-            'body': {
-              'algorithm': AlgorithmTypes.megolmV1AesSha2,
-              'room_id': '!726s6s6q:example.com',
-              'sender_key': validSenderKey,
-              'session_id': 'invalid',
-            },
-            'request_id': 'request_6',
-            'requesting_device_id': 'OTHERDEVICE',
-          });
+        sender: '@alice:example.com',
+        type: 'm.room_key_request',
+        content: {
+          'action': 'request',
+          'body': {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'room_id': '!726s6s6q:example.com',
+            'sender_key': validSenderKey,
+            'session_id': 'invalid',
+          },
+          'request_id': 'request_6',
+          'requesting_device_id': 'OTHERDEVICE',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          false);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        false,
+      );
 
       FakeMatrixApi.calledEndpoints.clear();
       await matrix.dispose(closeDatabase: true);
@@ -274,8 +301,11 @@ void main() {
       final matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com')!;
       await matrix.encryption!.keyManager.request(
-          requestRoom, validSessionId, validSenderKey,
-          tryOnlineBackup: false);
+        requestRoom,
+        validSessionId,
+        validSenderKey,
+        tryOnlineBackup: false,
+      );
 
       final session = (await matrix.encryption!.keyManager
           .loadInboundGroupSession(requestRoom.id, validSessionId))!;
@@ -283,123 +313,135 @@ void main() {
           .export_session(session.inboundGroupSession!.first_known_index());
       matrix.encryption!.keyManager.clearInboundGroupSessions();
       var event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.forwarded_room_key',
-          content: {
-            'algorithm': AlgorithmTypes.megolmV1AesSha2,
-            'room_id': '!726s6s6q:example.com',
-            'session_id': validSessionId,
-            'session_key': sessionKey,
-            'sender_key': validSenderKey,
-            'forwarding_curve25519_key_chain': [],
-            'sender_claimed_ed25519_key':
-                'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
-          },
-          encryptedContent: {
-            'sender_key': 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
-          });
+        sender: '@alice:example.com',
+        type: 'm.forwarded_room_key',
+        content: {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': '!726s6s6q:example.com',
+          'session_id': validSessionId,
+          'session_key': sessionKey,
+          'sender_key': validSenderKey,
+          'forwarding_curve25519_key_chain': [],
+          'sender_claimed_ed25519_key':
+              'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
+        },
+        encryptedContent: {
+          'sender_key': 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption!.keyManager
-                  .getInboundGroupSession(requestRoom.id, validSessionId) !=
-              null,
-          true);
+        matrix.encryption!.keyManager
+                .getInboundGroupSession(requestRoom.id, validSessionId) !=
+            null,
+        true,
+      );
 
       // test ToDeviceEvent without sender_key in content
       event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.forwarded_room_key',
-          content: {
-            'algorithm': AlgorithmTypes.megolmV1AesSha2,
-            'room_id': '!726s6s6q:example.com',
-            'session_id': validSessionId,
-            'session_key': sessionKey,
-            'forwarding_curve25519_key_chain': [],
-            'sender_claimed_ed25519_key':
-                'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
-          },
-          encryptedContent: {
-            'sender_key': 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
-          });
+        sender: '@alice:example.com',
+        type: 'm.forwarded_room_key',
+        content: {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': '!726s6s6q:example.com',
+          'session_id': validSessionId,
+          'session_key': sessionKey,
+          'forwarding_curve25519_key_chain': [],
+          'sender_claimed_ed25519_key':
+              'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
+        },
+        encryptedContent: {
+          'sender_key': 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
+        },
+      );
 
       // now test a few invalid scenarios
 
       // request not found
       matrix.encryption!.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.forwarded_room_key',
-          content: {
-            'algorithm': AlgorithmTypes.megolmV1AesSha2,
-            'room_id': '!726s6s6q:example.com',
-            'session_id': validSessionId,
-            'session_key': sessionKey,
-            'sender_key': validSenderKey,
-            'forwarding_curve25519_key_chain': [],
-            'sender_claimed_ed25519_key':
-                'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
-          },
-          encryptedContent: {
-            'sender_key': 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
-          });
+        sender: '@alice:example.com',
+        type: 'm.forwarded_room_key',
+        content: {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': '!726s6s6q:example.com',
+          'session_id': validSessionId,
+          'session_key': sessionKey,
+          'sender_key': validSenderKey,
+          'forwarding_curve25519_key_chain': [],
+          'sender_claimed_ed25519_key':
+              'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
+        },
+        encryptedContent: {
+          'sender_key': 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption!.keyManager
-                  .getInboundGroupSession(requestRoom.id, validSessionId) !=
-              null,
-          false);
+        matrix.encryption!.keyManager
+                .getInboundGroupSession(requestRoom.id, validSessionId) !=
+            null,
+        false,
+      );
 
       // unknown device
       await matrix.encryption!.keyManager
           .request(requestRoom, validSessionId, null, tryOnlineBackup: false);
       matrix.encryption!.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.forwarded_room_key',
-          content: {
-            'algorithm': AlgorithmTypes.megolmV1AesSha2,
-            'room_id': '!726s6s6q:example.com',
-            'session_id': validSessionId,
-            'session_key': sessionKey,
-            'sender_key': validSenderKey,
-            'forwarding_curve25519_key_chain': [],
-            'sender_claimed_ed25519_key':
-                'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
-          },
-          encryptedContent: {
-            'sender_key': 'invalid',
-          });
+        sender: '@alice:example.com',
+        type: 'm.forwarded_room_key',
+        content: {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': '!726s6s6q:example.com',
+          'session_id': validSessionId,
+          'session_key': sessionKey,
+          'sender_key': validSenderKey,
+          'forwarding_curve25519_key_chain': [],
+          'sender_claimed_ed25519_key':
+              'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
+        },
+        encryptedContent: {
+          'sender_key': 'invalid',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption!.keyManager
-                  .getInboundGroupSession(requestRoom.id, validSessionId) !=
-              null,
-          false);
+        matrix.encryption!.keyManager
+                .getInboundGroupSession(requestRoom.id, validSessionId) !=
+            null,
+        false,
+      );
 
       // no encrypted content
       await matrix.encryption!.keyManager.request(
-          requestRoom, validSessionId, validSenderKey,
-          tryOnlineBackup: false);
+        requestRoom,
+        validSessionId,
+        validSenderKey,
+        tryOnlineBackup: false,
+      );
       matrix.encryption!.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.forwarded_room_key',
-          content: {
-            'algorithm': AlgorithmTypes.megolmV1AesSha2,
-            'room_id': '!726s6s6q:example.com',
-            'session_id': validSessionId,
-            'session_key': sessionKey,
-            'sender_key': validSenderKey,
-            'forwarding_curve25519_key_chain': [],
-            'sender_claimed_ed25519_key':
-                'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
-          });
+        sender: '@alice:example.com',
+        type: 'm.forwarded_room_key',
+        content: {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': '!726s6s6q:example.com',
+          'session_id': validSessionId,
+          'session_key': sessionKey,
+          'sender_key': validSenderKey,
+          'forwarding_curve25519_key_chain': [],
+          'sender_claimed_ed25519_key':
+              'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
+        },
+      );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption!.keyManager
-                  .getInboundGroupSession(requestRoom.id, validSessionId) !=
-              null,
-          false);
+        matrix.encryption!.keyManager
+                .getInboundGroupSession(requestRoom.id, validSessionId) !=
+            null,
+        false,
+      );
 
       // There is a non awaiting setInboundGroupSession call on the database
       await Future.delayed(Duration(seconds: 1));

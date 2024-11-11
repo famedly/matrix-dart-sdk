@@ -50,13 +50,24 @@ Future<ByteBuffer> decrypt(dynamic algorithm, dynamic key, Uint8List data) {
 }
 
 @JS('crypto.subtle.importKey')
-external dynamic _importKey(String format, dynamic keyData, dynamic algorithm,
-    bool extractable, List<String> keyUsages);
+external dynamic _importKey(
+  String format,
+  dynamic keyData,
+  dynamic algorithm,
+  bool extractable,
+  List<String> keyUsages,
+);
 
-Future<dynamic> importKey(String format, dynamic keyData, dynamic algorithm,
-    bool extractable, List<String> keyUsages) {
+Future<dynamic> importKey(
+  String format,
+  dynamic keyData,
+  dynamic algorithm,
+  bool extractable,
+  List<String> keyUsages,
+) {
   return promiseToFuture(
-      _importKey(format, keyData, algorithm, extractable, keyUsages));
+    _importKey(format, keyData, algorithm, extractable, keyUsages),
+  );
 }
 
 @JS('crypto.subtle.exportKey')
@@ -67,13 +78,30 @@ Future<dynamic> exportKey(String algorithm, dynamic key) {
 }
 
 @JS('crypto.subtle.deriveKey')
-external dynamic _deriveKey(dynamic algorithm, dynamic baseKey,
-    dynamic derivedKeyAlgorithm, bool extractable, List<String> keyUsages);
+external dynamic _deriveKey(
+  dynamic algorithm,
+  dynamic baseKey,
+  dynamic derivedKeyAlgorithm,
+  bool extractable,
+  List<String> keyUsages,
+);
 
-Future<ByteBuffer> deriveKey(dynamic algorithm, dynamic baseKey,
-    dynamic derivedKeyAlgorithm, bool extractable, List<String> keyUsages) {
-  return promiseToFuture(_deriveKey(
-      algorithm, baseKey, derivedKeyAlgorithm, extractable, keyUsages));
+Future<ByteBuffer> deriveKey(
+  dynamic algorithm,
+  dynamic baseKey,
+  dynamic derivedKeyAlgorithm,
+  bool extractable,
+  List<String> keyUsages,
+) {
+  return promiseToFuture(
+    _deriveKey(
+      algorithm,
+      baseKey,
+      derivedKeyAlgorithm,
+      extractable,
+      keyUsages,
+    ),
+  );
 }
 
 @JS('crypto.subtle.deriveBits')

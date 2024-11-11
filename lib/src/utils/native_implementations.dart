@@ -140,14 +140,17 @@ class NativeImplementationsIsolate extends NativeImplementations {
   // ignore: deprecated_member_use_from_same_package
   /// known from [Client.runInBackground]
   factory NativeImplementationsIsolate.fromRunInBackground(
-      ComputeRunner runInBackground) {
+    ComputeRunner runInBackground,
+  ) {
     return NativeImplementationsIsolate(
       computeCallbackFromRunInBackground(runInBackground),
     );
   }
 
   Future<T> runInBackground<T, U>(
-      FutureOr<T> Function(U arg) function, U arg) async {
+    FutureOr<T> Function(U arg) function,
+    U arg,
+  ) async {
     final compute = this.compute;
     return await compute(function, arg);
   }

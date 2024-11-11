@@ -45,8 +45,10 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
 }
 
 // ignore: deprecated_member_use_from_same_package
-Future<MatrixSdkDatabase> getMatrixSdkDatabase(Client? c,
-    {String? path}) async {
+Future<MatrixSdkDatabase> getMatrixSdkDatabase(
+  Client? c, {
+  String? path,
+}) async {
   final database = await databaseFactoryFfi.openDatabase(
     path ?? ':memory:',
     options: OpenDatabaseOptions(singleInstance: false),
