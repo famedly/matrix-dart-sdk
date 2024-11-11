@@ -1607,6 +1607,8 @@ class Room {
   /// [[Membership.join, Membership.invite, Membership.knock]]
   /// Set [cache] to `false` if you do not want to cache the users in memory
   /// for this session which is highly recommended for large public rooms.
+  /// By default users are only cached in encrypted rooms as encrypted rooms
+  /// need a full member list.
   Future<List<User>> requestParticipants([
     List<Membership> membershipFilter = const [
       Membership.join,
@@ -1614,7 +1616,7 @@ class Room {
       Membership.knock,
     ],
     bool suppressWarning = false,
-    bool cache = true,
+    bool? cache,
   ]) async {
     if (!participantListComplete || partial) {
       // we aren't fully loaded, maybe the users are in the database
@@ -1632,6 +1634,8 @@ class Room {
     if (participantListComplete) {
       return getParticipants(membershipFilter);
     }
+
+    cache ??= encrypted;
 
     final memberCount = summary.mJoinedMemberCount;
     if (!suppressWarning && cache && memberCount != null && memberCount > 100) {
@@ -1651,6 +1655,14 @@ class Room {
     if (cache) {
       for (final user in users) {
         setState(user); // at *least* cache this in-memory
+        await client.database?.storeEventUpdate(
+          EventUpdate(
+            roomID: id,
+            type: EventUpdateType.state,
+            content: user.toJson(),
+          ),
+          client,
+        );
       }
     }
 
