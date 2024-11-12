@@ -463,6 +463,11 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
+  Future<bool> deleteFile(Uri mxcUri) async {
+    return false;
+  }
+
+  @override
   Future<StoredInboundGroupSession?> getInboundGroupSession(
     String roomId,
     String sessionId,
