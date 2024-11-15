@@ -1673,7 +1673,7 @@ class Client extends MatrixApi {
 
   /// This gives the current status of the synchronization
   final CachedStreamController<SyncStatusUpdate> onSyncStatus =
-      CachedStreamController();
+      CachedStreamController(SyncStatusUpdate(SyncStatus.notLoggedIn));
 
   /// Callback will be called on presences.
   @Deprecated(
@@ -1951,6 +1951,7 @@ class Client extends MatrixApi {
         '[init()] has been called multiple times!',
       );
     }
+    onSyncStatus.add(SyncStatusUpdate(SyncStatus.initializing));
     _initLock = true;
     String? olmAccount;
     String? accessToken;
@@ -2042,6 +2043,8 @@ class Client extends MatrixApi {
 
       if (accessToken == null || homeserver == null || userID == null) {
         if (legacyDatabaseBuilder != null) {
+          onSyncStatus
+              .add(SyncStatusUpdate(SyncStatus.initializingDatabaseMigration));
           await _migrateFromLegacyDatabase(onMigration: onMigration);
           if (isLogged()) return;
         }
@@ -2065,7 +2068,11 @@ class Client extends MatrixApi {
         await encryption?.dispose();
         _encryption = null;
       }
+
+      onSyncStatus.add(SyncStatusUpdate(SyncStatus.initializingEncryption));
       await encryption?.init(olmAccount);
+
+      onSyncStatus.add(SyncStatusUpdate(SyncStatus.initializingFinalize));
 
       final database = this.database;
       if (database != null) {
@@ -2135,6 +2142,7 @@ class Client extends MatrixApi {
     } catch (e, s) {
       Logs().wtf('Client initialization failed', e, s);
       onLoginStateChanged.addError(e, s);
+      onSyncStatus.add(SyncStatusUpdate(SyncStatus.notLoggedIn));
       final clientInitException = ClientInitException(
         e,
         homeserver: homeserver,
@@ -3880,10 +3888,42 @@ class SyncStatusUpdate {
 }
 
 enum SyncStatus {
+  /// The client is not logged in so the sync loop has not started
+  notLoggedIn,
+
+  /// The client has started initializing. For this it loads data from the
+  /// database or updates it.
+  initializing,
+
+  /// The client initializes the encryption and if necessary uploads encryption
+  /// keys to the server.
+  initializingEncryption,
+
+  /// The client migrates to a new database version.
+  initializingDatabaseMigration,
+
+  /// The client finishes the initalization process and (if configured in the
+  /// `Client.init()` call) waits for the room list, account data and device
+  /// keys to be loaded from the database.
+  initializingFinalize,
+
+  /// The client waits for the next sync response from the server.
   waitingForResponse,
+
+  /// The client stores the sync response in the database and updates the
+  /// cache.
   processing,
+
+  /// The client performs some clean up tasks and updates the device keys. For
+  /// this is may do some network requests to the server.
   cleaningUp,
+
+  /// An iteration of the sync loop has been finished and the next will start
+  /// if all requirements are fulfilled.
   finished,
+
+  /// An error has occured in the sync loop (not in the init process). If all
+  /// requirements are fulfilled, it will be retried after a short period.
   error,
 }
 
