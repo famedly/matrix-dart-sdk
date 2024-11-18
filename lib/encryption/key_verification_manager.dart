@@ -126,9 +126,15 @@ class KeyVerificationManager {
       final room = client.getRoomById(update.roomID) ??
           Room(id: update.roomID, client: client);
       final newKeyRequest = KeyVerification(
-          encryption: encryption, userId: event['sender'], room: room);
+        encryption: encryption,
+        userId: event['sender'],
+        room: room,
+      );
       await newKeyRequest.handlePayload(
-          type, event['content'], event['event_id']);
+        type,
+        event['content'],
+        event['event_id'],
+      );
       if (newKeyRequest.state != KeyVerificationState.askAccept) {
         // something went wrong, let's just dispose the request
         newKeyRequest.dispose();

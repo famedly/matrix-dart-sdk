@@ -61,7 +61,9 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String changedTheGuestAccessRulesTo(
-          String senderName, String localizedString) =>
+    String senderName,
+    String localizedString,
+  ) =>
       '$senderName changed the guest access rules to $localizedString';
 
   @override
@@ -70,7 +72,9 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String changedTheHistoryVisibilityTo(
-          String senderName, String localizedString) =>
+    String senderName,
+    String localizedString,
+  ) =>
       '$senderName changed the history visibility to $localizedString';
 
   @override
@@ -124,6 +128,9 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String get guestsCanJoin => 'Guests can join';
+
+  @override
+  String get cancelledSend => 'Cancelled sending message';
 
   @override
   String hasWithdrawnTheInvitationFor(String senderName, String targetName) =>

@@ -71,7 +71,10 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     } catch (e, s) {
       if (!retryInDummy) {
         Logs().e(
-            'Web worker computation error. Ignoring and returning null', e, s);
+          'Web worker computation error. Ignoring and returning null',
+          e,
+          s,
+        );
         return null;
       }
       Logs().e('Web worker computation error. Fallback to main thread', e, s);
@@ -94,7 +97,10 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     } catch (e, s) {
       if (!retryInDummy) {
         Logs().e(
-            'Web worker computation error. Ignoring and returning null', e, s);
+          'Web worker computation error. Ignoring and returning null',
+          e,
+          s,
+        );
         return null;
       }
       Logs().e('Web worker computation error. Fallback to main thread', e, s);
@@ -149,4 +155,5 @@ class WebWorkerError extends Error {
 
 /// converts a stringifyed, obfuscated [StackTrace] into a [StackTrace]
 typedef WebWorkerStackTraceCallback = FutureOr<StackTrace> Function(
-    String obfuscatedStackTrace);
+  String obfuscatedStackTrace,
+);

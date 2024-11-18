@@ -66,10 +66,16 @@ class BoxCollection with ZoneTransactionMixin {
         },
       );
 
-  Future<void> close() => _db.close();
+  Future<void> close() => zoneTransaction(() => _db.close());
 
+  @Deprecated('use collection.deleteDatabase now')
   static Future<void> delete(String path, [dynamic factory]) =>
       (factory ?? databaseFactory).deleteDatabase(path);
+
+  Future<void> deleteDatabase(String path, [dynamic factory]) async {
+    await close();
+    await (factory ?? databaseFactory).deleteDatabase(path);
+  }
 }
 
 class Box<V> {
@@ -121,7 +127,8 @@ class Box<V> {
     if (value == null) return null;
     if (value is! String) {
       throw Exception(
-          'Wrong database type! Expected String but got one of type ${value.runtimeType}');
+        'Wrong database type! Expected String but got one of type ${value.runtimeType}',
+      );
     }
     switch (V) {
       case const (int):

@@ -17,7 +17,7 @@
  */
 
 /// Matrix SDK written in pure Dart.
-library matrix;
+library;
 
 export 'matrix_api_lite.dart';
 
@@ -52,6 +52,7 @@ export 'src/voip/utils/wrapped_media_stream.dart';
 export 'src/room.dart';
 export 'src/timeline.dart';
 export 'src/user.dart';
+export 'src/utils/cached_profile_information.dart';
 export 'src/utils/commands_extension.dart';
 export 'src/utils/crypto/encrypted_file.dart';
 export 'src/utils/device_keys_list.dart';
@@ -72,6 +73,7 @@ export 'src/utils/sync_update_extension.dart';
 export 'src/utils/to_device_event.dart';
 export 'src/utils/uia_request.dart';
 export 'src/utils/uri_extension.dart';
+export 'src/models/login_type.dart';
 
 export 'msc_extensions/extension_recent_emoji/recent_emoji.dart';
 export 'msc_extensions/msc_3935_cute_events/msc_3935_cute_events.dart';

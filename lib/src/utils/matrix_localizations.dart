@@ -60,6 +60,8 @@ abstract class MatrixLocalizations {
 
   String get unknownUser;
 
+  String get cancelledSend;
+
   String youInvitedBy(String senderName);
 
   String invitedBy(String senderName);
@@ -129,12 +131,16 @@ abstract class MatrixLocalizations {
   String changedTheGuestAccessRules(String senderName);
 
   String changedTheGuestAccessRulesTo(
-      String senderName, String localizedString);
+    String senderName,
+    String localizedString,
+  );
 
   String changedTheHistoryVisibility(String senderName);
 
   String changedTheHistoryVisibilityTo(
-      String senderName, String localizedString);
+    String senderName,
+    String localizedString,
+  );
 
   String activatedEndToEndEncryption(String senderName);
 

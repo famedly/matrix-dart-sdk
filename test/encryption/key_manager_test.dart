@@ -43,71 +43,86 @@ void main() {
 
       client.encryption!.keyManager.clearInboundGroupSessions();
       var event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.room_key',
-          content: {
-            'algorithm': AlgorithmTypes.megolmV1AesSha2,
-            'room_id': '!726s6s6q:example.com',
-            'session_id': validSessionId,
-            'session_key': sessionKey,
-          },
-          encryptedContent: {
-            'sender_key': validSenderKey,
-          });
+        sender: '@alice:example.com',
+        type: 'm.room_key',
+        content: {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': '!726s6s6q:example.com',
+          'session_id': validSessionId,
+          'session_key': sessionKey,
+        },
+        encryptedContent: {
+          'sender_key': validSenderKey,
+        },
+      );
       await client.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          client.encryption!.keyManager.getInboundGroupSession(
-                  '!726s6s6q:example.com', validSessionId) !=
-              null,
-          true);
+        client.encryption!.keyManager.getInboundGroupSession(
+              '!726s6s6q:example.com',
+              validSessionId,
+            ) !=
+            null,
+        true,
+      );
 
       // now test a few invalid scenarios
 
       // not encrypted
       client.encryption!.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
-          sender: '@alice:example.com',
-          type: 'm.room_key',
-          content: {
-            'algorithm': AlgorithmTypes.megolmV1AesSha2,
-            'room_id': '!726s6s6q:example.com',
-            'session_id': validSessionId,
-            'session_key': sessionKey,
-          });
+        sender: '@alice:example.com',
+        type: 'm.room_key',
+        content: {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': '!726s6s6q:example.com',
+          'session_id': validSessionId,
+          'session_key': sessionKey,
+        },
+      );
       await client.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          client.encryption!.keyManager.getInboundGroupSession(
-                  '!726s6s6q:example.com', validSessionId) !=
-              null,
-          false);
+        client.encryption!.keyManager.getInboundGroupSession(
+              '!726s6s6q:example.com',
+              validSessionId,
+            ) !=
+            null,
+        false,
+      );
     });
 
     test('outbound group session', () async {
       final roomId = '!726s6s6q:example.com';
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          false);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        false,
+      );
       var sess = await client.encryption!.keyManager
           .createOutboundGroupSession(roomId);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          true);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        true,
+      );
       await client.encryption!.keyManager
           .clearOrUseOutboundGroupSession(roomId);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          true);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        true,
+      );
       var inbound = client.encryption!.keyManager.getInboundGroupSession(
-          roomId, sess.outboundGroupSession!.session_id());
+        roomId,
+        sess.outboundGroupSession!.session_id(),
+      );
       expect(inbound != null, true);
       expect(
-          inbound!.allowedAtIndex['@alice:example.com']
-              ?['L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8'],
-          0);
+        inbound!.allowedAtIndex['@alice:example.com']
+            ?['L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8'],
+        0,
+      );
       expect(
-          inbound.allowedAtIndex['@alice:example.com']
-              ?['wMIDhiQl5jEXQrTB03ePOSQfR8sA/KMrW0CIfFfXKEE'],
-          0);
+        inbound.allowedAtIndex['@alice:example.com']
+            ?['wMIDhiQl5jEXQrTB03ePOSQfR8sA/KMrW0CIfFfXKEE'],
+        0,
+      );
 
       // rotate after too many messages
       for (final _ in Iterable.generate(300)) {
@@ -116,8 +131,9 @@ void main() {
       await client.encryption!.keyManager
           .clearOrUseOutboundGroupSession(roomId);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          false);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        false,
+      );
 
       // rotate if device is blocked
       sess = await client.encryption!.keyManager
@@ -127,8 +143,9 @@ void main() {
       await client.encryption!.keyManager
           .clearOrUseOutboundGroupSession(roomId);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          false);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        false,
+      );
       client.userDeviceKeys['@alice:example.com']!.deviceKeys['JLAFKJWSCS']!
           .blocked = false;
 
@@ -140,15 +157,17 @@ void main() {
           .blocked = true;
       await client.encryption!.keyManager.prepareOutboundGroupSession(roomId);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          true);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        true,
+      );
       expect(
-          client.encryption!.keyManager
-                  .getOutboundGroupSession(roomId)!
-                  .outboundGroupSession!
-                  .session_key() !=
-              oldSessKey,
-          true);
+        client.encryption!.keyManager
+                .getOutboundGroupSession(roomId)!
+                .outboundGroupSession!
+                .session_key() !=
+            oldSessKey,
+        true,
+      );
       client.userDeviceKeys['@alice:example.com']!.deviceKeys['JLAFKJWSCS']!
           .blocked = false;
 
@@ -159,8 +178,9 @@ void main() {
       await client.encryption!.keyManager
           .clearOrUseOutboundGroupSession(roomId);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          false);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        false,
+      );
 
       // rotate if user leaves
       sess = await client.encryption!.keyManager
@@ -172,8 +192,9 @@ void main() {
       await client.encryption!.keyManager
           .clearOrUseOutboundGroupSession(roomId);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          false);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        false,
+      );
       member.content['membership'] = 'join';
       room.summary.mJoinedMemberCount = room.summary.mJoinedMemberCount! + 1;
 
@@ -181,45 +202,56 @@ void main() {
       sess = await client.encryption!.keyManager
           .createOutboundGroupSession(roomId);
       sess.outboundGroupSession!.encrypt(
-          'foxies'); // so that the new device will have a different index
+        'foxies',
+      ); // so that the new device will have a different index
       client.userDeviceKeys['@alice:example.com']?.deviceKeys['NEWDEVICE'] =
-          DeviceKeys.fromJson({
-        'user_id': '@alice:example.com',
-        'device_id': 'NEWDEVICE',
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2
-        ],
-        'keys': {
-          'curve25519:NEWDEVICE': 'bnKQp6pPW0l9cGoIgHpBoK5OUi4h0gylJ7upc4asFV8',
-          'ed25519:NEWDEVICE': 'ZZhPdvWYg3MRpGy2MwtI+4MHXe74wPkBli5hiEOUi8Y'
+          DeviceKeys.fromJson(
+        {
+          'user_id': '@alice:example.com',
+          'device_id': 'NEWDEVICE',
+          'algorithms': [
+            AlgorithmTypes.olmV1Curve25519AesSha2,
+            AlgorithmTypes.megolmV1AesSha2,
+          ],
+          'keys': {
+            'curve25519:NEWDEVICE':
+                'bnKQp6pPW0l9cGoIgHpBoK5OUi4h0gylJ7upc4asFV8',
+            'ed25519:NEWDEVICE': 'ZZhPdvWYg3MRpGy2MwtI+4MHXe74wPkBli5hiEOUi8Y',
+          },
+          'signatures': {
+            '@alice:example.com': {
+              'ed25519:NEWDEVICE':
+                  '94GSg8N9vNB8wyWHJtKaaX3MGNWPVOjBatJM+TijY6B1RlDFJT5Cl1h/tjr17AoQz0CDdOf6uFhrYsBkH1/ABg',
+            },
+          },
         },
-        'signatures': {
-          '@alice:example.com': {
-            'ed25519:NEWDEVICE':
-                '94GSg8N9vNB8wyWHJtKaaX3MGNWPVOjBatJM+TijY6B1RlDFJT5Cl1h/tjr17AoQz0CDdOf6uFhrYsBkH1/ABg'
-          }
-        }
-      }, client);
+        client,
+      );
       await client.encryption!.keyManager
           .clearOrUseOutboundGroupSession(roomId);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          true);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        true,
+      );
       inbound = client.encryption!.keyManager.getInboundGroupSession(
-          roomId, sess.outboundGroupSession!.session_id());
+        roomId,
+        sess.outboundGroupSession!.session_id(),
+      );
       expect(
-          inbound!.allowedAtIndex['@alice:example.com']
-              ?['L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8'],
-          0);
+        inbound!.allowedAtIndex['@alice:example.com']
+            ?['L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8'],
+        0,
+      );
       expect(
-          inbound.allowedAtIndex['@alice:example.com']
-              ?['wMIDhiQl5jEXQrTB03ePOSQfR8sA/KMrW0CIfFfXKEE'],
-          0);
+        inbound.allowedAtIndex['@alice:example.com']
+            ?['wMIDhiQl5jEXQrTB03ePOSQfR8sA/KMrW0CIfFfXKEE'],
+        0,
+      );
       expect(
-          inbound.allowedAtIndex['@alice:example.com']
-              ?['bnKQp6pPW0l9cGoIgHpBoK5OUi4h0gylJ7upc4asFV8'],
-          1);
+        inbound.allowedAtIndex['@alice:example.com']
+            ?['bnKQp6pPW0l9cGoIgHpBoK5OUi4h0gylJ7upc4asFV8'],
+        1,
+      );
 
       // do not rotate if new user is added
       member.content['membership'] = 'leave';
@@ -231,8 +263,9 @@ void main() {
       await client.encryption!.keyManager
           .clearOrUseOutboundGroupSession(roomId);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          true);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        true,
+      );
 
       // force wipe
       sess = await client.encryption!.keyManager
@@ -240,20 +273,23 @@ void main() {
       await client.encryption!.keyManager
           .clearOrUseOutboundGroupSession(roomId, wipe: true);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          false);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        false,
+      );
 
       // load from database
       sess = await client.encryption!.keyManager
           .createOutboundGroupSession(roomId);
       client.encryption!.keyManager.clearOutboundGroupSessions();
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          false);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        false,
+      );
       await client.encryption!.keyManager.loadOutboundGroupSession(roomId);
       expect(
-          client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
-          true);
+        client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
+        true,
+      );
     });
 
     test('inbound group session', () async {
@@ -265,48 +301,54 @@ void main() {
         'room_id': '!726s6s6q:example.com',
         'session_id': 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU',
         'session_key':
-            'AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw'
+            'AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw',
       };
       client.encryption!.keyManager.clearInboundGroupSessions();
       expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId) !=
-              null,
-          false);
+        client.encryption!.keyManager
+                .getInboundGroupSession(roomId, sessionId) !=
+            null,
+        false,
+      );
       await client.encryption!.keyManager
           .setInboundGroupSession(roomId, sessionId, senderKey, sessionContent);
       expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId) !=
-              null,
-          true);
+        client.encryption!.keyManager
+                .getInboundGroupSession(roomId, sessionId) !=
+            null,
+        true,
+      );
 
       expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId) !=
-              null,
-          true);
+        client.encryption!.keyManager
+                .getInboundGroupSession(roomId, sessionId) !=
+            null,
+        true,
+      );
 
       client.encryption!.keyManager.clearInboundGroupSessions();
       expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId) !=
-              null,
-          false);
+        client.encryption!.keyManager
+                .getInboundGroupSession(roomId, sessionId) !=
+            null,
+        false,
+      );
       await client.encryption!.keyManager
           .loadInboundGroupSession(roomId, sessionId);
       expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId) !=
-              null,
-          true);
+        client.encryption!.keyManager
+                .getInboundGroupSession(roomId, sessionId) !=
+            null,
+        true,
+      );
 
       client.encryption!.keyManager.clearInboundGroupSessions();
       expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId) !=
-              null,
-          false);
+        client.encryption!.keyManager
+                .getInboundGroupSession(roomId, sessionId) !=
+            null,
+        false,
+      );
     });
 
     test('setInboundGroupSession', () async {
@@ -323,31 +365,41 @@ void main() {
           .timeout(const Duration(seconds: 5));
       client.rooms.add(room);
       // we build up an encrypted message so that we can test if it successfully decrypted afterwards
-      await client.handleSync(SyncUpdate(
+      await client.handleSync(
+        SyncUpdate(
           nextBatch: '',
-          rooms: RoomsUpdate(join: {
-            room.id: JoinedRoomUpdate(
-                timeline: TimelineUpdate(events: [
-              Event(
-                senderId: '@test:example.com',
-                type: 'm.room.encrypted',
-                room: room,
-                eventId: '12345',
-                originServerTs: DateTime.now(),
-                content: {
-                  'algorithm': AlgorithmTypes.megolmV1AesSha2,
-                  'ciphertext': session.encrypt(json.encode({
-                    'type': 'm.room.message',
-                    'content': {'msgtype': 'm.text', 'body': 'foxies'},
-                  })),
-                  'device_id': client.deviceID,
-                  'sender_key': client.identityKey,
-                  'session_id': sessionId,
-                },
-                stateKey: '',
-              )
-            ]))
-          })));
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    Event(
+                      senderId: '@test:example.com',
+                      type: 'm.room.encrypted',
+                      room: room,
+                      eventId: '12345',
+                      originServerTs: DateTime.now(),
+                      content: {
+                        'algorithm': AlgorithmTypes.megolmV1AesSha2,
+                        'ciphertext': session.encrypt(
+                          json.encode({
+                            'type': 'm.room.message',
+                            'content': {'msgtype': 'm.text', 'body': 'foxies'},
+                          }),
+                        ),
+                        'device_id': client.deviceID,
+                        'sender_key': client.identityKey,
+                        'session_id': sessionId,
+                      },
+                      stateKey: '',
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
       expect(room.lastEvent?.type, 'm.room.encrypted');
       // set a payload...
       var sessionPayload = <String, dynamic>{
@@ -360,20 +412,26 @@ void main() {
         'sender_claimed_ed25519_key': client.fingerprintKey,
       };
       await client.encryption!.keyManager.setInboundGroupSession(
-          roomId, sessionId, senderKey, sessionPayload,
-          forwarded: true);
+        roomId,
+        sessionId,
+        senderKey,
+        sessionPayload,
+        forwarded: true,
+      );
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.inboundGroupSession
-              ?.first_known_index(),
-          1);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.inboundGroupSession
+            ?.first_known_index(),
+        1,
+      );
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.forwardingCurve25519KeyChain
-              .length,
-          1);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.forwardingCurve25519KeyChain
+            .length,
+        1,
+      );
 
       // not set one with a higher first known index
       sessionPayload = <String, dynamic>{
@@ -386,20 +444,26 @@ void main() {
         'sender_claimed_ed25519_key': client.fingerprintKey,
       };
       await client.encryption!.keyManager.setInboundGroupSession(
-          roomId, sessionId, senderKey, sessionPayload,
-          forwarded: true);
+        roomId,
+        sessionId,
+        senderKey,
+        sessionPayload,
+        forwarded: true,
+      );
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.inboundGroupSession
-              ?.first_known_index(),
-          1);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.inboundGroupSession
+            ?.first_known_index(),
+        1,
+      );
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.forwardingCurve25519KeyChain
-              .length,
-          1);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.forwardingCurve25519KeyChain
+            .length,
+        1,
+      );
 
       // set one with a lower first known index
       sessionPayload = <String, dynamic>{
@@ -412,20 +476,26 @@ void main() {
         'sender_claimed_ed25519_key': client.fingerprintKey,
       };
       await client.encryption!.keyManager.setInboundGroupSession(
-          roomId, sessionId, senderKey, sessionPayload,
-          forwarded: true);
+        roomId,
+        sessionId,
+        senderKey,
+        sessionPayload,
+        forwarded: true,
+      );
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.inboundGroupSession
-              ?.first_known_index(),
-          0);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.inboundGroupSession
+            ?.first_known_index(),
+        0,
+      );
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.forwardingCurve25519KeyChain
-              .length,
-          1);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.forwardingCurve25519KeyChain
+            .length,
+        1,
+      );
 
       // not set one with a longer forwarding chain
       sessionPayload = <String, dynamic>{
@@ -438,20 +508,26 @@ void main() {
         'sender_claimed_ed25519_key': client.fingerprintKey,
       };
       await client.encryption!.keyManager.setInboundGroupSession(
-          roomId, sessionId, senderKey, sessionPayload,
-          forwarded: true);
+        roomId,
+        sessionId,
+        senderKey,
+        sessionPayload,
+        forwarded: true,
+      );
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.inboundGroupSession
-              ?.first_known_index(),
-          0);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.inboundGroupSession
+            ?.first_known_index(),
+        0,
+      );
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.forwardingCurve25519KeyChain
-              .length,
-          1);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.forwardingCurve25519KeyChain
+            .length,
+        1,
+      );
 
       // set one with a shorter forwarding chain
       sessionPayload = <String, dynamic>{
@@ -464,20 +540,26 @@ void main() {
         'sender_claimed_ed25519_key': client.fingerprintKey,
       };
       await client.encryption!.keyManager.setInboundGroupSession(
-          roomId, sessionId, senderKey, sessionPayload,
-          forwarded: true);
+        roomId,
+        sessionId,
+        senderKey,
+        sessionPayload,
+        forwarded: true,
+      );
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.inboundGroupSession
-              ?.first_known_index(),
-          0);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.inboundGroupSession
+            ?.first_known_index(),
+        0,
+      );
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.forwardingCurve25519KeyChain
-              .length,
-          0);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.forwardingCurve25519KeyChain
+            .length,
+        0,
+      );
 
       // test that it decrypted the last event
       expect(room.lastEvent?.type, 'm.room.message');
@@ -497,10 +579,10 @@ void main() {
 
       // Ensure the device came from sync
       expect(
-          client.userDeviceKeys['@alice:example.com']
-                  ?.deviceKeys['JLAFKJWSCS'] !=
-              null,
-          true);
+        client.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS'] !=
+            null,
+        true,
+      );
 
       // Alice removes her device
       client.userDeviceKeys['@alice:example.com']?.deviceKeys
@@ -515,27 +597,28 @@ void main() {
           'device_id': 'JLAFKJWSCS',
           'algorithms': [
             'm.olm.v1.curve25519-aes-sha2',
-            'm.megolm.v1.aes-sha2'
+            'm.megolm.v1.aes-sha2',
           ],
           'keys': {
             'curve25519:JLAFKJWSCS':
                 'WbwrNyD7nvtmcLQ0TTuVPFGJq6JznfjrVsjIpmBqvDw',
-            'ed25519:JLAFKJWSCS': 'vl0d54pTVRcvBgUzoQFa8e6TldHWG9O8bh0iuIvgd/I'
+            'ed25519:JLAFKJWSCS': 'vl0d54pTVRcvBgUzoQFa8e6TldHWG9O8bh0iuIvgd/I',
           },
           'signatures': {
             '@alice:example.com': {
               'ed25519:JLAFKJWSCS':
-                  's/L86jLa8BTroL8GsBeqO0gRLC3ZrSA7Gch6UoLI2SefC1+1ycmnP9UGbLPh3qBJOmlhczMpBLZwelg87qNNDA'
-            }
-          }
+                  's/L86jLa8BTroL8GsBeqO0gRLC3ZrSA7Gch6UoLI2SefC1+1ycmnP9UGbLPh3qBJOmlhczMpBLZwelg87qNNDA',
+            },
+          },
         };
         return oldResp;
       };
       client.userDeviceKeys['@alice:example.com']!.outdated = true;
       await client.updateUserDeviceKeys();
       expect(
-          client.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS'],
-          null);
+        client.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS'],
+        null,
+      );
     });
 
     test('dispose client', () async {

@@ -26,18 +26,25 @@ const ssssKey = 'EsT9 RzbW VhPW yqNp cC7j ViiW 5TZB LuY4 ryyv 9guN Ysmr WDPH';
 const pickledOlmAccount =
     'N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtuyg3RxViwdNxs3718fyAqQ/VSwbXsY0Nl+qQbF+nlVGHenGqk5SuNl1P6e1PzZxcR0IfXA94Xij1Ob5gDv5YH4UCn9wRMG0abZsQP0YzpDM0FLaHSCyo9i5JD/vMlhH+nZWrgAzPPCTNGYewNV8/h3c+VyJh8ZTx/fVi6Yq46Fv+27Ga2ETRZ3Qn+Oyx6dLBjnBZ9iUvIhqpe2XqaGA1PopOz8iDnaZitw';
 
-Future<Client> getClient(
-    {Duration sendTimelineEventTimeout = const Duration(minutes: 1)}) async {
+/// only use `path` if you explicitly if you need a db on path instead of in mem
+Future<Client> getClient({
+  Duration sendTimelineEventTimeout = const Duration(minutes: 1),
+  String? databasePath,
+}) async {
   final client = Client(
+    logLevel: Level.verbose,
     'testclient',
     httpClient: FakeMatrixApi(),
-    databaseBuilder: getDatabase,
+    databaseBuilder: (client) =>
+        getDatabase(client, databasePath: databasePath),
     onSoftLogout: (client) => client.refreshAccessToken(),
     sendTimelineEventTimeout: sendTimelineEventTimeout,
   );
   FakeMatrixApi.client = client;
-  await client.checkHomeserver(Uri.parse('https://fakeServer.notExisting'),
-      checkWellKnown: false);
+  await client.checkHomeserver(
+    Uri.parse('https://fakeServer.notExisting'),
+    checkWellKnown: false,
+  );
   await client.init(
     newToken: 'abcd',
     newRefreshToken: 'refresh_abcd',
@@ -48,6 +55,7 @@ Future<Client> getClient(
     newOlmAccount: pickledOlmAccount,
   );
   await Future.delayed(Duration(milliseconds: 10));
+  await client.abortSync();
   return client;
 }
 
@@ -58,8 +66,10 @@ Future<Client> getOtherClient() async {
     databaseBuilder: getDatabase,
   );
   FakeMatrixApi.client = client;
-  await client.checkHomeserver(Uri.parse('https://fakeServer.notExisting'),
-      checkWellKnown: false);
+  await client.checkHomeserver(
+    Uri.parse('https://fakeServer.notExisting'),
+    checkWellKnown: false,
+  );
   await client.init(
     newToken: '1234',
     newUserID: '@test:fakeServer.notExisting',

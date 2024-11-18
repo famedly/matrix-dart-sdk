@@ -2,7 +2,7 @@ class UserMediaConstraints {
   static const Map<String, Object> micMediaConstraints = {
     'echoCancellation': true,
     'noiseSuppression': true,
-    'autoGainControl': false
+    'autoGainControl': false,
   };
 
   static const Map<String, Object> camMediaConstraints = {

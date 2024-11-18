@@ -1,3 +1,6 @@
+import 'dart:core' as dart;
+import 'dart:core';
+
 import 'package:enhanced_enum/enhanced_enum.dart';
 
 import 'package:matrix/matrix_api_lite/model/children_state.dart';
@@ -26,6 +29,16 @@ class HomeserverInformation {
 
   /// The base URL for the homeserver for client-server connections.
   Uri baseUrl;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is HomeserverInformation &&
+          other.runtimeType == runtimeType &&
+          other.baseUrl == baseUrl);
+
+  @dart.override
+  int get hashCode => baseUrl.hashCode;
 }
 
 ///
@@ -43,6 +56,16 @@ class IdentityServerInformation {
 
   /// The base URL for the identity server for client-server connections.
   Uri baseUrl;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IdentityServerInformation &&
+          other.runtimeType == runtimeType &&
+          other.baseUrl == baseUrl);
+
+  @dart.override
+  int get hashCode => baseUrl.hashCode;
 }
 
 /// Used by clients to determine the homeserver, identity server, and other
@@ -57,14 +80,18 @@ class DiscoveryInformation {
 
   DiscoveryInformation.fromJson(Map<String, Object?> json)
       : mHomeserver = HomeserverInformation.fromJson(
-            json['m.homeserver'] as Map<String, Object?>),
+          json['m.homeserver'] as Map<String, Object?>,
+        ),
         mIdentityServer = ((v) => v != null
             ? IdentityServerInformation.fromJson(v as Map<String, Object?>)
             : null)(json['m.identity_server']),
-        additionalProperties = Map.fromEntries(json.entries
-            .where(
-                (e) => !['m.homeserver', 'm.identity_server'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value as Map<String, Object?>)));
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where(
+                (e) => !['m.homeserver', 'm.identity_server'].contains(e.key),
+              )
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
     final mIdentityServer = this.mIdentityServer;
     return {
@@ -81,7 +108,262 @@ class DiscoveryInformation {
   /// Used by clients to discover identity server information.
   IdentityServerInformation? mIdentityServer;
 
-  Map<String, Map<String, Object?>> additionalProperties;
+  Map<String, Object?> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DiscoveryInformation &&
+          other.runtimeType == runtimeType &&
+          other.mHomeserver == mHomeserver &&
+          other.mIdentityServer == mIdentityServer);
+
+  @dart.override
+  int get hashCode => Object.hash(mHomeserver, mIdentityServer);
+}
+
+///
+@_NameSource('generated')
+@EnhancedEnum()
+enum Role {
+  @EnhancedEnumValue(name: 'm.role.admin')
+  mRoleAdmin,
+  @EnhancedEnumValue(name: 'm.role.security')
+  mRoleSecurity
+}
+
+/// A way to contact the server administrator.
+@_NameSource('spec')
+class Contact {
+  Contact({
+    this.emailAddress,
+    this.matrixId,
+    required this.role,
+  });
+
+  Contact.fromJson(Map<String, Object?> json)
+      : emailAddress =
+            ((v) => v != null ? v as String : null)(json['email_address']),
+        matrixId = ((v) => v != null ? v as String : null)(json['matrix_id']),
+        role = Role.values.fromString(json['role'] as String)!;
+  Map<String, Object?> toJson() {
+    final emailAddress = this.emailAddress;
+    final matrixId = this.matrixId;
+    return {
+      if (emailAddress != null) 'email_address': emailAddress,
+      if (matrixId != null) 'matrix_id': matrixId,
+      'role': role.name,
+    };
+  }
+
+  /// An email address to reach the administrator.
+  ///
+  /// At least one of `matrix_id` or `email_address` is
+  /// required.
+  String? emailAddress;
+
+  /// A [Matrix User ID](https://spec.matrix.org/unstable/appendices/#user-identifiers)
+  /// representing the administrator.
+  ///
+  /// It could be an account registered on a different
+  /// homeserver so the administrator can be contacted
+  /// when the homeserver is down.
+  ///
+  /// At least one of `matrix_id` or `email_address` is
+  /// required.
+  String? matrixId;
+
+  /// An informal description of what the contact methods
+  /// are used for.
+  ///
+  /// `m.role.admin` is a catch-all role for any queries
+  /// and `m.role.security` is intended for sensitive
+  /// requests.
+  ///
+  /// Unspecified roles are permitted through the use of
+  /// [Namespaced Identifiers](https://spec.matrix.org/unstable/appendices/#common-namespaced-identifier-grammar).
+  Role role;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Contact &&
+          other.runtimeType == runtimeType &&
+          other.emailAddress == emailAddress &&
+          other.matrixId == matrixId &&
+          other.role == role);
+
+  @dart.override
+  int get hashCode => Object.hash(emailAddress, matrixId, role);
+}
+
+///
+@_NameSource('generated')
+class GetWellknownSupportResponse {
+  GetWellknownSupportResponse({
+    this.contacts,
+    this.supportPage,
+  });
+
+  GetWellknownSupportResponse.fromJson(Map<String, Object?> json)
+      : contacts = ((v) => v != null
+            ? (v as List)
+                .map((v) => Contact.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['contacts']),
+        supportPage =
+            ((v) => v != null ? v as String : null)(json['support_page']);
+  Map<String, Object?> toJson() {
+    final contacts = this.contacts;
+    final supportPage = this.supportPage;
+    return {
+      if (contacts != null)
+        'contacts': contacts.map((v) => v.toJson()).toList(),
+      if (supportPage != null) 'support_page': supportPage,
+    };
+  }
+
+  /// Ways to contact the server administrator.
+  ///
+  /// At least one of `contacts` or `support_page` is required.
+  /// If only `contacts` is set, it must contain at least one
+  /// item.
+  List<Contact>? contacts;
+
+  /// The URL of a page to give users help specific to the
+  /// homeserver, like extra login/registration steps.
+  ///
+  /// At least one of `contacts` or `support_page` is required.
+  String? supportPage;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetWellknownSupportResponse &&
+          other.runtimeType == runtimeType &&
+          other.contacts == contacts &&
+          other.supportPage == supportPage);
+
+  @dart.override
+  int get hashCode => Object.hash(contacts, supportPage);
+}
+
+///
+@_NameSource('generated')
+class GenerateLoginTokenResponse {
+  GenerateLoginTokenResponse({
+    required this.expiresInMs,
+    required this.loginToken,
+  });
+
+  GenerateLoginTokenResponse.fromJson(Map<String, Object?> json)
+      : expiresInMs = json['expires_in_ms'] as int,
+        loginToken = json['login_token'] as String;
+  Map<String, Object?> toJson() => {
+        'expires_in_ms': expiresInMs,
+        'login_token': loginToken,
+      };
+
+  /// The time remaining in milliseconds until the homeserver will no longer accept the token. `120000`
+  /// (2 minutes) is recommended as a default.
+  int expiresInMs;
+
+  /// The login token for the `m.login.token` login flow.
+  String loginToken;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GenerateLoginTokenResponse &&
+          other.runtimeType == runtimeType &&
+          other.expiresInMs == expiresInMs &&
+          other.loginToken == loginToken);
+
+  @dart.override
+  int get hashCode => Object.hash(expiresInMs, loginToken);
+}
+
+///
+@_NameSource('rule override generated')
+class MediaConfig {
+  MediaConfig({
+    this.mUploadSize,
+  });
+
+  MediaConfig.fromJson(Map<String, Object?> json)
+      : mUploadSize =
+            ((v) => v != null ? v as int : null)(json['m.upload.size']);
+  Map<String, Object?> toJson() {
+    final mUploadSize = this.mUploadSize;
+    return {
+      if (mUploadSize != null) 'm.upload.size': mUploadSize,
+    };
+  }
+
+  /// The maximum size an upload can be in bytes.
+  /// Clients SHOULD use this as a guide when uploading content.
+  /// If not listed or null, the size limit should be treated as unknown.
+  int? mUploadSize;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MediaConfig &&
+          other.runtimeType == runtimeType &&
+          other.mUploadSize == mUploadSize);
+
+  @dart.override
+  int get hashCode => mUploadSize.hashCode;
+}
+
+///
+@_NameSource('rule override generated')
+class PreviewForUrl {
+  PreviewForUrl({
+    this.matrixImageSize,
+    this.ogImage,
+  });
+
+  PreviewForUrl.fromJson(Map<String, Object?> json)
+      : matrixImageSize =
+            ((v) => v != null ? v as int : null)(json['matrix:image:size']),
+        ogImage = ((v) =>
+            v != null ? Uri.parse(v as String) : null)(json['og:image']);
+  Map<String, Object?> toJson() {
+    final matrixImageSize = this.matrixImageSize;
+    final ogImage = this.ogImage;
+    return {
+      if (matrixImageSize != null) 'matrix:image:size': matrixImageSize,
+      if (ogImage != null) 'og:image': ogImage.toString(),
+    };
+  }
+
+  /// The byte-size of the image. Omitted if there is no image attached.
+  int? matrixImageSize;
+
+  /// An [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the image. Omitted if there is no image.
+  Uri? ogImage;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PreviewForUrl &&
+          other.runtimeType == runtimeType &&
+          other.matrixImageSize == matrixImageSize &&
+          other.ogImage == ogImage);
+
+  @dart.override
+  int get hashCode => Object.hash(matrixImageSize, ogImage);
+}
+
+///
+@_NameSource('generated')
+@EnhancedEnum()
+enum Method {
+  @EnhancedEnumValue(name: 'crop')
+  crop,
+  @EnhancedEnumValue(name: 'scale')
+  scale
 }
 
 ///
@@ -166,17 +448,47 @@ class PublicRoomsChunk {
 
   /// Whether the room may be viewed by guest users without joining.
   bool worldReadable;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PublicRoomsChunk &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.canonicalAlias == canonicalAlias &&
+          other.guestCanJoin == guestCanJoin &&
+          other.joinRule == joinRule &&
+          other.name == name &&
+          other.numJoinedMembers == numJoinedMembers &&
+          other.roomId == roomId &&
+          other.roomType == roomType &&
+          other.topic == topic &&
+          other.worldReadable == worldReadable);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        avatarUrl,
+        canonicalAlias,
+        guestCanJoin,
+        joinRule,
+        name,
+        numJoinedMembers,
+        roomId,
+        roomType,
+        topic,
+        worldReadable,
+      );
 }
 
 ///
 @_NameSource('spec')
-class ChildRoomsChunk {
-  ChildRoomsChunk({
+class SpaceHierarchyRoomsChunk {
+  SpaceHierarchyRoomsChunk({
     required this.childrenState,
     this.roomType,
   });
 
-  ChildRoomsChunk.fromJson(Map<String, Object?> json)
+  SpaceHierarchyRoomsChunk.fromJson(Map<String, Object?> json)
       : childrenState = (json['children_state'] as List)
             .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
             .toList(),
@@ -197,11 +509,22 @@ class ChildRoomsChunk {
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
   String? roomType;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpaceHierarchyRoomsChunk &&
+          other.runtimeType == runtimeType &&
+          other.childrenState == childrenState &&
+          other.roomType == roomType);
+
+  @dart.override
+  int get hashCode => Object.hash(childrenState, roomType);
 }
 
 ///
 @_NameSource('rule override generated')
-class SpaceRoomsChunk implements PublicRoomsChunk, ChildRoomsChunk {
+class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
   SpaceRoomsChunk({
     this.avatarUrl,
     this.canonicalAlias,
@@ -304,6 +627,38 @@ class SpaceRoomsChunk implements PublicRoomsChunk, ChildRoomsChunk {
   /// If the room is not a space-room, this should be empty.
   @override
   List<ChildrenState> childrenState;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpaceRoomsChunk &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.canonicalAlias == canonicalAlias &&
+          other.guestCanJoin == guestCanJoin &&
+          other.joinRule == joinRule &&
+          other.name == name &&
+          other.numJoinedMembers == numJoinedMembers &&
+          other.roomId == roomId &&
+          other.roomType == roomType &&
+          other.topic == topic &&
+          other.worldReadable == worldReadable &&
+          other.childrenState == childrenState);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        avatarUrl,
+        canonicalAlias,
+        guestCanJoin,
+        joinRule,
+        name,
+        numJoinedMembers,
+        roomId,
+        roomType,
+        topic,
+        worldReadable,
+        childrenState,
+      );
 }
 
 ///
@@ -333,6 +688,17 @@ class GetSpaceHierarchyResponse {
 
   /// The rooms for the current page, with the current filters.
   List<SpaceRoomsChunk> rooms;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetSpaceHierarchyResponse &&
+          other.runtimeType == runtimeType &&
+          other.nextBatch == nextBatch &&
+          other.rooms == rooms);
+
+  @dart.override
+  int get hashCode => Object.hash(nextBatch, rooms);
 }
 
 ///
@@ -352,6 +718,7 @@ class GetRelatingEventsResponse {
     required this.chunk,
     this.nextBatch,
     this.prevBatch,
+    this.recursionDepth,
   });
 
   GetRelatingEventsResponse.fromJson(Map<String, Object?> json)
@@ -359,91 +726,18 @@ class GetRelatingEventsResponse {
             .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
             .toList(),
         nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']);
+        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+        recursionDepth =
+            ((v) => v != null ? v as int : null)(json['recursion_depth']);
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
     final prevBatch = this.prevBatch;
+    final recursionDepth = this.recursionDepth;
     return {
       'chunk': chunk.map((v) => v.toJson()).toList(),
       if (nextBatch != null) 'next_batch': nextBatch,
       if (prevBatch != null) 'prev_batch': prevBatch,
-    };
-  }
-
-  /// The child events of the requested event, ordered topologically most-recent first.
-  List<MatrixEvent> chunk;
-
-  /// An opaque string representing a pagination token. The absence of this token
-  /// means there are no more results to fetch and the client should stop paginating.
-  String? nextBatch;
-
-  /// An opaque string representing a pagination token. The absence of this token
-  /// means this is the start of the result set, i.e. this is the first batch/page.
-  String? prevBatch;
-}
-
-///
-@_NameSource('generated')
-class GetRelatingEventsWithRelTypeResponse {
-  GetRelatingEventsWithRelTypeResponse({
-    required this.chunk,
-    this.nextBatch,
-    this.prevBatch,
-  });
-
-  GetRelatingEventsWithRelTypeResponse.fromJson(Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
-            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-            .toList(),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']);
-  Map<String, Object?> toJson() {
-    final nextBatch = this.nextBatch;
-    final prevBatch = this.prevBatch;
-    return {
-      'chunk': chunk.map((v) => v.toJson()).toList(),
-      if (nextBatch != null) 'next_batch': nextBatch,
-      if (prevBatch != null) 'prev_batch': prevBatch,
-    };
-  }
-
-  /// The child events of the requested event, ordered topologically
-  /// most-recent first. The events returned will match the `relType`
-  /// supplied in the URL.
-  List<MatrixEvent> chunk;
-
-  /// An opaque string representing a pagination token. The absence of this token
-  /// means there are no more results to fetch and the client should stop paginating.
-  String? nextBatch;
-
-  /// An opaque string representing a pagination token. The absence of this token
-  /// means this is the start of the result set, i.e. this is the first batch/page.
-  String? prevBatch;
-}
-
-///
-@_NameSource('generated')
-class GetRelatingEventsWithRelTypeAndEventTypeResponse {
-  GetRelatingEventsWithRelTypeAndEventTypeResponse({
-    required this.chunk,
-    this.nextBatch,
-    this.prevBatch,
-  });
-
-  GetRelatingEventsWithRelTypeAndEventTypeResponse.fromJson(
-      Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
-            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-            .toList(),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']);
-  Map<String, Object?> toJson() {
-    final nextBatch = this.nextBatch;
-    final prevBatch = this.prevBatch;
-    return {
-      'chunk': chunk.map((v) => v.toJson()).toList(),
-      if (nextBatch != null) 'next_batch': nextBatch,
-      if (prevBatch != null) 'prev_batch': prevBatch,
+      if (recursionDepth != null) 'recursion_depth': recursionDepth,
     };
   }
 
@@ -459,6 +753,149 @@ class GetRelatingEventsWithRelTypeAndEventTypeResponse {
   /// An opaque string representing a pagination token. The absence of this token
   /// means this is the start of the result set, i.e. this is the first batch/page.
   String? prevBatch;
+
+  /// If the `recurse` parameter was supplied by the client, this response field is
+  /// mandatory and gives the actual depth to which the server recursed. If the client
+  /// did not specify the `recurse` parameter, this field must be absent.
+  int? recursionDepth;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRelatingEventsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch &&
+          other.prevBatch == prevBatch &&
+          other.recursionDepth == recursionDepth);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, nextBatch, prevBatch, recursionDepth);
+}
+
+///
+@_NameSource('generated')
+class GetRelatingEventsWithRelTypeResponse {
+  GetRelatingEventsWithRelTypeResponse({
+    required this.chunk,
+    this.nextBatch,
+    this.prevBatch,
+    this.recursionDepth,
+  });
+
+  GetRelatingEventsWithRelTypeResponse.fromJson(Map<String, Object?> json)
+      : chunk = (json['chunk'] as List)
+            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+            .toList(),
+        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+        recursionDepth =
+            ((v) => v != null ? v as int : null)(json['recursion_depth']);
+  Map<String, Object?> toJson() {
+    final nextBatch = this.nextBatch;
+    final prevBatch = this.prevBatch;
+    final recursionDepth = this.recursionDepth;
+    return {
+      'chunk': chunk.map((v) => v.toJson()).toList(),
+      if (nextBatch != null) 'next_batch': nextBatch,
+      if (prevBatch != null) 'prev_batch': prevBatch,
+      if (recursionDepth != null) 'recursion_depth': recursionDepth,
+    };
+  }
+
+  /// The child events of the requested event, ordered topologically most-recent
+  /// first. The events returned will match the `relType` and `eventType` supplied
+  /// in the URL.
+  List<MatrixEvent> chunk;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means there are no more results to fetch and the client should stop paginating.
+  String? nextBatch;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means this is the start of the result set, i.e. this is the first batch/page.
+  String? prevBatch;
+
+  /// If the `recurse` parameter was supplied by the client, this response field is
+  /// mandatory and gives the actual depth to which the server recursed. If the client
+  /// did not specify the `recurse` parameter, this field must be absent.
+  int? recursionDepth;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRelatingEventsWithRelTypeResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch &&
+          other.prevBatch == prevBatch &&
+          other.recursionDepth == recursionDepth);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, nextBatch, prevBatch, recursionDepth);
+}
+
+///
+@_NameSource('generated')
+class GetRelatingEventsWithRelTypeAndEventTypeResponse {
+  GetRelatingEventsWithRelTypeAndEventTypeResponse({
+    required this.chunk,
+    this.nextBatch,
+    this.prevBatch,
+    this.recursionDepth,
+  });
+
+  GetRelatingEventsWithRelTypeAndEventTypeResponse.fromJson(
+    Map<String, Object?> json,
+  )   : chunk = (json['chunk'] as List)
+            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+            .toList(),
+        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+        recursionDepth =
+            ((v) => v != null ? v as int : null)(json['recursion_depth']);
+  Map<String, Object?> toJson() {
+    final nextBatch = this.nextBatch;
+    final prevBatch = this.prevBatch;
+    final recursionDepth = this.recursionDepth;
+    return {
+      'chunk': chunk.map((v) => v.toJson()).toList(),
+      if (nextBatch != null) 'next_batch': nextBatch,
+      if (prevBatch != null) 'prev_batch': prevBatch,
+      if (recursionDepth != null) 'recursion_depth': recursionDepth,
+    };
+  }
+
+  /// The child events of the requested event, ordered topologically most-recent
+  /// first. The events returned will match the `relType` and `eventType` supplied
+  /// in the URL.
+  List<MatrixEvent> chunk;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means there are no more results to fetch and the client should stop paginating.
+  String? nextBatch;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means this is the start of the result set, i.e. this is the first batch/page.
+  String? prevBatch;
+
+  /// If the `recurse` parameter was supplied by the client, this response field is
+  /// mandatory and gives the actual depth to which the server recursed. If the client
+  /// did not specify the `recurse` parameter, this field must be absent.
+  int? recursionDepth;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRelatingEventsWithRelTypeAndEventTypeResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch &&
+          other.prevBatch == prevBatch &&
+          other.recursionDepth == recursionDepth);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, nextBatch, prevBatch, recursionDepth);
 }
 
 ///
@@ -492,8 +929,8 @@ class GetThreadRootsResponse {
     };
   }
 
-  /// The thread roots, ordered by the `latest_event` in each event's aggregation bundle. All events
-  /// returned include bundled [aggregations](https://spec.matrix.org/unstable/client-server-api/#aggregations).
+  /// The thread roots, ordered by the `latest_event` in each event's aggregated children. All events
+  /// returned include bundled [aggregations](https://spec.matrix.org/unstable/client-server-api/#aggregations-of-child-events).
   ///
   /// If the thread root event was sent by an [ignored user](https://spec.matrix.org/unstable/client-server-api/#ignoring-users), the
   /// event is returned redacted to the caller. This is to simulate the same behaviour of a client doing
@@ -503,6 +940,17 @@ class GetThreadRootsResponse {
   /// A token to supply to `from` to keep paginating the responses. Not present when there are
   /// no further results.
   String? nextBatch;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetThreadRootsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, nextBatch);
 }
 
 ///
@@ -529,6 +977,17 @@ class GetEventByTimestampResponse {
   /// `event_id` fetched is too far out of range to be useful for your
   /// use case.
   int originServerTs;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetEventByTimestampResponse &&
+          other.runtimeType == runtimeType &&
+          other.eventId == eventId &&
+          other.originServerTs == originServerTs);
+
+  @dart.override
+  int get hashCode => Object.hash(eventId, originServerTs);
 }
 
 ///
@@ -564,18 +1023,31 @@ class ThirdPartyIdentifier {
         'validated_at': validatedAt,
       };
 
-  /// The timestamp, in milliseconds, when the homeserver associated the third party identifier with the user.
+  /// The timestamp, in milliseconds, when the homeserver associated the third-party identifier with the user.
   int addedAt;
 
-  /// The third party identifier address.
+  /// The third-party identifier address.
   String address;
 
-  /// The medium of the third party identifier.
+  /// The medium of the third-party identifier.
   ThirdPartyIdentifierMedium medium;
 
   /// The timestamp, in milliseconds, when the identifier was
   /// validated by the identity server.
   int validatedAt;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ThirdPartyIdentifier &&
+          other.runtimeType == runtimeType &&
+          other.addedAt == addedAt &&
+          other.address == address &&
+          other.medium == medium &&
+          other.validatedAt == validatedAt);
+
+  @dart.override
+  int get hashCode => Object.hash(addedAt, address, medium, validatedAt);
 }
 
 ///
@@ -613,6 +1085,19 @@ class ThreePidCredentials {
 
   /// The session identifier given by the identity server.
   String sid;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ThreePidCredentials &&
+          other.runtimeType == runtimeType &&
+          other.clientSecret == clientSecret &&
+          other.idAccessToken == idAccessToken &&
+          other.idServer == idServer &&
+          other.sid == sid);
+
+  @dart.override
+  int get hashCode => Object.hash(clientSecret, idAccessToken, idServer, sid);
 }
 
 ///
@@ -661,6 +1146,17 @@ class RequestTokenResponse {
   /// advertises this specification version in the `/versions` response
   /// (ie: r0.5.0).
   Uri? submitUrl;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RequestTokenResponse &&
+          other.runtimeType == runtimeType &&
+          other.sid == sid &&
+          other.submitUrl == submitUrl);
+
+  @dart.override
+  int get hashCode => Object.hash(sid, submitUrl);
 }
 
 ///
@@ -699,6 +1195,18 @@ class TokenOwnerInfo {
 
   /// The user ID that owns the access token.
   String userId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TokenOwnerInfo &&
+          other.runtimeType == runtimeType &&
+          other.deviceId == deviceId &&
+          other.isGuest == isGuest &&
+          other.userId == userId);
+
+  @dart.override
+  int get hashCode => Object.hash(deviceId, isGuest, userId);
 }
 
 ///
@@ -733,6 +1241,18 @@ class ConnectionInfo {
 
   /// User agent string last seen in the session.
   String? userAgent;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ConnectionInfo &&
+          other.runtimeType == runtimeType &&
+          other.ip == ip &&
+          other.lastSeen == lastSeen &&
+          other.userAgent == userAgent);
+
+  @dart.override
+  int get hashCode => Object.hash(ip, lastSeen, userAgent);
 }
 
 ///
@@ -758,6 +1278,16 @@ class SessionInfo {
 
   /// Information particular connections in the session.
   List<ConnectionInfo>? connections;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SessionInfo &&
+          other.runtimeType == runtimeType &&
+          other.connections == connections);
+
+  @dart.override
+  int get hashCode => connections.hashCode;
 }
 
 ///
@@ -783,6 +1313,16 @@ class DeviceInfo {
 
   /// A user's sessions (i.e. what they did with an access token from one login).
   List<SessionInfo>? sessions;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DeviceInfo &&
+          other.runtimeType == runtimeType &&
+          other.sessions == sessions);
+
+  @dart.override
+  int get hashCode => sessions.hashCode;
 }
 
 ///
@@ -795,8 +1335,10 @@ class WhoIsInfo {
 
   WhoIsInfo.fromJson(Map<String, Object?> json)
       : devices = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) =>
-                MapEntry(k, DeviceInfo.fromJson(v as Map<String, Object?>)))
+            ? (v as Map<String, Object?>).map(
+                (k, v) =>
+                    MapEntry(k, DeviceInfo.fromJson(v as Map<String, Object?>)),
+              )
             : null)(json['devices']),
         userId = ((v) => v != null ? v as String : null)(json['user_id']);
   Map<String, Object?> toJson() {
@@ -814,23 +1356,44 @@ class WhoIsInfo {
 
   /// The Matrix user ID of the user.
   String? userId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WhoIsInfo &&
+          other.runtimeType == runtimeType &&
+          other.devices == devices &&
+          other.userId == userId);
+
+  @dart.override
+  int get hashCode => Object.hash(devices, userId);
 }
 
 ///
 @_NameSource('spec')
-class ChangePasswordCapability {
-  ChangePasswordCapability({
+class BooleanCapability {
+  BooleanCapability({
     required this.enabled,
   });
 
-  ChangePasswordCapability.fromJson(Map<String, Object?> json)
+  BooleanCapability.fromJson(Map<String, Object?> json)
       : enabled = json['enabled'] as bool;
   Map<String, Object?> toJson() => {
         'enabled': enabled,
       };
 
-  /// True if the user can change their password, false otherwise.
+  /// True if the user can perform the action, false otherwise.
   bool enabled;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BooleanCapability &&
+          other.runtimeType == runtimeType &&
+          other.enabled == enabled);
+
+  @dart.override
+  int get hashCode => enabled.hashCode;
 }
 
 /// The stability of the room version.
@@ -852,8 +1415,10 @@ class RoomVersionsCapability {
   });
 
   RoomVersionsCapability.fromJson(Map<String, Object?> json)
-      : available = (json['available'] as Map<String, Object?>).map((k, v) =>
-            MapEntry(k, RoomVersionAvailable.values.fromString(v as String)!)),
+      : available = (json['available'] as Map<String, Object?>).map(
+          (k, v) =>
+              MapEntry(k, RoomVersionAvailable.values.fromString(v as String)!),
+        ),
         default$ = json['default'] as String;
   Map<String, Object?> toJson() => {
         'available': available.map((k, v) => MapEntry(k, v.name)),
@@ -865,46 +1430,126 @@ class RoomVersionsCapability {
 
   /// The default room version the server is using for new rooms.
   String default$;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomVersionsCapability &&
+          other.runtimeType == runtimeType &&
+          other.available == available &&
+          other.default$ == default$);
+
+  @dart.override
+  int get hashCode => Object.hash(available, default$);
 }
 
 ///
 @_NameSource('spec')
 class Capabilities {
   Capabilities({
+    this.m3pidChanges,
     this.mChangePassword,
+    this.mGetLoginToken,
     this.mRoomVersions,
+    this.mSetAvatarUrl,
+    this.mSetDisplayname,
     this.additionalProperties = const {},
   });
 
   Capabilities.fromJson(Map<String, Object?> json)
-      : mChangePassword = ((v) => v != null
-            ? ChangePasswordCapability.fromJson(v as Map<String, Object?>)
+      : m3pidChanges = ((v) => v != null
+            ? BooleanCapability.fromJson(v as Map<String, Object?>)
+            : null)(json['m.3pid_changes']),
+        mChangePassword = ((v) => v != null
+            ? BooleanCapability.fromJson(v as Map<String, Object?>)
             : null)(json['m.change_password']),
+        mGetLoginToken = ((v) => v != null
+            ? BooleanCapability.fromJson(v as Map<String, Object?>)
+            : null)(json['m.get_login_token']),
         mRoomVersions = ((v) => v != null
             ? RoomVersionsCapability.fromJson(v as Map<String, Object?>)
             : null)(json['m.room_versions']),
-        additionalProperties = Map.fromEntries(json.entries
-            .where((e) =>
-                !['m.change_password', 'm.room_versions'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value as Map<String, Object?>)));
+        mSetAvatarUrl = ((v) => v != null
+            ? BooleanCapability.fromJson(v as Map<String, Object?>)
+            : null)(json['m.set_avatar_url']),
+        mSetDisplayname = ((v) => v != null
+            ? BooleanCapability.fromJson(v as Map<String, Object?>)
+            : null)(json['m.set_displayname']),
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where(
+                (e) => ![
+                  'm.3pid_changes',
+                  'm.change_password',
+                  'm.get_login_token',
+                  'm.room_versions',
+                  'm.set_avatar_url',
+                  'm.set_displayname',
+                ].contains(e.key),
+              )
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
+    final m3pidChanges = this.m3pidChanges;
     final mChangePassword = this.mChangePassword;
+    final mGetLoginToken = this.mGetLoginToken;
     final mRoomVersions = this.mRoomVersions;
+    final mSetAvatarUrl = this.mSetAvatarUrl;
+    final mSetDisplayname = this.mSetDisplayname;
     return {
       ...additionalProperties,
+      if (m3pidChanges != null) 'm.3pid_changes': m3pidChanges.toJson(),
       if (mChangePassword != null)
         'm.change_password': mChangePassword.toJson(),
+      if (mGetLoginToken != null) 'm.get_login_token': mGetLoginToken.toJson(),
       if (mRoomVersions != null) 'm.room_versions': mRoomVersions.toJson(),
+      if (mSetAvatarUrl != null) 'm.set_avatar_url': mSetAvatarUrl.toJson(),
+      if (mSetDisplayname != null)
+        'm.set_displayname': mSetDisplayname.toJson(),
     };
   }
 
+  /// Capability to indicate if the user can change 3PID associations on their account.
+  BooleanCapability? m3pidChanges;
+
   /// Capability to indicate if the user can change their password.
-  ChangePasswordCapability? mChangePassword;
+  BooleanCapability? mChangePassword;
+
+  /// Capability to indicate if the user can generate tokens to log further clients into their account.
+  BooleanCapability? mGetLoginToken;
 
   /// The room versions the server supports.
   RoomVersionsCapability? mRoomVersions;
 
-  Map<String, Map<String, Object?>> additionalProperties;
+  /// Capability to indicate if the user can change their avatar.
+  BooleanCapability? mSetAvatarUrl;
+
+  /// Capability to indicate if the user can change their display name.
+  BooleanCapability? mSetDisplayname;
+
+  Map<String, Object?> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Capabilities &&
+          other.runtimeType == runtimeType &&
+          other.m3pidChanges == m3pidChanges &&
+          other.mChangePassword == mChangePassword &&
+          other.mGetLoginToken == mGetLoginToken &&
+          other.mRoomVersions == mRoomVersions &&
+          other.mSetAvatarUrl == mSetAvatarUrl &&
+          other.mSetDisplayname == mSetDisplayname);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        m3pidChanges,
+        mChangePassword,
+        mGetLoginToken,
+        mRoomVersions,
+        mSetAvatarUrl,
+        mSetDisplayname,
+      );
 }
 
 ///
@@ -937,6 +1582,18 @@ class StateEvent {
 
   /// The type of event to send.
   String type;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StateEvent &&
+          other.runtimeType == runtimeType &&
+          other.content == content &&
+          other.stateKey == stateKey &&
+          other.type == type);
+
+  @dart.override
+  int get hashCode => Object.hash(content, stateKey, type);
 }
 
 ///
@@ -961,7 +1618,7 @@ class Invite3pid {
         'medium': medium,
       };
 
-  /// The invitee's third party identifier.
+  /// The invitee's third-party identifier.
   String address;
 
   /// An access token previously registered with the identity server. Servers
@@ -969,12 +1626,25 @@ class Invite3pid {
   /// and this specification version.
   String idAccessToken;
 
-  /// The hostname+port of the identity server which should be used for third party identifier lookups.
+  /// The hostname+port of the identity server which should be used for third-party identifier lookups.
   String idServer;
 
   /// The kind of address being passed in the address field, for example `email`
   /// (see [the list of recognised values](https://spec.matrix.org/unstable/appendices/#3pid-types)).
   String medium;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Invite3pid &&
+          other.runtimeType == runtimeType &&
+          other.address == address &&
+          other.idAccessToken == idAccessToken &&
+          other.idServer == idServer &&
+          other.medium == medium);
+
+  @dart.override
+  int get hashCode => Object.hash(address, idAccessToken, idServer, medium);
 }
 
 ///
@@ -1043,6 +1713,20 @@ class Device {
   /// was last seen. (May be a few minutes out of date, for efficiency
   /// reasons).
   int? lastSeenTs;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Device &&
+          other.runtimeType == runtimeType &&
+          other.deviceId == deviceId &&
+          other.displayName == displayName &&
+          other.lastSeenIp == lastSeenIp &&
+          other.lastSeenTs == lastSeenTs);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(deviceId, displayName, lastSeenIp, lastSeenTs);
 }
 
 ///
@@ -1072,6 +1756,17 @@ class GetRoomIdByAliasResponse {
 
   /// A list of servers that are aware of this room alias.
   List<String>? servers;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRoomIdByAliasResponse &&
+          other.runtimeType == runtimeType &&
+          other.roomId == roomId &&
+          other.servers == servers);
+
+  @dart.override
+  int get hashCode => Object.hash(roomId, servers);
 }
 
 ///
@@ -1112,6 +1807,18 @@ class GetEventsResponse {
   /// A token which correlates to the start of `chunk`. This
   /// is usually the same token supplied to `from=`.
   String? start;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetEventsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.end == end &&
+          other.start == start);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, end, start);
 }
 
 ///
@@ -1152,10 +1859,22 @@ class PeekEventsResponse {
   /// A token which correlates to the first value in `chunk`. This
   /// is usually the same token supplied to `from=`.
   String? start;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PeekEventsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.end == end &&
+          other.start == start);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, end, start);
 }
 
 /// A signature of an `m.third_party_invite` token to prove that this user
-/// owns a third party identity which has been invited to the room.
+/// owns a third-party identity which has been invited to the room.
 @_NameSource('spec')
 class ThirdPartySigned {
   ThirdPartySigned({
@@ -1168,11 +1887,12 @@ class ThirdPartySigned {
   ThirdPartySigned.fromJson(Map<String, Object?> json)
       : mxid = json['mxid'] as String,
         sender = json['sender'] as String,
-        signatures = (json['signatures'] as Map<String, Object?>).map((k, v) =>
-            MapEntry(
-                k,
-                (v as Map<String, Object?>)
-                    .map((k, v) => MapEntry(k, v as String)))),
+        signatures = (json['signatures'] as Map<String, Object?>).map(
+          (k, v) => MapEntry(
+            k,
+            (v as Map<String, Object?>).map((k, v) => MapEntry(k, v as String)),
+          ),
+        ),
         token = json['token'] as String;
   Map<String, Object?> toJson() => {
         'mxid': mxid,
@@ -1193,6 +1913,19 @@ class ThirdPartySigned {
 
   /// The state key of the m.third_party_invite event.
   String token;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ThirdPartySigned &&
+          other.runtimeType == runtimeType &&
+          other.mxid == mxid &&
+          other.sender == sender &&
+          other.signatures == signatures &&
+          other.token == token);
+
+  @dart.override
+  int get hashCode => Object.hash(mxid, sender, signatures, token);
 }
 
 ///
@@ -1227,6 +1960,17 @@ class GetKeysChangesResponse {
   /// the end-to-end encrypted rooms they previously shared
   /// with the user.
   List<String>? left;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetKeysChangesResponse &&
+          other.runtimeType == runtimeType &&
+          other.changed == changed &&
+          other.left == left);
+
+  @dart.override
+  int get hashCode => Object.hash(changed, left);
 }
 
 ///
@@ -1243,10 +1987,12 @@ class ClaimKeysResponse {
                 .map((k, v) => MapEntry(k, v as Map<String, Object?>))
             : null)(json['failures']),
         oneTimeKeys = (json['one_time_keys'] as Map<String, Object?>).map(
-            (k, v) => MapEntry(
-                k,
-                (v as Map<String, Object?>)
-                    .map((k, v) => MapEntry(k, v as Map<String, Object?>))));
+          (k, v) => MapEntry(
+            k,
+            (v as Map<String, Object?>)
+                .map((k, v) => MapEntry(k, v as Map<String, Object?>)),
+          ),
+        );
   Map<String, Object?> toJson() {
     final failures = this.failures;
     return {
@@ -1274,6 +2020,17 @@ class ClaimKeysResponse {
   /// If necessary, the claimed key might be a fallback key. Fallback
   /// keys are re-used by the server until replaced by the device.
   Map<String, Map<String, Map<String, Object?>>> oneTimeKeys;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ClaimKeysResponse &&
+          other.runtimeType == runtimeType &&
+          other.failures == failures &&
+          other.oneTimeKeys == oneTimeKeys);
+
+  @dart.override
+  int get hashCode => Object.hash(failures, oneTimeKeys);
 }
 
 ///
@@ -1289,26 +2046,45 @@ class QueryKeysResponse {
 
   QueryKeysResponse.fromJson(Map<String, Object?> json)
       : deviceKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k,
-                (v as Map<String, Object?>).map((k, v) => MapEntry(
-                    k, MatrixDeviceKeys.fromJson(v as Map<String, Object?>)))))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  (v as Map<String, Object?>).map(
+                    (k, v) => MapEntry(
+                      k,
+                      MatrixDeviceKeys.fromJson(v as Map<String, Object?>),
+                    ),
+                  ),
+                ),
+              )
             : null)(json['device_keys']),
         failures = ((v) => v != null
             ? (v as Map<String, Object?>)
                 .map((k, v) => MapEntry(k, v as Map<String, Object?>))
             : null)(json['failures']),
         masterKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k, MatrixCrossSigningKey.fromJson(v as Map<String, Object?>)))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
+                ),
+              )
             : null)(json['master_keys']),
         selfSigningKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k, MatrixCrossSigningKey.fromJson(v as Map<String, Object?>)))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
+                ),
+              )
             : null)(json['self_signing_keys']),
         userSigningKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k, MatrixCrossSigningKey.fromJson(v as Map<String, Object?>)))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
+                ),
+              )
             : null)(json['user_signing_keys']);
   Map<String, Object?> toJson() {
     final deviceKeys = this.deviceKeys;
@@ -1319,7 +2095,8 @@ class QueryKeysResponse {
     return {
       if (deviceKeys != null)
         'device_keys': deviceKeys.map(
-            (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson())))),
+          (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson()))),
+        ),
       if (failures != null) 'failures': failures.map((k, v) => MapEntry(k, v)),
       if (masterKeys != null)
         'master_keys': masterKeys.map((k, v) => MapEntry(k, v.toJson())),
@@ -1368,39 +2145,79 @@ class QueryKeysResponse {
   /// information returned will be the same as uploaded via
   /// `/keys/device_signing/upload`.
   Map<String, MatrixCrossSigningKey>? userSigningKeys;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is QueryKeysResponse &&
+          other.runtimeType == runtimeType &&
+          other.deviceKeys == deviceKeys &&
+          other.failures == failures &&
+          other.masterKeys == masterKeys &&
+          other.selfSigningKeys == selfSigningKeys &&
+          other.userSigningKeys == userSigningKeys);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        deviceKeys,
+        failures,
+        masterKeys,
+        selfSigningKeys,
+        userSigningKeys,
+      );
 }
 
 ///
 @_NameSource('spec')
 class LoginFlow {
   LoginFlow({
-    this.type,
+    this.getLoginToken,
+    required this.type,
+    this.additionalProperties = const {},
   });
 
   LoginFlow.fromJson(Map<String, Object?> json)
-      : type = ((v) => v != null ? v as String : null)(json['type']);
+      : getLoginToken =
+            ((v) => v != null ? v as bool : null)(json['get_login_token']),
+        type = json['type'] as String,
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where((e) => !['get_login_token', 'type'].contains(e.key))
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
-    final type = this.type;
+    final getLoginToken = this.getLoginToken;
     return {
-      if (type != null) 'type': type,
+      ...additionalProperties,
+      if (getLoginToken != null) 'get_login_token': getLoginToken,
+      'type': type,
     };
   }
 
+  /// If `type` is `m.login.token`, an optional field to indicate
+  /// to the unauthenticated client that the homeserver supports
+  /// the [`POST /login/get_token`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv1loginget_token)
+  /// endpoint. Note that supporting the endpoint does not
+  /// necessarily indicate that the user attempting to log in will
+  /// be able to generate such a token.
+  bool? getLoginToken;
+
   /// The login type. This is supplied as the `type` when
   /// logging in.
-  String? type;
-}
+  String type;
 
-///
-@_NameSource('rule override generated')
-@EnhancedEnum()
-enum LoginType {
-  @EnhancedEnumValue(name: 'm.login.password')
-  mLoginPassword,
-  @EnhancedEnumValue(name: 'm.login.token')
-  mLoginToken,
-  @EnhancedEnumValue(name: 'org.matrix.login.jwt')
-  mLoginJWT
+  Map<String, Object?> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoginFlow &&
+          other.runtimeType == runtimeType &&
+          other.getLoginToken == getLoginToken &&
+          other.type == type);
+
+  @dart.override
+  int get hashCode => Object.hash(getLoginToken, type);
 }
 
 ///
@@ -1482,6 +2299,30 @@ class LoginResponse {
   /// optionally validating the URLs within. This object takes the same
   /// form as the one returned from .well-known autodiscovery.
   DiscoveryInformation? wellKnown;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoginResponse &&
+          other.runtimeType == runtimeType &&
+          other.accessToken == accessToken &&
+          other.deviceId == deviceId &&
+          other.expiresInMs == expiresInMs &&
+          other.homeServer == homeServer &&
+          other.refreshToken == refreshToken &&
+          other.userId == userId &&
+          other.wellKnown == wellKnown);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        accessToken,
+        deviceId,
+        expiresInMs,
+        homeServer,
+        refreshToken,
+        userId,
+        wellKnown,
+      );
 }
 
 ///
@@ -1536,6 +2377,21 @@ class Notification {
   /// The unix timestamp at which the event notification was sent,
   /// in milliseconds.
   int ts;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Notification &&
+          other.runtimeType == runtimeType &&
+          other.actions == actions &&
+          other.event == event &&
+          other.profileTag == profileTag &&
+          other.read == read &&
+          other.roomId == roomId &&
+          other.ts == ts);
+
+  @dart.override
+  int get hashCode => Object.hash(actions, event, profileTag, read, roomId, ts);
 }
 
 ///
@@ -1566,6 +2422,17 @@ class GetNotificationsResponse {
 
   /// The list of events that triggered notifications.
   List<Notification> notifications;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetNotificationsResponse &&
+          other.runtimeType == runtimeType &&
+          other.nextToken == nextToken &&
+          other.notifications == notifications);
+
+  @dart.override
+  int get hashCode => Object.hash(nextToken, notifications);
 }
 
 ///
@@ -1621,6 +2488,20 @@ class GetPresenceResponse {
 
   /// The state message for this user if one was set.
   String? statusMsg;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetPresenceResponse &&
+          other.runtimeType == runtimeType &&
+          other.currentlyActive == currentlyActive &&
+          other.lastActiveAgo == lastActiveAgo &&
+          other.presence == presence &&
+          other.statusMsg == statusMsg);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(currentlyActive, lastActiveAgo, presence, statusMsg);
 }
 
 ///
@@ -1650,6 +2531,17 @@ class ProfileInformation {
 
   /// The user's display name if they have set one, otherwise not present.
   String? displayname;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProfileInformation &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.displayname == displayname);
+
+  @dart.override
+  int get hashCode => Object.hash(avatarUrl, displayname);
 }
 
 /// A list of the rooms on the server.
@@ -1699,6 +2591,20 @@ class GetPublicRoomsResponse {
   /// An estimate on the total number of public rooms, if the
   /// server has an estimate.
   int? totalRoomCountEstimate;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetPublicRoomsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch &&
+          other.prevBatch == prevBatch &&
+          other.totalRoomCountEstimate == totalRoomCountEstimate);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(chunk, nextBatch, prevBatch, totalRoomCountEstimate);
 }
 
 ///
@@ -1713,7 +2619,9 @@ class PublicRoomQueryFilter {
       : genericSearchTerm = ((v) =>
             v != null ? v as String : null)(json['generic_search_term']),
         roomTypes = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
+            ? (v as List)
+                .map((v) => ((v) => v != null ? v as String : null)(v))
+                .toList()
             : null)(json['room_types']);
   Map<String, Object?> toJson() {
     final genericSearchTerm = this.genericSearchTerm;
@@ -1732,7 +2640,18 @@ class PublicRoomQueryFilter {
   /// for. To include rooms without a room type, specify `null` within this
   /// list. When not specified, all applicable rooms (regardless of type)
   /// are returned.
-  List<String>? roomTypes;
+  List<String?>? roomTypes;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PublicRoomQueryFilter &&
+          other.runtimeType == runtimeType &&
+          other.genericSearchTerm == genericSearchTerm &&
+          other.roomTypes == roomTypes);
+
+  @dart.override
+  int get hashCode => Object.hash(genericSearchTerm, roomTypes);
 }
 
 /// A list of the rooms on the server.
@@ -1782,6 +2701,20 @@ class QueryPublicRoomsResponse {
   /// An estimate on the total number of public rooms, if the
   /// server has an estimate.
   int? totalRoomCountEstimate;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is QueryPublicRoomsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.nextBatch == nextBatch &&
+          other.prevBatch == prevBatch &&
+          other.totalRoomCountEstimate == totalRoomCountEstimate);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(chunk, nextBatch, prevBatch, totalRoomCountEstimate);
 }
 
 ///
@@ -1796,9 +2729,11 @@ class PusherData {
   PusherData.fromJson(Map<String, Object?> json)
       : format = ((v) => v != null ? v as String : null)(json['format']),
         url = ((v) => v != null ? Uri.parse(v as String) : null)(json['url']),
-        additionalProperties = Map.fromEntries(json.entries
-            .where((e) => !['format', 'url'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value)));
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where((e) => !['format', 'url'].contains(e.key))
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
     final format = this.format;
     final url = this.url;
@@ -1818,6 +2753,17 @@ class PusherData {
   Uri? url;
 
   Map<String, Object?> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PusherData &&
+          other.runtimeType == runtimeType &&
+          other.format == format &&
+          other.url == url);
+
+  @dart.override
+  int get hashCode => Object.hash(format, url);
 }
 
 ///
@@ -1844,6 +2790,17 @@ class PusherId {
   /// more detail.
   /// Max length, 512 bytes.
   String pushkey;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PusherId &&
+          other.runtimeType == runtimeType &&
+          other.appId == appId &&
+          other.pushkey == pushkey);
+
+  @dart.override
+  int get hashCode => Object.hash(appId, pushkey);
 }
 
 ///
@@ -1919,6 +2876,32 @@ class Pusher implements PusherId {
   /// This string determines which set of device specific rules this
   /// pusher executes.
   String? profileTag;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Pusher &&
+          other.runtimeType == runtimeType &&
+          other.appId == appId &&
+          other.pushkey == pushkey &&
+          other.appDisplayName == appDisplayName &&
+          other.data == data &&
+          other.deviceDisplayName == deviceDisplayName &&
+          other.kind == kind &&
+          other.lang == lang &&
+          other.profileTag == profileTag);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        appId,
+        pushkey,
+        appDisplayName,
+        data,
+        deviceDisplayName,
+        kind,
+        lang,
+        profileTag,
+      );
 }
 
 ///
@@ -1929,22 +2912,26 @@ class PushCondition {
     this.key,
     required this.kind,
     this.pattern,
+    this.value,
   });
 
   PushCondition.fromJson(Map<String, Object?> json)
       : is$ = ((v) => v != null ? v as String : null)(json['is']),
         key = ((v) => v != null ? v as String : null)(json['key']),
         kind = json['kind'] as String,
-        pattern = ((v) => v != null ? v as String : null)(json['pattern']);
+        pattern = ((v) => v != null ? v as String : null)(json['pattern']),
+        value = ((v) => v != null ? v as Object? : null)(json['value']);
   Map<String, Object?> toJson() {
     final is$ = this.is$;
     final key = this.key;
     final pattern = this.pattern;
+    final value = this.value;
     return {
       if (is$ != null) 'is': is$,
       if (key != null) 'key': key,
       'kind': kind,
       if (pattern != null) 'pattern': pattern,
+      if (value != null) 'value': value,
     };
   }
 
@@ -1954,8 +2941,8 @@ class PushCondition {
   /// so forth. If no prefix is present, this parameter defaults to ==.
   String? is$;
 
-  /// Required for `event_match` conditions. The dot-separated field of the
-  /// event to match.
+  /// Required for `event_match`, `event_property_is` and `event_property_contains`
+  /// conditions. The dot-separated field of the event to match.
   ///
   /// Required for `sender_notification_permission` conditions. The field in
   /// the power level event the user needs a minimum power level for. Fields
@@ -1963,13 +2950,32 @@ class PushCondition {
   /// event's `content`.
   String? key;
 
-  /// The kind of condition to apply. See [conditions](https://spec.matrix.org/unstable/client-server-api/#conditions) for
+  /// The kind of condition to apply. See [conditions](https://spec.matrix.org/unstable/client-server-api/#conditions-1) for
   /// more information on the allowed kinds and how they work.
   String kind;
 
-  /// Required for `event_match` conditions. The glob-style pattern to
-  /// match against.
+  /// Required for `event_match` conditions. The [glob-style pattern](https://spec.matrix.org/unstable/appendices#glob-style-matching)
+  /// to match against.
   String? pattern;
+
+  /// Required for `event_property_is` and `event_property_contains` conditions.
+  /// A non-compound [canonical JSON](https://spec.matrix.org/unstable/appendices#canonical-json) value to match
+  /// against.
+  Object? value;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PushCondition &&
+          other.runtimeType == runtimeType &&
+          other.is$ == is$ &&
+          other.key == key &&
+          other.kind == kind &&
+          other.pattern == pattern &&
+          other.value == value);
+
+  @dart.override
+  int get hashCode => Object.hash(is$, key, kind, pattern, value);
 }
 
 ///
@@ -2023,12 +3029,28 @@ class PushRule {
   /// Whether the push rule is enabled or not.
   bool enabled;
 
-  /// The glob-style pattern to match against.  Only applicable to `content`
-  /// rules.
+  /// The [glob-style pattern](https://spec.matrix.org/unstable/appendices#glob-style-matching) to match against.
+  /// Only applicable to `content` rules.
   String? pattern;
 
   /// The ID of this rule.
   String ruleId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PushRule &&
+          other.runtimeType == runtimeType &&
+          other.actions == actions &&
+          other.conditions == conditions &&
+          other.default$ == default$ &&
+          other.enabled == enabled &&
+          other.pattern == pattern &&
+          other.ruleId == ruleId);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(actions, conditions, default$, enabled, pattern, ruleId);
 }
 
 ///
@@ -2099,6 +3121,104 @@ class PushRuleSet {
 
   ///
   List<PushRule>? underride;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PushRuleSet &&
+          other.runtimeType == runtimeType &&
+          other.content == content &&
+          other.override == override &&
+          other.room == room &&
+          other.sender == sender &&
+          other.underride == underride);
+
+  @dart.override
+  int get hashCode => Object.hash(content, override, room, sender, underride);
+}
+
+///
+@_NameSource('generated')
+class GetPushRulesGlobalResponse {
+  GetPushRulesGlobalResponse({
+    this.content,
+    this.override,
+    this.room,
+    this.sender,
+    this.underride,
+  });
+
+  GetPushRulesGlobalResponse.fromJson(Map<String, Object?> json)
+      : content = ((v) => v != null
+            ? (v as List)
+                .map((v) => PushRule.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['content']),
+        override = ((v) => v != null
+            ? (v as List)
+                .map((v) => PushRule.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['override']),
+        room = ((v) => v != null
+            ? (v as List)
+                .map((v) => PushRule.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['room']),
+        sender = ((v) => v != null
+            ? (v as List)
+                .map((v) => PushRule.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['sender']),
+        underride = ((v) => v != null
+            ? (v as List)
+                .map((v) => PushRule.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['underride']);
+  Map<String, Object?> toJson() {
+    final content = this.content;
+    final override = this.override;
+    final room = this.room;
+    final sender = this.sender;
+    final underride = this.underride;
+    return {
+      if (content != null) 'content': content.map((v) => v.toJson()).toList(),
+      if (override != null)
+        'override': override.map((v) => v.toJson()).toList(),
+      if (room != null) 'room': room.map((v) => v.toJson()).toList(),
+      if (sender != null) 'sender': sender.map((v) => v.toJson()).toList(),
+      if (underride != null)
+        'underride': underride.map((v) => v.toJson()).toList(),
+    };
+  }
+
+  ///
+  List<PushRule>? content;
+
+  ///
+  List<PushRule>? override;
+
+  ///
+  List<PushRule>? room;
+
+  ///
+  List<PushRule>? sender;
+
+  ///
+  List<PushRule>? underride;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetPushRulesGlobalResponse &&
+          other.runtimeType == runtimeType &&
+          other.content == content &&
+          other.override == override &&
+          other.room == room &&
+          other.sender == sender &&
+          other.underride == underride);
+
+  @dart.override
+  int get hashCode => Object.hash(content, override, room, sender, underride);
 }
 
 ///
@@ -2154,6 +3274,18 @@ class RefreshResponse {
   /// be refreshed again. If not given, the old refresh token can
   /// be re-used.
   String? refreshToken;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RefreshResponse &&
+          other.runtimeType == runtimeType &&
+          other.accessToken == accessToken &&
+          other.expiresInMs == expiresInMs &&
+          other.refreshToken == refreshToken);
+
+  @dart.override
+  int get hashCode => Object.hash(accessToken, expiresInMs, refreshToken);
 }
 
 ///
@@ -2245,6 +3377,28 @@ class RegisterResponse {
   /// Any user ID returned by this API must conform to the grammar given in the
   /// [Matrix specification](https://spec.matrix.org/unstable/appendices/#user-identifiers).
   String userId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RegisterResponse &&
+          other.runtimeType == runtimeType &&
+          other.accessToken == accessToken &&
+          other.deviceId == deviceId &&
+          other.expiresInMs == expiresInMs &&
+          other.homeServer == homeServer &&
+          other.refreshToken == refreshToken &&
+          other.userId == userId);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        accessToken,
+        deviceId,
+        expiresInMs,
+        homeServer,
+        refreshToken,
+        userId,
+      );
 }
 
 ///
@@ -2269,6 +3423,17 @@ class RoomKeysUpdateResponse {
   /// The new etag value representing stored keys in the backup.
   /// See `GET /room_keys/version/{version}` for more details.
   String etag;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomKeysUpdateResponse &&
+          other.runtimeType == runtimeType &&
+          other.count == count &&
+          other.etag == etag);
+
+  @dart.override
+  int get hashCode => Object.hash(count, etag);
 }
 
 /// The key data
@@ -2307,6 +3472,20 @@ class KeyBackupData {
   /// algorithms in [Server-side key backups](https://spec.matrix.org/unstable/client-server-api/#server-side-key-backups) for more information on the
   /// expected format of the data.
   Map<String, Object?> sessionData;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is KeyBackupData &&
+          other.runtimeType == runtimeType &&
+          other.firstMessageIndex == firstMessageIndex &&
+          other.forwardedCount == forwardedCount &&
+          other.isVerified == isVerified &&
+          other.sessionData == sessionData);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(firstMessageIndex, forwardedCount, isVerified, sessionData);
 }
 
 /// The backed up keys for a room.
@@ -2317,14 +3496,26 @@ class RoomKeyBackup {
   });
 
   RoomKeyBackup.fromJson(Map<String, Object?> json)
-      : sessions = (json['sessions'] as Map<String, Object?>).map((k, v) =>
-            MapEntry(k, KeyBackupData.fromJson(v as Map<String, Object?>)));
+      : sessions = (json['sessions'] as Map<String, Object?>).map(
+          (k, v) =>
+              MapEntry(k, KeyBackupData.fromJson(v as Map<String, Object?>)),
+        );
   Map<String, Object?> toJson() => {
         'sessions': sessions.map((k, v) => MapEntry(k, v.toJson())),
       };
 
   /// A map of session IDs to key data.
   Map<String, KeyBackupData> sessions;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomKeyBackup &&
+          other.runtimeType == runtimeType &&
+          other.sessions == sessions);
+
+  @dart.override
+  int get hashCode => sessions.hashCode;
 }
 
 ///
@@ -2335,14 +3526,26 @@ class RoomKeys {
   });
 
   RoomKeys.fromJson(Map<String, Object?> json)
-      : rooms = (json['rooms'] as Map<String, Object?>).map((k, v) =>
-            MapEntry(k, RoomKeyBackup.fromJson(v as Map<String, Object?>)));
+      : rooms = (json['rooms'] as Map<String, Object?>).map(
+          (k, v) =>
+              MapEntry(k, RoomKeyBackup.fromJson(v as Map<String, Object?>)),
+        );
   Map<String, Object?> toJson() => {
         'rooms': rooms.map((k, v) => MapEntry(k, v.toJson())),
       };
 
   /// A map of room IDs to room key backup data.
   Map<String, RoomKeyBackup> rooms;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomKeys &&
+          other.runtimeType == runtimeType &&
+          other.rooms == rooms);
+
+  @dart.override
+  int get hashCode => rooms.hashCode;
 }
 
 ///
@@ -2398,6 +3601,20 @@ class GetRoomKeysVersionCurrentResponse {
 
   /// The backup version.
   String version;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRoomKeysVersionCurrentResponse &&
+          other.runtimeType == runtimeType &&
+          other.algorithm == algorithm &&
+          other.authData == authData &&
+          other.count == count &&
+          other.etag == etag &&
+          other.version == version);
+
+  @dart.override
+  int get hashCode => Object.hash(algorithm, authData, count, etag, version);
 }
 
 ///
@@ -2445,6 +3662,20 @@ class GetRoomKeysVersionResponse {
 
   /// The backup version.
   String version;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRoomKeysVersionResponse &&
+          other.runtimeType == runtimeType &&
+          other.algorithm == algorithm &&
+          other.authData == authData &&
+          other.count == count &&
+          other.etag == etag &&
+          other.version == version);
+
+  @dart.override
+  int get hashCode => Object.hash(algorithm, authData, count, etag, version);
 }
 
 /// The events and state surrounding the requested event.
@@ -2518,6 +3749,22 @@ class EventContext {
 
   /// The state of the room at the last event returned.
   List<MatrixEvent>? state;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EventContext &&
+          other.runtimeType == runtimeType &&
+          other.end == end &&
+          other.event == event &&
+          other.eventsAfter == eventsAfter &&
+          other.eventsBefore == eventsBefore &&
+          other.start == start &&
+          other.state == state);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(end, event, eventsAfter, eventsBefore, start, state);
 }
 
 ///
@@ -2542,11 +3789,22 @@ class RoomMember {
     };
   }
 
-  /// The mxc avatar url of the user this object is representing.
+  /// The avatar of the user this object is representing, as an [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris).
   Uri? avatarUrl;
 
   /// The display name of the user this object is representing.
   String? displayName;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomMember &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.displayName == displayName);
+
+  @dart.override
+  int get hashCode => Object.hash(avatarUrl, displayName);
 }
 
 ///
@@ -2629,6 +3887,19 @@ class GetRoomEventsResponse {
   /// sent to the client in prior calls to this endpoint, assuming
   /// the membership of those members has not changed.
   List<MatrixEvent>? state;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRoomEventsResponse &&
+          other.runtimeType == runtimeType &&
+          other.chunk == chunk &&
+          other.end == end &&
+          other.start == start &&
+          other.state == state);
+
+  @dart.override
+  int get hashCode => Object.hash(chunk, end, start, state);
 }
 
 ///
@@ -2682,6 +3953,18 @@ class IncludeEventContext {
   /// that sent the events that were returned.
   /// By default, this is `false`.
   bool? includeProfile;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IncludeEventContext &&
+          other.runtimeType == runtimeType &&
+          other.afterLimit == afterLimit &&
+          other.beforeLimit == beforeLimit &&
+          other.includeProfile == includeProfile);
+
+  @dart.override
+  int get hashCode => Object.hash(afterLimit, beforeLimit, includeProfile);
 }
 
 ///
@@ -2724,7 +4007,11 @@ class EventFilter {
     };
   }
 
-  /// The maximum number of events to return.
+  /// The maximum number of events to return, must be an integer greater than 0.
+  ///
+  /// Servers should apply a default value, and impose a maximum value to avoid
+  /// resource exhaustion.
+  ///
   int? limit;
 
   /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `'senders'` filter.
@@ -2738,6 +4025,20 @@ class EventFilter {
 
   /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
   List<String>? types;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EventFilter &&
+          other.runtimeType == runtimeType &&
+          other.limit == limit &&
+          other.notSenders == notSenders &&
+          other.notTypes == notTypes &&
+          other.senders == senders &&
+          other.types == types);
+
+  @dart.override
+  int get hashCode => Object.hash(limit, notSenders, notTypes, senders, types);
 }
 
 ///
@@ -2810,6 +4111,28 @@ class RoomEventFilter {
   /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
   bool? unreadThreadNotifications;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomEventFilter &&
+          other.runtimeType == runtimeType &&
+          other.containsUrl == containsUrl &&
+          other.includeRedundantMembers == includeRedundantMembers &&
+          other.lazyLoadMembers == lazyLoadMembers &&
+          other.notRooms == notRooms &&
+          other.rooms == rooms &&
+          other.unreadThreadNotifications == unreadThreadNotifications);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        containsUrl,
+        includeRedundantMembers,
+        lazyLoadMembers,
+        notRooms,
+        rooms,
+        unreadThreadNotifications,
+      );
 }
 
 ///
@@ -2887,7 +4210,11 @@ class SearchFilter implements EventFilter, RoomEventFilter {
     };
   }
 
-  /// The maximum number of events to return.
+  /// The maximum number of events to return, must be an integer greater than 0.
+  ///
+  /// Servers should apply a default value, and impose a maximum value to avoid
+  /// resource exhaustion.
+  ///
   @override
   int? limit;
 
@@ -2937,6 +4264,38 @@ class SearchFilter implements EventFilter, RoomEventFilter {
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
   @override
   bool? unreadThreadNotifications;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SearchFilter &&
+          other.runtimeType == runtimeType &&
+          other.limit == limit &&
+          other.notSenders == notSenders &&
+          other.notTypes == notTypes &&
+          other.senders == senders &&
+          other.types == types &&
+          other.containsUrl == containsUrl &&
+          other.includeRedundantMembers == includeRedundantMembers &&
+          other.lazyLoadMembers == lazyLoadMembers &&
+          other.notRooms == notRooms &&
+          other.rooms == rooms &&
+          other.unreadThreadNotifications == unreadThreadNotifications);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        limit,
+        notSenders,
+        notTypes,
+        senders,
+        types,
+        containsUrl,
+        includeRedundantMembers,
+        lazyLoadMembers,
+        notRooms,
+        rooms,
+        unreadThreadNotifications,
+      );
 }
 
 ///
@@ -2969,6 +4328,14 @@ class Group {
 
   /// Key that defines the group.
   GroupKey? key;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Group && other.runtimeType == runtimeType && other.key == key);
+
+  @dart.override
+  int get hashCode => key.hashCode;
 }
 
 ///
@@ -2993,6 +4360,16 @@ class Groupings {
 
   /// List of groups to request.
   List<Group>? groupBy;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Groupings &&
+          other.runtimeType == runtimeType &&
+          other.groupBy == groupBy);
+
+  @dart.override
+  int get hashCode => groupBy.hashCode;
 }
 
 ///
@@ -3093,6 +4470,30 @@ class RoomEventsCriteria {
 
   /// The string to search events for
   String searchTerm;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomEventsCriteria &&
+          other.runtimeType == runtimeType &&
+          other.eventContext == eventContext &&
+          other.filter == filter &&
+          other.groupings == groupings &&
+          other.includeState == includeState &&
+          other.keys == keys &&
+          other.orderBy == orderBy &&
+          other.searchTerm == searchTerm);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        eventContext,
+        filter,
+        groupings,
+        includeState,
+        keys,
+        orderBy,
+        searchTerm,
+      );
 }
 
 ///
@@ -3115,6 +4516,16 @@ class Categories {
 
   /// Mapping of category name to search criteria.
   RoomEventsCriteria? roomEvents;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Categories &&
+          other.runtimeType == runtimeType &&
+          other.roomEvents == roomEvents);
+
+  @dart.override
+  int get hashCode => roomEvents.hashCode;
 }
 
 /// The results for a particular group value.
@@ -3156,6 +4567,18 @@ class GroupValue {
 
   /// Which results are in this group.
   List<String>? results;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GroupValue &&
+          other.runtimeType == runtimeType &&
+          other.nextBatch == nextBatch &&
+          other.order == order &&
+          other.results == results);
+
+  @dart.override
+  int get hashCode => Object.hash(nextBatch, order, results);
 }
 
 ///
@@ -3185,6 +4608,17 @@ class UserProfile {
 
   ///
   String? displayname;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is UserProfile &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.displayname == displayname);
+
+  @dart.override
+  int get hashCode => Object.hash(avatarUrl, displayname);
 }
 
 ///
@@ -3211,8 +4645,12 @@ class SearchResultsEventContext {
                 .toList()
             : null)(json['events_before']),
         profileInfo = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) =>
-                MapEntry(k, UserProfile.fromJson(v as Map<String, Object?>)))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  UserProfile.fromJson(v as Map<String, Object?>),
+                ),
+              )
             : null)(json['profile_info']),
         start = ((v) => v != null ? v as String : null)(json['start']);
   Map<String, Object?> toJson() {
@@ -3245,12 +4683,27 @@ class SearchResultsEventContext {
   /// The historic profile information of the
   /// users that sent the events returned.
   ///
-  /// The `string` key is the user ID for which
+  /// The key is the user ID for which
   /// the profile belongs to.
   Map<String, UserProfile>? profileInfo;
 
   /// Pagination token for the start of the chunk
   String? start;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SearchResultsEventContext &&
+          other.runtimeType == runtimeType &&
+          other.end == end &&
+          other.eventsAfter == eventsAfter &&
+          other.eventsBefore == eventsBefore &&
+          other.profileInfo == profileInfo &&
+          other.start == start);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(end, eventsAfter, eventsBefore, profileInfo, start);
 }
 
 /// The result object.
@@ -3289,6 +4742,18 @@ class Result {
 
   /// The event that matched.
   MatrixEvent? result;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Result &&
+          other.runtimeType == runtimeType &&
+          other.context == context &&
+          other.rank == rank &&
+          other.result == result);
+
+  @dart.override
+  int get hashCode => Object.hash(context, rank, result);
 }
 
 ///
@@ -3306,10 +4771,17 @@ class ResultRoomEvents {
   ResultRoomEvents.fromJson(Map<String, Object?> json)
       : count = ((v) => v != null ? v as int : null)(json['count']),
         groups = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k,
-                (v as Map<String, Object?>).map((k, v) => MapEntry(
-                    k, GroupValue.fromJson(v as Map<String, Object?>)))))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  (v as Map<String, Object?>).map(
+                    (k, v) => MapEntry(
+                      k,
+                      GroupValue.fromJson(v as Map<String, Object?>),
+                    ),
+                  ),
+                ),
+              )
             : null)(json['groups']),
         highlights = ((v) => v != null
             ? (v as List).map((v) => v as String).toList()
@@ -3321,11 +4793,16 @@ class ResultRoomEvents {
                 .toList()
             : null)(json['results']),
         state = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(
-                k,
-                (v as List)
-                    .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-                    .toList()))
+            ? (v as Map<String, Object?>).map(
+                (k, v) => MapEntry(
+                  k,
+                  (v as List)
+                      .map(
+                        (v) => MatrixEvent.fromJson(v as Map<String, Object?>),
+                      )
+                      .toList(),
+                ),
+              )
             : null)(json['state']);
   Map<String, Object?> toJson() {
     final count = this.count;
@@ -3338,7 +4815,8 @@ class ResultRoomEvents {
       if (count != null) 'count': count,
       if (groups != null)
         'groups': groups.map(
-            (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson())))),
+          (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson()))),
+        ),
       if (highlights != null) 'highlights': highlights.map((v) => v).toList(),
       if (nextBatch != null) 'next_batch': nextBatch,
       if (results != null) 'results': results.map((v) => v.toJson()).toList(),
@@ -3374,9 +4852,25 @@ class ResultRoomEvents {
   /// This is included if the request had the
   /// `include_state` key set with a value of `true`.
   ///
-  /// The `string` key is the room ID for which the `State
+  /// The key is the room ID for which the `State
   /// Event` array belongs to.
   Map<String, List<MatrixEvent>>? state;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ResultRoomEvents &&
+          other.runtimeType == runtimeType &&
+          other.count == count &&
+          other.groups == groups &&
+          other.highlights == highlights &&
+          other.nextBatch == nextBatch &&
+          other.results == results &&
+          other.state == state);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(count, groups, highlights, nextBatch, results, state);
 }
 
 ///
@@ -3399,6 +4893,16 @@ class ResultCategories {
 
   /// Mapping of category name to search criteria.
   ResultRoomEvents? roomEvents;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ResultCategories &&
+          other.runtimeType == runtimeType &&
+          other.roomEvents == roomEvents);
+
+  @dart.override
+  int get hashCode => roomEvents.hashCode;
 }
 
 ///
@@ -3410,13 +4914,24 @@ class SearchResults {
 
   SearchResults.fromJson(Map<String, Object?> json)
       : searchCategories = ResultCategories.fromJson(
-            json['search_categories'] as Map<String, Object?>);
+          json['search_categories'] as Map<String, Object?>,
+        );
   Map<String, Object?> toJson() => {
         'search_categories': searchCategories.toJson(),
       };
 
   /// Describes which categories to search in and their criteria.
   ResultCategories searchCategories;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SearchResults &&
+          other.runtimeType == runtimeType &&
+          other.searchCategories == searchCategories);
+
+  @dart.override
+  int get hashCode => searchCategories.hashCode;
 }
 
 ///
@@ -3441,11 +4956,23 @@ class Location {
   /// An alias for a matrix room.
   String alias;
 
-  /// Information used to identify this third party location.
+  /// Information used to identify this third-party location.
   Map<String, Object?> fields;
 
-  /// The protocol ID that the third party location is a part of.
+  /// The protocol ID that the third-party location is a part of.
   String protocol;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Location &&
+          other.runtimeType == runtimeType &&
+          other.alias == alias &&
+          other.fields == fields &&
+          other.protocol == protocol);
+
+  @dart.override
+  int get hashCode => Object.hash(alias, fields, protocol);
 }
 
 /// Definition of valid values for a field.
@@ -3464,13 +4991,24 @@ class FieldType {
         'regexp': regexp,
       };
 
-  /// An placeholder serving as a valid example of the field value.
+  /// A placeholder serving as a valid example of the field value.
   String placeholder;
 
   /// A regular expression for validation of a field's value. This may be relatively
   /// coarse to verify the value as the application service providing this protocol
   /// may apply additional validation or filtering.
   String regexp;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FieldType &&
+          other.runtimeType == runtimeType &&
+          other.placeholder == placeholder &&
+          other.regexp == regexp);
+
+  @dart.override
+  int get hashCode => Object.hash(placeholder, regexp);
 }
 
 ///
@@ -3510,6 +5048,19 @@ class ProtocolInstance {
 
   /// A unique identifier across all instances.
   String networkId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProtocolInstance &&
+          other.runtimeType == runtimeType &&
+          other.desc == desc &&
+          other.fields == fields &&
+          other.icon == icon &&
+          other.networkId == networkId);
+
+  @dart.override
+  int get hashCode => Object.hash(desc, fields, icon, networkId);
 }
 
 ///
@@ -3524,8 +5075,9 @@ class Protocol {
   });
 
   Protocol.fromJson(Map<String, Object?> json)
-      : fieldTypes = (json['field_types'] as Map<String, Object?>).map((k, v) =>
-            MapEntry(k, FieldType.fromJson(v as Map<String, Object?>))),
+      : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
+          (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
+        ),
         icon = json['icon'] as String,
         instances = (json['instances'] as List)
             .map((v) => ProtocolInstance.fromJson(v as Map<String, Object?>))
@@ -3542,14 +5094,14 @@ class Protocol {
         'user_fields': userFields.map((v) => v).toList(),
       };
 
-  /// The type definitions for the fields defined in the `user_fields` and
-  /// `location_fields`. Each entry in those arrays MUST have an entry here. The
-  /// `string` key for this object is field name itself.
+  /// The type definitions for the fields defined in `user_fields` and
+  /// `location_fields`. Each entry in those arrays MUST have an entry here.
+  /// The `string` key for this object is the field name itself.
   ///
   /// May be an empty object if no fields are defined.
   Map<String, FieldType> fieldTypes;
 
-  /// A content URI representing an icon for the third party protocol.
+  /// A content URI representing an icon for the third-party protocol.
   String icon;
 
   /// A list of objects representing independent instances of configuration.
@@ -3557,17 +5109,32 @@ class Protocol {
   /// same application service.
   List<ProtocolInstance> instances;
 
-  /// Fields which may be used to identify a third party location. These should be
+  /// Fields which may be used to identify a third-party location. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the name of a channel.
   List<String> locationFields;
 
-  /// Fields which may be used to identify a third party user. These should be
+  /// Fields which may be used to identify a third-party user. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the nickname of a user.
   List<String> userFields;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Protocol &&
+          other.runtimeType == runtimeType &&
+          other.fieldTypes == fieldTypes &&
+          other.icon == icon &&
+          other.instances == instances &&
+          other.locationFields == locationFields &&
+          other.userFields == userFields);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(fieldTypes, icon, instances, locationFields, userFields);
 }
 
 ///
@@ -3589,14 +5156,26 @@ class ThirdPartyUser {
         'userid': userid,
       };
 
-  /// Information used to identify this third party location.
+  /// Information used to identify this third-party location.
   Map<String, Object?> fields;
 
-  /// The protocol ID that the third party location is a part of.
+  /// The protocol ID that the third-party location is a part of.
   String protocol;
 
-  /// A Matrix User ID represting a third party user.
+  /// A Matrix User ID representing a third-party user.
   String userid;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ThirdPartyUser &&
+          other.runtimeType == runtimeType &&
+          other.fields == fields &&
+          other.protocol == protocol &&
+          other.userid == userid);
+
+  @dart.override
+  int get hashCode => Object.hash(fields, protocol, userid);
 }
 
 ///
@@ -3684,7 +5263,11 @@ class StateFilter implements EventFilter, RoomEventFilter {
     };
   }
 
-  /// The maximum number of events to return.
+  /// The maximum number of events to return, must be an integer greater than 0.
+  ///
+  /// Servers should apply a default value, and impose a maximum value to avoid
+  /// resource exhaustion.
+  ///
   @override
   int? limit;
 
@@ -3734,6 +5317,38 @@ class StateFilter implements EventFilter, RoomEventFilter {
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
   @override
   bool? unreadThreadNotifications;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StateFilter &&
+          other.runtimeType == runtimeType &&
+          other.limit == limit &&
+          other.notSenders == notSenders &&
+          other.notTypes == notTypes &&
+          other.senders == senders &&
+          other.types == types &&
+          other.containsUrl == containsUrl &&
+          other.includeRedundantMembers == includeRedundantMembers &&
+          other.lazyLoadMembers == lazyLoadMembers &&
+          other.notRooms == notRooms &&
+          other.rooms == rooms &&
+          other.unreadThreadNotifications == unreadThreadNotifications);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        limit,
+        notSenders,
+        notTypes,
+        senders,
+        types,
+        containsUrl,
+        includeRedundantMembers,
+        lazyLoadMembers,
+        notRooms,
+        rooms,
+        unreadThreadNotifications,
+      );
 }
 
 ///
@@ -3809,6 +5424,30 @@ class RoomFilter {
 
   /// The message and state update events to include for rooms.
   StateFilter? timeline;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomFilter &&
+          other.runtimeType == runtimeType &&
+          other.accountData == accountData &&
+          other.ephemeral == ephemeral &&
+          other.includeLeave == includeLeave &&
+          other.notRooms == notRooms &&
+          other.rooms == rooms &&
+          other.state == state &&
+          other.timeline == timeline);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        accountData,
+        ephemeral,
+        includeLeave,
+        notRooms,
+        rooms,
+        state,
+        timeline,
+      );
 }
 
 ///
@@ -3857,7 +5496,7 @@ class Filter {
   /// The user account data that isn't associated with rooms to include.
   EventFilter? accountData;
 
-  /// List of event fields to include. If this list is absent then all fields are included. The entries may include '.' characters to indicate sub-fields. So ['content.body'] will include the 'body' field of the 'content' object. A literal '.' character in a field name may be escaped using a '\\'. A server may include more fields than were requested.
+  /// List of event fields to include. If this list is absent then all fields are included. The entries are [dot-separated paths for each property](https://spec.matrix.org/unstable/appendices#dot-separated-property-paths) to include. So ['content.body'] will include the 'body' field of the 'content' object. A server may include more fields than were requested.
   List<String>? eventFields;
 
   /// The format to use for events. 'client' will return the events in a format suitable for clients. 'federation' will return the raw event as received over federation. The default is 'client'.
@@ -3868,6 +5507,21 @@ class Filter {
 
   /// Filters to be applied to room data.
   RoomFilter? room;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Filter &&
+          other.runtimeType == runtimeType &&
+          other.accountData == accountData &&
+          other.eventFields == eventFields &&
+          other.eventFormat == eventFormat &&
+          other.presence == presence &&
+          other.room == room);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(accountData, eventFields, eventFormat, presence, room);
 }
 
 ///
@@ -3907,6 +5561,20 @@ class OpenIdCredentials {
 
   /// The string `Bearer`.
   String tokenType;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OpenIdCredentials &&
+          other.runtimeType == runtimeType &&
+          other.accessToken == accessToken &&
+          other.expiresIn == expiresIn &&
+          other.matrixServerName == matrixServerName &&
+          other.tokenType == tokenType);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(accessToken, expiresIn, matrixServerName, tokenType);
 }
 
 ///
@@ -3920,9 +5588,11 @@ class Tag {
   Tag.fromJson(Map<String, Object?> json)
       : order =
             ((v) => v != null ? (v as num).toDouble() : null)(json['order']),
-        additionalProperties = Map.fromEntries(json.entries
-            .where((e) => !['order'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value)));
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where((e) => !['order'].contains(e.key))
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
     final order = this.order;
     return {
@@ -3936,6 +5606,16 @@ class Tag {
   double? order;
 
   Map<String, Object?> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Tag &&
+          other.runtimeType == runtimeType &&
+          other.order == order);
+
+  @dart.override
+  int get hashCode => order.hashCode;
 }
 
 ///
@@ -3963,7 +5643,7 @@ class Profile {
     };
   }
 
-  /// The avatar url, as an MXC, if one exists.
+  /// The avatar url, as an [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris), if one exists.
   Uri? avatarUrl;
 
   /// The display name of the user, if one exists.
@@ -3971,6 +5651,18 @@ class Profile {
 
   /// The user's matrix user ID.
   String userId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Profile &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.displayName == displayName &&
+          other.userId == userId);
+
+  @dart.override
+  int get hashCode => Object.hash(avatarUrl, displayName, userId);
 }
 
 ///
@@ -3996,6 +5688,17 @@ class SearchUserDirectoryResponse {
 
   /// Ordered by rank and then whether or not profile info is available.
   List<Profile> results;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SearchUserDirectoryResponse &&
+          other.runtimeType == runtimeType &&
+          other.limited == limited &&
+          other.results == results);
+
+  @dart.override
+  int get hashCode => Object.hash(limited, results);
 }
 
 ///
@@ -4031,6 +5734,19 @@ class TurnServerCredentials {
 
   /// The username to use.
   String username;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TurnServerCredentials &&
+          other.runtimeType == runtimeType &&
+          other.password == password &&
+          other.ttl == ttl &&
+          other.uris == uris &&
+          other.username == username);
+
+  @dart.override
+  int get hashCode => Object.hash(password, ttl, uris, username);
 }
 
 ///
@@ -4062,66 +5778,57 @@ class GetVersionsResponse {
 
   /// The supported versions.
   List<String> versions;
-}
 
-///
-@_NameSource('rule override generated')
-class ServerConfig {
-  ServerConfig({
-    this.mUploadSize,
-  });
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetVersionsResponse &&
+          other.runtimeType == runtimeType &&
+          other.unstableFeatures == unstableFeatures &&
+          other.versions == versions);
 
-  ServerConfig.fromJson(Map<String, Object?> json)
-      : mUploadSize =
-            ((v) => v != null ? v as int : null)(json['m.upload.size']);
-  Map<String, Object?> toJson() {
-    final mUploadSize = this.mUploadSize;
-    return {
-      if (mUploadSize != null) 'm.upload.size': mUploadSize,
-    };
-  }
-
-  /// The maximum size an upload can be in bytes.
-  /// Clients SHOULD use this as a guide when uploading content.
-  /// If not listed or null, the size limit should be treated as unknown.
-  int? mUploadSize;
+  @dart.override
+  int get hashCode => Object.hash(unstableFeatures, versions);
 }
 
 ///
 @_NameSource('generated')
-class GetUrlPreviewResponse {
-  GetUrlPreviewResponse({
-    this.matrixImageSize,
-    this.ogImage,
+class CreateContentResponse {
+  CreateContentResponse({
+    required this.contentUri,
+    this.unusedExpiresAt,
   });
 
-  GetUrlPreviewResponse.fromJson(Map<String, Object?> json)
-      : matrixImageSize =
-            ((v) => v != null ? v as int : null)(json['matrix:image:size']),
-        ogImage = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['og:image']);
+  CreateContentResponse.fromJson(Map<String, Object?> json)
+      : contentUri = ((json['content_uri'] as String).startsWith('mxc://')
+            ? Uri.parse(json['content_uri'] as String)
+            : throw Exception('Uri not an mxc URI')),
+        unusedExpiresAt =
+            ((v) => v != null ? v as int : null)(json['unused_expires_at']);
   Map<String, Object?> toJson() {
-    final matrixImageSize = this.matrixImageSize;
-    final ogImage = this.ogImage;
+    final unusedExpiresAt = this.unusedExpiresAt;
     return {
-      if (matrixImageSize != null) 'matrix:image:size': matrixImageSize,
-      if (ogImage != null) 'og:image': ogImage.toString(),
+      'content_uri': contentUri.toString(),
+      if (unusedExpiresAt != null) 'unused_expires_at': unusedExpiresAt,
     };
   }
 
-  /// The byte-size of the image. Omitted if there is no image attached.
-  int? matrixImageSize;
+  /// The [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) at
+  /// which the content will be available, once it is uploaded.
+  Uri contentUri;
 
-  /// An [MXC URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the image. Omitted if there is no image.
-  Uri? ogImage;
-}
+  /// The timestamp (in milliseconds since the unix epoch) when the
+  /// generated media id will expire, if media is not uploaded.
+  int? unusedExpiresAt;
 
-///
-@_NameSource('generated')
-@EnhancedEnum()
-enum Method {
-  @EnhancedEnumValue(name: 'crop')
-  crop,
-  @EnhancedEnumValue(name: 'scale')
-  scale
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CreateContentResponse &&
+          other.runtimeType == runtimeType &&
+          other.contentUri == contentUri &&
+          other.unusedExpiresAt == unusedExpiresAt);
+
+  @dart.override
+  int get hashCode => Object.hash(contentUri, unusedExpiresAt);
 }

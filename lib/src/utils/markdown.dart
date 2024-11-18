@@ -155,7 +155,7 @@ class BlockLatexSyntax extends BlockSyntax {
     // we use .substring(2) as childLines will *always* contain the first two '$$'
     final latex = childLines.join('\n').trim().substring(2).trim();
     final element = Element('div', [
-      Element('pre', [Element.text('code', htmlEscape.convert(latex))])
+      Element('pre', [Element.text('code', htmlEscape.convert(latex))]),
     ]);
     element.attributes['data-mx-maths'] = htmlAttrEscape.convert(latex);
     return element;
@@ -165,7 +165,8 @@ class BlockLatexSyntax extends BlockSyntax {
 class PillSyntax extends InlineSyntax {
   PillSyntax()
       : super(
-            r'([@#!][^\s:]*:(?:[^\s]+\.\w+|[\d\.]+|\[[a-fA-F0-9:]+\])(?::\d+)?)');
+          r'([@#!][^\s:]*:(?:[^\s]+\.\w+|[\d\.]+|\[[a-fA-F0-9:]+\])(?::\d+)?)',
+        );
 
   @override
   bool onMatch(InlineParser parser, Match match) {
@@ -269,8 +270,11 @@ String markdown(
 }
 
 extension on String {
-  String convertLinebreaksToBr(String tagName,
-      {bool exclude = false, String replaceWith = '<br/>'}) {
+  String convertLinebreaksToBr(
+    String tagName, {
+    bool exclude = false,
+    String replaceWith = '<br/>',
+  }) {
     final parts = split('$tagName>');
     var convertLinebreaks = exclude;
     for (var i = 0; i < parts.length; i++) {

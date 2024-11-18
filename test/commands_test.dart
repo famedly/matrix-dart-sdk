@@ -29,37 +29,48 @@ void main() {
     late Client client;
     late Room room;
 
-    Map<String, dynamic> getLastMessagePayload(
-        [String type = 'm.room.message', String? stateKey]) {
+    Map<String, dynamic> getLastMessagePayload([
+      String type = 'm.room.message',
+      String? stateKey,
+    ]) {
       final state = stateKey != null;
-      return json.decode(FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((e) => e.key.startsWith(
-              '/client/v3/rooms/${Uri.encodeComponent(room.id)}/${state ? 'state' : 'send'}/${Uri.encodeComponent(type)}${state && stateKey.isNotEmpty == true ? '/${Uri.encodeComponent(stateKey)}' : ''}'))
-          .value
-          .first);
+      return json.decode(
+        FakeMatrixApi.calledEndpoints.entries
+            .firstWhere(
+              (e) => e.key.startsWith(
+                '/client/v3/rooms/${Uri.encodeComponent(room.id)}/${state ? 'state' : 'send'}/${Uri.encodeComponent(type)}${state && stateKey.isNotEmpty == true ? '/${Uri.encodeComponent(stateKey)}' : ''}',
+              ),
+            )
+            .value
+            .first,
+      );
     }
 
     test('setupClient', () async {
       client = await getClient();
       room = Room(id: '!1234:fakeServer.notExisting', client: client);
-      room.setState(Event(
-        type: 'm.room.power_levels',
-        content: {},
-        room: room,
-        stateKey: '',
-        eventId: '\$fakeeventid',
-        originServerTs: DateTime.now(),
-        senderId: '@fakeuser:fakeServer.notExisting',
-      ));
-      room.setState(Event(
-        type: 'm.room.member',
-        content: {'membership': 'join'},
-        room: room,
-        stateKey: client.userID,
-        eventId: '\$fakeeventid',
-        originServerTs: DateTime.now(),
-        senderId: '@fakeuser:fakeServer.notExisting',
-      ));
+      room.setState(
+        Event(
+          type: 'm.room.power_levels',
+          content: {},
+          room: room,
+          stateKey: '',
+          eventId: '\$fakeeventid',
+          originServerTs: DateTime.now(),
+          senderId: '@fakeuser:fakeServer.notExisting',
+        ),
+      );
+      room.setState(
+        Event(
+          type: 'm.room.member',
+          content: {'membership': 'join'},
+          room: room,
+          stateKey: client.userID,
+          eventId: '\$fakeeventid',
+          originServerTs: DateTime.now(),
+          senderId: '@fakeuser:fakeServer.notExisting',
+        ),
+      );
     });
 
     test('send', () async {
@@ -132,20 +143,22 @@ void main() {
 
     test('react', () async {
       FakeMatrixApi.calledEndpoints.clear();
-      await room.sendTextEvent('/react 🦊',
-          inReplyTo: Event(
-            eventId: '\$event',
-            type: 'm.room.message',
-            content: {
-              'msgtype': 'm.text',
-              'body': '<b>yay</b>',
-              'format': 'org.matrix.custom.html',
-              'formatted_body': '<b>yay</b>',
-            },
-            originServerTs: DateTime.now(),
-            senderId: client.userID!,
-            room: room,
-          ));
+      await room.sendTextEvent(
+        '/react 🦊',
+        inReplyTo: Event(
+          eventId: '\$event',
+          type: 'm.room.message',
+          content: {
+            'msgtype': 'm.text',
+            'body': '<b>yay</b>',
+            'format': 'org.matrix.custom.html',
+            'formatted_body': '<b>yay</b>',
+          },
+          originServerTs: DateTime.now(),
+          senderId: client.userID!,
+          room: room,
+        ),
+      );
       final sent = getLastMessagePayload('m.reaction');
       expect(sent, {
         'm.relates_to': {
@@ -171,7 +184,7 @@ void main() {
           'rel_type': 'm.thread',
           'event_id': '\$parent_event',
           'is_falling_back': true,
-          'm.in_reply_to': {'event_id': '\$parent_event'}
+          'm.in_reply_to': {'event_id': '\$parent_event'},
         },
       });
     });
@@ -198,27 +211,29 @@ void main() {
           'rel_type': 'm.thread',
           'event_id': '\$parent_event',
           'is_falling_back': true,
-          'm.in_reply_to': {'event_id': '\$parent_event'}
+          'm.in_reply_to': {'event_id': '\$parent_event'},
         },
       });
     });
 
     test('thread_reply', () async {
       FakeMatrixApi.calledEndpoints.clear();
-      await room.sendTextEvent('reply',
-          inReplyTo: Event(
-            eventId: '\$parent_event',
-            type: 'm.room.message',
-            content: {
-              'msgtype': 'm.text',
-              'body': 'reply',
-            },
-            originServerTs: DateTime.now(),
-            senderId: client.userID!,
-            room: room,
-          ),
-          threadRootEventId: '\$parent_event',
-          threadLastEventId: '\$parent_event');
+      await room.sendTextEvent(
+        'reply',
+        inReplyTo: Event(
+          eventId: '\$parent_event',
+          type: 'm.room.message',
+          content: {
+            'msgtype': 'm.text',
+            'body': 'reply',
+          },
+          originServerTs: DateTime.now(),
+          senderId: client.userID!,
+          room: room,
+        ),
+        threadRootEventId: '\$parent_event',
+        threadLastEventId: '\$parent_event',
+      );
       final sent = getLastMessagePayload();
       expect(sent, {
         'msgtype': 'm.text',
@@ -230,7 +245,7 @@ void main() {
           'rel_type': 'm.thread',
           'event_id': '\$parent_event',
           'is_falling_back': false,
-          'm.in_reply_to': {'event_id': '\$parent_event'}
+          'm.in_reply_to': {'event_id': '\$parent_event'},
         },
       });
     });
@@ -250,7 +265,7 @@ void main() {
           'rel_type': 'm.thread',
           'event_id': '\$parent_event',
           'is_falling_back': true,
-          'm.in_reply_to': {'event_id': '\$last_event'}
+          'm.in_reply_to': {'event_id': '\$last_event'},
         },
       });
     });
@@ -259,23 +274,24 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/join !newroom:example.com');
       expect(
-          FakeMatrixApi
-                  .calledEndpoints['/client/v3/join/!newroom%3Aexample.com']
-                  ?.first !=
-              null,
-          true);
+        FakeMatrixApi.calledEndpoints['/client/v3/join/!newroom%3Aexample.com']
+                ?.first !=
+            null,
+        true,
+      );
     });
 
     test('leave', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/leave');
       expect(
-          FakeMatrixApi
-                  .calledEndpoints[
-                      '/client/v3/rooms/!1234%3AfakeServer.notExisting/leave']
-                  ?.first !=
-              null,
-          true);
+        FakeMatrixApi
+                .calledEndpoints[
+                    '/client/v3/rooms/!1234%3AfakeServer.notExisting/leave']
+                ?.first !=
+            null,
+        true,
+      );
     });
 
     test('op', () async {
@@ -283,14 +299,14 @@ void main() {
       await room.sendTextEvent('/op @user:example.org');
       var sent = getLastMessagePayload('m.room.power_levels', '');
       expect(sent, {
-        'users': {'@user:example.org': 50}
+        'users': {'@user:example.org': 50},
       });
 
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/op @user:example.org 100');
       sent = getLastMessagePayload('m.room.power_levels', '');
       expect(sent, {
-        'users': {'@user:example.org': 100}
+        'users': {'@user:example.org': 100},
       });
     });
 
@@ -298,10 +314,12 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/kick @baduser:example.org');
       expect(
-          json.decode(FakeMatrixApi
-              .calledEndpoints[
-                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/kick']
-              ?.first),
+          json.decode(
+            FakeMatrixApi
+                .calledEndpoints[
+                    '/client/v3/rooms/!1234%3AfakeServer.notExisting/kick']
+                ?.first,
+          ),
           {
             'user_id': '@baduser:example.org',
           });
@@ -311,10 +329,12 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/ban @baduser:example.org');
       expect(
-          json.decode(FakeMatrixApi
-              .calledEndpoints[
-                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/ban']
-              ?.first),
+          json.decode(
+            FakeMatrixApi
+                .calledEndpoints[
+                    '/client/v3/rooms/!1234%3AfakeServer.notExisting/ban']
+                ?.first,
+          ),
           {
             'user_id': '@baduser:example.org',
           });
@@ -324,10 +344,12 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/unban @baduser:example.org');
       expect(
-          json.decode(FakeMatrixApi
-              .calledEndpoints[
-                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/unban']
-              ?.first),
+          json.decode(
+            FakeMatrixApi
+                .calledEndpoints[
+                    '/client/v3/rooms/!1234%3AfakeServer.notExisting/unban']
+                ?.first,
+          ),
           {
             'user_id': '@baduser:example.org',
           });
@@ -337,10 +359,12 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/invite @baduser:example.org');
       expect(
-          json.decode(FakeMatrixApi
-              .calledEndpoints[
-                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/invite']
-              ?.first),
+          json.decode(
+            FakeMatrixApi
+                .calledEndpoints[
+                    '/client/v3/rooms/!1234%3AfakeServer.notExisting/invite']
+                ?.first,
+          ),
           {
             'user_id': '@baduser:example.org',
           });
@@ -371,11 +395,12 @@ void main() {
       await room.sendTextEvent('/dm @alice:example.com --no-encryption');
       expect(
           json.decode(
-              FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first),
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+          ),
           {
             'invite': ['@alice:example.com'],
             'is_direct': true,
-            'preset': 'trusted_private_chat'
+            'preset': 'trusted_private_chat',
           });
     });
 
@@ -383,51 +408,64 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/create @alice:example.com --no-encryption');
       expect(
-          json.decode(
-              FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first),
-          {'preset': 'private_chat'});
+        json.decode(
+          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+        ),
+        {'preset': 'private_chat'},
+      );
     });
 
     test('discardsession', () async {
       await client.encryption?.keyManager.createOutboundGroupSession(room.id);
       expect(
-          client.encryption?.keyManager.getOutboundGroupSession(room.id) !=
-              null,
-          true);
+        client.encryption?.keyManager.getOutboundGroupSession(room.id) != null,
+        true,
+      );
       await room.sendTextEvent('/discardsession');
       expect(
-          client.encryption?.keyManager.getOutboundGroupSession(room.id) !=
-              null,
-          false);
+        client.encryption?.keyManager.getOutboundGroupSession(room.id) != null,
+        false,
+      );
     });
 
     test('markasdm', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/markasdm @test:fakeServer.notExisting');
       expect(
-          json.decode(FakeMatrixApi
+        json.decode(
+          FakeMatrixApi
               .calledEndpoints[
                   '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
-              ?.first)?['@alice:example.com'],
-          ['!1234:fakeServer.notExisting']);
+              ?.first,
+        )?['@alice:example.com'],
+        ['!1234:fakeServer.notExisting'],
+      );
       expect(
-          json.decode(FakeMatrixApi
+        json.decode(
+          FakeMatrixApi
               .calledEndpoints[
                   '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
-              ?.first)?['@test:fakeServer.notExisting'],
-          ['!1234:fakeServer.notExisting']);
+              ?.first,
+        )?['@test:fakeServer.notExisting'],
+        ['!1234:fakeServer.notExisting'],
+      );
       expect(
-          json
-              .decode(FakeMatrixApi
+        json
+            .decode(
+              FakeMatrixApi
                   .calledEndpoints[
                       '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
-                  ?.first)
-              .entries
-              .any((e) =>
+                  ?.first,
+            )
+            .entries
+            .any(
+              (e) =>
                   e.key != '@test:fakeServer.notExisting' &&
                   e.key != '@alice:example.com' &&
-                  e.value.contains('!1234:fakeServer.notExisting')),
-          false);
+                  e.value.contains('!1234:fakeServer.notExisting'),
+            ),
+        false,
+      );
 
       FakeMatrixApi.calledEndpoints.clear();
     });
@@ -436,23 +474,31 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/markasgroup');
       expect(
-          json
-              .decode(FakeMatrixApi
+        json
+            .decode(
+              FakeMatrixApi
                   .calledEndpoints[
                       '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
-                  ?.first)
-              ?.containsKey('@alice:example.com'),
-          false);
+                  ?.first,
+            )
+            ?.containsKey('@alice:example.com'),
+        false,
+      );
       expect(
-          json
-              .decode(FakeMatrixApi
+        json
+            .decode(
+              FakeMatrixApi
                   .calledEndpoints[
                       '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
-                  ?.first)
-              .entries
-              .any((e) => (e.value as List<dynamic>)
-                  .contains('!1234:fakeServer.notExisting')),
-          false);
+                  ?.first,
+            )
+            .entries
+            .any(
+              (e) => (e.value as List<dynamic>)
+                  .contains('!1234:fakeServer.notExisting'),
+            ),
+        false,
+      );
     });
 
     test('clearcache', () async {

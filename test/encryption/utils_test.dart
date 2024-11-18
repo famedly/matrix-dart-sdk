@@ -56,22 +56,32 @@ void main() {
       );
       expect(image.width, 220, reason: 'Unexpected image width');
       expect(image.height, 220, reason: 'Unexpected image heigth');
-      expect(image.blurhash, 'L75NyU5krSbx=zAF#kSNZxOZ%4NE',
-          reason: 'Unexpected image blur');
+      expect(
+        image.blurhash,
+        'L75NyU5krSbx=zAF#kSNZxOZ%4NE',
+        reason: 'Unexpected image blur',
+      );
 
       final thumbnail = await image.generateThumbnail(dimension: 64);
       expect(thumbnail!.height, 64, reason: 'Unexpected thumbnail height');
 
       final shrinkedImage = await MatrixImageFile.shrink(
-          bytes: data,
-          name: 'bomb.png',
-          mimeType: 'image/png',
-          maxDimension: 150);
+        bytes: data,
+        name: 'bomb.png',
+        mimeType: 'image/png',
+        maxDimension: 150,
+      );
       expect(shrinkedImage.width, 150, reason: 'Unexpected scaled image width');
-      expect(shrinkedImage.height, 150,
-          reason: 'Unexpected scaled image heigth');
-      expect(shrinkedImage.blurhash, 'L75NyU5kvvbx^7AF#kSgZxOZ%5NE',
-          reason: 'Unexpected scaled image blur');
+      expect(
+        shrinkedImage.height,
+        150,
+        reason: 'Unexpected scaled image heigth',
+      );
+      expect(
+        shrinkedImage.blurhash,
+        'L75NyU5kvvbx^7AF#kSgZxOZ%5NE',
+        reason: 'Unexpected scaled image blur',
+      );
     });
   });
 }
