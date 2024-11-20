@@ -1261,18 +1261,26 @@ class Room {
         reason: reason,
       );
 
-  /// Request more previous events from the server. [historyCount] defines how much events should
+  /// Request more previous events from the server. [historyCount] defines how many events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
-  /// the historical events will be published in the onEvent stream.
+  /// the historical events will be published in the onEvent stream. [filter] allows you to specify a
+  /// [StateFilter] object to filter the events, which can include various criteria such as event types
+  /// (e.g., [EventTypes.Message]) and other state-related filters. The [StateFilter] object will have
+  /// [lazyLoadMembers] set to true by default, but this can be overridden.
   /// Returns the actual count of received timeline events.
   Future<int> requestHistory({
     int historyCount = defaultHistoryCount,
     void Function()? onHistoryReceived,
     direction = Direction.b,
+    StateFilter? filter,
   }) async {
     final prev_batch = this.prev_batch;
 
     final storeInDatabase = !isArchived;
+
+    // Ensure stateFilter is not null and set lazyLoadMembers to true if not already set
+    filter ??= StateFilter(lazyLoadMembers: true);
+    filter.lazyLoadMembers ??= true;
 
     if (prev_batch == null) {
       throw 'Tried to request history without a prev_batch token';
@@ -1282,7 +1290,7 @@ class Room {
       direction,
       from: prev_batch,
       limit: historyCount,
-      filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
+      filter: jsonEncode(filter.toJson()),
     );
 
     if (onHistoryReceived != null) onHistoryReceived();
