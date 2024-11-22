@@ -1101,6 +1101,7 @@ class Room {
         } else {
           Logs()
               .w('Problem while sending message: $e Try again in 1 seconds...');
+          Logs().w('Error Stacktrace: $s');
           await Future.delayed(Duration(seconds: 1));
         }
       }
