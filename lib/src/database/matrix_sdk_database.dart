@@ -52,7 +52,7 @@ import 'package:matrix/src/database/database_file_storage_stub.dart'
 /// Learn more at:
 /// https://github.com/famedly/matrix-dart-sdk/issues/1642#issuecomment-1865827227
 class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
-  static const int version = 9;
+  static const int version = 10;
   final String name;
 
   late BoxCollection _collection;
@@ -61,12 +61,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   late Box<Map> _roomsBox;
   late Box<Map> _toDeviceQueueBox;
 
-  /// Key is a tuple as TupleKey(roomId, type) where stateKey can be
+  /// Key is a tuple as TupleKey(roomId, type, stateKey) where stateKey can be
   /// an empty string. Must contain only states of type
   /// client.importantRoomStates.
   late Box<Map> _preloadRoomStateBox;
 
-  /// Key is a tuple as TupleKey(roomId, type) where stateKey can be
+  /// Key is a tuple as TupleKey(roomId, type, stateKey) where stateKey can be
   /// an empty string. Must NOT contain states of a type from
   /// client.importantRoomStates.
   late Box<Map> _nonPreloadRoomStateBox;
@@ -593,13 +593,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
     // Get important states:
     if (loadImportantStates) {
-      final dbKeys = client.importantStateEvents
-          .map((state) => TupleKey(roomId, state).toString())
+      final preloadRoomStateKeys = await _preloadRoomStateBox.getAllKeys();
+      final keysForRoom = preloadRoomStateKeys
+          .where((key) => TupleKey.fromString(key).parts.first == roomId)
           .toList();
-      final rawStates = await _preloadRoomStateBox.getAll(dbKeys);
-      for (final rawState in rawStates) {
-        if (rawState == null || rawState[''] == null) continue;
-        room.setState(Event.fromJson(copyMap(rawState['']), room));
+      final rawStates = await _preloadRoomStateBox.getAll(keysForRoom);
+
+      for (final raw in rawStates) {
+        if (raw == null) continue;
+        room.setState(Event.fromJson(copyMap(raw), room));
       }
     }
 
@@ -630,17 +632,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
             Logs().w('Found event in store for unknown room', entry.value);
             continue;
           }
-          final states = entry.value;
-          final stateEvents = states.values
-              .map(
-                (raw) => room.membership == Membership.invite
-                    ? StrippedStateEvent.fromJson(copyMap(raw))
-                    : Event.fromJson(copyMap(raw), room),
-              )
-              .toList();
-          for (final state in stateEvents) {
-            room.setState(state);
-          }
+          final raw = entry.value;
+          room.setState(
+            room.membership == Membership.invite
+                ? StrippedStateEvent.fromJson(copyMap(raw))
+                : Event.fromJson(copyMap(raw), room),
+          );
         }
 
         // Get the room account data
@@ -697,11 +694,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
     final unimportantEvents = <Event>[];
     for (final key in keys) {
-      final states = await _nonPreloadRoomStateBox.get(key);
-      if (states == null) continue;
-      unimportantEvents.addAll(
-        states.values.map((raw) => Event.fromJson(copyMap(raw), room)),
-      );
+      final raw = await _nonPreloadRoomStateBox.get(key);
+      if (raw == null) continue;
+      unimportantEvents.add(Event.fromJson(copyMap(raw), room));
     }
 
     return unimportantEvents.where((event) => event.stateKey != null).toList();
@@ -1068,13 +1063,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         if (tmpRoom.lastEvent?.eventId == event.eventId) {
           if (client.importantStateEvents.contains(event.type)) {
             await _preloadRoomStateBox.put(
-              TupleKey(eventUpdate.roomID, event.type).toString(),
-              {'': event.toJson()},
+              TupleKey(eventUpdate.roomID, event.type, '').toString(),
+              event.toJson(),
             );
           } else {
             await _nonPreloadRoomStateBox.put(
-              TupleKey(eventUpdate.roomID, event.type).toString(),
-              {'': event.toJson()},
+              TupleKey(eventUpdate.roomID, event.type, '').toString(),
+              event.toJson(),
             );
           }
         }
@@ -1198,11 +1193,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         final key = TupleKey(
           eventUpdate.roomID,
           type,
+          stateKey,
         ).toString();
-        final stateMap = copyMap(await roomStateBox.get(key) ?? {});
 
-        stateMap[stateKey] = eventUpdate.content;
-        await roomStateBox.put(key, stateMap);
+        await roomStateBox.put(key, eventUpdate.content);
       }
     }
 
