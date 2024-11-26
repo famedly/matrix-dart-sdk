@@ -1675,6 +1675,15 @@ class Client extends MatrixApi {
   final CachedStreamController<SyncStatusUpdate> onSyncStatus =
       CachedStreamController();
 
+  /// Will be called when `Client.uploadKeys()` is called and helps you
+  /// track the process of uploading keys in the background.
+  final CachedStreamController<
+      ({
+        MatrixDeviceKeys? deviceKeys,
+        Map<String, Object?>? fallbackKeys,
+        Map<String, Object?>? oneTimeKeys,
+      })> onUploadingKeys = CachedStreamController();
+
   /// Callback will be called on presences.
   @Deprecated(
     'Deprecated, use onPresenceChanged instead which has a timestamp.',
@@ -3616,6 +3625,32 @@ class Client extends MatrixApi {
                 ?.keys ??
             <String>[],
       );
+
+  @override
+  Future<Map<String, int>> uploadKeys({
+    MatrixDeviceKeys? deviceKeys,
+    Map<String, Object?>? fallbackKeys,
+    Map<String, Object?>? oneTimeKeys,
+  }) async {
+    onUploadingKeys.add(
+      (
+        deviceKeys: deviceKeys,
+        fallbackKeys: fallbackKeys,
+        oneTimeKeys: oneTimeKeys,
+      ),
+    );
+    try {
+      final result = await super.uploadKeys(
+        deviceKeys: deviceKeys,
+        fallbackKeys: fallbackKeys,
+        oneTimeKeys: oneTimeKeys,
+      );
+      return result;
+    } catch (e, s) {
+      onUploadingKeys.addError(e, s);
+      rethrow;
+    }
+  }
 
   /// Ignore another user. This will clear the local cached messages to
   /// hide all previous messages from this user.
