@@ -82,15 +82,26 @@ void main() {
         databaseBuilder: getDatabase,
       );
       expect(client.isLogged(), false);
-      await client.init();
+      final Set<InitState> initStates = {};
+      await client.init(onInitStateChanged: initStates.add);
       expect(client.isLogged(), false);
+      expect(initStates, {InitState.initializing, InitState.finished});
+      initStates.clear();
       await client.login(
         LoginType.mLoginPassword,
         token: 'abcd',
         identifier:
             AuthenticationUserIdentifier(user: '@test:fakeServer.notExisting'),
         deviceId: 'GHTYAJCE',
+        onInitStateChanged: initStates.add,
       );
+      expect(initStates, {
+        InitState.initializing,
+        InitState.settingUpEncryption,
+        InitState.loadingData,
+        InitState.waitingForFirstSync,
+        InitState.finished,
+      });
 
       expect(client.isLogged(), true);
 
@@ -1439,7 +1450,14 @@ void main() {
         databaseBuilder: getDatabase,
         legacyDatabaseBuilder: (_) => database,
       );
-      await hiveClient.init();
+      final Set<InitState> initStates = {};
+      await hiveClient.init(onInitStateChanged: initStates.add);
+      expect(initStates, {
+        InitState.initializing,
+        InitState.migratingDatabase,
+        InitState.settingUpEncryption,
+        InitState.finished,
+      });
       await Future.delayed(Duration(milliseconds: 200));
       expect(hiveClient.isLogged(), true);
       await hiveClient.dispose(closeDatabase: false);
