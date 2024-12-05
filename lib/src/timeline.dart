@@ -84,22 +84,40 @@ class Timeline {
         (room.prev_batch != null && events.last.type != EventTypes.RoomCreate);
   }
 
+  /// Request more previous events from the server. [historyCount] defines how many events should
+  /// be received maximum. [filter] allows you to specify a [StateFilter] object to filter the
+  /// events, which can include various criteria such as event types (e.g., [EventTypes.Message])
+  /// and other state-related filters. The [StateFilter] object will have [lazyLoadMembers] set to
+  /// true by default, but this can be overridden.
+  /// This method does not return a value.
   Future<void> requestHistory({
     int historyCount = Room.defaultHistoryCount,
+    StateFilter? filter,
   }) async {
     if (isRequestingHistory) {
       return;
     }
 
     isRequestingHistory = true;
-    await _requestEvents(direction: Direction.b, historyCount: historyCount);
+    await _requestEvents(
+      direction: Direction.b,
+      historyCount: historyCount,
+      filter: filter,
+    );
     isRequestingHistory = false;
   }
 
   bool get canRequestFuture => !allowNewEvent;
 
+  /// Request more future events from the server. [historyCount] defines how many events should
+  /// be received maximum. [filter] allows you to specify a [StateFilter] object to filter the
+  /// events, which can include various criteria such as event types (e.g., [EventTypes.Message])
+  /// and other state-related filters. The [StateFilter] object will have [lazyLoadMembers] set to
+  /// true by default, but this can be overridden.
+  /// This method does not return a value.
   Future<void> requestFuture({
     int historyCount = Room.defaultHistoryCount,
+    StateFilter? filter,
   }) async {
     if (allowNewEvent) {
       return; // we shouldn't force to add new events if they will autatically be added
@@ -107,13 +125,18 @@ class Timeline {
 
     if (isRequestingFuture) return;
     isRequestingFuture = true;
-    await _requestEvents(direction: Direction.f, historyCount: historyCount);
+    await _requestEvents(
+      direction: Direction.f,
+      historyCount: historyCount,
+      filter: filter,
+    );
     isRequestingFuture = false;
   }
 
   Future<void> _requestEvents({
     int historyCount = Room.defaultHistoryCount,
     required Direction direction,
+    StateFilter? filter,
   }) async {
     onUpdate?.call();
 
@@ -161,6 +184,7 @@ class Timeline {
           await getRoomEvents(
             historyCount: historyCount,
             direction: direction,
+            filter: filter,
           );
         } else {
           if (room.prev_batch == null) {
@@ -172,6 +196,7 @@ class Timeline {
               onHistoryReceived: () {
                 _collectHistoryUpdates = true;
               },
+              filter: filter,
             );
           }
         }
@@ -185,18 +210,26 @@ class Timeline {
 
   /// Request more previous events from the server. [historyCount] defines how much events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
-  /// the historical events will be published in the onEvent stream.
+  /// the historical events will be published in the onEvent stream. [filter] allows you to specify a
+  /// [StateFilter] object to filter the  events, which can include various criteria such as
+  /// event types (e.g., [EventTypes.Message]) and other state-related filters.
+  /// The [StateFilter] object will have [lazyLoadMembers] set to true by default, but this can be overridden.
   /// Returns the actual count of received timeline events.
   Future<int> getRoomEvents({
     int historyCount = Room.defaultHistoryCount,
     direction = Direction.b,
+    StateFilter? filter,
   }) async {
+    // Ensure stateFilter is not null and set lazyLoadMembers to true if not already set
+    filter ??= StateFilter(lazyLoadMembers: true);
+    filter.lazyLoadMembers ??= true;
+
     final resp = await room.client.getRoomEvents(
       room.id,
       direction,
       from: direction == Direction.b ? chunk.prevBatch : chunk.nextBatch,
       limit: historyCount,
-      filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
+      filter: jsonEncode(filter.toJson()),
     );
 
     if (resp.end == null) {

@@ -1264,18 +1264,26 @@ class Room {
         reason: reason,
       );
 
-  /// Request more previous events from the server. [historyCount] defines how much events should
+  /// Request more previous events from the server. [historyCount] defines how many events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
-  /// the historical events will be published in the onEvent stream.
+  /// the historical events will be published in the onEvent stream. [filter] allows you to specify a
+  /// [StateFilter] object to filter the events, which can include various criteria such as event types
+  /// (e.g., [EventTypes.Message]) and other state-related filters. The [StateFilter] object will have
+  /// [lazyLoadMembers] set to true by default, but this can be overridden.
   /// Returns the actual count of received timeline events.
   Future<int> requestHistory({
     int historyCount = defaultHistoryCount,
     void Function()? onHistoryReceived,
     direction = Direction.b,
+    StateFilter? filter,
   }) async {
     final prev_batch = this.prev_batch;
 
     final storeInDatabase = !isArchived;
+
+    // Ensure stateFilter is not null and set lazyLoadMembers to true if not already set
+    filter ??= StateFilter(lazyLoadMembers: true);
+    filter.lazyLoadMembers ??= true;
 
     if (prev_batch == null) {
       throw 'Tried to request history without a prev_batch token';
@@ -1285,7 +1293,7 @@ class Room {
       direction,
       from: prev_batch,
       limit: historyCount,
-      filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
+      filter: jsonEncode(filter.toJson()),
     );
 
     if (onHistoryReceived != null) onHistoryReceived();
@@ -2093,16 +2101,22 @@ class Room {
   /// Returns the [PushRuleState] for this room, based on the m.push_rules stored in
   /// the account_data.
   PushRuleState get pushRuleState {
-    final globalPushRules =
-        client.accountData['m.push_rules']?.content['global'];
-    if (globalPushRules is! Map) {
+    final globalPushRules = client.globalPushRules;
+    if (globalPushRules == null) {
+      // We have no push rules specified at all so we fallback to just notify:
       return PushRuleState.notify;
     }
 
-    if (globalPushRules['override'] is List) {
-      for (final pushRule in globalPushRules['override']) {
-        if (pushRule['rule_id'] == id) {
-          if (pushRule['actions'].indexOf('dont_notify') != -1) {
+    final overridePushRules = globalPushRules.override;
+    if (overridePushRules != null) {
+      for (final pushRule in overridePushRules) {
+        if (pushRule.ruleId == id) {
+          // "dont_notify" and "coalesce" should be ignored in actions since
+          // https://spec.matrix.org/v1.7/client-server-api/#actions
+          pushRule.actions
+            ..remove('dont_notify')
+            ..remove('coalesce');
+          if (pushRule.actions.isEmpty) {
             return PushRuleState.dontNotify;
           }
           break;
@@ -2110,10 +2124,16 @@ class Room {
       }
     }
 
-    if (globalPushRules['room'] is List) {
-      for (final pushRule in globalPushRules['room']) {
-        if (pushRule['rule_id'] == id) {
-          if (pushRule['actions'].indexOf('dont_notify') != -1) {
+    final roomPushRules = globalPushRules.room;
+    if (roomPushRules != null) {
+      for (final pushRule in roomPushRules) {
+        if (pushRule.ruleId == id) {
+          // "dont_notify" and "coalesce" should be ignored in actions since
+          // https://spec.matrix.org/v1.7/client-server-api/#actions
+          pushRule.actions
+            ..remove('dont_notify')
+            ..remove('coalesce');
+          if (pushRule.actions.isEmpty) {
             return PushRuleState.mentionsOnly;
           }
           break;
@@ -2145,13 +2165,13 @@ class Room {
           await client.setPushRule(
             PushRuleKind.room,
             id,
-            [PushRuleAction.dontNotify],
+            [],
           );
         } else if (pushRuleState == PushRuleState.notify) {
           await client.setPushRule(
             PushRuleKind.room,
             id,
-            [PushRuleAction.dontNotify],
+            [],
           );
         }
         break;
@@ -2163,7 +2183,7 @@ class Room {
         await client.setPushRule(
           PushRuleKind.override,
           id,
-          [PushRuleAction.dontNotify],
+          [],
           conditions: [
             PushCondition(kind: 'event_match', key: 'room_id', pattern: id),
           ],
