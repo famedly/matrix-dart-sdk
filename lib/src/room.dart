@@ -1128,7 +1128,10 @@ class Room {
           await _handleFakeSync(syncUpdate);
           completer.complete();
           _sendingQueue.remove(completer);
-          if (e is EventTooLarge) rethrow;
+          if (e is EventTooLarge ||
+              (e is MatrixException && e.error == MatrixError.M_FORBIDDEN)) {
+            rethrow;
+          }
           return null;
         } else {
           Logs()
