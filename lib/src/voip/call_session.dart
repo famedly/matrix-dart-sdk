@@ -937,7 +937,6 @@ class CallSession {
   /// This used to be done by calling hangup, but is a separate method and protocol
   /// event as of MSC2746.
   Future<void> reject({CallErrorCode? reason, bool shouldEmit = true}) async {
-    setCallState(CallState.kEnding);
     if (state != CallState.kRinging && state != CallState.kFledgling) {
       Logs().e(
         '[VOIP] Call must be in \'ringing|fledgling\' state to reject! (current state was: ${state.toString()}) Calling hangup instead',
@@ -946,6 +945,7 @@ class CallSession {
       return;
     }
     Logs().d('[VOIP] Rejecting call: $callId');
+    setCallState(CallState.kEnding);
     await terminate(CallParty.kLocal, CallErrorCode.userHangup, shouldEmit);
     if (shouldEmit) {
       await sendCallReject(room, callId, localPartyId);
