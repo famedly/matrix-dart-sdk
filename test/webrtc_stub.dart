@@ -16,6 +16,11 @@ class MockWebRTCDelegate implements WebRTCDelegate {
       MockRTCPeerConnection();
 
   @override
+  Future<void> registerListeners(CallSession session) async {
+    Logs().i('registerListeners called in MockWebRTCDelegate');
+  }
+
+  @override
   Future<void> handleCallEnded(CallSession session) async {
     Logs().i('handleCallEnded called in MockWebRTCDelegate');
   }
