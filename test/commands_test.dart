@@ -536,15 +536,18 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       final stdout = StringBuffer();
       await client.parseAndRunCommand(
-          null, '/dm @alice:example.com --no-encryption',
-          stdout: stdout);
+        null,
+        '/dm @alice:example.com --no-encryption',
+        stdout: stdout,
+      );
       expect(
           json.decode(
-              FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first),
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+          ),
           {
             'invite': ['@alice:example.com'],
             'is_direct': true,
-            'preset': 'trusted_private_chat'
+            'preset': 'trusted_private_chat',
           });
       expect(
         (jsonDecode(stdout.toString()) as DefaultCommandOutput).rooms?.first,
@@ -556,12 +559,16 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       final stdout = StringBuffer();
       await client.parseAndRunCommand(
-          null, '/create @alice:example.com --no-encryption',
-          stdout: stdout);
+        null,
+        '/create @alice:example.com --no-encryption',
+        stdout: stdout,
+      );
       expect(
-          json.decode(
-              FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first),
-          {'preset': 'private_chat'});
+        json.decode(
+          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+        ),
+        {'preset': 'private_chat'},
+      );
       expect(
         (jsonDecode(stdout.toString()) as DefaultCommandOutput).rooms?.first,
         '!1234:fakeServer.notExisting',
