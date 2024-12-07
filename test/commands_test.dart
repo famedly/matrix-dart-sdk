@@ -527,6 +527,65 @@ void main() {
       expect(sent, CuteEventContent.cuddle);
     });
 
+    test('client - clearcache', () async {
+      await client.parseAndRunCommand(null, '/clearcache');
+      expect(client.prevBatch, null);
+    });
+
+    test('client - dm', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      final stdout = StringBuffer();
+      await client.parseAndRunCommand(
+        null,
+        '/dm @alice:example.com --no-encryption',
+        stdout: stdout,
+      );
+      expect(
+          json.decode(
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+          ),
+          {
+            'invite': ['@alice:example.com'],
+            'is_direct': true,
+            'preset': 'trusted_private_chat',
+          });
+      expect(
+        (jsonDecode(stdout.toString()) as DefaultCommandOutput).rooms?.first,
+        '!1234:fakeServer.notExisting',
+      );
+    });
+
+    test('client - create', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      final stdout = StringBuffer();
+      await client.parseAndRunCommand(
+        null,
+        '/create @alice:example.com --no-encryption',
+        stdout: stdout,
+      );
+      expect(
+        json.decode(
+          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+        ),
+        {'preset': 'private_chat'},
+      );
+      expect(
+        (jsonDecode(stdout.toString()) as DefaultCommandOutput).rooms?.first,
+        '!1234:fakeServer.notExisting',
+      );
+    });
+
+    test('client - missing room - discardsession', () async {
+      Object? error;
+      try {
+        await client.parseAndRunCommand(null, '/discardsession');
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error is RoomCommandException, isTrue);
+    });
+
     test('dispose client', () async {
       await client.dispose(closeDatabase: true);
     });
