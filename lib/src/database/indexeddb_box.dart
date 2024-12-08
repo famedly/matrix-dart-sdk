@@ -213,20 +213,22 @@ class Box<V> {
     return;
   }
 
+  void clearCache() {
+    _cache.clear();
+    _cachedKeys = null;
+  }
+
   Future<void> clear([Transaction? txn]) async {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => clear(txn));
-      _cache.clear();
-      _cachedKeys = null;
+      clearCache();
       return;
     }
 
     txn ??= boxCollection._db.transaction(name, 'readwrite');
     final store = txn.objectStore(name);
     await store.clear();
-    _cache.clear();
-    _cachedKeys = null;
-    return;
+    clearCache();
   }
 
   V? _fromValue(Object? value) {
