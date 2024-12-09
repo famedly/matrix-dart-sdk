@@ -597,6 +597,7 @@ class Client extends MatrixApi {
     bool? refreshToken,
     AuthenticationData? auth,
     AccountKind? kind,
+    void Function(InitState)? onInitStateChanged,
   }) async {
     final response = await super.register(
       kind: kind,
@@ -632,6 +633,7 @@ class Client extends MatrixApi {
       newHomeserver: homeserver,
       newDeviceName: initialDeviceDisplayName ?? '',
       newDeviceID: deviceId_,
+      onInitStateChanged: onInitStateChanged,
     );
     return response;
   }
@@ -655,6 +657,7 @@ class Client extends MatrixApi {
     @Deprecated('Deprecated in favour of identifier.') String? user,
     @Deprecated('Deprecated in favour of identifier.') String? medium,
     @Deprecated('Deprecated in favour of identifier.') String? address,
+    void Function(InitState)? onInitStateChanged,
   }) async {
     if (homeserver == null) {
       final domain = identifier is AuthenticationUserIdentifier
@@ -704,6 +707,7 @@ class Client extends MatrixApi {
       newHomeserver: homeserver_,
       newDeviceName: initialDeviceDisplayName ?? '',
       newDeviceID: deviceId_,
+      onInitStateChanged: onInitStateChanged,
     );
     return response;
   }
@@ -1931,7 +1935,11 @@ class Client extends MatrixApi {
     bool waitUntilLoadCompletedLoaded = true,
 
     /// Will be called if the app performs a migration task from the [legacyDatabaseBuilder]
+    @Deprecated('Use onInitStateChanged and listen to `InitState.migration`.')
     void Function()? onMigration,
+
+    /// To track what actually happens you can set a callback here.
+    void Function(InitState)? onInitStateChanged,
   }) async {
     if ((newToken != null ||
             newUserID != null ||
@@ -1956,6 +1964,7 @@ class Client extends MatrixApi {
     String? accessToken;
     String? userID;
     try {
+      onInitStateChanged?.call(InitState.initializing);
       Logs().i('Initialize client $clientName');
       if (onLoginStateChanged.value == LoginState.loggedIn) {
         throw ClientInitPreconditionError(
@@ -2036,14 +2045,21 @@ class Client extends MatrixApi {
             encryption?.pickledOlmAccount,
           );
         }
+        onInitStateChanged?.call(InitState.finished);
         onLoginStateChanged.add(LoginState.loggedIn);
         return;
       }
 
       if (accessToken == null || homeserver == null || userID == null) {
         if (legacyDatabaseBuilder != null) {
-          await _migrateFromLegacyDatabase(onMigration: onMigration);
-          if (isLogged()) return;
+          await _migrateFromLegacyDatabase(
+            onInitStateChanged: onInitStateChanged,
+            onMigration: onMigration,
+          );
+          if (isLogged()) {
+            onInitStateChanged?.call(InitState.finished);
+            return;
+          }
         }
         // we aren't logged in
         await encryption?.dispose();
@@ -2051,6 +2067,7 @@ class Client extends MatrixApi {
         onLoginStateChanged.add(LoginState.loggedOut);
         Logs().i('User is not logged in.');
         _initLock = false;
+        onInitStateChanged?.call(InitState.finished);
         return;
       }
 
@@ -2065,6 +2082,7 @@ class Client extends MatrixApi {
         await encryption?.dispose();
         _encryption = null;
       }
+      onInitStateChanged?.call(InitState.settingUpEncryption);
       await encryption?.init(olmAccount);
 
       final database = this.database;
@@ -2112,6 +2130,7 @@ class Client extends MatrixApi {
         // ignore: deprecated_member_use_from_same_package
         presences.clear();
         if (waitUntilLoadCompletedLoaded) {
+          onInitStateChanged?.call(InitState.loadingData);
           await userDeviceKeysLoading;
           await roomsLoading;
           await _accountDataLoading;
@@ -2127,14 +2146,18 @@ class Client extends MatrixApi {
       /// Timeout of 0, so that we don't see a spinner for 30 seconds.
       firstSyncReceived = _sync(timeout: Duration.zero);
       if (waitForFirstSync) {
+        onInitStateChanged?.call(InitState.waitingForFirstSync);
         await firstSyncReceived;
       }
+      onInitStateChanged?.call(InitState.finished);
       return;
     } on ClientInitPreconditionError {
+      onInitStateChanged?.call(InitState.error);
       rethrow;
     } catch (e, s) {
       Logs().wtf('Client initialization failed', e, s);
       onLoginStateChanged.addError(e, s);
+      onInitStateChanged?.call(InitState.error);
       final clientInitException = ClientInitException(
         e,
         homeserver: homeserver,
@@ -3728,6 +3751,7 @@ class Client extends MatrixApi {
   }
 
   Future<void> _migrateFromLegacyDatabase({
+    void Function(InitState)? onInitStateChanged,
     void Function()? onMigration,
   }) async {
     Logs().i('Check legacy database for migration data...');
@@ -3741,6 +3765,7 @@ class Client extends MatrixApi {
       return;
     }
     Logs().i('Found data in the legacy database!');
+    onInitStateChanged?.call(InitState.migratingDatabase);
     onMigration?.call();
     _id = migrateClient['client_id'];
     final tokenExpiresAtMs =
@@ -3858,6 +3883,7 @@ class Client extends MatrixApi {
     return init(
       waitForFirstSync: false,
       waitUntilLoadCompletedLoaded: false,
+      onInitStateChanged: onInitStateChanged,
     );
   }
 }
@@ -3957,4 +3983,31 @@ class _EventPendingDecryption {
       addedAt.add(Duration(minutes: 5)).isBefore(DateTime.now());
 
   _EventPendingDecryption(this.event);
+}
+
+enum InitState {
+  /// Initialization has been started. Client fetches information from the database.
+  initializing,
+
+  /// The database has been updated. A migration is in progress.
+  migratingDatabase,
+
+  /// The encryption module will be set up now. For the first login this also
+  /// includes uploading keys to the server.
+  settingUpEncryption,
+
+  /// The client is loading rooms, device keys and account data from the
+  /// database.
+  loadingData,
+
+  /// The client waits now for the first sync before procceeding. Get more
+  /// information from `Client.onSyncUpdate`.
+  waitingForFirstSync,
+
+  /// Initialization is complete without errors. The client is now either
+  /// logged in or no active session was found.
+  finished,
+
+  /// Initialization has been completed with an error.
+  error,
 }
