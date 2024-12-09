@@ -1153,21 +1153,29 @@ class Room {
   /// Call the Matrix API to join this room if the user is not already a member.
   /// If this room is intended to be a direct chat, the direct chat flag will
   /// automatically be set.
-  Future<void> join({bool leaveIfNotFound = true}) async {
+  Future<void> join({
+    /// In case of the room is not found on the server, the client leaves the
+    /// room and rethrows the exception.
+    bool leaveIfNotFound = true,
+  }) async {
+    final dmId = directChatMatrixID;
     try {
       // If this is a DM, mark it as a DM first, because otherwise the current member
       // event might be the join event already and there is also a race condition there for SDK users.
-      final dmId = directChatMatrixID;
-      if (dmId != null) {
-        await addToDirectChat(dmId);
-      }
+      if (dmId != null) await addToDirectChat(dmId);
 
       // now join
       await client.joinRoomById(id);
     } on MatrixException catch (exception) {
+      if (dmId != null) await removeFromDirectChat();
       if (leaveIfNotFound &&
-          [MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
-              .contains(exception.error)) {
+          membership == Membership.invite &&
+          // Right now Synapse responses with `M_UNKNOWN` when the room can not
+          // be found. This is the case for example when User A invites User B
+          // to a direct chat and then User A leaves the chat before User B
+          // joined.
+          // See: https://github.com/element-hq/synapse/issues/1533
+          exception.error == MatrixError.M_UNKNOWN) {
         await leave();
       }
       rethrow;
@@ -1180,9 +1188,13 @@ class Room {
   Future<void> leave() async {
     try {
       await client.leaveRoom(id);
-    } on MatrixException catch (exception) {
-      if ([MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
-          .contains(exception.error)) {
+    } on MatrixException catch (e, s) {
+      if ([MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN].contains(e.error)) {
+        Logs().w(
+          'Unable to leave room. Deleting manually from database...',
+          e,
+          s,
+        );
         await _handleFakeSync(
           SyncUpdate(
             nextBatch: '',
