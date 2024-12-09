@@ -39,8 +39,11 @@ void main() {
     });
 
     test('Shrink', () async {
-      final resp = await http.get(Uri.parse(
-          'https://upload.wikimedia.org/wikipedia/commons/5/5f/Salagou_Lake%2C_Celles_cf01.jpg'));
+      final resp = await http.get(
+        Uri.parse(
+          'https://upload.wikimedia.org/wikipedia/commons/5/5f/Salagou_Lake%2C_Celles_cf01.jpg',
+        ),
+      );
 
       if (resp.statusCode == 200) {
         final file = MatrixImageFile(

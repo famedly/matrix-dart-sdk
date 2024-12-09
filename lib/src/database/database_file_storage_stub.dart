@@ -17,4 +17,6 @@ mixin DatabaseFileStorage {
   Future<void> deleteOldFiles(int savedAt) async {
     return;
   }
+
+  Future<bool> deleteFile(Uri mxcUri) async => false;
 }

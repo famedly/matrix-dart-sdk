@@ -42,21 +42,33 @@ void main() {
     };
     String? getMention(mention) => mentionMap[mention];
     test('simple markdown', () {
-      expect(markdown('hey *there* how are **you** doing?'),
-          'hey <em>there</em> how are <strong>you</strong> doing?');
+      expect(
+        markdown('hey *there* how are **you** doing?'),
+        'hey <em>there</em> how are <strong>you</strong> doing?',
+      );
       expect(markdown('wha ~~strike~~ works!'), 'wha <del>strike</del> works!');
     });
     test('spoilers', () {
-      expect(markdown('Snape killed ||Dumbledoor||'),
-          'Snape killed <span data-mx-spoiler="">Dumbledoor</span>');
-      expect(markdown('Snape killed ||Story|Dumbledoor||'),
-          'Snape killed <span data-mx-spoiler="Story">Dumbledoor</span>');
-      expect(markdown('Snape killed ||Some dumb loser|Dumbledoor||'),
-          'Snape killed <span data-mx-spoiler="Some dumb loser">Dumbledoor</span>');
-      expect(markdown('Snape killed ||Some dumb loser|Dumbledoor **bold**||'),
-          'Snape killed <span data-mx-spoiler="Some dumb loser">Dumbledoor <strong>bold</strong></span>');
-      expect(markdown('Snape killed ||Dumbledoor **bold**||'),
-          'Snape killed <span data-mx-spoiler="">Dumbledoor <strong>bold</strong></span>');
+      expect(
+        markdown('Snape killed ||Dumbledoor||'),
+        'Snape killed <span data-mx-spoiler="">Dumbledoor</span>',
+      );
+      expect(
+        markdown('Snape killed ||Story|Dumbledoor||'),
+        'Snape killed <span data-mx-spoiler="Story">Dumbledoor</span>',
+      );
+      expect(
+        markdown('Snape killed ||Some dumb loser|Dumbledoor||'),
+        'Snape killed <span data-mx-spoiler="Some dumb loser">Dumbledoor</span>',
+      );
+      expect(
+        markdown('Snape killed ||Some dumb loser|Dumbledoor **bold**||'),
+        'Snape killed <span data-mx-spoiler="Some dumb loser">Dumbledoor <strong>bold</strong></span>',
+      );
+      expect(
+        markdown('Snape killed ||Dumbledoor **bold**||'),
+        'Snape killed <span data-mx-spoiler="">Dumbledoor <strong>bold</strong></span>',
+      );
     });
     test('multiple paragraphs', () {
       expect(markdown('Heya!\n\nBeep'), '<p>Heya!</p><p>Beep</p>');
@@ -74,60 +86,108 @@ void main() {
       );
     });
     test('emotes', () {
-      expect(markdown(':fox:', getEmotePacks: () => emotePacks),
-          '<img data-mx-emoticon="" src="mxc://roomfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
-      expect(markdown(':user~fox:', getEmotePacks: () => emotePacks),
-          '<img data-mx-emoticon="" src="mxc://userfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
-      expect(markdown(':raccoon:', getEmotePacks: () => emotePacks),
-          '<img data-mx-emoticon="" src="mxc://raccoon" alt=":raccoon:" title=":raccoon:" height="32" vertical-align="middle" />');
       expect(
-          markdown(':invalid:', getEmotePacks: () => emotePacks), ':invalid:');
-      expect(markdown(':invalid:?!', getEmotePacks: () => emotePacks),
-          ':invalid:?!');
-      expect(markdown(':room~invalid:', getEmotePacks: () => emotePacks),
-          ':room~invalid:');
+        markdown(':fox:', getEmotePacks: () => emotePacks),
+        '<img data-mx-emoticon="" src="mxc://roomfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />',
+      );
+      expect(
+        markdown(':user~fox:', getEmotePacks: () => emotePacks),
+        '<img data-mx-emoticon="" src="mxc://userfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />',
+      );
+      expect(
+        markdown(':raccoon:', getEmotePacks: () => emotePacks),
+        '<img data-mx-emoticon="" src="mxc://raccoon" alt=":raccoon:" title=":raccoon:" height="32" vertical-align="middle" />',
+      );
+      expect(
+        markdown(':invalid:', getEmotePacks: () => emotePacks),
+        ':invalid:',
+      );
+      expect(
+        markdown(':invalid:?!', getEmotePacks: () => emotePacks),
+        ':invalid:?!',
+      );
+      expect(
+        markdown(':room~invalid:', getEmotePacks: () => emotePacks),
+        ':room~invalid:',
+      );
     });
     test('pills', () {
-      expect(markdown('Hey @sorunome:sorunome.de!'),
-          'Hey <a href="https://matrix.to/#/@sorunome:sorunome.de">@sorunome:sorunome.de</a>!');
-      expect(markdown('#fox:sorunome.de: you all are awesome'),
-          '<a href="https://matrix.to/#/#fox:sorunome.de">#fox:sorunome.de</a>: you all are awesome');
-      expect(markdown('!blah:example.org'),
-          '<a href="https://matrix.to/#/!blah:example.org">!blah:example.org</a>');
-      expect(markdown('https://matrix.to/#/#fox:sorunome.de'),
-          'https://matrix.to/#/#fox:sorunome.de');
-      expect(markdown('Hey @sorunome:sorunome.de:1234!'),
-          'Hey <a href="https://matrix.to/#/@sorunome:sorunome.de:1234">@sorunome:sorunome.de:1234</a>!');
-      expect(markdown('Hey @sorunome:127.0.0.1!'),
-          'Hey <a href="https://matrix.to/#/@sorunome:127.0.0.1">@sorunome:127.0.0.1</a>!');
-      expect(markdown('Hey @sorunome:[::1]!'),
-          'Hey <a href="https://matrix.to/#/@sorunome:[::1]">@sorunome:[::1]</a>!');
+      expect(
+        markdown('Hey @sorunome:sorunome.de!'),
+        'Hey <a href="https://matrix.to/#/@sorunome:sorunome.de">@sorunome:sorunome.de</a>!',
+      );
+      expect(
+        markdown('#fox:sorunome.de: you all are awesome'),
+        '<a href="https://matrix.to/#/#fox:sorunome.de">#fox:sorunome.de</a>: you all are awesome',
+      );
+      expect(
+        markdown('!blah:example.org'),
+        '<a href="https://matrix.to/#/!blah:example.org">!blah:example.org</a>',
+      );
+      expect(
+        markdown('https://matrix.to/#/#fox:sorunome.de'),
+        'https://matrix.to/#/#fox:sorunome.de',
+      );
+      expect(
+        markdown('Hey @sorunome:sorunome.de:1234!'),
+        'Hey <a href="https://matrix.to/#/@sorunome:sorunome.de:1234">@sorunome:sorunome.de:1234</a>!',
+      );
+      expect(
+        markdown('Hey @sorunome:127.0.0.1!'),
+        'Hey <a href="https://matrix.to/#/@sorunome:127.0.0.1">@sorunome:127.0.0.1</a>!',
+      );
+      expect(
+        markdown('Hey @sorunome:[::1]!'),
+        'Hey <a href="https://matrix.to/#/@sorunome:[::1]">@sorunome:[::1]</a>!',
+      );
     });
     test('mentions', () {
-      expect(markdown('Hey @Bob!', getMention: getMention),
-          'Hey <a href="https://matrix.to/#/@bob:example.org">@Bob</a>!');
-      expect(markdown('How is @[Bob Ross] doing?', getMention: getMention),
-          'How is <a href="https://matrix.to/#/@bobross:example.org">@[Bob Ross]</a> doing?');
       expect(
-          markdown('Hey @invalid!', getMention: getMention), 'Hey @invalid!');
-      expect(markdown('Hey @Fox#123!', getMention: getMention),
-          'Hey <a href="https://matrix.to/#/@fox:example.org">@Fox#123</a>!');
-      expect(markdown('Hey @[Fast Fox]#123!', getMention: getMention),
-          'Hey <a href="https://matrix.to/#/@fastfox:example.org">@[Fast Fox]#123</a>!');
-      expect(markdown('Hey @[">]!', getMention: getMention),
-          'Hey <a href="https://matrix.to/#/@blah:example.org">@[&quot;&gt;]</a>!');
+        markdown('Hey @Bob!', getMention: getMention),
+        'Hey <a href="https://matrix.to/#/@bob:example.org">@Bob</a>!',
+      );
+      expect(
+        markdown('How is @[Bob Ross] doing?', getMention: getMention),
+        'How is <a href="https://matrix.to/#/@bobross:example.org">@[Bob Ross]</a> doing?',
+      );
+      expect(
+        markdown('Hey @invalid!', getMention: getMention),
+        'Hey @invalid!',
+      );
+      expect(
+        markdown('Hey @Fox#123!', getMention: getMention),
+        'Hey <a href="https://matrix.to/#/@fox:example.org">@Fox#123</a>!',
+      );
+      expect(
+        markdown('Hey @[Fast Fox]#123!', getMention: getMention),
+        'Hey <a href="https://matrix.to/#/@fastfox:example.org">@[Fast Fox]#123</a>!',
+      );
+      expect(
+        markdown('Hey @[">]!', getMention: getMention),
+        'Hey <a href="https://matrix.to/#/@blah:example.org">@[&quot;&gt;]</a>!',
+      );
     });
     test('latex', () {
-      expect(markdown('meep \$\\frac{2}{3}\$'),
-          'meep <span data-mx-maths="\\frac{2}{3}"><code>\\frac{2}{3}</code></span>');
-      expect(markdown('meep \$hmm *yay*\$'),
-          'meep <span data-mx-maths="hmm *yay*"><code>hmm *yay*</code></span>');
-      expect(markdown('you have \$somevar and \$someothervar'),
-          'you have \$somevar and \$someothervar');
-      expect(markdown('meep ||\$\\frac{2}{3}\$||'),
-          'meep <span data-mx-spoiler=""><span data-mx-maths="\\frac{2}{3}"><code>\\frac{2}{3}</code></span></span>');
-      expect(markdown('meep `\$\\frac{2}{3}\$`'),
-          'meep <code>\$\\frac{2}{3}\$</code>');
+      expect(
+        markdown('meep \$\\frac{2}{3}\$'),
+        'meep <span data-mx-maths="\\frac{2}{3}"><code>\\frac{2}{3}</code></span>',
+      );
+      expect(
+        markdown('meep \$hmm *yay*\$'),
+        'meep <span data-mx-maths="hmm *yay*"><code>hmm *yay*</code></span>',
+      );
+      expect(
+        markdown('you have \$somevar and \$someothervar'),
+        'you have \$somevar and \$someothervar',
+      );
+      expect(
+        markdown('meep ||\$\\frac{2}{3}\$||'),
+        'meep <span data-mx-spoiler=""><span data-mx-maths="\\frac{2}{3}"><code>\\frac{2}{3}</code></span></span>',
+      );
+      expect(
+        markdown('meep `\$\\frac{2}{3}\$`'),
+        'meep <code>\$\\frac{2}{3}\$</code>',
+      );
     });
     test('Code blocks', () {
       expect(

@@ -33,16 +33,19 @@ class AuthenticationPassword extends AuthenticationData {
   /// Identifier classes extending AuthenticationIdentifier.
   AuthenticationIdentifier identifier;
 
-  AuthenticationPassword(
-      {super.session, required this.password, required this.identifier})
-      : super(
+  AuthenticationPassword({
+    super.session,
+    required this.password,
+    required this.identifier,
+  }) : super(
           type: AuthenticationTypes.password,
         );
 
   AuthenticationPassword.fromJson(super.json)
       : password = json['password'] as String,
         identifier = AuthenticationIdentifier.subFromJson(
-            json['identifier'] as Map<String, Object?>),
+          json['identifier'] as Map<String, Object?>,
+        ),
         super.fromJson();
 
   @override

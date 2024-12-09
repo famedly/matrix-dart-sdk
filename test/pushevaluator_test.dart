@@ -59,63 +59,91 @@ void main() {
     test('event_match rule', () async {
       final event = Event.fromJson(jsonObj, room);
 
-      final override_ruleset = PushRuleSet(override: [
-        PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
-          'notify',
-          {'set_tweak': 'highlight', 'value': true},
-          {'set_tweak': 'sound', 'value': 'goose.wav'},
-        ], conditions: [
-          PushCondition(
-              kind: 'event_match', pattern: 'fox', key: 'content.body'),
-        ])
-      ]);
-      final underride_ruleset = PushRuleSet(underride: [
-        PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
-          'notify',
-          {'set_tweak': 'highlight', 'value': true},
-          {'set_tweak': 'sound', 'value': 'goose.wav'},
-        ], conditions: [
-          PushCondition(
-              kind: 'event_match', pattern: 'fox', key: 'content.body'),
-        ])
-      ]);
-      final content_ruleset = PushRuleSet(content: [
-        PushRule(
-          ruleId: 'my.rule',
-          default$: false,
-          enabled: true,
-          actions: [
-            'notify',
-            {'set_tweak': 'highlight', 'value': true},
-            {'set_tweak': 'sound', 'value': 'goose.wav'},
-          ],
-          pattern: 'fox',
-        )
-      ]);
-      final room_ruleset = PushRuleSet(room: [
-        PushRule(
-          ruleId: room.id,
-          default$: false,
-          enabled: true,
-          actions: [
-            'notify',
-            {'set_tweak': 'highlight', 'value': true},
-            {'set_tweak': 'sound', 'value': 'goose.wav'},
-          ],
-        )
-      ]);
-      final sender_ruleset = PushRuleSet(sender: [
-        PushRule(
-          ruleId: senderID,
-          default$: false,
-          enabled: true,
-          actions: [
-            'notify',
-            {'set_tweak': 'highlight', 'value': true},
-            {'set_tweak': 'sound', 'value': 'goose.wav'},
-          ],
-        )
-      ]);
+      final override_ruleset = PushRuleSet(
+        override: [
+          PushRule(
+            ruleId: 'my.rule',
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            conditions: [
+              PushCondition(
+                kind: 'event_match',
+                pattern: 'fox',
+                key: 'content.body',
+              ),
+            ],
+          ),
+        ],
+      );
+      final underride_ruleset = PushRuleSet(
+        underride: [
+          PushRule(
+            ruleId: 'my.rule',
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            conditions: [
+              PushCondition(
+                kind: 'event_match',
+                pattern: 'fox',
+                key: 'content.body',
+              ),
+            ],
+          ),
+        ],
+      );
+      final content_ruleset = PushRuleSet(
+        content: [
+          PushRule(
+            ruleId: 'my.rule',
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            pattern: 'fox',
+          ),
+        ],
+      );
+      final room_ruleset = PushRuleSet(
+        room: [
+          PushRule(
+            ruleId: room.id,
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+          ),
+        ],
+      );
+      final sender_ruleset = PushRuleSet(
+        sender: [
+          PushRule(
+            ruleId: senderID,
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+          ),
+        ],
+      );
 
       void testMatch(PushRuleSet ruleset, Event event) {
         final evaluator = PushruleEvaluator.fromRuleset(ruleset);
@@ -174,15 +202,27 @@ void main() {
       testMatch(room_ruleset, event);
       testMatch(sender_ruleset, event);
 
-      final override_ruleset2 = PushRuleSet(override: [
-        PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
-          'notify',
-          {'set_tweak': 'highlight', 'value': true},
-          {'set_tweak': 'sound', 'value': 'goose.wav'},
-        ], conditions: [
-          PushCondition(kind: 'event_match', pattern: senderID, key: 'sender'),
-        ])
-      ]);
+      final override_ruleset2 = PushRuleSet(
+        override: [
+          PushRule(
+            ruleId: 'my.rule',
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            conditions: [
+              PushCondition(
+                kind: 'event_match',
+                pattern: senderID,
+                key: 'sender',
+              ),
+            ],
+          ),
+        ],
+      );
 
       testMatch(override_ruleset2, event);
       event.senderId = '@nope:server.tld';
@@ -199,19 +239,32 @@ void main() {
     });
 
     test('invalid push condition', () async {
-      final invalid_ruleset = PushRuleSet(override: [
-        PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
-          'notify',
-          {'set_tweak': 'highlight', 'value': true},
-          {'set_tweak': 'sound', 'value': 'goose.wav'},
-        ], conditions: [
-          PushCondition(
-              kind: 'invalidcondition', pattern: 'fox', key: 'content.body'),
-        ])
-      ]);
+      final invalid_ruleset = PushRuleSet(
+        override: [
+          PushRule(
+            ruleId: 'my.rule',
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            conditions: [
+              PushCondition(
+                kind: 'invalidcondition',
+                pattern: 'fox',
+                key: 'content.body',
+              ),
+            ],
+          ),
+        ],
+      );
 
-      expect(() => PushruleEvaluator.fromRuleset(invalid_ruleset),
-          returnsNormally);
+      expect(
+        () => PushruleEvaluator.fromRuleset(invalid_ruleset),
+        returnsNormally,
+      );
 
       final evaluator = PushruleEvaluator.fromRuleset(invalid_ruleset);
       final event = Event.fromJson(jsonObj, room);
@@ -224,24 +277,35 @@ void main() {
     test('match_display_name rule', () async {
       final event = Event.fromJson(jsonObj, room);
       (event.room.states[EventTypes.RoomMember] ??= {})[client.userID!] =
-          Event.fromJson({
-        'type': EventTypes.RoomMember,
-        'sender': senderID,
-        'state_key': 'client.senderID',
-        'content': {'displayname': 'Nico', 'membership': 'join'},
-        'room_id': room.id,
-        'origin_server_ts': 5,
-      }, room);
+          Event.fromJson(
+        {
+          'type': EventTypes.RoomMember,
+          'sender': senderID,
+          'state_key': 'client.senderID',
+          'content': {'displayname': 'Nico', 'membership': 'join'},
+          'room_id': room.id,
+          'origin_server_ts': 5,
+        },
+        room,
+      );
 
-      final ruleset = PushRuleSet(override: [
-        PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
-          'notify',
-          {'set_tweak': 'highlight', 'value': true},
-          {'set_tweak': 'sound', 'value': 'goose.wav'},
-        ], conditions: [
-          PushCondition(kind: 'contains_display_name'),
-        ])
-      ]);
+      final ruleset = PushRuleSet(
+        override: [
+          PushRule(
+            ruleId: 'my.rule',
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            conditions: [
+              PushCondition(kind: 'contains_display_name'),
+            ],
+          ),
+        ],
+      );
       event.content['body'] = 'äNicoü';
 
       final evaluator = PushruleEvaluator.fromRuleset(ruleset);
@@ -258,24 +322,35 @@ void main() {
     test('member_count rule', () async {
       final event = Event.fromJson(jsonObj, room);
       (event.room.states[EventTypes.RoomMember] ??= {})[client.userID!] =
-          Event.fromJson({
-        'type': EventTypes.RoomMember,
-        'sender': senderID,
-        'state_key': 'client.senderID',
-        'content': {'displayname': 'Nico', 'membership': 'join'},
-        'room_id': room.id,
-        'origin_server_ts': 5,
-      }, room);
+          Event.fromJson(
+        {
+          'type': EventTypes.RoomMember,
+          'sender': senderID,
+          'state_key': 'client.senderID',
+          'content': {'displayname': 'Nico', 'membership': 'join'},
+          'room_id': room.id,
+          'origin_server_ts': 5,
+        },
+        room,
+      );
 
-      final ruleset = PushRuleSet(override: [
-        PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
-          'notify',
-          {'set_tweak': 'highlight', 'value': true},
-          {'set_tweak': 'sound', 'value': 'goose.wav'},
-        ], conditions: [
-          PushCondition(kind: 'room_member_count', is$: '<5'),
-        ])
-      ]);
+      final ruleset = PushRuleSet(
+        override: [
+          PushRule(
+            ruleId: 'my.rule',
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            conditions: [
+              PushCondition(kind: 'room_member_count', is$: '<5'),
+            ],
+          ),
+        ],
+      );
       event.content['body'] = 'äNicoü';
 
       var evaluator = PushruleEvaluator.fromRuleset(ruleset);
@@ -309,27 +384,41 @@ void main() {
     test('notification permissions rule', () async {
       final event = Event.fromJson(jsonObj, room);
       (event.room.states[EventTypes.RoomPowerLevels] ??= {})[''] =
-          Event.fromJson({
-        'type': EventTypes.RoomMember,
-        'sender': senderID,
-        'state_key': 'client.senderID',
-        'content': {
-          'notifications': {'broom': 20},
-          'users': {senderID: 20},
+          Event.fromJson(
+        {
+          'type': EventTypes.RoomMember,
+          'sender': senderID,
+          'state_key': 'client.senderID',
+          'content': {
+            'notifications': {'broom': 20},
+            'users': {senderID: 20},
+          },
+          'room_id': room.id,
+          'origin_server_ts': 5,
         },
-        'room_id': room.id,
-        'origin_server_ts': 5,
-      }, room);
+        room,
+      );
 
-      final ruleset = PushRuleSet(override: [
-        PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
-          'notify',
-          {'set_tweak': 'highlight', 'value': true},
-          {'set_tweak': 'sound', 'value': 'goose.wav'},
-        ], conditions: [
-          PushCondition(kind: 'sender_notification_permission', key: 'broom'),
-        ])
-      ]);
+      final ruleset = PushRuleSet(
+        override: [
+          PushRule(
+            ruleId: 'my.rule',
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            conditions: [
+              PushCondition(
+                kind: 'sender_notification_permission',
+                key: 'broom',
+              ),
+            ],
+          ),
+        ],
+      );
 
       final evaluator = PushruleEvaluator.fromRuleset(ruleset);
       expect(evaluator.match(event).notify, true);
@@ -339,24 +428,29 @@ void main() {
     });
 
     test('invalid content rule', () async {
-      final invalid_content_ruleset = PushRuleSet(content: [
-        PushRule(
-          ruleId: 'my.rule',
-          default$: false,
-          enabled: true,
-          actions: [
-            'notify',
-            {'set_tweak': 'highlight', 'value': true},
-            {'set_tweak': 'sound', 'value': 'goose.wav'},
-          ],
-          // pattern: 'fox', <- no pattern!
-        )
-      ]);
+      final invalid_content_ruleset = PushRuleSet(
+        content: [
+          PushRule(
+            ruleId: 'my.rule',
+            default$: false,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            // pattern: 'fox', <- no pattern!
+          ),
+        ],
+      );
 
-      expect(() => PushruleEvaluator.fromRuleset(invalid_content_ruleset),
-          returnsNormally);
+      expect(
+        () => PushruleEvaluator.fromRuleset(invalid_content_ruleset),
+        returnsNormally,
+      );
 
-      final dendriteRuleset = PushRuleSet.fromJson(json.decode('''{
+      final dendriteRuleset = PushRuleSet.fromJson(
+        json.decode('''{
   "global": {
     "override": [
       {
@@ -634,9 +728,12 @@ void main() {
     ]
   }
 }
-'''));
-      expect(() => PushruleEvaluator.fromRuleset(dendriteRuleset),
-          returnsNormally);
+'''),
+      );
+      expect(
+        () => PushruleEvaluator.fromRuleset(dendriteRuleset),
+        returnsNormally,
+      );
     });
   });
 }

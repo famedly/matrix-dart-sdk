@@ -131,12 +131,16 @@ abstract class MatrixLocalizations {
   String changedTheGuestAccessRules(String senderName);
 
   String changedTheGuestAccessRulesTo(
-      String senderName, String localizedString);
+    String senderName,
+    String localizedString,
+  );
 
   String changedTheHistoryVisibility(String senderName);
 
   String changedTheHistoryVisibilityTo(
-      String senderName, String localizedString);
+    String senderName,
+    String localizedString,
+  );
 
   String activatedEndToEndEncryption(String senderName);
 

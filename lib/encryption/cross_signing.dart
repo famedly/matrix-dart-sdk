@@ -72,11 +72,12 @@ class CrossSigning {
             null;
   }
 
-  Future<void> selfSign(
-      {String? passphrase,
-      String? recoveryKey,
-      String? keyOrPassphrase,
-      OpenSSSS? openSsss}) async {
+  Future<void> selfSign({
+    String? passphrase,
+    String? recoveryKey,
+    String? keyOrPassphrase,
+    OpenSSSS? openSsss,
+  }) async {
     var handle = openSsss;
     if (handle == null) {
       handle = encryption.ssss.open(EventTypes.CrossSigningMasterKey);
@@ -89,7 +90,8 @@ class CrossSigning {
       await handle.maybeCacheAll();
     }
     final masterPrivateKey = base64decodeUnpadded(
-        await handle.getStored(EventTypes.CrossSigningMasterKey));
+      await handle.getStored(EventTypes.CrossSigningMasterKey),
+    );
     final keyObj = olm.PkSigning();
     String? masterPubkey;
     try {
@@ -117,11 +119,13 @@ class CrossSigning {
     ]);
   }
 
-  bool signable(List<SignableKey> keys) => keys.any((key) =>
-      key is CrossSigningKey && key.usage.contains('master') ||
-      key is DeviceKeys &&
-          key.userId == client.userID &&
-          key.identifier != client.deviceID);
+  bool signable(List<SignableKey> keys) => keys.any(
+        (key) =>
+            key is CrossSigningKey && key.usage.contains('master') ||
+            key is DeviceKeys &&
+                key.userId == client.userID &&
+                key.identifier != client.deviceID,
+      );
 
   Future<void> sign(List<SignableKey> keys) async {
     final signedKeys = <MatrixSignableKey>[];
@@ -133,7 +137,10 @@ class CrossSigning {
     }
 
     void addSignature(
-        SignableKey key, SignableKey signedWith, String signature) {
+      SignableKey key,
+      SignableKey signedWith,
+      String signature,
+    ) {
       final signedKey = key.cloneForSigning();
       ((signedKey.signatures ??=
               <String, Map<String, String>>{})[signedWith.userId] ??=
@@ -154,9 +161,11 @@ class CrossSigning {
           // we don't care about signing other cross-signing keys
         } else {
           // okay, we'll sign a device key with our self signing key
-          selfSigningKey ??= base64decodeUnpadded(await encryption.ssss
-                  .getCached(EventTypes.CrossSigningSelfSigning) ??
-              '');
+          selfSigningKey ??= base64decodeUnpadded(
+            await encryption.ssss
+                    .getCached(EventTypes.CrossSigningSelfSigning) ??
+                '',
+          );
           if (selfSigningKey.isNotEmpty) {
             final signature = _sign(key.signingContent, selfSigningKey);
             addSignature(key, userKeys.selfSigningKey!, signature);
@@ -164,9 +173,10 @@ class CrossSigning {
         }
       } else if (key is CrossSigningKey && key.usage.contains('master')) {
         // we are signing someone elses master key
-        userSigningKey ??= base64decodeUnpadded(await encryption.ssss
-                .getCached(EventTypes.CrossSigningUserSigning) ??
-            '');
+        userSigningKey ??= base64decodeUnpadded(
+          await encryption.ssss.getCached(EventTypes.CrossSigningUserSigning) ??
+              '',
+        );
         if (userSigningKey.isNotEmpty) {
           final signature = _sign(key.signingContent, userSigningKey);
           addSignature(key, userKeys.userSigningKey!, signature);

@@ -51,8 +51,12 @@ class MatrixWidget {
       );
 
   /// creates an `m.jitsi` [MatrixWidget]
-  factory MatrixWidget.jitsi(Room room, String name, Uri url,
-          {bool isAudioOnly = false}) =>
+  factory MatrixWidget.jitsi(
+    Room room,
+    String name,
+    Uri url, {
+    bool isAudioOnly = false,
+  }) =>
       MatrixWidget(
         room: room,
         name: name,
@@ -104,8 +108,10 @@ class MatrixWidget {
       // `[a-zA-Z0-9_-]` as well as non string values
       if (data != null)
         ...Map.from(data!)
-          ..removeWhere((key, value) =>
-              !RegExp(r'^[\w-]+$').hasMatch(key) || !value is String)
+          ..removeWhere(
+            (key, value) =>
+                !RegExp(r'^[\w-]+$').hasMatch(key) || !value is String,
+          )
           ..map((key, value) => MapEntry('\$key', value)),
     };
 
