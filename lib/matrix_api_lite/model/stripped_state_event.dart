@@ -26,11 +26,12 @@ import 'package:matrix/matrix_api_lite.dart';
 class StrippedStateEvent extends BasicEventWithSender {
   String? stateKey;
 
-  StrippedStateEvent(
-      {required super.type,
-      required super.content,
-      required super.senderId,
-      this.stateKey});
+  StrippedStateEvent({
+    required super.type,
+    required super.content,
+    required super.senderId,
+    this.stateKey,
+  });
 
   StrippedStateEvent.fromJson(super.json)
       : stateKey = json.tryGet<String>('state_key'),

@@ -52,7 +52,7 @@ extension EventStatusExtension on EventStatus {
   bool get isSent => [
         EventStatus.sent,
         EventStatus.synced,
-        EventStatus.roomState
+        EventStatus.roomState,
       ].contains(this);
 
   /// Returns `true` if the status is `synced` or `roomState`:

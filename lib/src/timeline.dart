@@ -84,34 +84,60 @@ class Timeline {
         (room.prev_batch != null && events.last.type != EventTypes.RoomCreate);
   }
 
-  Future<void> requestHistory(
-      {int historyCount = Room.defaultHistoryCount}) async {
+  /// Request more previous events from the server. [historyCount] defines how many events should
+  /// be received maximum. [filter] allows you to specify a [StateFilter] object to filter the
+  /// events, which can include various criteria such as event types (e.g., [EventTypes.Message])
+  /// and other state-related filters. The [StateFilter] object will have [lazyLoadMembers] set to
+  /// true by default, but this can be overridden.
+  /// This method does not return a value.
+  Future<void> requestHistory({
+    int historyCount = Room.defaultHistoryCount,
+    StateFilter? filter,
+  }) async {
     if (isRequestingHistory) {
       return;
     }
 
     isRequestingHistory = true;
-    await _requestEvents(direction: Direction.b, historyCount: historyCount);
+    await _requestEvents(
+      direction: Direction.b,
+      historyCount: historyCount,
+      filter: filter,
+    );
     isRequestingHistory = false;
   }
 
   bool get canRequestFuture => !allowNewEvent;
 
-  Future<void> requestFuture(
-      {int historyCount = Room.defaultHistoryCount}) async {
+  /// Request more future events from the server. [historyCount] defines how many events should
+  /// be received maximum. [filter] allows you to specify a [StateFilter] object to filter the
+  /// events, which can include various criteria such as event types (e.g., [EventTypes.Message])
+  /// and other state-related filters. The [StateFilter] object will have [lazyLoadMembers] set to
+  /// true by default, but this can be overridden.
+  /// This method does not return a value.
+  Future<void> requestFuture({
+    int historyCount = Room.defaultHistoryCount,
+    StateFilter? filter,
+  }) async {
     if (allowNewEvent) {
       return; // we shouldn't force to add new events if they will autatically be added
     }
 
     if (isRequestingFuture) return;
     isRequestingFuture = true;
-    await _requestEvents(direction: Direction.f, historyCount: historyCount);
+    await _requestEvents(
+      direction: Direction.f,
+      historyCount: historyCount,
+      filter: filter,
+    );
     isRequestingFuture = false;
   }
 
-  Future<void> _requestEvents(
-      {int historyCount = Room.defaultHistoryCount,
-      required Direction direction}) async {
+  Future<void> _requestEvents({
+    int historyCount = Room.defaultHistoryCount,
+    required Direction direction,
+    StateFilter? filter,
+  }) async {
     onUpdate?.call();
 
     try {
@@ -158,6 +184,7 @@ class Timeline {
           await getRoomEvents(
             historyCount: historyCount,
             direction: direction,
+            filter: filter,
           );
         } else {
           if (room.prev_batch == null) {
@@ -169,6 +196,7 @@ class Timeline {
               onHistoryReceived: () {
                 _collectHistoryUpdates = true;
               },
+              filter: filter,
             );
           }
         }
@@ -182,17 +210,26 @@ class Timeline {
 
   /// Request more previous events from the server. [historyCount] defines how much events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
-  /// the historical events will be published in the onEvent stream.
+  /// the historical events will be published in the onEvent stream. [filter] allows you to specify a
+  /// [StateFilter] object to filter the  events, which can include various criteria such as
+  /// event types (e.g., [EventTypes.Message]) and other state-related filters.
+  /// The [StateFilter] object will have [lazyLoadMembers] set to true by default, but this can be overridden.
   /// Returns the actual count of received timeline events.
-  Future<int> getRoomEvents(
-      {int historyCount = Room.defaultHistoryCount,
-      direction = Direction.b}) async {
+  Future<int> getRoomEvents({
+    int historyCount = Room.defaultHistoryCount,
+    direction = Direction.b,
+    StateFilter? filter,
+  }) async {
+    // Ensure stateFilter is not null and set lazyLoadMembers to true if not already set
+    filter ??= StateFilter(lazyLoadMembers: true);
+    filter.lazyLoadMembers ??= true;
+
     final resp = await room.client.getRoomEvents(
       room.id,
       direction,
       from: direction == Direction.b ? chunk.prevBatch : chunk.nextBatch,
       limit: historyCount,
-      filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
+      filter: jsonEncode(filter.toJson()),
     );
 
     if (resp.end == null) {
@@ -212,10 +249,12 @@ class Timeline {
         newNextBatch != null) {
       if (type == EventUpdateType.history) {
         Logs().w(
-            '[nav] we can still request history prevBatch: $type $newPrevBatch');
+          '[nav] we can still request history prevBatch: $type $newPrevBatch',
+        );
       } else {
         Logs().w(
-            '[nav] we can still request timeline nextBatch: $type $newNextBatch');
+          '[nav] we can still request timeline nextBatch: $type $newNextBatch',
+        );
       }
     }
 
@@ -229,8 +268,9 @@ class Timeline {
       if (allowNewEvent) {
         Logs().d('We now allow sync update into the timeline.');
         newEvents.addAll(
-            await room.client.database?.getEventList(room, onlySending: true) ??
-                []);
+          await room.client.database?.getEventList(room, onlySending: true) ??
+              [],
+        );
       }
     }
 
@@ -272,14 +312,15 @@ class Timeline {
     return resp.chunk.length;
   }
 
-  Timeline(
-      {required this.room,
-      this.onUpdate,
-      this.onChange,
-      this.onInsert,
-      this.onRemove,
-      this.onNewEvent,
-      required this.chunk}) {
+  Timeline({
+    required this.room,
+    this.onUpdate,
+    this.onChange,
+    this.onInsert,
+    this.onRemove,
+    this.onNewEvent,
+    required this.chunk,
+  }) {
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
 
     // If the timeline is limited we want to clear our events cache
@@ -430,11 +471,14 @@ class Timeline {
   }
 
   void _removeEventFromSet(Set<Event> eventSet, Event event) {
-    eventSet.removeWhere((e) =>
-        e.matchesEventOrTransactionId(event.eventId) ||
-        event.unsigned != null &&
-            e.matchesEventOrTransactionId(
-                event.unsigned?.tryGet<String>('transaction_id')));
+    eventSet.removeWhere(
+      (e) =>
+          e.matchesEventOrTransactionId(event.eventId) ||
+          event.unsigned != null &&
+              e.matchesEventOrTransactionId(
+                event.unsigned?.tryGet<String>('transaction_id'),
+              ),
+    );
   }
 
   void addAggregatedEvent(Event event) {
@@ -483,17 +527,20 @@ class Timeline {
 
       if (!allowNewEvent) return;
 
-      final status = eventStatusFromInt(eventUpdate.content['status'] ??
-          (eventUpdate.content['unsigned'] is Map<String, dynamic>
-              ? eventUpdate.content['unsigned'][messageSendingStatusKey]
-              : null) ??
-          EventStatus.synced.intValue);
+      final status = eventStatusFromInt(
+        eventUpdate.content['status'] ??
+            (eventUpdate.content['unsigned'] is Map<String, dynamic>
+                ? eventUpdate.content['unsigned'][messageSendingStatusKey]
+                : null) ??
+            EventStatus.synced.intValue,
+      );
 
       final i = _findEvent(
-          event_id: eventUpdate.content['event_id'],
-          unsigned_txid: eventUpdate.content['unsigned'] is Map
-              ? eventUpdate.content['unsigned']['transaction_id']
-              : null);
+        event_id: eventUpdate.content['event_id'],
+        unsigned_txid: eventUpdate.content['unsigned'] is Map
+            ? eventUpdate.content['unsigned']['transaction_id']
+            : null,
+      );
 
       if (i < events.length) {
         // if the old status is larger than the new one, we also want to preserve the old status
@@ -517,7 +564,8 @@ class Timeline {
 
         if (eventUpdate.type == EventUpdateType.history &&
             events.indexWhere(
-                    (e) => e.eventId == eventUpdate.content['event_id']) !=
+                  (e) => e.eventId == eventUpdate.content['event_id'],
+                ) !=
                 -1) return;
         var index = events.length;
         if (eventUpdate.type == EventUpdateType.history) {
@@ -548,10 +596,12 @@ class Timeline {
             }
           }
 
-          events[index].setRedactionEvent(Event.fromJson(
-            eventUpdate.content,
-            room,
-          ));
+          events[index].setRedactionEvent(
+            Event.fromJson(
+              eventUpdate.content,
+              room,
+            ),
+          );
           onChange?.call(index);
         }
       }

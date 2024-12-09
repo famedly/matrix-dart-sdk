@@ -50,14 +50,15 @@ jobs:
           retention-days: 1
 
   coverage:
-    runs-on: arm-ubuntu-latest-16core
+    #runs-on: arm-ubuntu-latest-16core
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
           sdk: ${{ env.dart_version }}
-          architecture: "arm64"
+          #architecture: "arm64"
       - name: Run tests
         run: |
           sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev libolm3 libssl3

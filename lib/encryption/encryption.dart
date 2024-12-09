@@ -105,9 +105,15 @@ class Encryption {
       );
 
   void handleDeviceOneTimeKeysCount(
-      Map<String, int>? countJson, List<String>? unusedFallbackKeyTypes) {
-    runInRoot(() async => olmManager.handleDeviceOneTimeKeysCount(
-        countJson, unusedFallbackKeyTypes));
+    Map<String, int>? countJson,
+    List<String>? unusedFallbackKeyTypes,
+  ) {
+    runInRoot(
+      () async => olmManager.handleDeviceOneTimeKeysCount(
+        countJson,
+        unusedFallbackKeyTypes,
+      ),
+    );
   }
 
   void onSync() {
@@ -173,9 +179,10 @@ class Encryption {
       return await olmManager.decryptToDeviceEvent(event);
     } catch (e, s) {
       Logs().w(
-          '[LibOlm] Could not decrypt to device event from ${event.sender} with content: ${event.content}',
-          e,
-          s);
+        '[LibOlm] Could not decrypt to device event from ${event.sender} with content: ${event.content}',
+        e,
+        s,
+      );
       client.onEncryptionError.add(
         SdkError(
           exception: e is Exception ? e : Exception(e),
@@ -241,7 +248,10 @@ class Encryption {
         client.database
             // ignore: discarded_futures
             ?.updateInboundGroupSessionIndexes(
-                json.encode(inboundGroupSession.indexes), roomId, sessionId)
+              json.encode(inboundGroupSession.indexes),
+              roomId,
+              sessionId,
+            )
             // ignore: discarded_futures
             .onError((e, _) => Logs().e('Ignoring error for updating indexes'));
       }
@@ -255,8 +265,10 @@ class Encryption {
                       ?.session_id() ??
                   '') ==
               content.sessionId) {
-        runInRoot(() async =>
-            keyManager.clearOrUseOutboundGroupSession(roomId, wipe: true));
+        runInRoot(
+          () async =>
+              keyManager.clearOrUseOutboundGroupSession(roomId, wipe: true),
+        );
       }
       if (canRequestSession) {
         decryptedPayload = {
@@ -295,9 +307,12 @@ class Encryption {
     );
   }
 
-  Future<Event> decryptRoomEvent(String roomId, Event event,
-      {bool store = false,
-      EventUpdateType updateType = EventUpdateType.timeline}) async {
+  Future<Event> decryptRoomEvent(
+    String roomId,
+    Event event, {
+    bool store = false,
+    EventUpdateType updateType = EventUpdateType.timeline,
+  }) async {
     if (event.type != EventTypes.Encrypted || event.redacted) {
       return event;
     }
@@ -351,8 +366,10 @@ class Encryption {
   /// Encrypts the given json payload and creates a send-ready m.room.encrypted
   /// payload. This will create a new outgoingGroupSession if necessary.
   Future<Map<String, dynamic>> encryptGroupMessagePayload(
-      String roomId, Map<String, dynamic> payload,
-      {String type = EventTypes.Message}) async {
+    String roomId,
+    Map<String, dynamic> payload, {
+    String type = EventTypes.Message,
+  }) async {
     payload = copyMap(payload);
     final Map<String, dynamic>? mRelatesTo = payload.remove('m.relates_to');
 
@@ -403,9 +420,10 @@ class Encryption {
   }
 
   Future<Map<String, Map<String, Map<String, dynamic>>>> encryptToDeviceMessage(
-      List<DeviceKeys> deviceKeys,
-      String type,
-      Map<String, dynamic> payload) async {
+    List<DeviceKeys> deviceKeys,
+    String type,
+    Map<String, dynamic> payload,
+  ) async {
     return await olmManager.encryptToDeviceMessage(deviceKeys, type, payload);
   }
 

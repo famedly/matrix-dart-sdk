@@ -193,8 +193,12 @@ class _OptimizedRules {
     actions = EvaluatedPushRuleAction.fromActions(rule.actions);
   }
 
-  EvaluatedPushRuleAction? match(Map<String, String> event, String? displayName,
-      int memberCount, Room room) {
+  EvaluatedPushRuleAction? match(
+    Map<String, String> event,
+    String? displayName,
+    int memberCount,
+    Room room,
+  ) {
     if (patterns.any((pat) => !pat.match(event))) {
       return null;
     }
@@ -207,8 +211,10 @@ class _OptimizedRules {
         return null;
       }
 
-      final regex = RegExp('(^|\\W)${RegExp.escape(displayName)}(\$|\\W)',
-          caseSensitive: false);
+      final regex = RegExp(
+        '(^|\\W)${RegExp.escape(displayName)}(\$|\\W)',
+        caseSensitive: false,
+      );
       if (!regex.hasMatch(body)) {
         return null;
       }
@@ -217,9 +223,12 @@ class _OptimizedRules {
     if (notificationPermissions.isNotEmpty) {
       final sender = event.tryGet<String>('sender');
       if (sender == null ||
-          notificationPermissions.any((notificationType) =>
-              !room.canSendNotification(sender,
-                  notificationType: notificationType))) {
+          notificationPermissions.any(
+            (notificationType) => !room.canSendNotification(
+              sender,
+              notificationType: notificationType,
+            ),
+          )) {
         return null;
       }
     }
@@ -258,7 +267,10 @@ class PushruleEvaluator {
         actions: c.actions,
         conditions: [
           PushCondition(
-              kind: 'event_match', key: 'content.body', pattern: c.pattern)
+            kind: 'event_match',
+            key: 'content.body',
+            pattern: c.pattern,
+          ),
         ],
         ruleId: c.ruleId,
         default$: c.default$,
@@ -284,7 +296,10 @@ class PushruleEvaluator {
   }
 
   Map<String, String> _flattenJson(
-      Map<String, dynamic> obj, Map<String, String> flattened, String prefix) {
+    Map<String, dynamic> obj,
+    Map<String, String> flattened,
+    String prefix,
+  ) {
     for (final entry in obj.entries) {
       final key = prefix == '' ? entry.key : '$prefix.${entry.key}';
       final value = entry.value;

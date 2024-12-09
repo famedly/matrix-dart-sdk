@@ -41,11 +41,13 @@ extension MscUnpublishedCustomRefreshTokenLifetime on MatrixApi {
     final requestUri = Uri(path: '_matrix/client/v3/refresh');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(jsonEncode({
-      'refresh_token': refreshToken,
-      if (refreshTokenLifetimeMs != null)
-        customFieldKey: refreshTokenLifetimeMs,
-    }));
+    request.bodyBytes = utf8.encode(
+      jsonEncode({
+        'refresh_token': refreshToken,
+        if (refreshTokenLifetimeMs != null)
+          customFieldKey: refreshTokenLifetimeMs,
+      }),
+    );
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);

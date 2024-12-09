@@ -33,4 +33,5 @@ class WebWorkerError extends Error {
 
 /// converts a stringifyed, obfuscated [StackTrace] into a [StackTrace]
 typedef WebWorkerStackTraceCallback = FutureOr<StackTrace> Function(
-    String obfuscatedStackTrace);
+  String obfuscatedStackTrace,
+);

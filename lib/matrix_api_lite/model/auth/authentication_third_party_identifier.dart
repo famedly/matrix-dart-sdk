@@ -28,9 +28,10 @@ class AuthenticationThirdPartyIdentifier extends AuthenticationIdentifier {
   String medium;
   String address;
 
-  AuthenticationThirdPartyIdentifier(
-      {required this.medium, required this.address})
-      : super(type: AuthenticationIdentifierTypes.thirdParty);
+  AuthenticationThirdPartyIdentifier({
+    required this.medium,
+    required this.address,
+  }) : super(type: AuthenticationIdentifierTypes.thirdParty);
 
   AuthenticationThirdPartyIdentifier.fromJson(super.json)
       : medium = json['medium'] as String,

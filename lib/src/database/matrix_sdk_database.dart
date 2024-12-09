@@ -51,7 +51,7 @@ import 'package:matrix/src/database/indexeddb_box.dart'
 /// Learn more at:
 /// https://github.com/famedly/matrix-dart-sdk/issues/1642#issuecomment-1865827227
 class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
-  static const int version = 9;
+  static const int version = 10;
   final String name;
 
   late BoxCollection _collection;
@@ -60,12 +60,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   late Box<Map> _roomsBox;
   late Box<Map> _toDeviceQueueBox;
 
-  /// Key is a tuple as TupleKey(roomId, type) where stateKey can be
+  /// Key is a tuple as TupleKey(roomId, type, stateKey) where stateKey can be
   /// an empty string. Must contain only states of type
   /// client.importantRoomStates.
   late Box<Map> _preloadRoomStateBox;
 
-  /// Key is a tuple as TupleKey(roomId, type) where stateKey can be
+  /// Key is a tuple as TupleKey(roomId, type, stateKey) where stateKey can be
   /// an empty string. Must NOT contain states of a type from
   /// client.importantRoomStates.
   late Box<Map> _nonPreloadRoomStateBox;
@@ -104,6 +104,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   late Box<String> _seenDeviceKeysBox;
 
   late Box<Map> _spacesHierarchyBox;
+
   late Box<Map> _userProfilesBox;
 
   @override
@@ -112,7 +113,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   // there was a field of type `dart:io:Directory` here. This one broke the
   // dart js standalone compiler. Migration via URI as file system identifier.
   @Deprecated(
-      'Breaks support for web standalone. Use [fileStorageLocation] instead.')
+    'Breaks support for web standalone. Use [fileStorageLocation] instead.',
+  )
   Object? get fileStoragePath => fileStorageLocation?.toFilePath();
 
   static const String _clientBoxName = 'box_client';
@@ -163,6 +165,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   static const String _seenDeviceKeysBoxName = 'box_seen_device_keys';
 
   static const String _spacesHierarchyBoxName = 'box_spaces_hierarchy';
+
   static const String _userProfilesBoxName = 'box_user_profiles';
 
   Database? database;
@@ -184,7 +187,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     this.maxFileSize = 0,
     // TODO : remove deprecated member migration on next major release
     @Deprecated(
-        'Breaks support for web standalone. Use [fileStorageLocation] instead.')
+      'Breaks support for web standalone. Use [fileStorageLocation] instead.',
+    )
     dynamic fileStoragePath,
     Uri? fileStorageLocation,
     Duration? deleteFilesAfterDuration,
@@ -320,7 +324,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           .where((session) => session.uploaded == false)
           .toList();
       Logs().i(
-          'Move ${allInboundGroupSessions.length} inbound group sessions to upload to their own queue...');
+        'Move ${allInboundGroupSessions.length} inbound group sessions to upload to their own queue...',
+      );
       await transaction(() async {
         for (final session in sessionsToUpload) {
           await _inboundGroupSessionsUploadQueueBox.put(
@@ -487,8 +492,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         }
 
         // Combine those two lists while respecting the start and limit parameters.
-        final end = min(timelineEventIds.length,
-            start + (limit ?? timelineEventIds.length));
+        final end = min(
+          timelineEventIds.length,
+          start + (limit ?? timelineEventIds.length),
+        );
         final eventIds = [
           ...sendingEventIds,
           if (!onlySending && start < timelineEventIds.length)
@@ -522,7 +529,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<List<String>> getLastSentMessageUserDeviceKey(
-      String userId, String deviceId) async {
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString());
     if (raw == null) return <String>[];
@@ -530,8 +539,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeOlmSession(String identityKey, String sessionId,
-      String pickle, int lastReceived) async {
+  Future<void> storeOlmSession(
+    String identityKey,
+    String sessionId,
+    String pickle,
+    int lastReceived,
+  ) async {
     final rawSessions = copyMap((await _olmSessionsBox.get(identityKey)) ?? {});
     rawSessions[sessionId] = {
       'identity_key': identityKey,
@@ -545,7 +558,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<List<OlmSession>> getOlmSessions(
-      String identityKey, String userId) async {
+    String identityKey,
+    String userId,
+  ) async {
     final rawSessions = await _olmSessionsBox.get(identityKey);
     if (rawSessions == null || rawSessions.isEmpty) return <OlmSession>[];
     return rawSessions.values
@@ -559,23 +574,31 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<List<OlmSession>> getOlmSessionsForDevices(
-      List<String> identityKeys, String userId) async {
+    List<String> identityKeys,
+    String userId,
+  ) async {
     final sessions = await Future.wait(
-        identityKeys.map((identityKey) => getOlmSessions(identityKey, userId)));
+      identityKeys.map((identityKey) => getOlmSessions(identityKey, userId)),
+    );
     return <OlmSession>[for (final sublist in sessions) ...sublist];
   }
 
   @override
   Future<OutboundGroupSession?> getOutboundGroupSession(
-      String roomId, String userId) async {
+    String roomId,
+    String userId,
+  ) async {
     final raw = await _outboundGroupSessionsBox.get(roomId);
     if (raw == null) return null;
     return OutboundGroupSession.fromJson(copyMap(raw), userId);
   }
 
   @override
-  Future<Room?> getSingleRoom(Client client, String roomId,
-      {bool loadImportantStates = true}) async {
+  Future<Room?> getSingleRoom(
+    Client client,
+    String roomId, {
+    bool loadImportantStates = true,
+  }) async {
     // Get raw room from database:
     final roomData = await _roomsBox.get(roomId);
     if (roomData == null) return null;
@@ -583,13 +606,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
     // Get important states:
     if (loadImportantStates) {
-      final dbKeys = client.importantStateEvents
-          .map((state) => TupleKey(roomId, state).toString())
+      final preloadRoomStateKeys = await _preloadRoomStateBox.getAllKeys();
+      final keysForRoom = preloadRoomStateKeys
+          .where((key) => TupleKey.fromString(key).parts.first == roomId)
           .toList();
-      final rawStates = await _preloadRoomStateBox.getAll(dbKeys);
-      for (final rawState in rawStates) {
-        if (rawState == null || rawState[''] == null) continue;
-        room.setState(Event.fromJson(copyMap(rawState['']), room));
+      final rawStates = await _preloadRoomStateBox.getAll(keysForRoom);
+
+      for (final raw in rawStates) {
+        if (raw == null) continue;
+        room.setState(Event.fromJson(copyMap(raw), room));
       }
     }
 
@@ -620,15 +645,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
             Logs().w('Found event in store for unknown room', entry.value);
             continue;
           }
-          final states = entry.value;
-          final stateEvents = states.values
-              .map((raw) => room.membership == Membership.invite
-                  ? StrippedStateEvent.fromJson(copyMap(raw))
-                  : Event.fromJson(copyMap(raw), room))
-              .toList();
-          for (final state in stateEvents) {
-            room.setState(state);
-          }
+          final raw = entry.value;
+          room.setState(
+            room.membership == Membership.invite
+                ? StrippedStateEvent.fromJson(copyMap(raw))
+                : Event.fromJson(copyMap(raw), room),
+          );
         }
 
         // Get the room account data
@@ -644,7 +666,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
                 basicRoomEvent;
           } else {
             Logs().w(
-                'Found account data for unknown room $roomId. Delete now...');
+              'Found account data for unknown room $roomId. Delete now...',
+            );
             await _roomAccountDataBox
                 .delete(TupleKey(roomId, basicRoomEvent.type).toString());
           }
@@ -674,7 +697,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<List<Event>> getUnimportantRoomEventStatesForRoom(
-      List<String> events, Room room) async {
+    List<String> events,
+    Room room,
+  ) async {
     final keys = (await _nonPreloadRoomStateBox.getAllKeys()).where((key) {
       final tuple = TupleKey.fromString(key);
       return tuple.parts.first == room.id && !events.contains(tuple.parts[1]);
@@ -682,10 +707,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
     final unimportantEvents = <Event>[];
     for (final key in keys) {
-      final states = await _nonPreloadRoomStateBox.get(key);
-      if (states == null) continue;
-      unimportantEvents.addAll(
-          states.values.map((raw) => Event.fromJson(copyMap(raw), room)));
+      final raw = await _nonPreloadRoomStateBox.get(key);
+      if (raw == null) continue;
+      unimportantEvents.add(Event.fromJson(copyMap(raw), room));
     }
 
     return unimportantEvents.where((event) => event.stateKey != null).toList();
@@ -737,20 +761,21 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
             },
           );
           res[userId] = DeviceKeysList.fromDbJson(
-              {
-                'client_id': client.id,
-                'user_id': userId,
-                'outdated': deviceKeysOutdated[userId],
-              },
-              childEntries
-                  .where((c) => c != null)
-                  .toList()
-                  .cast<Map<String, dynamic>>(),
-              crossSigningEntries
-                  .where((c) => c != null)
-                  .toList()
-                  .cast<Map<String, dynamic>>(),
-              client);
+            {
+              'client_id': client.id,
+              'user_id': userId,
+              'outdated': deviceKeysOutdated[userId],
+            },
+            childEntries
+                .where((c) => c != null)
+                .toList()
+                .cast<Map<String, dynamic>>(),
+            crossSigningEntries
+                .where((c) => c != null)
+                .toList()
+                .cast<Map<String, dynamic>>(),
+            client,
+          );
         }
         return res;
       });
@@ -772,24 +797,27 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<int> insertClient(
-      String name,
-      String homeserverUrl,
-      String token,
-      DateTime? tokenExpiresAt,
-      String? refreshToken,
-      String userId,
-      String? deviceId,
-      String? deviceName,
-      String? prevBatch,
-      String? olmAccount) async {
+    String name,
+    String homeserverUrl,
+    String token,
+    DateTime? tokenExpiresAt,
+    String? refreshToken,
+    String userId,
+    String? deviceId,
+    String? deviceName,
+    String? prevBatch,
+    String? olmAccount,
+  ) async {
     await transaction(() async {
       await _clientBox.put('homeserver_url', homeserverUrl);
       await _clientBox.put('token', token);
       if (tokenExpiresAt == null) {
         await _clientBox.delete('token_expires_at');
       } else {
-        await _clientBox.put('token_expires_at',
-            tokenExpiresAt.millisecondsSinceEpoch.toString());
+        await _clientBox.put(
+          'token_expires_at',
+          tokenExpiresAt.millisecondsSinceEpoch.toString(),
+        );
       }
       if (refreshToken == null) {
         await _clientBox.delete('refresh_token');
@@ -824,7 +852,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<int> insertIntoToDeviceQueue(
-      String type, String txnId, String content) async {
+    String type,
+    String txnId,
+    String content,
+  ) async {
     final id = DateTime.now().millisecondsSinceEpoch;
     await _toDeviceQueueBox.put(id.toString(), {
       'type': type,
@@ -836,7 +867,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> markInboundGroupSessionAsUploaded(
-      String roomId, String sessionId) async {
+    String roomId,
+    String sessionId,
+  ) async {
     await _inboundGroupSessionsUploadQueueBox.delete(sessionId);
     return;
   }
@@ -882,7 +915,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> removeUserCrossSigningKey(
-      String userId, String publicKey) async {
+    String userId,
+    String publicKey,
+  ) async {
     await _userCrossSigningKeysBox
         .delete(TupleKey(userId, publicKey).toString());
     return;
@@ -896,7 +931,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> setBlockedUserCrossSigningKey(
-      bool blocked, String userId, String publicKey) async {
+    bool blocked,
+    String userId,
+    String publicKey,
+  ) async {
     final raw = copyMap(
       await _userCrossSigningKeysBox
               .get(TupleKey(userId, publicKey).toString()) ??
@@ -912,7 +950,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> setBlockedUserDeviceKey(
-      bool blocked, String userId, String deviceId) async {
+    bool blocked,
+    String userId,
+    String deviceId,
+  ) async {
     final raw = copyMap(
       await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ?? {},
     );
@@ -926,7 +967,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> setLastActiveUserDeviceKey(
-      int lastActive, String userId, String deviceId) async {
+    int lastActive,
+    String userId,
+    String deviceId,
+  ) async {
     final raw = copyMap(
       await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ?? {},
     );
@@ -940,7 +984,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> setLastSentMessageUserDeviceKey(
-      String lastSentMessage, String userId, String deviceId) async {
+    String lastSentMessage,
+    String userId,
+    String deviceId,
+  ) async {
     final raw = copyMap(
       await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ?? {},
     );
@@ -953,7 +1000,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> setRoomPrevBatch(
-      String? prevBatch, String roomId, Client client) async {
+    String? prevBatch,
+    String roomId,
+    Client client,
+  ) async {
     final raw = await _roomsBox.get(roomId);
     if (raw == null) return;
     final room = Room.fromJson(copyMap(raw), client);
@@ -964,7 +1014,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> setVerifiedUserCrossSigningKey(
-      bool verified, String userId, String publicKey) async {
+    bool verified,
+    String userId,
+    String publicKey,
+  ) async {
     final raw = copyMap(
       (await _userCrossSigningKeysBox
               .get(TupleKey(userId, publicKey).toString())) ??
@@ -980,7 +1033,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> setVerifiedUserDeviceKey(
-      bool verified, String userId, String deviceId) async {
+    bool verified,
+    String userId,
+    String deviceId,
+  ) async {
     final raw = copyMap(
       await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ?? {},
     );
@@ -1013,19 +1069,20 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       if (event != null) {
         event.setRedactionEvent(Event.fromJson(eventUpdate.content, tmpRoom));
         await _eventsBox.put(
-            TupleKey(eventUpdate.roomID, event.eventId).toString(),
-            event.toJson());
+          TupleKey(eventUpdate.roomID, event.eventId).toString(),
+          event.toJson(),
+        );
 
         if (tmpRoom.lastEvent?.eventId == event.eventId) {
           if (client.importantStateEvents.contains(event.type)) {
             await _preloadRoomStateBox.put(
-              TupleKey(eventUpdate.roomID, event.type).toString(),
-              {'': event.toJson()},
+              TupleKey(eventUpdate.roomID, event.type, '').toString(),
+              event.toJson(),
             );
           } else {
             await _nonPreloadRoomStateBox.put(
-              TupleKey(eventUpdate.roomID, event.type).toString(),
-              {'': event.toJson()},
+              TupleKey(eventUpdate.roomID, event.type, '').toString(),
+              event.toJson(),
             );
           }
         }
@@ -1081,8 +1138,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       final transactionId = eventUpdate.content
           .tryGetMap<String, dynamic>('unsigned')
           ?.tryGet<String>('transaction_id');
-      await _eventsBox.put(TupleKey(eventUpdate.roomID, eventId).toString(),
-          eventUpdate.content);
+      await _eventsBox.put(
+        TupleKey(eventUpdate.roomID, eventId).toString(),
+        eventUpdate.content,
+      );
 
       // Update timeline fragments
       final key = TupleKey(eventUpdate.roomID, status.isSent ? '' : 'SENDING')
@@ -1133,11 +1192,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
             eventUpdate.type == EventUpdateType.inviteState)) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {
         await _roomMembersBox.put(
-            TupleKey(
-              eventUpdate.roomID,
-              eventUpdate.content['state_key'],
-            ).toString(),
-            eventUpdate.content);
+          TupleKey(
+            eventUpdate.roomID,
+            eventUpdate.content['state_key'],
+          ).toString(),
+          eventUpdate.content,
+        );
       } else {
         final type = eventUpdate.content['type'] as String;
         final roomStateBox = client.importantStateEvents.contains(type)
@@ -1146,11 +1206,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         final key = TupleKey(
           eventUpdate.roomID,
           type,
+          stateKey,
         ).toString();
-        final stateMap = copyMap(await roomStateBox.get(key) ?? {});
 
-        stateMap[stateKey] = eventUpdate.content;
-        await roomStateBox.put(key, stateMap);
+        await roomStateBox.put(key, eventUpdate.content);
       }
     }
 
@@ -1168,14 +1227,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> storeInboundGroupSession(
-      String roomId,
-      String sessionId,
-      String pickle,
-      String content,
-      String indexes,
-      String allowedAtIndex,
-      String senderKey,
-      String senderClaimedKey) async {
+    String roomId,
+    String sessionId,
+    String pickle,
+    String content,
+    String indexes,
+    String allowedAtIndex,
+    String senderKey,
+    String senderClaimedKey,
+  ) async {
     final json = StoredInboundGroupSession(
       roomId: roomId,
       sessionId: sessionId,
@@ -1197,7 +1257,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> storeOutboundGroupSession(
-      String roomId, String pickle, String deviceIds, int creationTime) async {
+    String roomId,
+    String pickle,
+    String deviceIds,
+    int creationTime,
+  ) async {
     await _outboundGroupSessionsBox.put(roomId, <String, dynamic>{
       'room_id': roomId,
       'pickle': pickle,
@@ -1217,8 +1281,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeRoomUpdate(String roomId, SyncRoomUpdate roomUpdate,
-      Event? lastEvent, Client client) async {
+  Future<void> storeRoomUpdate(
+    String roomId,
+    SyncRoomUpdate roomUpdate,
+    Event? lastEvent,
+    Client client,
+  ) async {
     // Leave room if membership is leave
     if (roomUpdate is LeftRoomUpdate) {
       await forgetRoom(roomId);
@@ -1233,29 +1301,30 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     final currentRawRoom = await _roomsBox.get(roomId);
     if (currentRawRoom == null) {
       await _roomsBox.put(
-          roomId,
-          roomUpdate is JoinedRoomUpdate
-              ? Room(
-                  client: client,
-                  id: roomId,
-                  membership: membership,
-                  highlightCount:
-                      roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
-                          0,
-                  notificationCount: roomUpdate
-                          .unreadNotifications?.notificationCount
-                          ?.toInt() ??
-                      0,
-                  prev_batch: roomUpdate.timeline?.prevBatch,
-                  summary: roomUpdate.summary,
-                  lastEvent: lastEvent,
-                ).toJson()
-              : Room(
-                  client: client,
-                  id: roomId,
-                  membership: membership,
-                  lastEvent: lastEvent,
-                ).toJson());
+        roomId,
+        roomUpdate is JoinedRoomUpdate
+            ? Room(
+                client: client,
+                id: roomId,
+                membership: membership,
+                highlightCount:
+                    roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
+                        0,
+                notificationCount: roomUpdate
+                        .unreadNotifications?.notificationCount
+                        ?.toInt() ??
+                    0,
+                prev_batch: roomUpdate.timeline?.prevBatch,
+                summary: roomUpdate.summary,
+                lastEvent: lastEvent,
+              ).toJson()
+            : Room(
+                client: client,
+                id: roomId,
+                membership: membership,
+                lastEvent: lastEvent,
+              ).toJson(),
+      );
     } else if (roomUpdate is JoinedRoomUpdate) {
       final currentRoom = Room.fromJson(
         copyMap(currentRawRoom),
@@ -1263,23 +1332,25 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         includeLastEvent: false,
       );
       await _roomsBox.put(
-          roomId,
-          Room(
-            client: client,
-            id: roomId,
-            membership: membership,
-            highlightCount:
-                roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
-                    currentRoom.highlightCount,
-            notificationCount:
-                roomUpdate.unreadNotifications?.notificationCount?.toInt() ??
-                    currentRoom.notificationCount,
-            prev_batch:
-                roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch,
-            summary: RoomSummary.fromJson(currentRoom.summary.toJson()
-              ..addAll(roomUpdate.summary?.toJson() ?? {})),
-            lastEvent: lastEvent,
-          ).toJson());
+        roomId,
+        Room(
+          client: client,
+          id: roomId,
+          membership: membership,
+          highlightCount:
+              roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
+                  currentRoom.highlightCount,
+          notificationCount:
+              roomUpdate.unreadNotifications?.notificationCount?.toInt() ??
+                  currentRoom.notificationCount,
+          prev_batch: roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch,
+          summary: RoomSummary.fromJson(
+            currentRoom.summary.toJson()
+              ..addAll(roomUpdate.summary?.toJson() ?? {}),
+          ),
+          lastEvent: lastEvent,
+        ).toJson(),
+      );
     }
   }
 
@@ -1289,15 +1360,20 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> storeSSSSCache(
-      String type, String keyId, String ciphertext, String content) async {
+    String type,
+    String keyId,
+    String ciphertext,
+    String content,
+  ) async {
     await _ssssCacheBox.put(
-        type,
-        SSSSCache(
-          type: type,
-          keyId: keyId,
-          ciphertext: ciphertext,
-          content: content,
-        ).toJson());
+      type,
+      SSSSCache(
+        type: type,
+        keyId: keyId,
+        ciphertext: ciphertext,
+        content: content,
+      ).toJson(),
+    );
   }
 
   @override
@@ -1308,8 +1384,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeUserCrossSigningKey(String userId, String publicKey,
-      String content, bool verified, bool blocked) async {
+  Future<void> storeUserCrossSigningKey(
+    String userId,
+    String publicKey,
+    String content,
+    bool verified,
+    bool blocked,
+  ) async {
     await _userCrossSigningKeysBox.put(
       TupleKey(userId, publicKey).toString(),
       {
@@ -1323,8 +1404,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeUserDeviceKey(String userId, String deviceId,
-      String content, bool verified, bool blocked, int lastActive) async {
+  Future<void> storeUserDeviceKey(
+    String userId,
+    String deviceId,
+    String content,
+    bool verified,
+    bool blocked,
+    int lastActive,
+  ) async {
     await _userDeviceKeysBox.put(TupleKey(userId, deviceId).toString(), {
       'user_id': userId,
       'device_id': deviceId,
@@ -1365,8 +1452,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       if (tokenExpiresAt == null) {
         await _clientBox.delete('token_expires_at');
       } else {
-        await _clientBox.put('token_expires_at',
-            tokenExpiresAt.millisecondsSinceEpoch.toString());
+        await _clientBox.put(
+          'token_expires_at',
+          tokenExpiresAt.millisecondsSinceEpoch.toString(),
+        );
       }
       if (refreshToken == null) {
         await _clientBox.delete('refresh_token');
@@ -1408,11 +1497,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> updateInboundGroupSessionAllowedAtIndex(
-      String allowedAtIndex, String roomId, String sessionId) async {
+    String allowedAtIndex,
+    String roomId,
+    String sessionId,
+  ) async {
     final raw = await _inboundGroupSessionsBox.get(sessionId);
     if (raw == null) {
       Logs().w(
-          'Tried to update inbound group session as uploaded which wasnt found in the database!');
+        'Tried to update inbound group session as uploaded which wasnt found in the database!',
+      );
       return;
     }
     raw['allowed_at_index'] = allowedAtIndex;
@@ -1422,11 +1515,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> updateInboundGroupSessionIndexes(
-      String indexes, String roomId, String sessionId) async {
+    String indexes,
+    String roomId,
+    String sessionId,
+  ) async {
     final raw = await _inboundGroupSessionsBox.get(sessionId);
     if (raw == null) {
       Logs().w(
-          'Tried to update inbound group session indexes of a session which was not found in the database!');
+        'Tried to update inbound group session indexes of a session which was not found in the database!',
+      );
       return;
     }
     final json = copyMap(raw);
@@ -1526,11 +1623,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       }
       for (final key in json[_preloadRoomStateBoxName]!.keys) {
         await _preloadRoomStateBox.put(
-            key, json[_preloadRoomStateBoxName]![key]);
+          key,
+          json[_preloadRoomStateBoxName]![key],
+        );
       }
       for (final key in json[_nonPreloadRoomStateBoxName]!.keys) {
         await _nonPreloadRoomStateBox.put(
-            key, json[_nonPreloadRoomStateBoxName]![key]);
+          key,
+          json[_nonPreloadRoomStateBoxName]![key],
+        );
       }
       for (final key in json[_roomMembersBoxName]!.keys) {
         await _roomMembersBox.put(key, json[_roomMembersBoxName]![key]);
@@ -1543,15 +1644,21 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       }
       for (final key in json[_inboundGroupSessionsBoxName]!.keys) {
         await _inboundGroupSessionsBox.put(
-            key, json[_inboundGroupSessionsBoxName]![key]);
+          key,
+          json[_inboundGroupSessionsBoxName]![key],
+        );
       }
       for (final key in json[_inboundGroupSessionsUploadQueueBoxName]!.keys) {
         await _inboundGroupSessionsUploadQueueBox.put(
-            key, json[_inboundGroupSessionsUploadQueueBoxName]![key]);
+          key,
+          json[_inboundGroupSessionsUploadQueueBoxName]![key],
+        );
       }
       for (final key in json[_outboundGroupSessionsBoxName]!.keys) {
         await _outboundGroupSessionsBox.put(
-            key, json[_outboundGroupSessionsBoxName]![key]);
+          key,
+          json[_outboundGroupSessionsBoxName]![key],
+        );
       }
       for (final key in json[_olmSessionsBoxName]!.keys) {
         await _olmSessionsBox.put(key, json[_olmSessionsBoxName]![key]);
@@ -1561,11 +1668,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       }
       for (final key in json[_userDeviceKeysOutdatedBoxName]!.keys) {
         await _userDeviceKeysOutdatedBox.put(
-            key, json[_userDeviceKeysOutdatedBoxName]![key]);
+          key,
+          json[_userDeviceKeysOutdatedBoxName]![key],
+        );
       }
       for (final key in json[_userCrossSigningKeysBoxName]!.keys) {
         await _userCrossSigningKeysBox.put(
-            key, json[_userCrossSigningKeysBoxName]![key]);
+          key,
+          json[_userCrossSigningKeysBoxName]![key],
+        );
       }
       for (final key in json[_ssssCacheBoxName]!.keys) {
         await _ssssCacheBox.put(key, json[_ssssCacheBoxName]![key]);
@@ -1575,7 +1686,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       }
       for (final key in json[_timelineFragmentsBoxName]!.keys) {
         await _timelineFragmentsBox.put(
-            key, json[_timelineFragmentsBoxName]![key]);
+          key,
+          json[_timelineFragmentsBoxName]![key],
+        );
       }
       for (final key in json[_seenDeviceIdsBoxName]!.keys) {
         await _seenDeviceIdsBox.put(key, json[_seenDeviceIdsBoxName]![key]);
@@ -1604,7 +1717,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         // Get the synced event IDs from the store
         final timelineKey = TupleKey(room.id, '').toString();
         final timelineEventIds = List<String>.from(
-            (await _timelineFragmentsBox.get(timelineKey)) ?? []);
+          (await _timelineFragmentsBox.get(timelineKey)) ?? [],
+        );
 
         // Get the local stored SENDING events from the store
         late final List<String> sendingEventIds;
@@ -1613,7 +1727,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         } else {
           final sendingTimelineKey = TupleKey(room.id, 'SENDING').toString();
           sendingEventIds = List<String>.from(
-              (await _timelineFragmentsBox.get(sendingTimelineKey)) ?? []);
+            (await _timelineFragmentsBox.get(sendingTimelineKey)) ?? [],
+          );
         }
 
         // Combine those two lists while respecting the start and limit parameters.
@@ -1702,13 +1817,17 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<CachedProfileInformation?> getUserProfile(String userId) =>
-      _userProfilesBox.get(userId).then((json) => json == null
-          ? null
-          : CachedProfileInformation.fromJson(copyMap(json)));
+      _userProfilesBox.get(userId).then(
+            (json) => json == null
+                ? null
+                : CachedProfileInformation.fromJson(copyMap(json)),
+          );
 
   @override
   Future<void> storeUserProfile(
-          String userId, CachedProfileInformation profile) =>
+    String userId,
+    CachedProfileInformation profile,
+  ) =>
       _userProfilesBox.put(
         userId,
         profile.toJson(),

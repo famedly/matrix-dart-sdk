@@ -63,7 +63,10 @@ class MockWebRTCDelegate implements WebRTCDelegate {
 class MockEncryptionKeyProvider implements EncryptionKeyProvider {
   @override
   Future<void> onSetEncryptionKey(
-      CallParticipant participant, Uint8List key, int index) async {
+    CallParticipant participant,
+    Uint8List key,
+    int index,
+  ) async {
     Logs().i('Mock onSetEncryptionKey called for ${participant.id} ');
   }
 
@@ -104,7 +107,8 @@ class MockMediaDevices implements MediaDevices {
 
   @override
   Future<MediaStream> getUserMedia(
-      Map<String, dynamic> mediaConstraints) async {
+    Map<String, dynamic> mediaConstraints,
+  ) async {
     return MockMediaStream('', '');
   }
 
@@ -203,16 +207,18 @@ class MockRTCPeerConnection implements RTCPeerConnection {
   }
 
   @override
-  Future<RTCSessionDescription> createOffer(
-      [Map<String, dynamic>? constraints]) {
+  Future<RTCSessionDescription> createOffer([
+    Map<String, dynamic>? constraints,
+  ]) {
     // Mock implementation for creating an offer
     Logs().i('Mock: Creating offer');
     return Future.value(RTCSessionDescription('', ''));
   }
 
   @override
-  Future<RTCSessionDescription> createAnswer(
-      [Map<String, dynamic>? constraints]) {
+  Future<RTCSessionDescription> createAnswer([
+    Map<String, dynamic>? constraints,
+  ]) {
     // Mock implementation for creating an answer
     Logs().i('Mock: Creating answer');
     return Future.value(RTCSessionDescription('', ''));
@@ -285,7 +291,9 @@ class MockRTCPeerConnection implements RTCPeerConnection {
 
   @override
   Future<RTCDataChannel> createDataChannel(
-      String label, RTCDataChannelInit dataChannelDict) async {
+    String label,
+    RTCDataChannelInit dataChannelDict,
+  ) async {
     // Mock implementation for creating a data channel
     Logs().i('Mock: Creating data channel');
     return MockRTCDataChannel();
@@ -332,8 +340,10 @@ class MockRTCPeerConnection implements RTCPeerConnection {
   }
 
   @override
-  Future<RTCRtpSender> addTrack(MediaStreamTrack track,
-      [MediaStream? stream]) async {
+  Future<RTCRtpSender> addTrack(
+    MediaStreamTrack track, [
+    MediaStream? stream,
+  ]) async {
     // Mock implementation for adding a track
     Logs().i('Mock: Adding track');
     return MockRTCRtpSender();
@@ -347,10 +357,11 @@ class MockRTCPeerConnection implements RTCPeerConnection {
   }
 
   @override
-  Future<RTCRtpTransceiver> addTransceiver(
-      {MediaStreamTrack? track,
-      RTCRtpMediaType? kind,
-      RTCRtpTransceiverInit? init}) async {
+  Future<RTCRtpTransceiver> addTransceiver({
+    MediaStreamTrack? track,
+    RTCRtpMediaType? kind,
+    RTCRtpTransceiverInit? init,
+  }) async {
     // Mock implementation for adding a transceiver
     Logs().i('Mock: Adding transceiver');
     return MockRTCRtpTransceiver();
@@ -418,7 +429,8 @@ class MockRTCRtpTransceiver implements RTCRtpTransceiver {
   TransceiverDirection get currentDirection {
     // Deprecated method, should be replaced with `await getCurrentDirection`
     throw UnimplementedError(
-        'Need to be call asynchronously from native SDK, so the method is deprecated');
+      'Need to be call asynchronously from native SDK, so the method is deprecated',
+    );
   }
 
   @override
@@ -598,17 +610,24 @@ class MockMediaStreamTrack implements MediaStreamTrack {
 
 class MockRTCDTMFSender implements RTCDTMFSender {
   @override
-  Future<void> insertDTMF(String tones,
-      {int duration = 100, int interToneGap = 70}) async {
+  Future<void> insertDTMF(
+    String tones, {
+    int duration = 100,
+    int interToneGap = 70,
+  }) async {
     // Mock implementation for inserting DTMF tones
     Logs().i(
-        'Mock: Inserting DTMF tones: $tones, Duration: $duration, InterToneGap: $interToneGap');
+      'Mock: Inserting DTMF tones: $tones, Duration: $duration, InterToneGap: $interToneGap',
+    );
   }
 
   @override
   @Deprecated('Use method insertDTMF instead')
-  Future<void> sendDtmf(String tones,
-      {int duration = 100, int interToneGap = 70}) async {
+  Future<void> sendDtmf(
+    String tones, {
+    int duration = 100,
+    int interToneGap = 70,
+  }) async {
     return insertDTMF(tones, duration: duration, interToneGap: interToneGap);
   }
 
@@ -696,16 +715,20 @@ class MockMediaStream implements MediaStream {
   }
 
   @override
-  Future<void> addTrack(MediaStreamTrack track,
-      {bool addToNative = true}) async {
+  Future<void> addTrack(
+    MediaStreamTrack track, {
+    bool addToNative = true,
+  }) async {
     // Mock implementation for adding a track
     Logs().i('Mock: Adding track to MediaStream: $track');
     onAddTrack?.call(track);
   }
 
   @override
-  Future<void> removeTrack(MediaStreamTrack track,
-      {bool removeFromNative = true}) async {
+  Future<void> removeTrack(
+    MediaStreamTrack track, {
+    bool removeFromNative = true,
+  }) async {
     // Mock implementation for removing a track
     Logs().i('Mock: Removing track from MediaStream: $track');
     onRemoveTrack?.call(track);

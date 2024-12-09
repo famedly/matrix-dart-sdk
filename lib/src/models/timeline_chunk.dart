@@ -7,8 +7,11 @@ class TimelineChunk {
   List<Event> events;
   final Map<String, Event> eventsMap = {};
 
-  TimelineChunk(
-      {required this.events, this.prevBatch = '', this.nextBatch = ''}) {
+  TimelineChunk({
+    required this.events,
+    this.prevBatch = '',
+    this.nextBatch = '',
+  }) {
     for (final event in events) {
       eventsMap[event.eventId] = event;
     }

@@ -19,7 +19,8 @@
 import 'package:matrix/matrix_api_lite.dart';
 
 mixin EventType {
-  static const String markedUnread = 'com.famedly.marked_unread';
+  static const String markedUnread = 'm.marked_unread';
+  static const String oldMarkedUnread = 'com.famedly.marked_unread';
 }
 
 class MarkedUnread {

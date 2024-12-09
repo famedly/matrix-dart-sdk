@@ -36,21 +36,27 @@ enum ImagePackUsage {
 }
 
 List<ImagePackUsage>? imagePackUsageFromJson(List<String>? json) => json
-    ?.map((v) => {
-          'sticker': ImagePackUsage.sticker,
-          'emoticon': ImagePackUsage.emoticon,
-        }[v])
+    ?.map(
+      (v) => {
+        'sticker': ImagePackUsage.sticker,
+        'emoticon': ImagePackUsage.emoticon,
+      }[v],
+    )
     .whereType<ImagePackUsage>()
     .toList();
 
 List<String> imagePackUsageToJson(
-    List<ImagePackUsage>? usage, List<String>? prevUsage) {
+  List<ImagePackUsage>? usage,
+  List<String>? prevUsage,
+) {
   final knownUsages = <String>{'sticker', 'emoticon'};
   final usagesStr = usage
-          ?.map((v) => {
-                ImagePackUsage.sticker: 'sticker',
-                ImagePackUsage.emoticon: 'emoticon',
-              }[v])
+          ?.map(
+            (v) => {
+              ImagePackUsage.sticker: 'sticker',
+              ImagePackUsage.emoticon: 'emoticon',
+            }[v],
+          )
           .whereType<String>()
           .toList() ??
       [];
@@ -74,30 +80,42 @@ class ImagePackContent {
   ImagePackContent({required this.images, required this.pack}) : _json = {};
 
   ImagePackContent.fromJson(Map<String, Object?> json)
-      : _json = Map.fromEntries(json.entries.where(
-            (e) => !['images', 'pack', 'emoticons', 'short'].contains(e.key))),
+      : _json = Map.fromEntries(
+          json.entries.where(
+            (e) => !['images', 'pack', 'emoticons', 'short'].contains(e.key),
+          ),
+        ),
         pack = ImagePackPackContent.fromJson(
-            json.tryGetMap<String, Object?>('pack') ?? {}),
-        images = json.tryGetMap<String, Object?>('images')?.catchMap((k, v) =>
-                MapEntry(
+          json.tryGetMap<String, Object?>('pack') ?? {},
+        ),
+        images = json.tryGetMap<String, Object?>('images')?.catchMap(
+                  (k, v) => MapEntry(
                     k,
                     ImagePackImageContent.fromJson(
-                        v as Map<String, Object?>))) ??
+                      v as Map<String, Object?>,
+                    ),
+                  ),
+                ) ??
             // the "emoticons" key needs a small migration on the key, ":string:" --> "string"
-            json.tryGetMap<String, Object?>('emoticons')?.catchMap((k, v) =>
-                MapEntry(
+            json.tryGetMap<String, Object?>('emoticons')?.catchMap(
+                  (k, v) => MapEntry(
                     k.startsWith(':') && k.endsWith(':')
                         ? k.substring(1, k.length - 1)
                         : k,
                     ImagePackImageContent.fromJson(
-                        v as Map<String, Object?>))) ??
+                      v as Map<String, Object?>,
+                    ),
+                  ),
+                ) ??
             // the "short" key was still just a map from shortcode to mxc uri
-            json.tryGetMap<String, String>('short')?.catchMap((k, v) =>
-                MapEntry(
+            json.tryGetMap<String, String>('short')?.catchMap(
+                  (k, v) => MapEntry(
                     k.startsWith(':') && k.endsWith(':')
                         ? k.substring(1, k.length - 1)
                         : k,
-                    ImagePackImageContent(url: Uri.parse(v)))) ??
+                    ImagePackImageContent(url: Uri.parse(v)),
+                  ),
+                ) ??
             {};
 
   Map<String, Object?> toJson() => {
@@ -120,8 +138,9 @@ class ImagePackImageContent {
       : _json = {};
 
   ImagePackImageContent.fromJson(Map<String, Object?> json)
-      : _json = Map.fromEntries(json.entries
-            .where((e) => !['url', 'body', 'info'].contains(e.key))),
+      : _json = Map.fromEntries(
+          json.entries.where((e) => !['url', 'body', 'info'].contains(e.key)),
+        ),
         url = Uri.parse(json['url'] as String),
         body = json.tryGet('body'),
         info = json.tryGetMap<String, Object?>('info'),
@@ -148,13 +167,20 @@ class ImagePackPackContent {
   List<ImagePackUsage>? usage;
   String? attribution;
 
-  ImagePackPackContent(
-      {this.displayName, this.avatarUrl, this.usage, this.attribution})
-      : _json = {};
+  ImagePackPackContent({
+    this.displayName,
+    this.avatarUrl,
+    this.usage,
+    this.attribution,
+  }) : _json = {};
 
   ImagePackPackContent.fromJson(Map<String, Object?> json)
-      : _json = Map.fromEntries(json.entries.where((e) =>
-            !['display_name', 'avatar_url', 'attribution'].contains(e.key))),
+      : _json = Map.fromEntries(
+          json.entries.where(
+            (e) =>
+                !['display_name', 'avatar_url', 'attribution'].contains(e.key),
+          ),
+        ),
         displayName = json.tryGet('display_name'),
         // we default to an invalid uri
         avatarUrl = Uri.tryParse(json.tryGet('avatar_url') ?? '.::'),

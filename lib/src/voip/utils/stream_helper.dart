@@ -28,7 +28,9 @@ void setTracksEnabled(List<MediaStreamTrack> tracks, bool enabled) {
 }
 
 Future<bool> hasMediaDevice(
-    WebRTCDelegate delegate, MediaInputKind mediaInputKind) async {
+  WebRTCDelegate delegate,
+  MediaInputKind mediaInputKind,
+) async {
   final devices = await delegate.mediaDevices.enumerateDevices();
   return devices
       .where((device) => device.kind == mediaInputKind.name)

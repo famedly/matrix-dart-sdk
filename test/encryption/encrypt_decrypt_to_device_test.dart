@@ -32,8 +32,11 @@ void main() {
     Logs().level = Level.error;
 
     late Client client;
-    final otherClient = Client('othertestclient',
-        httpClient: FakeMatrixApi(), databaseBuilder: getDatabase);
+    final otherClient = Client(
+      'othertestclient',
+      httpClient: FakeMatrixApi(),
+      databaseBuilder: getDatabase,
+    );
     late DeviceKeys device;
     late Map<String, dynamic> payload;
 
@@ -47,8 +50,9 @@ void main() {
       client = await getClient();
       await client.abortSync();
       await otherClient.checkHomeserver(
-          Uri.parse('https://fakeserver.notexisting'),
-          checkWellKnown: false);
+        Uri.parse('https://fakeserver.notexisting'),
+        checkWellKnown: false,
+      );
       await otherClient.init(
         newToken: 'abc',
         newUserID: '@othertest:fakeServer.notExisting',
@@ -60,18 +64,21 @@ void main() {
       await otherClient.abortSync();
 
       await Future.delayed(Duration(milliseconds: 10));
-      device = DeviceKeys.fromJson({
-        'user_id': client.userID,
-        'device_id': client.deviceID,
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2
-        ],
-        'keys': {
-          'curve25519:${client.deviceID}': client.identityKey,
-          'ed25519:${client.deviceID}': client.fingerprintKey,
+      device = DeviceKeys.fromJson(
+        {
+          'user_id': client.userID,
+          'device_id': client.deviceID,
+          'algorithms': [
+            AlgorithmTypes.olmV1Curve25519AesSha2,
+            AlgorithmTypes.megolmV1AesSha2,
+          ],
+          'keys': {
+            'curve25519:${client.deviceID}': client.identityKey,
+            'ed25519:${client.deviceID}': client.fingerprintKey,
+          },
         },
-      }, client);
+        client,
+      );
     });
 
     test('encryptToDeviceMessage', () async {
@@ -94,7 +101,10 @@ void main() {
     test('decryptToDeviceEvent nocache', () async {
       client.encryption!.olmManager.olmSessions.clear();
       payload = await otherClient.encryption!.encryptToDeviceMessage(
-          [device], 'm.to_device', {'hello': 'superfoxies'});
+        [device],
+        'm.to_device',
+        {'hello': 'superfoxies'},
+      );
       final encryptedEvent = ToDeviceEvent(
         sender: '@othertest:fakeServer.notExisting',
         type: EventTypes.Encrypted,

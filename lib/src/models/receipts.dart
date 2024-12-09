@@ -167,10 +167,11 @@ class LatestReceiptStateForTimeline {
 
   factory LatestReceiptStateForTimeline.empty() =>
       LatestReceiptStateForTimeline(
-          ownPrivate: null,
-          ownPublic: null,
-          latestOwnReceipt: null,
-          otherUsers: {});
+        ownPrivate: null,
+        ownPublic: null,
+        latestOwnReceipt: null,
+        otherUsers: {},
+      );
 
   factory LatestReceiptStateForTimeline.fromJson(Map<String, dynamic> json) {
     final private = json['private'];
@@ -229,7 +230,8 @@ class LatestReceiptState {
       mainThread:
           main.isNotEmpty ? LatestReceiptStateForTimeline.fromJson(main) : null,
       byThread: byThread.map(
-          (k, v) => MapEntry(k, LatestReceiptStateForTimeline.fromJson(v))),
+        (k, v) => MapEntry(k, LatestReceiptStateForTimeline.fromJson(v)),
+      ),
     );
   }
 

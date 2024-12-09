@@ -1,4 +1,5 @@
-library msc_1236_widgets;
+/// Extensions related to widgets in a room. Widgets are not part of the Matrix specification yet.
+library;
 
 import 'package:matrix/matrix.dart';
 
