@@ -119,14 +119,25 @@ class MyVoipApp implements WebRTCDelegate {
   VideoRenderer createRenderer() => RTCVideoRenderer();
 
   @override
-  void playRingtone(){
+  Future<void> playRingtone() async {
       // play ringtone
   }
-  void stopRingtone() {
+  Future<void> stopRingtone() async {
       // stop ringtone
   }
 
-  void handleNewCall(CallSession session) {
+  Future<void> registerListeners(CallSession session) async {
+    // register all listeners here
+    session.onCallStreamsChanged.stream.listen((CallStateChange event) async {});
+    session.onCallReplaced.stream.listen((CallStateChange event) async {});
+    session.onCallHangupNotifierForGroupCalls.stream.listen((CallStateChange event) async {});
+    session.onCallStateChanged.stream.listen((CallStateChange event) async {});
+    session.onCallEventChanged.stream.listen((CallStateChange event) async {});
+    session.onStreamAdd.stream.listen((CallStateChange event) async {});
+    session.onStreamRemoved.stream.listen((CallStateChange event) async {});
+  }
+
+  Future<void> handleNewCall(CallSession session) async {
     // handle new call incoming or outgoing
     switch(session.direction) {
         case CallDirection.kIncoming:
@@ -138,7 +149,7 @@ class MyVoipApp implements WebRTCDelegate {
     }
   }
 
-  void handleCallEnded(CallSession session) {
+  Future<void> handleCallEnded(CallSession session) async {
     // handle call ended by local or remote
   }
 }
@@ -170,7 +181,7 @@ newCall.onCallStateChanged.stream.listen((state) {
 /// Then you can pop up the incoming call window at MyVoipApp.handleNewCall.
 class MyVoipApp implements WebRTCDelegate {
 ...
-  void handleNewCall(CallSession session) {
+  Future<void> handleNewCall(CallSession session) async {
       switch(session.direction) {
           case CallDirection.kOutgoing:
               // show outgoing call window
@@ -185,13 +196,13 @@ newCall.hangup();
 
 ### 4.Answer a incoming call
 
-When a new incoming call comes in, handleNewCall will be called, and the answering interface can pop up at this time, and use `onCallStateChanged` to listen to the call state.
+When a new incoming call comes in, registerListeners will be called right before handleNewCall is called, and the answering interface can pop up at this time, and use `onCallStateChanged` to listen to the call state.
 
 The incoming call window need display `answer` and `reject` buttons, by calling `newCall.answer();` or `newCall.reject();` to decide whether to connect the call.
 
 ```dart
 ...
-  void handleNewCall(CallSession newCall) {
+  Future<void> registerListeners(CallSession newCall) async {
       switch(newCall.direction) {
           case CallDirection.kIncoming:
               /// show incoming call window
