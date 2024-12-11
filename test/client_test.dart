@@ -1422,36 +1422,36 @@ void main() {
     });
 
     test('Database Migration', () async {
-      final database = await getDatabase(null);
-      final moorClient = Client(
+      final firstDatabase = await getDatabase(null);
+      final firstClient = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: (_) => database,
+        databaseBuilder: (_) => firstDatabase,
       );
-      FakeMatrixApi.client = moorClient;
-      await moorClient.checkHomeserver(
+      FakeMatrixApi.client = firstClient;
+      await firstClient.checkHomeserver(
         Uri.parse('https://fakeServer.notExisting'),
         checkWellKnown: false,
       );
-      await moorClient.init(
+      await firstClient.init(
         newToken: 'abcd',
         newUserID: '@test:fakeServer.notExisting',
-        newHomeserver: moorClient.homeserver,
+        newHomeserver: firstClient.homeserver,
         newDeviceName: 'Text Matrix Client',
         newDeviceID: 'GHTYAJCE',
         newOlmAccount: pickledOlmAccount,
       );
       await Future.delayed(Duration(milliseconds: 200));
-      await moorClient.dispose(closeDatabase: false);
+      await firstClient.dispose(closeDatabase: false);
 
-      final hiveClient = Client(
+      final newClient = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
         databaseBuilder: getDatabase,
-        legacyDatabaseBuilder: (_) => database,
+        legacyDatabaseBuilder: (_) => firstDatabase,
       );
       final Set<InitState> initStates = {};
-      await hiveClient.init(onInitStateChanged: initStates.add);
+      await newClient.init(onInitStateChanged: initStates.add);
       expect(initStates, {
         InitState.initializing,
         InitState.migratingDatabase,
@@ -1459,8 +1459,12 @@ void main() {
         InitState.finished,
       });
       await Future.delayed(Duration(milliseconds: 200));
-      expect(hiveClient.isLogged(), true);
-      await hiveClient.dispose(closeDatabase: false);
+      expect(newClient.isLogged(), true);
+      await newClient.dispose(closeDatabase: false);
+
+      await firstDatabase.close();
+      final sameOldFirstDatabase = await getDatabase(null);
+      expect(await sameOldFirstDatabase.getClient('testclient'), null);
     });
 
     test('getEventByPushNotification', () async {

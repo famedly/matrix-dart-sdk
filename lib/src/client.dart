@@ -2182,14 +2182,22 @@ class Client extends MatrixApi {
   /// Resets all settings and stops the synchronisation.
   Future<void> clear() async {
     Logs().outputEvents.clear();
+    DatabaseApi? legacyDatabase;
+    if (legacyDatabaseBuilder != null) {
+      // If there was data in the legacy db, it will never let the SDK
+      // completely log out as we migrate data from it, everytime we `init`
+      legacyDatabase = await legacyDatabaseBuilder?.call(this);
+    }
     try {
       await abortSync();
       await database?.clear();
+      await legacyDatabase?.clear();
       _backgroundSync = true;
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
     } finally {
       await database?.delete();
+      await legacyDatabase?.delete();
       _database = null;
     }
 
@@ -3877,6 +3885,7 @@ class Client extends MatrixApi {
       Logs().e('Unable to migrate inbound group sessions!', e, s);
     }
 
+    await legacyDatabase.clear();
     await legacyDatabase.delete();
 
     _initLock = false;
