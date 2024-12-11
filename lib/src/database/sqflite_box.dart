@@ -296,6 +296,11 @@ class Box<V> {
     return;
   }
 
+  void clearCache() {
+    _cache.clear();
+    _cachedKeys = null;
+  }
+
   Future<void> clear([Batch? txn]) async {
     txn ??= boxCollection._activeBatch;
 
@@ -305,8 +310,6 @@ class Box<V> {
       txn.delete(name);
     }
 
-    _cache.clear();
-    _cachedKeys = null;
-    return;
+    clearCache();
   }
 }
