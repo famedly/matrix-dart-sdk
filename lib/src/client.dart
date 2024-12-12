@@ -137,7 +137,7 @@ class Client extends MatrixApi {
   /// [wellKnown] cache will be invalidated.
   @override
   set homeserver(Uri? homeserver) {
-    if (homeserver?.host != this.homeserver?.host) {
+    if (this.homeserver != null && homeserver?.host != this.homeserver?.host) {
       _wellKnown = null;
       unawaited(database?.storeWellKnown(null));
     }
