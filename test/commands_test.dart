@@ -395,7 +395,7 @@ void main() {
       await room.sendTextEvent('/dm @alice:example.com --no-encryption');
       expect(
           json.decode(
-            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last,
           ),
           {
             'invite': ['@alice:example.com'],
@@ -409,7 +409,7 @@ void main() {
       await room.sendTextEvent('/create New room --no-encryption');
       expect(
         json.decode(
-          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last,
         ),
         {
           'name': 'New room',
@@ -545,7 +545,7 @@ void main() {
       );
       expect(
           json.decode(
-            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last,
           ),
           {
             'invite': ['@alice:example.com'],
@@ -568,7 +568,7 @@ void main() {
       );
       expect(
         json.decode(
-          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last,
         ),
         {
           'name': 'New room',
