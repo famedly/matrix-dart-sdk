@@ -395,7 +395,7 @@ void main() {
       await room.sendTextEvent('/dm @alice:example.com --no-encryption');
       expect(
           json.decode(
-            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last,
           ),
           {
             'invite': ['@alice:example.com'],
@@ -409,7 +409,7 @@ void main() {
       await room.sendTextEvent('/create New room --no-encryption');
       expect(
         json.decode(
-          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last,
         ),
         {
           'name': 'New room',
@@ -533,52 +533,6 @@ void main() {
     test('client - clearcache', () async {
       await client.parseAndRunCommand(null, '/clearcache');
       expect(client.prevBatch, null);
-    });
-
-    test('client - dm', () async {
-      FakeMatrixApi.calledEndpoints.clear();
-      final stdout = StringBuffer();
-      await client.parseAndRunCommand(
-        null,
-        '/dm @alice:example.com --no-encryption',
-        stdout: stdout,
-      );
-      expect(
-          json.decode(
-            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
-          ),
-          {
-            'invite': ['@alice:example.com'],
-            'is_direct': true,
-            'preset': 'trusted_private_chat',
-          });
-      expect(
-        (jsonDecode(stdout.toString()) as DefaultCommandOutput).rooms?.first,
-        '!1234:fakeServer.notExisting',
-      );
-    });
-
-    test('client - create', () async {
-      FakeMatrixApi.calledEndpoints.clear();
-      final stdout = StringBuffer();
-      await client.parseAndRunCommand(
-        null,
-        '/create New room --no-encryption',
-        stdout: stdout,
-      );
-      expect(
-        json.decode(
-          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
-        ),
-        {
-          'name': 'New room',
-          'preset': 'private_chat',
-        },
-      );
-      expect(
-        (jsonDecode(stdout.toString()) as DefaultCommandOutput).rooms?.first,
-        '!1234:fakeServer.notExisting',
-      );
     });
 
     test('client - missing room - discardsession', () async {

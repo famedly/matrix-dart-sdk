@@ -158,6 +158,7 @@ extension CommandsClientExtension on Client {
       final roomId = await args.client.createGroupChat(
         groupName: groupName.isNotEmpty ? groupName : null,
         enableEncryption: !parts.any((part) => part == '--no-encryption'),
+        waitForSync: false,
       );
       stdout?.write(DefaultCommandOutput(rooms: [roomId]).toString());
       return null;
@@ -521,11 +522,21 @@ class DefaultCommandOutput {
     }
     if (json['format'] != format) return null;
     return DefaultCommandOutput(
-      rooms: json['rooms'] as List<String>?,
-      events: json['events'] as List<String>?,
-      users: json['users'] as List<String>?,
-      messages: json['messages'] as List<String>?,
-      custom: json['custom'] as Map<String, Object?>?,
+      rooms: json['rooms'] == null
+          ? null
+          : List<String>.from(json['rooms'] as Iterable),
+      events: json['events'] == null
+          ? null
+          : List<String>.from(json['events'] as Iterable),
+      users: json['users'] == null
+          ? null
+          : List<String>.from(json['users'] as Iterable),
+      messages: json['messages'] == null
+          ? null
+          : List<String>.from(json['messages'] as Iterable),
+      custom: json['custom'] == null
+          ? null
+          : Map<String, Object?>.from(json['custom'] as Map),
     );
   }
 
