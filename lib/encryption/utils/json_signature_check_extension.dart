@@ -27,7 +27,9 @@ extension JsonSignatureCheckExtension on Map<String, dynamic> {
     final signatures = this['signatures'];
     if (signatures == null ||
         signatures is! Map<String, dynamic> ||
-        !signatures.containsKey(userId)) return false;
+        !signatures.containsKey(userId)) {
+      return false;
+    }
     remove('unsigned');
     remove('signatures');
     if (!signatures[userId].containsKey('ed25519:$deviceId')) return false;

@@ -2567,7 +2567,9 @@ class Client extends MatrixApi {
           if (event.event.roomID != roomId) continue;
           if (!sessionIds.contains(
             event.event.content['content']?['session_id'],
-          )) continue;
+          )) {
+            continue;
+          }
 
           final decryptedEvent = await event.event.decrypt(room);
           if (decryptedEvent.content.tryGet<String>('type') !=

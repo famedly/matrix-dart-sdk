@@ -263,7 +263,9 @@ class Timeline {
 
     if (!allowNewEvent) {
       if (resp.start == resp.end ||
-          (resp.end == null && direction == Direction.f)) allowNewEvent = true;
+          (resp.end == null && direction == Direction.f)) {
+        allowNewEvent = true;
+      }
 
       if (allowNewEvent) {
         Logs().d('We now allow sync update into the timeline.');
@@ -566,7 +568,9 @@ class Timeline {
             events.indexWhere(
                   (e) => e.eventId == eventUpdate.content['event_id'],
                 ) !=
-                -1) return;
+                -1) {
+          return;
+        }
         var index = events.length;
         if (eventUpdate.type == EventUpdateType.history) {
           events.add(newEvent);
