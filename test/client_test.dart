@@ -109,7 +109,7 @@ void main() {
     });
 
     test('Login', () async {
-      matrix = Client(
+      final matrix = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
         databaseBuilder: getDatabase,
