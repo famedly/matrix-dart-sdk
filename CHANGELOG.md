@@ -1,3 +1,40 @@
+## [0.36.0] 17th December 2024
+
+#### How to migrate from onMigration to onInitStateChanged
+
+**Before:**
+```dart
+Client('Name', onMigration: () {
+  print('Migrating now....');
+});
+```
+
+**After:**
+
+```dart
+Client('Name', onInitStateChanged: (state) {
+  if (state == InitState.migratingDatabase) {
+    print('Migrating now....');
+  }
+});
+```
+
+- chore: Make parse version error less sound (Krille)
+- feat: (BREAKING) Replace onMigration with advanced callback onInitStateChanged (Krille)
+- feat: Add deleteFile() endpoint to database (Krille)
+- feat: support filtering events when requesting events history or future (Johannes Nevels)
+- fix: BREAKING! missed initial updates for stream listener callbacks in P2P & mesh calls (Karthikeyan S)
+- fix: clear legacy db on logout properly (Karthikeyan S)
+- fix: don't reset wellknown cache on initialization (Konrad Pozniak)
+- fix: rejecting a call doesn't send m.call.reject event (Karthikeyan S)
+- fix: throw error on failed reaction send (Mohammad Reza Moradi)
+- refactor: BREAKING Store room states as triple keys (Krille)
+- refactor: Clarify Room.join() behavior and make sure DM link is purged if room not found (Krille)
+- refactor: Do not set default timeout for initialSync (Krille)
+- refactor: Do not set the deprecated dont_notify action in push rules (Krille)
+- refactor: Fix new lints from flutter 3.27 (Krille)
+- refactor: Remove unnecessary roomId parameter from decryptRoomEvent method (Krille)
+ 
 ## [0.35.0] 11th November 2024
 Fixes a minor performance leak where the app re-requests the member list of all encrypted rooms.
 For this the parameter `cache` in `Room.requestParticipants()` is now also
