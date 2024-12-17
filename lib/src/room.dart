@@ -518,7 +518,9 @@ class Room {
     // There is no known event or the last event is only a state fallback event,
     // we assume there is no new messages.
     if (lastEvent == null ||
-        !client.roomPreviewLastEvents.contains(lastEvent.type)) return false;
+        !client.roomPreviewLastEvents.contains(lastEvent.type)) {
+      return false;
+    }
 
     // Read marker is on the last event so no new messages.
     if (lastEvent.receipts
@@ -1458,10 +1460,7 @@ class Room {
       for (var i = 0; i < events.length; i++) {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].content['can_request_session'] == true) {
-          events[i] = await client.encryption!.decryptRoomEvent(
-            id,
-            events[i],
-          );
+          events[i] = await client.encryption!.decryptRoomEvent(events[i]);
         }
       }
     }
@@ -1527,10 +1526,7 @@ class Room {
         // Try to decrypt encrypted events but don't update the database.
         if (encrypted && client.encryptionEnabled) {
           if (events[i].type == EventTypes.Encrypted) {
-            events[i] = await client.encryption!.decryptRoomEvent(
-              id,
-              events[i],
-            );
+            events[i] = await client.encryption!.decryptRoomEvent(events[i]);
           }
         }
       }
@@ -1574,7 +1570,6 @@ class Room {
             // for the fragmented timeline, we don't cache the decrypted
             //message in the database
             chunk.events[i] = await client.encryption!.decryptRoomEvent(
-              id,
               chunk.events[i],
             );
           } else if (client.database != null) {
@@ -1583,7 +1578,6 @@ class Room {
               for (var i = 0; i < chunk.events.length; i++) {
                 if (chunk.events[i].content['can_request_session'] == true) {
                   chunk.events[i] = await client.encryption!.decryptRoomEvent(
-                    id,
                     chunk.events[i],
                     store: !isArchived,
                     updateType: EventUpdateType.history,
@@ -1911,10 +1905,7 @@ class Room {
       final event = Event.fromMatrixEvent(matrixEvent, this);
       if (event.type == EventTypes.Encrypted && client.encryptionEnabled) {
         // attempt decryption
-        return await client.encryption?.decryptRoomEvent(
-          id,
-          event,
-        );
+        return await client.encryption?.decryptRoomEvent(event);
       }
       return event;
     } on MatrixException catch (err) {

@@ -650,7 +650,6 @@ class MeshBackend extends CallBackend {
             await call.setLocalVideoMuted(muted);
           }
           break;
-        default:
       }
     }
 

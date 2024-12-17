@@ -1243,10 +1243,7 @@ class Client extends MatrixApi {
       if (archivedRoom.encrypted && archivedRoom.client.encryptionEnabled) {
         if (timeline.events[i].type == EventTypes.Encrypted) {
           await archivedRoom.client.encryption!
-              .decryptRoomEvent(
-                archivedRoom.id,
-                timeline.events[i],
-              )
+              .decryptRoomEvent(timeline.events[i])
               .then(
                 (decrypted) => timeline.events[i] = decrypted,
               );
@@ -1880,11 +1877,11 @@ class Client extends MatrixApi {
 
     final encryption = this.encryption;
     if (event.type == EventTypes.Encrypted && encryption != null) {
-      var decrypted = await encryption.decryptRoomEvent(roomId, event);
+      var decrypted = await encryption.decryptRoomEvent(event);
       if (decrypted.messageType == MessageTypes.BadEncrypted &&
           prevBatch != null) {
         await oneShotSync();
-        decrypted = await encryption.decryptRoomEvent(roomId, event);
+        decrypted = await encryption.decryptRoomEvent(event);
       }
       event = decrypted;
     }
@@ -2567,7 +2564,9 @@ class Client extends MatrixApi {
           if (event.event.roomID != roomId) continue;
           if (!sessionIds.contains(
             event.event.content['content']?['session_id'],
-          )) continue;
+          )) {
+            continue;
+          }
 
           final decryptedEvent = await event.event.decrypt(room);
           if (decryptedEvent.content.tryGet<String>('type') !=
