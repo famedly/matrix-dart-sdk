@@ -20,7 +20,11 @@ class MeshBackend extends CallBackend {
   /// participant:volume
   final Map<CallParticipant, double> _audioLevelsMap = {};
 
-  StreamSubscription<CallSession>? _callSubscription;
+  /// The stream is used to prepare for incoming peer calls like registering listeners
+  StreamSubscription<CallSession>? _callSetupSubscription;
+
+  /// The stream is used to signal the start of an incoming peer call
+  StreamSubscription<CallSession>? _callStartSubscription;
 
   Timer? _activeSpeakerLoopTimeout;
 
@@ -109,14 +113,32 @@ class MeshBackend extends CallBackend {
     );
   }
 
+  /// Register listeners for a peer call to use for the group calls, that is
+  /// needed before even call is added to `_callSessions`.
+  /// We do this here for onStreamAdd and onStreamRemoved to make sure we don't
+  /// miss any events that happen before the call is completely started.
+  void _registerListenersBeforeCallAdd(CallSession call) {
+    call.onStreamAdd.stream.listen((stream) {
+      if (!stream.isLocal()) {
+        onStreamAdd.add(stream);
+      }
+    });
+
+    call.onStreamRemoved.stream.listen((stream) {
+      if (!stream.isLocal()) {
+        onStreamRemoved.add(stream);
+      }
+    });
+  }
+
   Future<void> _addCall(GroupCallSession groupCall, CallSession call) async {
     _callSessions.add(call);
-    await _initCall(groupCall, call);
+    _initCall(groupCall, call);
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
   }
 
   /// init a peer call from group calls.
-  Future<void> _initCall(GroupCallSession groupCall, CallSession call) async {
+  void _initCall(GroupCallSession groupCall, CallSession call) {
     if (call.remoteUserId == null) {
       throw MatrixSDKVoipException(
         'Cannot init call without proper invitee user and device Id',
@@ -141,18 +163,6 @@ class MeshBackend extends CallBackend {
     call.onCallHangupNotifierForGroupCalls.stream.listen((event) async {
       await _onCallHangup(groupCall, call);
     });
-
-    call.onStreamAdd.stream.listen((stream) {
-      if (!stream.isLocal()) {
-        onStreamAdd.add(stream);
-      }
-    });
-
-    call.onStreamRemoved.stream.listen((stream) {
-      if (!stream.isLocal()) {
-        onStreamRemoved.add(stream);
-      }
-    });
   }
 
   Future<void> _replaceCall(
@@ -171,7 +181,8 @@ class MeshBackend extends CallBackend {
     _callSessions.add(replacementCall);
 
     await _disposeCall(groupCall, existingCall, CallErrorCode.replaced);
-    await _initCall(groupCall, replacementCall);
+    _registerListenersBeforeCallAdd(replacementCall);
+    _initCall(groupCall, replacementCall);
 
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
   }
@@ -657,7 +668,49 @@ class MeshBackend extends CallBackend {
     return;
   }
 
-  Future<void> _onIncomingCall(
+  void _onIncomingCallInMeshSetup(
+    GroupCallSession groupCall,
+    CallSession newCall,
+  ) {
+    // The incoming calls may be for another room, which we will ignore.
+    if (newCall.room.id != groupCall.room.id) return;
+
+    if (newCall.state != CallState.kRinging) {
+      Logs().v(
+        '[_onIncomingCallInMeshSetup] Incoming call no longer in ringing state. Ignoring.',
+      );
+      return;
+    }
+
+    if (newCall.groupCallId == null ||
+        newCall.groupCallId != groupCall.groupCallId) {
+      Logs().v(
+        '[_onIncomingCallInMeshSetup] Incoming call with groupCallId ${newCall.groupCallId} ignored because it doesn\'t match the current group call',
+      );
+      return;
+    }
+
+    final existingCall = _getCallForParticipant(
+      groupCall,
+      CallParticipant(
+        groupCall.voip,
+        userId: newCall.remoteUserId!,
+        deviceId: newCall.remoteDeviceId,
+      ),
+    );
+
+    // if it's an existing call, `_registerListenersForCall` will be called in
+    // `_replaceCall` that is used in `_onIncomingCallStart`.
+    if (existingCall != null) return;
+
+    Logs().v(
+      '[_onIncomingCallInMeshSetup] GroupCallSession: incoming call from: ${newCall.remoteUserId}${newCall.remoteDeviceId}${newCall.remotePartyId}',
+    );
+
+    _registerListenersBeforeCallAdd(newCall);
+  }
+
+  Future<void> _onIncomingCallInMeshStart(
     GroupCallSession groupCall,
     CallSession newCall,
   ) async {
@@ -667,14 +720,16 @@ class MeshBackend extends CallBackend {
     }
 
     if (newCall.state != CallState.kRinging) {
-      Logs().w('Incoming call no longer in ringing state. Ignoring.');
+      Logs().v(
+        '[_onIncomingCallInMeshStart] Incoming call no longer in ringing state. Ignoring.',
+      );
       return;
     }
 
     if (newCall.groupCallId == null ||
         newCall.groupCallId != groupCall.groupCallId) {
       Logs().v(
-        'Incoming call with groupCallId ${newCall.groupCallId} ignored because it doesn\'t match the current group call',
+        '[_onIncomingCallInMeshStart] Incoming call with groupCallId ${newCall.groupCallId} ignored because it doesn\'t match the current group call',
       );
       await newCall.reject();
       return;
@@ -694,7 +749,7 @@ class MeshBackend extends CallBackend {
     }
 
     Logs().v(
-      'GroupCallSession: incoming call from: ${newCall.remoteUserId}${newCall.remoteDeviceId}${newCall.remotePartyId}',
+      '[_onIncomingCallInMeshStart] GroupCallSession: incoming call from: ${newCall.remoteUserId}${newCall.remoteDeviceId}${newCall.remotePartyId}',
     );
 
     // Check if the user calling has an existing call and use this call instead.
@@ -800,7 +855,8 @@ class MeshBackend extends CallBackend {
 
     _activeSpeaker = null;
     _activeSpeakerLoopTimeout?.cancel();
-    await _callSubscription?.cancel();
+    await _callSetupSubscription?.cancel();
+    await _callStartSubscription?.cancel();
   }
 
   @override
@@ -826,11 +882,16 @@ class MeshBackend extends CallBackend {
     GroupCallSession groupCall,
   ) async {
     for (final call in _callSessions) {
-      await _onIncomingCall(groupCall, call);
+      _onIncomingCallInMeshSetup(groupCall, call);
+      await _onIncomingCallInMeshStart(groupCall, call);
     }
 
-    _callSubscription = groupCall.voip.onIncomingCall.stream.listen(
-      (newCall) => _onIncomingCall(groupCall, newCall),
+    _callSetupSubscription = groupCall.voip.onIncomingCallSetup.stream.listen(
+      (newCall) => _onIncomingCallInMeshSetup(groupCall, newCall),
+    );
+
+    _callStartSubscription = groupCall.voip.onIncomingCallStart.stream.listen(
+      (newCall) => _onIncomingCallInMeshStart(groupCall, newCall),
     );
 
     _onActiveSpeakerLoop(groupCall);
@@ -882,6 +943,8 @@ class MeshBackend extends CallBackend {
     newCall.remoteDeviceId = mem.deviceId;
     // party id set to when answered
     newCall.remoteSessionId = mem.membershipId;
+
+    _registerListenersBeforeCallAdd(newCall);
 
     await newCall.placeCallWithStreams(
       _getLocalStreams(),

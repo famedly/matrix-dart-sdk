@@ -36,7 +36,13 @@ class VoIP {
   Map<VoipId, GroupCallSession> get groupCalls => _groupCalls;
   final Map<VoipId, GroupCallSession> _groupCalls = {};
 
-  final CachedStreamController<CallSession> onIncomingCall =
+  /// The stream is used to prepare for incoming peer calls in a mesh call
+  /// For example, registering listeners
+  final CachedStreamController<CallSession> onIncomingCallSetup =
+      CachedStreamController();
+
+  /// The stream is used to signal the start of an incoming peer call in a mesh call
+  final CachedStreamController<CallSession> onIncomingCallStart =
       CachedStreamController();
 
   VoipId? currentCID;
@@ -479,6 +485,12 @@ class VoIP {
     // by terminate.
     currentCID = VoipId(roomId: room.id, callId: callId);
 
+    if (confId == null) {
+      await delegate.registerListeners(newCall);
+    } else {
+      onIncomingCallSetup.add(newCall);
+    }
+
     await newCall.initWithInvite(
       callType,
       offer,
@@ -493,8 +505,7 @@ class VoIP {
     }
 
     if (confId != null) {
-      // the stream is used to monitor incoming peer calls in a mesh call
-      onIncomingCall.add(newCall);
+      onIncomingCallStart.add(newCall);
     }
   }
 
@@ -767,6 +778,8 @@ class VoIP {
 
     newCall.remoteUserId = userId;
     newCall.remoteDeviceId = deviceId;
+
+    await delegate.registerListeners(newCall);
 
     currentCID = VoipId(roomId: roomId, callId: callId);
     await newCall.initOutboundCall(type).then((_) {
