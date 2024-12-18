@@ -26,7 +26,7 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 
 abstract class DatabaseApi {
-  int get maxFileSize => 1 * 1024 * 1024;
+  int get maxFileSize => 1 * 1000 * 1000;
 
   bool get supportsFileStoring => false;
 

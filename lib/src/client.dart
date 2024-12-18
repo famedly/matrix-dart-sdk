@@ -3950,9 +3950,9 @@ class FileTooBigMatrixException extends MatrixException {
   int maxFileSize;
 
   static String _formatFileSize(int size) {
-    if (size < 1024) return '$size B';
-    final i = (log(size) / log(1024)).floor();
-    final num = (size / pow(1024, i));
+    if (size < 1000) return '$size B';
+    final i = (log(size) / log(1000)).floor();
+    final num = (size / pow(1000, i));
     final round = num.round();
     final numString = round < 10
         ? num.toStringAsFixed(2)

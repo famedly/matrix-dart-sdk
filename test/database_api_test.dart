@@ -204,7 +204,7 @@ void main() {
         );
       });
       test('Database can write and read 5MB data', () async {
-        final hugeDataObject = {'foo': createLargeString('A', 5 * 1024 * 1024)};
+        final hugeDataObject = {'foo': createLargeString('A', 5 * 1000 * 1000)};
 
         await database.storeAccountData(
           'm.huge_data_test',
