@@ -39,7 +39,8 @@ dev_dependencies:
   coverage: ">=0.15.0 <2.0.0"
   enhanced_enum_generator:
     git:
-      url: git@github.com:famedly/dart-enhanced-enum.git
+      url: https://github.com/famedly/dart-enhanced-enum.git
+      # url: git@github.com:famedly/dart-enhanced-enum.git
       ref: release/v0.3.0
       path: enhanced_enum_generator
   file: ">=6.1.1 <8.0.0"
