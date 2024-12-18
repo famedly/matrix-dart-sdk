@@ -6,7 +6,7 @@ if [ -n "$NO_OLM" ]; then
     tagFlag="-x olm"
 fi
 
-dart test --concurrency=$thread_count --coverage=coverage_dir $tagFlag --fail-fast
+dart test --concurrency=$thread_count --coverage=coverage_dir $tagFlag
 TEST_CODE=$?
 
 # lets you do more stuff like reporton
