@@ -129,7 +129,7 @@ jobs:
       - name: Run tests
         run: |
           dart pub get
-          dart test test/box_test.dart --platform chrome --fail-fast
+          dart test test/box_test.dart --platform chrome
 
   pub-dev-dry-run:
     runs-on: ubuntu-latest
