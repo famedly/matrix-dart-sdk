@@ -16,8 +16,6 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:matrix/matrix.dart';
-
 enum EventUpdateType {
   /// Newly received events from /sync
   timeline,
@@ -58,28 +56,4 @@ class EventUpdate {
     required this.type,
     required this.content,
   });
-
-  Future<EventUpdate> decrypt(Room room, {bool store = false}) async {
-    final encryption = room.client.encryption;
-    if (content['type'] != EventTypes.Encrypted ||
-        !room.client.encryptionEnabled ||
-        encryption == null) {
-      return this;
-    }
-    try {
-      final decrpytedEvent = await encryption.decryptRoomEvent(
-        Event.fromJson(content, room),
-        store: store,
-        updateType: type,
-      );
-      return EventUpdate(
-        roomID: roomID,
-        type: type,
-        content: decrpytedEvent.toJson(),
-      );
-    } catch (e, s) {
-      Logs().e('[LibOlm] Could not decrypt megolm event', e, s);
-      return this;
-    }
-  }
 }

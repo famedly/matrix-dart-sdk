@@ -314,12 +314,12 @@ class Encryption {
     bool store = false,
     EventUpdateType updateType = EventUpdateType.timeline,
   }) async {
-    if (event.type != EventTypes.Encrypted || event.redacted) {
-      return event;
-    }
-    final content = event.parsedRoomEncryptedContent;
-    final sessionId = content.sessionId;
     try {
+      if (event.type != EventTypes.Encrypted || event.redacted) {
+        return event;
+      }
+      final content = event.parsedRoomEncryptedContent;
+      final sessionId = content.sessionId;
       if (client.database != null &&
           sessionId != null &&
           !(keyManager
