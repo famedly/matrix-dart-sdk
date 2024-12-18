@@ -46,6 +46,7 @@ linter:
 analyzer:
   errors:
     todo: ignore
+    unintended_html_in_doc_comment: ignore
   exclude:
     - example/main.dart
   plugins:
