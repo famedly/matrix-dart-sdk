@@ -1,8 +1,6 @@
 import 'dart:core' as dart;
 import 'dart:core';
 
-import 'package:enhanced_enum/enhanced_enum.dart';
-
 import 'package:matrix/matrix_api_lite/model/children_state.dart';
 import 'package:matrix/matrix_api_lite/model/matrix_event.dart';
 import 'package:matrix/matrix_api_lite/model/matrix_keys.dart';
@@ -124,12 +122,12 @@ class DiscoveryInformation {
 
 ///
 @_NameSource('generated')
-@EnhancedEnum()
 enum Role {
-  @EnhancedEnumValue(name: 'm.role.admin')
-  mRoleAdmin,
-  @EnhancedEnumValue(name: 'm.role.security')
-  mRoleSecurity
+  mRoleAdmin('m.role.admin'),
+  mRoleSecurity('m.role.security');
+
+  final String name;
+  const Role(this.name);
 }
 
 /// A way to contact the server administrator.
@@ -358,12 +356,12 @@ class PreviewForUrl {
 
 ///
 @_NameSource('generated')
-@EnhancedEnum()
 enum Method {
-  @EnhancedEnumValue(name: 'crop')
-  crop,
-  @EnhancedEnumValue(name: 'scale')
-  scale
+  crop('crop'),
+  scale('scale');
+
+  final String name;
+  const Method(this.name);
 }
 
 ///
@@ -703,12 +701,12 @@ class GetSpaceHierarchyResponse {
 
 ///
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum Direction {
-  @EnhancedEnumValue(name: 'b')
-  b,
-  @EnhancedEnumValue(name: 'f')
-  f
+  b('b'),
+  f('f');
+
+  final String name;
+  const Direction(this.name);
 }
 
 ///
@@ -900,12 +898,12 @@ class GetRelatingEventsWithRelTypeAndEventTypeResponse {
 
 ///
 @_NameSource('generated')
-@EnhancedEnum()
 enum Include {
-  @EnhancedEnumValue(name: 'all')
-  all,
-  @EnhancedEnumValue(name: 'participated')
-  participated
+  all('all'),
+  participated('participated');
+
+  final String name;
+  const Include(this.name);
 }
 
 ///
@@ -992,12 +990,12 @@ class GetEventByTimestampResponse {
 
 ///
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum ThirdPartyIdentifierMedium {
-  @EnhancedEnumValue(name: 'email')
-  email,
-  @EnhancedEnumValue(name: 'msisdn')
-  msisdn
+  email('email'),
+  msisdn('msisdn');
+
+  final String name;
+  const ThirdPartyIdentifierMedium(this.name);
 }
 
 ///
@@ -1102,12 +1100,12 @@ class ThreePidCredentials {
 
 ///
 @_NameSource('generated')
-@EnhancedEnum()
 enum IdServerUnbindResult {
-  @EnhancedEnumValue(name: 'no-support')
-  noSupport,
-  @EnhancedEnumValue(name: 'success')
-  success
+  noSupport('no-support'),
+  success('success');
+
+  final String name;
+  const IdServerUnbindResult(this.name);
 }
 
 ///
@@ -1398,12 +1396,12 @@ class BooleanCapability {
 
 /// The stability of the room version.
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum RoomVersionAvailable {
-  @EnhancedEnumValue(name: 'stable')
-  stable,
-  @EnhancedEnumValue(name: 'unstable')
-  unstable
+  stable('stable'),
+  unstable('unstable');
+
+  final String name;
+  const RoomVersionAvailable(this.name);
 }
 
 ///
@@ -1649,24 +1647,23 @@ class Invite3pid {
 
 ///
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum CreateRoomPreset {
-  @EnhancedEnumValue(name: 'private_chat')
-  privateChat,
-  @EnhancedEnumValue(name: 'public_chat')
-  publicChat,
-  @EnhancedEnumValue(name: 'trusted_private_chat')
-  trustedPrivateChat
+  privateChat('private_chat'),
+  publicChat('public_chat'),
+  trustedPrivateChat('trusted_private_chat');
+
+  final String name;
+  const CreateRoomPreset(this.name);
 }
 
 ///
 @_NameSource('generated')
-@EnhancedEnum()
 enum Visibility {
-  @EnhancedEnumValue(name: 'private')
-  private,
-  @EnhancedEnumValue(name: 'public')
-  public
+  private('private'),
+  public('public');
+
+  final String name;
+  const Visibility(this.name);
 }
 
 /// A client device
@@ -2437,14 +2434,13 @@ class GetNotificationsResponse {
 
 ///
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum PresenceType {
-  @EnhancedEnumValue(name: 'offline')
-  offline,
-  @EnhancedEnumValue(name: 'online')
-  online,
-  @EnhancedEnumValue(name: 'unavailable')
-  unavailable
+  offline('offline'),
+  online('online'),
+  unavailable('unavailable');
+
+  final String name;
+  const PresenceType(this.name);
 }
 
 ///
@@ -3223,18 +3219,15 @@ class GetPushRulesGlobalResponse {
 
 ///
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum PushRuleKind {
-  @EnhancedEnumValue(name: 'content')
-  content,
-  @EnhancedEnumValue(name: 'override')
-  override,
-  @EnhancedEnumValue(name: 'room')
-  room,
-  @EnhancedEnumValue(name: 'sender')
-  sender,
-  @EnhancedEnumValue(name: 'underride')
-  underride
+  content('content'),
+  override('override'),
+  room('room'),
+  sender('sender'),
+  underride('underride');
+
+  final String name;
+  const PushRuleKind(this.name);
 }
 
 ///
@@ -3290,12 +3283,12 @@ class RefreshResponse {
 
 ///
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum AccountKind {
-  @EnhancedEnumValue(name: 'guest')
-  guest,
-  @EnhancedEnumValue(name: 'user')
-  user
+  guest('guest'),
+  user('user');
+
+  final String name;
+  const AccountKind(this.name);
 }
 
 ///
@@ -3550,10 +3543,11 @@ class RoomKeys {
 
 ///
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum BackupAlgorithm {
-  @EnhancedEnumValue(name: 'm.megolm_backup.v1.curve25519-aes-sha2')
-  mMegolmBackupV1Curve25519AesSha2
+  mMegolmBackupV1Curve25519AesSha2('m.megolm_backup.v1.curve25519-aes-sha2');
+
+  final String name;
+  const BackupAlgorithm(this.name);
 }
 
 ///
@@ -3809,18 +3803,15 @@ class RoomMember {
 
 ///
 @_NameSource('(generated, rule override generated)')
-@EnhancedEnum()
 enum Membership {
-  @EnhancedEnumValue(name: 'ban')
-  ban,
-  @EnhancedEnumValue(name: 'invite')
-  invite,
-  @EnhancedEnumValue(name: 'join')
-  join,
-  @EnhancedEnumValue(name: 'knock')
-  knock,
-  @EnhancedEnumValue(name: 'leave')
-  leave
+  ban('ban'),
+  invite('invite'),
+  join('join'),
+  knock('knock'),
+  leave('leave');
+
+  final String name;
+  const Membership(this.name);
 }
 
 /// A list of messages with a new token to request more.
@@ -3904,14 +3895,13 @@ class GetRoomEventsResponse {
 
 ///
 @_NameSource('generated')
-@EnhancedEnum()
 enum ReceiptType {
-  @EnhancedEnumValue(name: 'm.fully_read')
-  mFullyRead,
-  @EnhancedEnumValue(name: 'm.read')
-  mRead,
-  @EnhancedEnumValue(name: 'm.read.private')
-  mReadPrivate
+  mFullyRead('m.fully_read'),
+  mRead('m.read'),
+  mReadPrivate('m.read.private');
+
+  final String name;
+  const ReceiptType(this.name);
 }
 
 ///
@@ -4300,12 +4290,12 @@ class SearchFilter implements EventFilter, RoomEventFilter {
 
 ///
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum GroupKey {
-  @EnhancedEnumValue(name: 'room_id')
-  roomId,
-  @EnhancedEnumValue(name: 'sender')
-  sender
+  roomId('room_id'),
+  sender('sender');
+
+  final String name;
+  const GroupKey(this.name);
 }
 
 /// Configuration for group.
@@ -4374,24 +4364,23 @@ class Groupings {
 
 ///
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum KeyKind {
-  @EnhancedEnumValue(name: 'content.body')
-  contentBody,
-  @EnhancedEnumValue(name: 'content.name')
-  contentName,
-  @EnhancedEnumValue(name: 'content.topic')
-  contentTopic
+  contentBody('content.body'),
+  contentName('content.name'),
+  contentTopic('content.topic');
+
+  final String name;
+  const KeyKind(this.name);
 }
 
 ///
 @_NameSource('rule override generated')
-@EnhancedEnum()
 enum SearchOrder {
-  @EnhancedEnumValue(name: 'rank')
-  rank,
-  @EnhancedEnumValue(name: 'recent')
-  recent
+  rank('rank'),
+  recent('recent');
+
+  final String name;
+  const SearchOrder(this.name);
 }
 
 ///
@@ -5180,12 +5169,12 @@ class ThirdPartyUser {
 
 ///
 @_NameSource('generated')
-@EnhancedEnum()
 enum EventFormat {
-  @EnhancedEnumValue(name: 'client')
-  client,
-  @EnhancedEnumValue(name: 'federation')
-  federation
+  client('client'),
+  federation('federation');
+
+  final String name;
+  const EventFormat(this.name);
 }
 
 ///
