@@ -2561,16 +2561,16 @@ class Client extends MatrixApi {
       if (room != null) {
         final List<BasicEvent> events = [];
         for (final event in _eventsPendingDecryption) {
-          if (event.event.roomID != roomId) continue;
+          if (event.event.room.id != roomId) continue;
           if (!sessionIds.contains(
-            event.event.content['content']?['session_id'],
+            event.event.content.tryGet<String>('session_id'),
           )) {
             continue;
           }
 
-          final decryptedEvent = await event.event.decrypt(room);
-          if (decryptedEvent.content.tryGet<String>('type') !=
-              EventTypes.Encrypted) {
+          final decryptedEvent =
+              await encryption!.decryptRoomEvent(event.event);
+          if (decryptedEvent.type != EventTypes.Encrypted) {
             events.add(BasicEvent.fromJson(decryptedEvent.content));
           }
         }
@@ -2747,7 +2747,7 @@ class Client extends MatrixApi {
     // we collect them first before we handle them.
     final callEvents = <Event>[];
 
-    for (final event in events) {
+    for (var event in events) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
       if ((event.type == EventTypes.Encryption &&
@@ -2760,24 +2760,29 @@ class Client extends MatrixApi {
         continue;
       }
 
-      var update =
-          EventUpdate(roomID: room.id, type: type, content: event.toJson());
-      if (event.type == EventTypes.Encrypted && encryptionEnabled) {
-        update = await update.decrypt(room);
+      if (event is MatrixEvent &&
+          event.type == EventTypes.Encrypted &&
+          encryptionEnabled) {
+        final decrypted = await encryption!.decryptRoomEvent(
+          Event.fromMatrixEvent(event, room),
+          updateType: type,
+        );
 
-        // if the event failed to decrypt, add it to the queue
-        if (update.content.tryGet<String>('type') == EventTypes.Encrypted) {
+        if (decrypted.type != EventTypes.Encrypted) {
+          event = decrypted;
+        } else {
+          // if the event failed to decrypt, add it to the queue
           _eventsPendingDecryption.add(
-            _EventPendingDecryption(
-              EventUpdate(
-                roomID: update.roomID,
-                type: EventUpdateType.decryptedTimelineQueue,
-                content: update.content,
-              ),
-            ),
+            _EventPendingDecryption(Event.fromMatrixEvent(event, room)),
           );
         }
       }
+
+      final update = EventUpdate(
+        roomID: room.id,
+        type: type,
+        content: event.toJson(),
+      );
 
       // Any kind of member change? We should invalidate the profile then:
       if (event is StrippedStateEvent && event.type == EventTypes.RoomMember) {
@@ -3985,7 +3990,7 @@ class ArchivedRoom {
 class _EventPendingDecryption {
   DateTime addedAt = DateTime.now();
 
-  EventUpdate event;
+  Event event;
 
   bool get timedOut =>
       addedAt.add(Duration(minutes: 5)).isBefore(DateTime.now());
