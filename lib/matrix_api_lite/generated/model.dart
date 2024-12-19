@@ -209,15 +209,15 @@ class GetWellknownSupportResponse {
                 .map((v) => Contact.fromJson(v as Map<String, Object?>))
                 .toList()
             : null)(json['contacts']),
-        supportPage =
-            ((v) => v != null ? v as String : null)(json['support_page']);
+        supportPage = ((v) =>
+            v != null ? Uri.parse(v as String) : null)(json['support_page']);
   Map<String, Object?> toJson() {
     final contacts = this.contacts;
     final supportPage = this.supportPage;
     return {
       if (contacts != null)
         'contacts': contacts.map((v) => v.toJson()).toList(),
-      if (supportPage != null) 'support_page': supportPage,
+      if (supportPage != null) 'support_page': supportPage.toString(),
     };
   }
 
@@ -232,7 +232,7 @@ class GetWellknownSupportResponse {
   /// homeserver, like extra login/registration steps.
   ///
   /// At least one of `contacts` or `support_page` is required.
-  String? supportPage;
+  Uri? supportPage;
 
   @dart.override
   bool operator ==(Object other) =>
@@ -499,8 +499,8 @@ class SpaceHierarchyRoomsChunk {
     };
   }
 
-  /// The [`m.space.child`](#mspacechild) events of the space-room, represented
-  /// as [Stripped State Events](#stripped-state) with an added `origin_server_ts` key.
+  /// The [`m.space.child`](https://spec.matrix.org/unstable/client-server-api/#mspacechild) events of the space-room, represented
+  /// as [Stripped State Events](https://spec.matrix.org/unstable/client-server-api/#stripped-state) with an added `origin_server_ts` key.
   ///
   /// If the room is not a space-room, this should be empty.
   List<ChildrenState> childrenState;
@@ -619,8 +619,8 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
   @override
   bool worldReadable;
 
-  /// The [`m.space.child`](#mspacechild) events of the space-room, represented
-  /// as [Stripped State Events](#stripped-state) with an added `origin_server_ts` key.
+  /// The [`m.space.child`](https://spec.matrix.org/unstable/client-server-api/#mspacechild) events of the space-room, represented
+  /// as [Stripped State Events](https://spec.matrix.org/unstable/client-server-api/#stripped-state) with an added `origin_server_ts` key.
   ///
   /// If the room is not a space-room, this should be empty.
   @override
@@ -1186,9 +1186,9 @@ class TokenOwnerInfo {
   /// Otherwise this is required.
   String? deviceId;
 
-  /// When `true`, the user is a [Guest User](#guest-access). When
-  /// not present or `false`, the user is presumed to be a non-guest
-  /// user.
+  /// When `true`, the user is a [Guest User](https://spec.matrix.org/unstable/client-server-api/#guest-access).
+  /// When not present or `false`, the user is presumed to be a
+  /// non-guest user.
   bool? isGuest;
 
   /// The user ID that owns the access token.
