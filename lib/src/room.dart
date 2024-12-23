@@ -2188,7 +2188,11 @@ class Room {
           id,
           [],
           conditions: [
-            PushCondition(kind: 'event_match', key: 'room_id', pattern: id),
+            PushCondition(
+              kind: PushRuleConditions.eventMatch.name,
+              key: 'room_id',
+              pattern: id,
+            ),
           ],
         );
     }
