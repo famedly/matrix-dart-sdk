@@ -18,7 +18,25 @@
 
 // Helper for fast evaluation of push conditions on a bunch of events
 
+import 'package:collection/collection.dart';
+
 import 'package:matrix/matrix.dart';
+
+enum PushRuleConditions {
+  eventMatch('event_match'),
+  eventPropertyIs('event_property_is'),
+  eventPropertyContains('event_property_contains'),
+  containsDisplayName('contains_display_name'),
+  roomMemberCount('room_member_count'),
+  senderNotificationPermission('sender_notification_permission');
+
+  final String name;
+  const PushRuleConditions(this.name);
+
+  static PushRuleConditions? fromString(String name) {
+    return values.firstWhereOrNull((e) => e.name == name);
+  }
+}
 
 class EvaluatedPushRuleAction {
   // if this message should be highlighted.
@@ -56,23 +74,19 @@ class _PatternCondition {
   String field = '';
 
   _PatternCondition.fromEventMatch(PushCondition condition) {
-    if (condition.kind != 'event_match') {
+    if (condition.kind != PushRuleConditions.eventMatch.name) {
       throw 'Logic error: invalid push rule passed to constructor ${condition.kind}';
     }
 
     final tempField = condition.key;
     if (tempField == null) {
-      {
-        throw 'No field to match pattern on!';
-      }
+      throw 'No field to match pattern on!';
     }
     field = tempField;
 
     var tempPat = condition.pattern;
     if (tempPat == null) {
-      {
-        throw 'PushCondition is missing pattern';
-      }
+      throw 'PushCondition is missing pattern';
     }
     tempPat =
         RegExp.escape(tempPat).replaceAll('\\*', '.*').replaceAll('\\?', '.');
@@ -84,12 +98,57 @@ class _PatternCondition {
     }
   }
 
-  bool match(Map<String, String> content) {
-    final fieldContent = content[field];
-    if (fieldContent == null) {
+  bool match(Map<String, Object?> flattenedEventJson) {
+    final fieldContent = flattenedEventJson[field];
+    if (fieldContent == null || fieldContent is! String) {
       return false;
     }
     return pattern.hasMatch(fieldContent);
+  }
+}
+
+class _EventPropertyCondition {
+  PushRuleConditions? kind;
+  // what field to match on, i.e. content.body
+  String field = '';
+  Object? value;
+
+  _EventPropertyCondition.fromEventMatch(PushCondition condition) {
+    if (![
+      PushRuleConditions.eventPropertyIs.name,
+      PushRuleConditions.eventPropertyContains.name,
+    ].contains(condition.kind)) {
+      throw 'Logic error: invalid push rule passed to constructor ${condition.kind}';
+    }
+    kind = PushRuleConditions.fromString(condition.kind);
+
+    final tempField = condition.key;
+    if (tempField == null) {
+      throw 'No field to check event property on!';
+    }
+    field = tempField;
+
+    final tempValue = condition.value;
+    if (![String, int, bool, Null].contains(tempValue.runtimeType)) {
+      throw 'PushCondition value is not a string, int, bool or null';
+    }
+    value = tempValue;
+  }
+
+  bool match(Map<String, Object?> flattenedEventJson) {
+    final fieldContent = flattenedEventJson[field];
+    switch (kind) {
+      case PushRuleConditions.eventPropertyIs:
+        // We check if the property exists because null is a valid property value.
+        if (!flattenedEventJson.keys.contains(field)) return false;
+        return fieldContent == value;
+      case PushRuleConditions.eventPropertyContains:
+        if (fieldContent is! Iterable) return false;
+        return fieldContent.contains(value);
+      default:
+        // This should never happen
+        throw 'Logic error: invalid push rule passed in _EventPropertyCondition ${kind?.name}';
+    }
   }
 }
 
@@ -106,7 +165,7 @@ class _MemberCountCondition {
   int count = 0;
 
   _MemberCountCondition.fromEventMatch(PushCondition condition) {
-    if (condition.kind != 'room_member_count') {
+    if (condition.kind != PushRuleConditions.roomMemberCount.name) {
       throw 'Logic error: invalid push rule passed to constructor ${condition.kind}';
     }
 
@@ -160,6 +219,7 @@ class _MemberCountCondition {
 
 class _OptimizedRules {
   List<_PatternCondition> patterns = [];
+  List<_EventPropertyCondition> eventProperties = [];
   List<_MemberCountCondition> memberCounts = [];
   List<String> notificationPermissions = [];
   bool matchDisplayname = false;
@@ -168,18 +228,24 @@ class _OptimizedRules {
   _OptimizedRules.fromRule(PushRule rule) {
     if (!rule.enabled) return;
 
-    for (final condition in rule.conditions ?? []) {
-      switch (condition.kind) {
-        case 'event_match':
+    for (final condition in rule.conditions ?? <PushCondition>[]) {
+      final kind = PushRuleConditions.fromString(condition.kind);
+      switch (kind) {
+        case PushRuleConditions.eventMatch:
           patterns.add(_PatternCondition.fromEventMatch(condition));
           break;
-        case 'contains_display_name':
+        case PushRuleConditions.eventPropertyIs:
+        case PushRuleConditions.eventPropertyContains:
+          eventProperties
+              .add(_EventPropertyCondition.fromEventMatch(condition));
+          break;
+        case PushRuleConditions.containsDisplayName:
           matchDisplayname = true;
           break;
-        case 'room_member_count':
+        case PushRuleConditions.roomMemberCount:
           memberCounts.add(_MemberCountCondition.fromEventMatch(condition));
           break;
-        case 'sender_notification_permission':
+        case PushRuleConditions.senderNotificationPermission:
           final key = condition.key;
           if (key != null) {
             notificationPermissions.add(key);
@@ -193,19 +259,22 @@ class _OptimizedRules {
   }
 
   EvaluatedPushRuleAction? match(
-    Map<String, String> event,
+    Map<String, Object?> flattenedEventJson,
     String? displayName,
     int memberCount,
     Room room,
   ) {
-    if (patterns.any((pat) => !pat.match(event))) {
+    if (patterns.any((pat) => !pat.match(flattenedEventJson))) {
+      return null;
+    }
+    if (eventProperties.any((pat) => !pat.match(flattenedEventJson))) {
       return null;
     }
     if (memberCounts.any((pat) => !pat.match(memberCount))) {
       return null;
     }
     if (matchDisplayname) {
-      final body = event.tryGet<String>('content.body');
+      final body = flattenedEventJson.tryGet<String>('content.body');
       if (displayName == null || body == null) {
         return null;
       }
@@ -220,7 +289,7 @@ class _OptimizedRules {
     }
 
     if (notificationPermissions.isNotEmpty) {
-      final sender = event.tryGet<String>('sender');
+      final sender = flattenedEventJson.tryGet<String>('sender');
       if (sender == null ||
           notificationPermissions.any(
             (notificationType) => !room.canSendNotification(
@@ -244,7 +313,7 @@ class PushruleEvaluator {
   final List<_OptimizedRules> _underride = [];
 
   PushruleEvaluator.fromRuleset(PushRuleSet ruleset) {
-    for (final o in ruleset.override ?? []) {
+    for (final o in ruleset.override ?? <PushRule>[]) {
       if (!o.enabled) continue;
       try {
         _override.add(_OptimizedRules.fromRule(o));
@@ -252,7 +321,7 @@ class PushruleEvaluator {
         Logs().d('Error parsing push rule $o', e);
       }
     }
-    for (final u in ruleset.underride ?? []) {
+    for (final u in ruleset.underride ?? <PushRule>[]) {
       if (!u.enabled) continue;
       try {
         _underride.add(_OptimizedRules.fromRule(u));
@@ -260,13 +329,13 @@ class PushruleEvaluator {
         Logs().d('Error parsing push rule $u', e);
       }
     }
-    for (final c in ruleset.content ?? []) {
+    for (final c in ruleset.content ?? <PushRule>[]) {
       if (!c.enabled) continue;
       final rule = PushRule(
         actions: c.actions,
         conditions: [
           PushCondition(
-            kind: 'event_match',
+            kind: PushRuleConditions.eventMatch.name,
             key: 'content.body',
             pattern: c.pattern,
           ),
@@ -281,12 +350,12 @@ class PushruleEvaluator {
         Logs().d('Error parsing push rule $rule', e);
       }
     }
-    for (final r in ruleset.room ?? []) {
+    for (final r in ruleset.room ?? <PushRule>[]) {
       if (r.enabled) {
         _room_rules[r.ruleId] = EvaluatedPushRuleAction.fromActions(r.actions);
       }
     }
-    for (final r in ruleset.sender ?? []) {
+    for (final r in ruleset.sender ?? <PushRule>[]) {
       if (r.enabled) {
         _sender_rules[r.ruleId] =
             EvaluatedPushRuleAction.fromActions(r.actions);
@@ -294,18 +363,18 @@ class PushruleEvaluator {
     }
   }
 
-  Map<String, String> _flattenJson(
+  Map<String, Object?> _flattenJson(
     Map<String, dynamic> obj,
-    Map<String, String> flattened,
+    Map<String, Object?> flattened,
     String prefix,
   ) {
     for (final entry in obj.entries) {
       final key = prefix == '' ? entry.key : '$prefix.${entry.key}';
       final value = entry.value;
-      if (value is String) {
-        flattened[key] = value;
-      } else if (value is Map<String, dynamic>) {
+      if (value is Map<String, dynamic>) {
         flattened = _flattenJson(value, flattened, key);
+      } else {
+        flattened[key] = value;
       }
     }
 
@@ -317,12 +386,13 @@ class PushruleEvaluator {
     final displayName = event.room
         .unsafeGetUserFromMemoryOrFallback(event.room.client.userID!)
         .displayName;
-    final content = _flattenJson(event.toJson(), {}, '');
+    final flattenedEventJson = _flattenJson(event.toJson(), {}, '');
     // ensure roomid is present
-    content['room_id'] = event.room.id;
+    flattenedEventJson['room_id'] = event.room.id;
 
     for (final o in _override) {
-      final actions = o.match(content, displayName, memberCount, event.room);
+      final actions =
+          o.match(flattenedEventJson, displayName, memberCount, event.room);
       if (actions != null) {
         return actions;
       }
@@ -339,14 +409,16 @@ class PushruleEvaluator {
     }
 
     for (final o in _content_rules) {
-      final actions = o.match(content, displayName, memberCount, event.room);
+      final actions =
+          o.match(flattenedEventJson, displayName, memberCount, event.room);
       if (actions != null) {
         return actions;
       }
     }
 
     for (final o in _underride) {
-      final actions = o.match(content, displayName, memberCount, event.room);
+      final actions =
+          o.match(flattenedEventJson, displayName, memberCount, event.room);
       if (actions != null) {
         return actions;
       }
