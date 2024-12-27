@@ -1238,7 +1238,10 @@ class QRCode {
 
 const knownKeyAgreementProtocols = ['curve25519-hkdf-sha256', 'curve25519'];
 const knownHashes = ['sha256'];
-const knownHashesAuthentificationCodes = ['hkdf-hmac-sha256'];
+const knownHashesAuthentificationCodes = [
+  'hkdf-hmac-sha256.v2',
+  'hkdf-hmac-sha256',
+];
 
 class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   _KeyVerificationMethodSas({required super.request});
@@ -1396,6 +1399,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     if (possibleMessageAuthenticationCodes.isEmpty) {
       return false;
     }
+
+    // intersect should make sure we choose v2 over the dep'd one
     messageAuthenticationCode = possibleMessageAuthenticationCodes.first;
     final possibleAuthenticationTypes = _intersect(
       knownAuthentificationTypes,
