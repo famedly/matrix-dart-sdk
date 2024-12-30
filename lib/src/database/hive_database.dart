@@ -1032,10 +1032,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   }
 
   @override
-  Future<void> storeAccountData(String type, String content) async {
+  Future<void> storeAccountData(
+    String type,
+    Map<String, Object?> content,
+  ) async {
     await _accountDataBox.put(
       type.toHiveKey,
-      convertToJson(jsonDecode(content)),
+      convertToJson(content),
     );
     return;
   }

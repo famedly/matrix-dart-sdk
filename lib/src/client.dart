@@ -2474,10 +2474,10 @@ class Client extends MatrixApi {
       onPresenceChanged.add(cachedPresence);
       await database?.storePresence(newPresence.senderId, cachedPresence);
     }
-    for (final newAccountData in sync.accountData ?? []) {
+    for (final newAccountData in sync.accountData ?? <BasicEvent>[]) {
       await database?.storeAccountData(
         newAccountData.type,
-        jsonEncode(newAccountData.content),
+        newAccountData.content,
       );
       accountData[newAccountData.type] = newAccountData;
       // ignore: deprecated_member_use_from_same_package
