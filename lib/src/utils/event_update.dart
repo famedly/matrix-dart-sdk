@@ -29,9 +29,6 @@ enum EventUpdateType {
   /// Updates to account data
   accountData,
 
-  /// Ephemeral events like receipts
-  ephemeral,
-
   /// The state of an invite
   inviteState,
 

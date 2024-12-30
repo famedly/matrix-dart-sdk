@@ -1043,8 +1043,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
-    // Ephemerals should not be stored
-    if (eventUpdate.type == EventUpdateType.ephemeral) return;
     final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
         Room(id: eventUpdate.roomID, client: client);
 
