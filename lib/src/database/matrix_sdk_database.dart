@@ -591,6 +591,20 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     if (roomData == null) return null;
     final room = Room.fromJson(copyMap(roomData), client);
 
+    // Get the room account data
+    final allKeys = await _roomAccountDataBox.getAllKeys();
+    final roomAccountDataKeys = allKeys
+        .where((key) => TupleKey.fromString(key).parts.first == roomId)
+        .toList();
+    final roomAccountDataList =
+        await _roomAccountDataBox.getAll(roomAccountDataKeys);
+
+    for (final data in roomAccountDataList) {
+      if (data == null) continue;
+      final event = BasicRoomEvent.fromJson(copyMap(data));
+      room.roomAccountData[event.type] = event;
+    }
+
     // Get important states:
     if (loadImportantStates) {
       final preloadRoomStateKeys = await _preloadRoomStateBox.getAllKeys();
