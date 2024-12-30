@@ -1036,8 +1036,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeAccountData(String type, String content) async {
-    await _accountDataBox.put(type, jsonDecode(content));
+  Future<void> storeAccountData(
+    String type,
+    Map<String, Object?> content,
+  ) async {
+    await _accountDataBox.put(type, content);
     return;
   }
 

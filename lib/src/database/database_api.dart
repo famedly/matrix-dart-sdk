@@ -127,7 +127,7 @@ abstract class DatabaseApi {
     String syncFilterId,
   );
 
-  Future storeAccountData(String type, String content);
+  Future storeAccountData(String type, Map<String, Object?> content);
 
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client);
 

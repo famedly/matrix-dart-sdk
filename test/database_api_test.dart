@@ -192,11 +192,11 @@ void main() {
         await database.getAccountData();
       });
       test('storeAccountData', () async {
-        await database.storeAccountData('m.test', '{"foo":"bar"}');
+        await database.storeAccountData('m.test', {'foo': 'bar'});
         final events = await database.getAccountData();
         expect(events.values.single.type, 'm.test');
 
-        await database.storeAccountData('m.abc+de', '{"foo":"bar"}');
+        await database.storeAccountData('m.abc+de', {'foo': 'bar'});
         final events2 = await database.getAccountData();
         expect(
           events2.values.any((element) => element.type == 'm.abc+de'),
@@ -208,7 +208,7 @@ void main() {
 
         await database.storeAccountData(
           'm.huge_data_test',
-          jsonEncode(hugeDataObject),
+          hugeDataObject,
         );
 
         final events = await database.getAccountData();
@@ -694,7 +694,7 @@ void main() {
         final database = await getMatrixSdkDatabase(null);
         await database.storeAccountData(
           'm.test.data',
-          jsonEncode({'foo': 'bar'}),
+          {'foo': 'bar'},
         );
         await database.delete();
 
