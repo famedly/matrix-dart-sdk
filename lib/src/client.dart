@@ -2559,7 +2559,7 @@ class Client extends MatrixApi {
 
       final room = getRoomById(roomId);
       if (room != null) {
-        final List<BasicEvent> events = [];
+        final events = <Event>[];
         for (final event in _eventsPendingDecryption) {
           if (event.event.room.id != roomId) continue;
           if (!sessionIds.contains(
@@ -2571,7 +2571,7 @@ class Client extends MatrixApi {
           final decryptedEvent =
               await encryption!.decryptRoomEvent(event.event);
           if (decryptedEvent.type != EventTypes.Encrypted) {
-            events.add(BasicEvent.fromJson(decryptedEvent.content));
+            events.add(decryptedEvent);
           }
         }
 
@@ -2651,11 +2651,10 @@ class Client extends MatrixApi {
 
         final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
-          await _handleRoomEvents(
-            room,
-            accountData,
-            EventUpdateType.accountData,
-          );
+          for (final event in accountData) {
+            await database?.storeRoomAccountData(event);
+            room.roomAccountData[event.type] = event;
+          }
         }
       }
 
@@ -2671,12 +2670,9 @@ class Client extends MatrixApi {
         }
         final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
-          await _handleRoomEvents(
-            room,
-            accountData,
-            EventUpdateType.accountData,
-            store: false,
-          );
+          for (final event in accountData) {
+            room.roomAccountData[event.type] = event;
+          }
         }
         final state = syncRoomUpdate.state;
         if (state != null && state.isNotEmpty) {
@@ -2720,17 +2716,13 @@ class Client extends MatrixApi {
         await receiptStateContent.update(e, room);
       }
 
-      await _handleRoomEvents(
-        room,
-        [
-          BasicRoomEvent(
-            type: LatestReceiptState.eventType,
-            roomId: room.id,
-            content: receiptStateContent.toJson(),
-          ),
-        ],
-        EventUpdateType.accountData,
+      final event = BasicRoomEvent(
+        type: LatestReceiptState.eventType,
+        roomId: room.id,
+        content: receiptStateContent.toJson(),
       );
+      await database?.storeRoomAccountData(event);
+      room.roomAccountData[event.type] = event;
     }
   }
 
@@ -2739,7 +2731,7 @@ class Client extends MatrixApi {
 
   Future<void> _handleRoomEvents(
     Room room,
-    List<BasicEvent> events,
+    List<StrippedStateEvent> events,
     EventUpdateType type, {
     bool store = true,
   }) async {
@@ -2785,7 +2777,7 @@ class Client extends MatrixApi {
       );
 
       // Any kind of member change? We should invalidate the profile then:
-      if (event is StrippedStateEvent && event.type == EventTypes.RoomMember) {
+      if (event.type == EventTypes.RoomMember) {
         final userId = event.stateKey;
         if (userId != null) {
           // We do not re-request the profile here as this would lead to
@@ -2977,10 +2969,6 @@ class Client extends MatrixApi {
         // Event is a valid new lastEvent:
         room.lastEvent = event;
 
-        break;
-      case EventUpdateType.accountData:
-        room.roomAccountData[eventUpdate.content['type']] =
-            BasicRoomEvent.fromJson(eventUpdate.content);
         break;
       case EventUpdateType.history:
       case EventUpdateType.decryptedTimelineQueue:

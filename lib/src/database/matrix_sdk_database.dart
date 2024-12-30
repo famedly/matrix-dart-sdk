@@ -1059,6 +1059,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
+  Future<void> storeRoomAccountData(BasicRoomEvent event) async {
+    await _roomAccountDataBox.put(
+      TupleKey(event.roomId ?? '', event.type).toString(),
+      event.toJson(),
+    );
+    return;
+  }
+
+  @override
   Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
     final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
         Room(id: eventUpdate.roomID, client: client);
@@ -1213,17 +1222,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
         await roomStateBox.put(key, eventUpdate.content);
       }
-    }
-
-    // Store a room account data event
-    if (eventUpdate.type == EventUpdateType.accountData) {
-      await _roomAccountDataBox.put(
-        TupleKey(
-          eventUpdate.roomID,
-          eventUpdate.content['type'],
-        ).toString(),
-        eventUpdate.content,
-      );
     }
   }
 
