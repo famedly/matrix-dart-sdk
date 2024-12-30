@@ -1042,9 +1042,6 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
-    // Ephemerals should not be stored
-    if (eventUpdate.type == EventUpdateType.ephemeral) return;
-
     // In case of this is a redaction event
     if (eventUpdate.content['type'] == EventTypes.Redaction) {
       final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
