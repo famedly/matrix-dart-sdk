@@ -254,6 +254,14 @@ void main() {
           client,
         );
 
+        await database.storeRoomAccountData(
+          BasicRoomEvent(
+            content: {'foo': 'bar'},
+            type: 'm.test',
+            roomId: roomid,
+          ),
+        );
+
         await database.storeEventUpdate(
           EventUpdate(
             roomID: roomid,
@@ -276,6 +284,8 @@ void main() {
         expect(room, isNotNull);
 
         expect(room?.name, 'start');
+
+        expect(room?.roomAccountData['m.test']?.content, {'foo': 'bar'});
 
         await database.storeEventUpdate(
           EventUpdate(

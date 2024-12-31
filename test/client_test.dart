@@ -282,7 +282,7 @@ void main() {
 
       final eventUpdateList = await eventUpdateListFuture;
 
-      expect(eventUpdateList.length, 18);
+      expect(eventUpdateList.length, 13);
 
       expect(eventUpdateList[0].content['type'], 'm.room.member');
       expect(eventUpdateList[0].roomID, '!726s6s6q:example.com');
@@ -308,28 +308,35 @@ void main() {
       expect(eventUpdateList[5].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[5].type, EventUpdateType.timeline);
 
-      expect(eventUpdateList[6].content['type'], LatestReceiptState.eventType);
-      expect(eventUpdateList[6].roomID, '!726s6s6q:example.com');
-      expect(eventUpdateList[6].type, EventUpdateType.accountData);
+      expect(eventUpdateList[6].content['type'], 'm.room.member');
+      expect(eventUpdateList[6].roomID, '!calls:example.com');
+      expect(eventUpdateList[6].type, EventUpdateType.state);
 
-      expect(eventUpdateList[7].content['type'], 'm.tag');
-      expect(eventUpdateList[7].roomID, '!726s6s6q:example.com');
-      expect(eventUpdateList[7].type, EventUpdateType.accountData);
+      expect(eventUpdateList[7].content['type'], 'm.room.member');
+      expect(eventUpdateList[7].roomID, '!calls:example.com');
+      expect(eventUpdateList[7].type, EventUpdateType.state);
 
       expect(
-        eventUpdateList[8].content['type'],
+        matrix
+            .getRoomById('!726s6s6q:example.com')
+            ?.roomAccountData['org.example.custom.room.config']
+            ?.type,
         'org.example.custom.room.config',
       );
-      expect(eventUpdateList[8].roomID, '!726s6s6q:example.com');
-      expect(eventUpdateList[8].type, EventUpdateType.accountData);
-
-      expect(eventUpdateList[9].content['type'], 'm.room.member');
-      expect(eventUpdateList[9].roomID, '!calls:example.com');
-      expect(eventUpdateList[9].type, EventUpdateType.state);
-
-      expect(eventUpdateList[10].content['type'], 'm.room.member');
-      expect(eventUpdateList[10].roomID, '!calls:example.com');
-      expect(eventUpdateList[10].type, EventUpdateType.state);
+      expect(
+        matrix
+            .getRoomById('!726s6s6q:example.com')
+            ?.roomAccountData[LatestReceiptState.eventType]
+            ?.type,
+        LatestReceiptState.eventType,
+      );
+      expect(
+        matrix
+            .getRoomById('!726s6s6q:example.com')
+            ?.roomAccountData['m.tag']
+            ?.type,
+        'm.tag',
+      );
 
       expect(
         matrix

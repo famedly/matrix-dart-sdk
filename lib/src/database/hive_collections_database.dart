@@ -1096,6 +1096,15 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
+  Future<void> storeRoomAccountData(BasicRoomEvent event) async {
+    await _roomAccountDataBox.put(
+      TupleKey(event.roomId ?? '', event.type).toString(),
+      copyMap(event.toJson()),
+    );
+    return;
+  }
+
+  @override
   Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
     final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
         Room(id: eventUpdate.roomID, client: client);
@@ -1243,17 +1252,6 @@ class HiveCollectionsDatabase extends DatabaseApi {
         stateMap[stateKey] = eventUpdate.content;
         await _roomStateBox.put(key, stateMap);
       }
-    }
-
-    // Store a room account data event
-    if (eventUpdate.type == EventUpdateType.accountData) {
-      await _roomAccountDataBox.put(
-        TupleKey(
-          eventUpdate.roomID,
-          eventUpdate.content['type'],
-        ).toString(),
-        eventUpdate.content,
-      );
     }
   }
 
