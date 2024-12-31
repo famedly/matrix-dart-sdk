@@ -38,7 +38,6 @@ String createLargeString(String character, int desiredSize) {
 void main() {
   final databaseBuilders = {
     'Matrix SDK Database': getMatrixSdkDatabase,
-    'Hive Database': getHiveDatabase,
     'Hive Collections Database': getHiveCollectionsDatabase,
   };
 
@@ -660,9 +659,7 @@ void main() {
             ),
           );
           // ignore: deprecated_member_use_from_same_package
-          if (database is! HiveCollectionsDatabase &&
-              // ignore: deprecated_member_use_from_same_package
-              database is! FamedlySdkHiveDatabase) {
+          if (database is! HiveCollectionsDatabase) {
             final profile2 =
                 await database.getUserProfile('@alice:example.com');
             expect(profile2?.displayname, 'Alice M');

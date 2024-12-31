@@ -61,18 +61,3 @@ Future<MatrixSdkDatabase> getMatrixSdkDatabase(
   await db.open();
   return db;
 }
-
-// ignore: deprecated_member_use_from_same_package
-Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
-  if (!hiveInitialized) {
-    final testHivePath = await LocalFileSystem()
-        .systemTempDirectory
-        .createTemp('dart-sdk-tests-database');
-    Hive.init(testHivePath.path);
-    hiveInitialized = true;
-  }
-  // ignore: deprecated_member_use_from_same_package
-  final db = FamedlySdkHiveDatabase('unit_test.${c?.hashCode}');
-  await db.open();
-  return db;
-}
