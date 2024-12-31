@@ -28,21 +28,20 @@ import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 import '../fake_database.dart';
 
-EventUpdate getLastSentEvent(KeyVerification req) {
+Event getLastSentEvent(KeyVerification req) {
   final entry = FakeMatrixApi.calledEndpoints.entries
       .firstWhere((p) => p.key.contains('/send/'));
   final type = entry.key.split('/')[6];
   final content = json.decode(entry.value.first);
-  return EventUpdate(
-    content: {
+  return Event.fromJson(
+    {
       'event_id': req.transactionId,
       'type': type,
       'content': content,
       'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
       'sender': req.client.userID,
     },
-    type: EventUpdateType.timeline,
-    roomID: req.room!.id,
+    req.room!,
   );
 }
 
@@ -615,8 +614,8 @@ void main() async {
       await sub.cancel();
 
       await client2.encryption!.keyVerificationManager.handleEventUpdate(
-        EventUpdate(
-          content: {
+        Event.fromJson(
+          {
             'event_id': req2.transactionId,
             'type': EventTypes.KeyVerificationReady,
             'content': {
@@ -630,8 +629,7 @@ void main() async {
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             'sender': client2.userID,
           },
-          type: EventUpdateType.timeline,
-          roomID: req2.room!.id,
+          req2.room!,
         ),
       );
       expect(req2.state, KeyVerificationState.error);
