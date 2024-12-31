@@ -2755,14 +2755,12 @@ class Client extends MatrixApi {
       if (event is MatrixEvent &&
           event.type == EventTypes.Encrypted &&
           encryptionEnabled) {
-        final decrypted = await encryption!.decryptRoomEvent(
+        event = await encryption!.decryptRoomEvent(
           Event.fromMatrixEvent(event, room),
           updateType: type,
         );
 
-        if (decrypted.type != EventTypes.Encrypted) {
-          event = decrypted;
-        } else {
+        if (event.type == EventTypes.Encrypted) {
           // if the event failed to decrypt, add it to the queue
           _eventsPendingDecryption.add(
             _EventPendingDecryption(Event.fromMatrixEvent(event, room)),
