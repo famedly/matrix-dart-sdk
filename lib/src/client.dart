@@ -2797,7 +2797,7 @@ class Client extends MatrixApi {
           room.setState(user);
         }
       }
-      _updateRoomsByEventUpdate(room, update);
+      _updateRoomsByEventUpdate(room, event, type);
       if (store) {
         await database?.storeEventUpdate(update, this);
       }
@@ -2812,11 +2812,9 @@ class Client extends MatrixApi {
       if (prevBatch != null &&
           (type == EventUpdateType.timeline ||
               type == EventUpdateType.decryptedTimelineQueue)) {
-        if ((update.content
-                .tryGet<String>('type')
-                ?.startsWith(CallConstants.callEventsRegxp) ??
-            false)) {
-          final callEvent = Event.fromJson(update.content, room);
+        if (event is MatrixEvent &&
+            (event.type.startsWith(CallConstants.callEventsRegxp))) {
+          final callEvent = Event.fromMatrixEvent(event, room);
           callEvents.add(callEvent);
         }
       }
@@ -2916,23 +2914,34 @@ class Client extends MatrixApi {
     return room;
   }
 
-  void _updateRoomsByEventUpdate(Room room, EventUpdate eventUpdate) {
-    if (eventUpdate.type == EventUpdateType.history) return;
+  void _updateRoomsByEventUpdate(
+    Room room,
+    StrippedStateEvent eventUpdate,
+    EventUpdateType type,
+  ) {
+    if (type == EventUpdateType.history) return;
 
-    switch (eventUpdate.type) {
+    switch (type) {
       case EventUpdateType.inviteState:
-        room.setState(StrippedStateEvent.fromJson(eventUpdate.content));
+        room.setState(eventUpdate);
         break;
       case EventUpdateType.state:
       case EventUpdateType.timeline:
-        final event = Event.fromJson(eventUpdate.content, room);
+        if (eventUpdate is! MatrixEvent) {
+          Logs().wtf(
+            'Passed in a ${eventUpdate.runtimeType} with $type to _updateRoomsByEventUpdate(). This should never happen!',
+          );
+          assert(true);
+          return;
+        }
+        final event = Event.fromMatrixEvent(eventUpdate, room);
 
         // Update the room state:
         if (event.stateKey != null &&
             (!room.partial || importantStateEvents.contains(event.type))) {
           room.setState(event);
         }
-        if (eventUpdate.type != EventUpdateType.timeline) break;
+        if (type != EventUpdateType.timeline) break;
 
         // If last event is null or not a valid room preview event anyway,
         // just use this:

@@ -171,7 +171,7 @@ class Event extends MatrixEvent {
               status: status ??
                   eventStatusFromInt(
                     matrixEvent.unsigned
-                            ?.tryGet<int>('messageSendingStatusKey') ??
+                            ?.tryGet<int>(messageSendingStatusKey) ??
                         defaultStatus.intValue,
                   ),
               content: matrixEvent.content,
