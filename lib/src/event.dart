@@ -163,20 +163,27 @@ class Event extends MatrixEvent {
   factory Event.fromMatrixEvent(
     MatrixEvent matrixEvent,
     Room room, {
-    EventStatus status = defaultStatus,
+    EventStatus? status,
   }) =>
-      Event(
-        status: status,
-        content: matrixEvent.content,
-        type: matrixEvent.type,
-        eventId: matrixEvent.eventId,
-        senderId: matrixEvent.senderId,
-        originServerTs: matrixEvent.originServerTs,
-        unsigned: matrixEvent.unsigned,
-        prevContent: matrixEvent.prevContent,
-        stateKey: matrixEvent.stateKey,
-        room: room,
-      );
+      matrixEvent is Event
+          ? matrixEvent
+          : Event(
+              status: status ??
+                  eventStatusFromInt(
+                    matrixEvent.unsigned
+                            ?.tryGet<int>('messageSendingStatusKey') ??
+                        defaultStatus.intValue,
+                  ),
+              content: matrixEvent.content,
+              type: matrixEvent.type,
+              eventId: matrixEvent.eventId,
+              senderId: matrixEvent.senderId,
+              originServerTs: matrixEvent.originServerTs,
+              unsigned: matrixEvent.unsigned,
+              prevContent: matrixEvent.prevContent,
+              stateKey: matrixEvent.stateKey,
+              room: room,
+            );
 
   /// Get a State event from a table row or from the event stream.
   factory Event.fromJson(
