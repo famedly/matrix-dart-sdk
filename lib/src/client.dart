@@ -2801,8 +2801,11 @@ class Client extends MatrixApi {
       if (store) {
         await database?.storeEventUpdate(update, this);
       }
-      if (encryptionEnabled) {
-        await encryption?.handleEventUpdate(update);
+      if (event is MatrixEvent && encryptionEnabled) {
+        await encryption?.handleEventUpdate(
+          Event.fromMatrixEvent(event, room),
+          type,
+        );
       }
       onEvent.add(update);
 
