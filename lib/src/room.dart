@@ -437,8 +437,9 @@ class Room {
   @Deprecated('Use `getLocalizedDisplayname()` instead')
   String get displayname => getLocalizedDisplayname();
 
-  /// When the last message received.
-  DateTime get timeCreated => lastEvent?.originServerTs ?? DateTime.now();
+  /// When was the last event received.
+  DateTime get latestEventReceivedTime =>
+      lastEvent?.originServerTs ?? DateTime.now();
 
   /// Call the Matrix API to change the name of this room. Returns the event ID of the
   /// new m.room.name event.

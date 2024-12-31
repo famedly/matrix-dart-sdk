@@ -257,7 +257,7 @@ void main() {
       );
       expect(room.lastEvent?.eventId, '12345');
       expect(room.lastEvent?.body, 'abc');
-      expect(room.timeCreated, room.lastEvent?.originServerTs);
+      expect(room.latestEventReceivedTime, room.lastEvent?.originServerTs);
     });
 
     test('lastEvent is set properly', () async {

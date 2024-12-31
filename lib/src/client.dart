@@ -2998,8 +2998,8 @@ class Client extends MatrixApi {
             a.notificationCount != b.notificationCount) {
           return b.notificationCount.compareTo(a.notificationCount);
         } else {
-          return b.timeCreated.millisecondsSinceEpoch
-              .compareTo(a.timeCreated.millisecondsSinceEpoch);
+          return b.latestEventReceivedTime.millisecondsSinceEpoch
+              .compareTo(a.latestEventReceivedTime.millisecondsSinceEpoch);
         }
       };
 
