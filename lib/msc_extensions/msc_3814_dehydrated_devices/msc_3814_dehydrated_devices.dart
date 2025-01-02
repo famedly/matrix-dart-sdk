@@ -54,7 +54,9 @@ extension DehydratedDeviceHandler on Client {
       // Only handle devices we understand
       // In the future we might want to migrate to a newer format here
       if (device.deviceData?.tryGet<String>('algorithm') !=
-          _dehydratedDeviceAlgorithm) return;
+          _dehydratedDeviceAlgorithm) {
+        return;
+      }
 
       // Verify that the device is cross-signed
       final dehydratedDeviceIdentity =

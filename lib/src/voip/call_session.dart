@@ -1016,7 +1016,9 @@ class CallSession {
       // when a call crash and this call is already terminated the currentCId is null.
       // So don't return bc the hangup or reject will not proceed anymore.
       if (voip.currentCID != null &&
-          voip.currentCID != VoipId(roomId: room.id, callId: callId)) return;
+          voip.currentCID != VoipId(roomId: room.id, callId: callId)) {
+        return;
+      }
       voip.currentCID = null;
       voip.incomingCallRoomId.removeWhere((key, value) => value == callId);
     }

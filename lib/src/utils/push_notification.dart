@@ -29,7 +29,7 @@ class PushNotification {
   });
 
   /// Generate a Push Notification object from JSON. It also supports a
-  /// <String, String> map which usually comes from Firebase Cloud Messaging.
+  /// `map<String, String>` which usually comes from Firebase Cloud Messaging.
   factory PushNotification.fromJson(Map<String, dynamic> json) =>
       PushNotification(
         content: json['content'] is Map
