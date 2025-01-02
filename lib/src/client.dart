@@ -236,6 +236,10 @@ class Client extends MatrixApi {
     /// support.
     this.customRefreshTokenLifetime,
     this.typingIndicatorTimeout = const Duration(seconds: 30),
+
+    /// A function that takes the current lastEvent and a new lastEvent and
+    /// returns true if the new lastEvent should replace the current lastEvent.
+    this.shouldReplaceRoomLastEvent,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -2947,6 +2951,10 @@ class Client extends MatrixApi {
         // If last event is null or not a valid room preview event anyway,
         // just use this:
         if (room.lastEvent == null) {
+          if (shouldReplaceRoomLastEvent != null &&
+              !shouldReplaceRoomLastEvent!(null, event)) {
+            break;
+          }
           room.lastEvent = event;
           break;
         }
