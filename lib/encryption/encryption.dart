@@ -348,11 +348,9 @@ class Encryption {
           event.room.setState(event);
         }
         await client.database?.storeEventUpdate(
-          EventUpdate(
-            content: event.toJson(),
-            roomID: event.room.id,
-            type: updateType,
-          ),
+          event.room.id,
+          event,
+          updateType,
           client,
         );
       }

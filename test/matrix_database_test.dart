@@ -46,89 +46,105 @@ void main() {
       final client = Client('testclient');
       final database = await getDatabase(client);
       // store a simple update
-      var update = EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: room.id,
-        content: {
-          'type': 'm.room.message',
-          'origin_server_ts': 100,
-          'content': <String, dynamic>{'blah': 'blubb'},
-          'event_id': '\$event-1',
-          'sender': '@blah:blubb',
-        },
+      await database.storeEventUpdate(
+        room.id,
+        MatrixEvent.fromJson(
+          {
+            'type': 'm.room.message',
+            'origin_server_ts': 100,
+            'content': <String, dynamic>{'blah': 'blubb'},
+            'event_id': '\$event-1',
+            'sender': '@blah:blubb',
+          },
+        ),
+        EventUpdateType.timeline,
+        client,
       );
-      await database.storeEventUpdate(update, client);
       var event = await database.getEventById('\$event-1', room);
       expect(event?.eventId, '\$event-1');
 
       // insert a transaction id
-      update = EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: room.id,
-        content: {
-          'type': 'm.room.message',
-          'origin_server_ts': 100,
-          'content': <String, dynamic>{'blah': 'blubb'},
-          'event_id': 'transaction-1',
-          'sender': '@blah:blubb',
-          'status': EventStatus.sending.intValue,
-        },
+      await database.storeEventUpdate(
+        room.id,
+        Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'origin_server_ts': 100,
+            'content': <String, dynamic>{'blah': 'blubb'},
+            'event_id': 'transaction-1',
+            'sender': '@blah:blubb',
+            'status': EventStatus.sending.intValue,
+          },
+          room,
+        ),
+        EventUpdateType.timeline,
+        client,
       );
-      await database.storeEventUpdate(update, client);
       event = await database.getEventById('transaction-1', room);
       expect(event?.eventId, 'transaction-1');
-      update = EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: room.id,
-        content: {
-          'type': 'm.room.message',
-          'origin_server_ts': 100,
-          'content': <String, dynamic>{'blah': 'blubb'},
-          'event_id': '\$event-2',
-          'sender': '@blah:blubb',
-          'unsigned': <String, dynamic>{
-            'transaction_id': 'transaction-1',
+
+      await database.storeEventUpdate(
+        room.id,
+        Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'origin_server_ts': 100,
+            'content': <String, dynamic>{'blah': 'blubb'},
+            'event_id': '\$event-2',
+            'sender': '@blah:blubb',
+            'unsigned': <String, dynamic>{
+              'transaction_id': 'transaction-1',
+            },
+            'status': EventStatus.sent.intValue,
           },
-          'status': EventStatus.sent.intValue,
-        },
+          room,
+        ),
+        EventUpdateType.timeline,
+        client,
       );
-      await database.storeEventUpdate(update, client);
       event = await database.getEventById('transaction-1', room);
       expect(event, null);
       event = await database.getEventById('\$event-2', room);
 
       // insert a transaction id if the event id for it already exists
-      update = EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: room.id,
-        content: {
-          'type': 'm.room.message',
-          'origin_server_ts': 100,
-          'content': {'blah': 'blubb'},
-          'event_id': '\$event-3',
-          'sender': '@blah:blubb',
-          'status': EventStatus.sending.intValue,
-        },
+      await database.storeEventUpdate(
+        room.id,
+        Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'origin_server_ts': 100,
+            'content': {'blah': 'blubb'},
+            'event_id': '\$event-3',
+            'sender': '@blah:blubb',
+            'status': EventStatus.sending.intValue,
+          },
+          room,
+        ),
+        EventUpdateType.timeline,
+        client,
       );
-      await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-3', room);
       expect(event?.eventId, '\$event-3');
-      update = EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: room.id,
-        content: {
-          'type': 'm.room.message',
-          'origin_server_ts': 100,
-          'content': {'blah': 'blubb'},
-          'event_id': '\$event-3',
-          'sender': '@blah:blubb',
-          'status': EventStatus.sent.intValue,
-          'unsigned': <String, dynamic>{
-            'transaction_id': 'transaction-2',
+
+      await database.storeEventUpdate(
+        room.id,
+        Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'origin_server_ts': 100,
+            'content': {'blah': 'blubb'},
+            'event_id': '\$event-3',
+            'sender': '@blah:blubb',
+            'status': EventStatus.sent.intValue,
+            'unsigned': <String, dynamic>{
+              'transaction_id': 'transaction-2',
+            },
           },
-        },
+          room,
+        ),
+        EventUpdateType.timeline,
+        client,
       );
-      await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-3', room);
       expect(event?.eventId, '\$event-3');
       expect(event?.status, EventStatus.sent);
@@ -136,37 +152,44 @@ void main() {
       expect(event, null);
 
       // insert transaction id and not update status
-      update = EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: room.id,
-        content: {
-          'type': 'm.room.message',
-          'origin_server_ts': 100,
-          'content': {'blah': 'blubb'},
-          'event_id': '\$event-4',
-          'sender': '@blah:blubb',
-          'status': EventStatus.synced.intValue,
-        },
+      await database.storeEventUpdate(
+        room.id,
+        Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'origin_server_ts': 100,
+            'content': {'blah': 'blubb'},
+            'event_id': '\$event-4',
+            'sender': '@blah:blubb',
+            'status': EventStatus.synced.intValue,
+          },
+          room,
+        ),
+        EventUpdateType.timeline,
+        client,
       );
-      await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-4', room);
       expect(event?.eventId, '\$event-4');
-      update = EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: room.id,
-        content: {
-          'type': 'm.room.message',
-          'origin_server_ts': 100,
-          'content': {'blah': 'blubb'},
-          'event_id': '\$event-4',
-          'sender': '@blah:blubb',
-          'status': EventStatus.sent.intValue,
-          'unsigned': <String, dynamic>{
-            'transaction_id': 'transaction-3',
+
+      await database.storeEventUpdate(
+        room.id,
+        Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'origin_server_ts': 100,
+            'content': {'blah': 'blubb'},
+            'event_id': '\$event-4',
+            'sender': '@blah:blubb',
+            'status': EventStatus.sent.intValue,
+            'unsigned': <String, dynamic>{
+              'transaction_id': 'transaction-3',
+            },
           },
-        },
+          room,
+        ),
+        EventUpdateType.timeline,
+        client,
       );
-      await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-4', room);
       expect(event?.eventId, '\$event-4');
       expect(event?.status, EventStatus.synced);

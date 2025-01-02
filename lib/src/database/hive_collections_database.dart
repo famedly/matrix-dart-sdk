@@ -1105,7 +1105,17 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
+  Future<void> storeEventUpdate(
+    String roomId,
+    StrippedStateEvent event,
+    EventUpdateType type,
+    Client client,
+  ) async {
+    final eventUpdate = EventUpdate(
+      roomID: roomId,
+      content: event.toJson(),
+      type: type,
+    );
     final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
         Room(id: eventUpdate.roomID, client: client);
 

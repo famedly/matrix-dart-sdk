@@ -1673,11 +1673,9 @@ class Room {
       for (final user in users) {
         setState(user); // at *least* cache this in-memory
         await client.database?.storeEventUpdate(
-          EventUpdate(
-            roomID: id,
-            type: EventUpdateType.state,
-            content: user.toJson(),
-          ),
+          id,
+          user,
+          EventUpdateType.state,
           client,
         );
       }
@@ -1754,11 +1752,9 @@ class Room {
       // Store user in database:
       await client.database?.transaction(() async {
         await client.database?.storeEventUpdate(
-          EventUpdate(
-            content: foundUser.toJson(),
-            roomID: id,
-            type: EventUpdateType.state,
-          ),
+          id,
+          foundUser,
+          EventUpdateType.state,
           client,
         );
       });

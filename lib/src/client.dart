@@ -1647,7 +1647,14 @@ class Client extends MatrixApi {
   /// the app receives a new synchronization, this event is called for every signal
   /// to update the GUI. For example, for a new message, it is called:
   /// onRoomEvent( "m.room.message", "!chat_id:server.com", "timeline", {sender: "@bob:server.com", body: "Hello world"} )
+  // ignore: deprecated_member_use_from_same_package
+  @Deprecated('Use `onTimelineEvent()` or `onHistoryEvent()` instead.')
   final CachedStreamController<EventUpdate> onEvent = CachedStreamController();
+
+  final CachedStreamController<Event> onTimelineEvent =
+      CachedStreamController();
+
+  final CachedStreamController<Event> onHistoryEvent = CachedStreamController();
 
   /// The onToDeviceEvent is called when there comes a new to device event. It is
   /// already decrypted if necessary.
@@ -1889,11 +1896,9 @@ class Client extends MatrixApi {
     if (storeInDatabase) {
       await database?.transaction(() async {
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomId,
-            type: EventUpdateType.timeline,
-            content: event.toJson(),
-          ),
+          roomId,
+          event,
+          EventUpdateType.timeline,
           this,
         );
       });
@@ -2768,12 +2773,6 @@ class Client extends MatrixApi {
         }
       }
 
-      final update = EventUpdate(
-        roomID: room.id,
-        type: type,
-        content: event.toJson(),
-      );
-
       // Any kind of member change? We should invalidate the profile then:
       if (event.type == EventTypes.RoomMember) {
         final userId = event.stateKey;
@@ -2799,7 +2798,7 @@ class Client extends MatrixApi {
       }
       _updateRoomsByEventUpdate(room, event, type);
       if (store) {
-        await database?.storeEventUpdate(update, this);
+        await database?.storeEventUpdate(room.id, event, type, this);
       }
       if (event is MatrixEvent && encryptionEnabled) {
         await encryption?.handleEventUpdate(
@@ -2807,7 +2806,24 @@ class Client extends MatrixApi {
           type,
         );
       }
-      onEvent.add(update);
+
+      // ignore: deprecated_member_use_from_same_package
+      onEvent.add(
+        // ignore: deprecated_member_use_from_same_package
+        EventUpdate(
+          roomID: room.id,
+          type: type,
+          content: event.toJson(),
+        ),
+      );
+      if (event is MatrixEvent) {
+        if (type == EventUpdateType.timeline) {
+          onTimelineEvent.add(Event.fromMatrixEvent(event, room));
+        }
+        if (type == EventUpdateType.history) {
+          onHistoryEvent.add(Event.fromMatrixEvent(event, room));
+        }
+      }
 
       if (prevBatch != null &&
           (type == EventUpdateType.timeline ||
@@ -2931,7 +2947,7 @@ class Client extends MatrixApi {
           Logs().wtf(
             'Passed in a ${eventUpdate.runtimeType} with $type to _updateRoomsByEventUpdate(). This should never happen!',
           );
-          assert(true);
+          assert(eventUpdate is! MatrixEvent);
           return;
         }
         final event = Event.fromMatrixEvent(eventUpdate, room);
