@@ -219,10 +219,9 @@ void main() {
       });
       test('storeEventUpdate', () async {
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: '!testroom:example.com',
-            type: EventUpdateType.timeline,
-            content: {
+          '!testroom:example.com',
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.Message,
               'content': {
                 'body': '* edit 3',
@@ -236,10 +235,12 @@ void main() {
                   'rel_type': RelationshipTypes.edit,
                 },
               },
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
               'event_id': '\$event:example.com',
               'sender': '@bob:example.org',
             },
           ),
+          EventUpdateType.timeline,
           Client('testclient'),
         );
       });
@@ -263,10 +264,9 @@ void main() {
         );
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.timeline,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'start',
@@ -274,8 +274,10 @@ void main() {
               'event_id': '\$eventstart:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.timeline,
           client,
         );
 
@@ -288,10 +290,9 @@ void main() {
         expect(room?.roomAccountData['m.test']?.content, {'foo': 'bar'});
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.timeline,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update',
@@ -299,8 +300,10 @@ void main() {
               'event_id': '\$eventupdate:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.timeline,
           client,
         );
 
@@ -309,10 +312,9 @@ void main() {
         expect(room?.name, 'update');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.state,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update2',
@@ -320,8 +322,10 @@ void main() {
               'event_id': '\$eventupdate2:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.state,
           client,
         );
 
@@ -330,10 +334,9 @@ void main() {
         expect(room?.name, 'update2');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.inviteState,
-            content: {
+          roomid,
+          StrippedStateEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update3',
@@ -343,6 +346,7 @@ void main() {
               'state_key': '',
             },
           ),
+          EventUpdateType.inviteState,
           client,
         );
 
@@ -351,10 +355,9 @@ void main() {
         expect(room?.name, 'update3');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.history,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'notupdate',
@@ -362,8 +365,10 @@ void main() {
               'event_id': '\$eventnotupdate:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.history,
           client,
         );
 
