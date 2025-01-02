@@ -1766,7 +1766,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> storeSpaceHierarchy(
-          String spaceId, GetSpaceHierarchyResponse hierarchy) =>
+    String spaceId,
+    GetSpaceHierarchyResponse hierarchy,
+  ) =>
       _spacesHierarchyBox.put(spaceId, hierarchy.toJson());
 
   @override

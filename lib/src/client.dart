@@ -140,7 +140,7 @@ class Client extends MatrixApi {
   /// [wellKnown] cache will be invalidated.
   @override
   set homeserver(Uri? homeserver) {
-    if (homeserver?.host != this.homeserver?.host) {
+    if (this.homeserver != null && homeserver?.host != this.homeserver?.host) {
       _wellKnown = null;
       unawaited(database?.storeWellKnown(null));
     }
@@ -1246,10 +1246,7 @@ class Client extends MatrixApi {
       if (archivedRoom.encrypted && archivedRoom.client.encryptionEnabled) {
         if (timeline.events[i].type == EventTypes.Encrypted) {
           await archivedRoom.client.encryption!
-              .decryptRoomEvent(
-                archivedRoom.id,
-                timeline.events[i],
-              )
+              .decryptRoomEvent(timeline.events[i])
               .then(
                 (decrypted) => timeline.events[i] = decrypted,
               );
@@ -1883,11 +1880,11 @@ class Client extends MatrixApi {
 
     final encryption = this.encryption;
     if (event.type == EventTypes.Encrypted && encryption != null) {
-      var decrypted = await encryption.decryptRoomEvent(roomId, event);
+      var decrypted = await encryption.decryptRoomEvent(event);
       if (decrypted.messageType == MessageTypes.BadEncrypted &&
           prevBatch != null) {
         await oneShotSync();
-        decrypted = await encryption.decryptRoomEvent(roomId, event);
+        decrypted = await encryption.decryptRoomEvent(event);
       }
       event = decrypted;
     }
@@ -2185,14 +2182,22 @@ class Client extends MatrixApi {
   /// Resets all settings and stops the synchronisation.
   Future<void> clear() async {
     Logs().outputEvents.clear();
+    DatabaseApi? legacyDatabase;
+    if (legacyDatabaseBuilder != null) {
+      // If there was data in the legacy db, it will never let the SDK
+      // completely log out as we migrate data from it, everytime we `init`
+      legacyDatabase = await legacyDatabaseBuilder?.call(this);
+    }
     try {
       await abortSync();
       await database?.clear();
+      await legacyDatabase?.clear();
       _backgroundSync = true;
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
     } finally {
       await database?.delete();
+      await legacyDatabase?.delete();
       _database = null;
     }
 
@@ -2562,7 +2567,9 @@ class Client extends MatrixApi {
           if (event.event.roomID != roomId) continue;
           if (!sessionIds.contains(
             event.event.content['content']?['session_id'],
-          )) continue;
+          )) {
+            continue;
+          }
 
           final decryptedEvent = await event.event.decrypt(room);
           if (decryptedEvent.content.tryGet<String>('type') !=
@@ -3890,6 +3897,7 @@ class Client extends MatrixApi {
       Logs().e('Unable to migrate inbound group sessions!', e, s);
     }
 
+    await legacyDatabase.clear();
     await legacyDatabase.delete();
 
     _initLock = false;
@@ -3901,8 +3909,13 @@ class Client extends MatrixApi {
   }
 
   @override
-  Future<GetSpaceHierarchyResponse> getSpaceHierarchy(String roomId,
-      {bool? suggestedOnly, int? limit, int? maxDepth, String? from}) async {
+  Future<GetSpaceHierarchyResponse> getSpaceHierarchy(
+    String roomId, {
+    bool? suggestedOnly,
+    int? limit,
+    int? maxDepth,
+    String? from,
+  }) async {
     final cachedResponse = await database?.getSpaceHierarchy(roomId);
     if (cachedResponse == null) {
       final response = await super.getSpaceHierarchy(
@@ -3936,11 +3949,12 @@ class Client extends MatrixApi {
       }
       // store new response
       await database?.storeSpaceHierarchy(
-          roomId,
-          GetSpaceHierarchyResponse(
-            rooms: newRooms,
-            nextBatch: response.nextBatch,
-          ));
+        roomId,
+        GetSpaceHierarchyResponse(
+          rooms: newRooms,
+          nextBatch: response.nextBatch,
+        ),
+      );
 
       // not returning new response since UI is union-ing the responses rooms
       // returning new rooms will cause duplicates
