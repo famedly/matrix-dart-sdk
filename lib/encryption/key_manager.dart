@@ -192,7 +192,7 @@ class KeyManager {
       if (event != null &&
           event.type == EventTypes.Encrypted &&
           event.content['session_id'] == sessionId) {
-        final decrypted = encryption.decryptRoomEventSync(roomId, event);
+        final decrypted = encryption.decryptRoomEventSync(event);
         if (decrypted.type != EventTypes.Encrypted) {
           // Update the last event in memory first
           room.lastEvent = decrypted;

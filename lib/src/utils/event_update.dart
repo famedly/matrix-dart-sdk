@@ -68,7 +68,6 @@ class EventUpdate {
     }
     try {
       final decrpytedEvent = await encryption.decryptRoomEvent(
-        room.id,
         Event.fromJson(content, room),
         store: store,
         updateType: type,

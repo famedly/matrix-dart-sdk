@@ -153,7 +153,6 @@ class _MemberCountCondition {
       case _CountComparisonOp.lt:
         return memberCount < count;
       case _CountComparisonOp.eq:
-      default:
         return memberCount == count;
     }
   }

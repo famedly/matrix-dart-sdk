@@ -11,6 +11,7 @@ abstract class WebRTCDelegate {
   ]);
   Future<void> playRingtone();
   Future<void> stopRingtone();
+  Future<void> registerListeners(CallSession session);
   Future<void> handleNewCall(CallSession session);
   Future<void> handleCallEnded(CallSession session);
   Future<void> handleMissedCall(CallSession session);

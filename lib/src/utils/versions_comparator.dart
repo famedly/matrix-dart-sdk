@@ -13,11 +13,10 @@ bool isVersionGreaterThanOrEqualTo(String version, String target) {
     }
 
     return true;
-  } catch (e, s) {
-    Logs().e(
+  } catch (e) {
+    Logs().w(
       '[_isVersionGreaterThanOrEqualTo] Failed to parse version $version',
       e,
-      s,
     );
     return false;
   }

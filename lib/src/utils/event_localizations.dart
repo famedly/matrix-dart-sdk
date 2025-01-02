@@ -203,7 +203,6 @@ abstract class EventLocalizations {
         case RoomMemberChangeType.knock:
           return i18n.hasKnocked(targetName);
         case RoomMemberChangeType.other:
-        default:
           return userIsTarget
               ? i18n.youJoinedTheChat
               : i18n.joinedTheChat(targetName);

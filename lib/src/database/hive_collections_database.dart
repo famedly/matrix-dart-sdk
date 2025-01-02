@@ -1738,7 +1738,9 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<void> storeSpaceHierarchy(
-          String spaceId, GetSpaceHierarchyResponse hierarchy) =>
+    String spaceId,
+    GetSpaceHierarchyResponse hierarchy,
+  ) =>
       _spacesHierarchyBox.put(spaceId, hierarchy);
 
   @override
