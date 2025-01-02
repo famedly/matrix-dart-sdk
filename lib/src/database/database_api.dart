@@ -349,7 +349,9 @@ abstract class DatabaseApi {
   Future<GetSpaceHierarchyResponse?> getSpaceHierarchy(String spaceId);
 
   Future<void> storeSpaceHierarchy(
-      String spaceId, GetSpaceHierarchyResponse hierarchy);
+    String spaceId,
+    GetSpaceHierarchyResponse hierarchy,
+  );
 
   Future<void> removeSpaceHierarchy(String spaceId);
 

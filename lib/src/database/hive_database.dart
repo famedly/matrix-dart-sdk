@@ -157,7 +157,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
         action(_eventsBox),
         action(_seenDeviceIdsBox),
         action(_seenDeviceKeysBox),
-        action(_spacesHierarchyBox)
+        action(_spacesHierarchyBox),
       ]);
 
   Future<void> open() async {
@@ -1568,7 +1568,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> storeSpaceHierarchy(
-          String spaceId, GetSpaceHierarchyResponse hierarchy) =>
+    String spaceId,
+    GetSpaceHierarchyResponse hierarchy,
+  ) =>
       _spacesHierarchyBox.put(spaceId, hierarchy);
 
   @override

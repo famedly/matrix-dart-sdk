@@ -1549,13 +1549,14 @@ class Room {
     }
 
     timeline = Timeline(
-        room: this,
-        chunk: chunk,
-        onChange: onChange,
-        onRemove: onRemove,
-        onInsert: onInsert,
-        onNewEvent: onNewEvent,
-        onUpdate: onUpdate);
+      room: this,
+      chunk: chunk,
+      onChange: onChange,
+      onRemove: onRemove,
+      onInsert: onInsert,
+      onNewEvent: onNewEvent,
+      onUpdate: onUpdate,
+    );
 
     // Fetch all users from database we have got here.
     if (eventContextId == null) {

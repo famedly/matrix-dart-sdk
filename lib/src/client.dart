@@ -3909,8 +3909,13 @@ class Client extends MatrixApi {
   }
 
   @override
-  Future<GetSpaceHierarchyResponse> getSpaceHierarchy(String roomId,
-      {bool? suggestedOnly, int? limit, int? maxDepth, String? from}) async {
+  Future<GetSpaceHierarchyResponse> getSpaceHierarchy(
+    String roomId, {
+    bool? suggestedOnly,
+    int? limit,
+    int? maxDepth,
+    String? from,
+  }) async {
     final cachedResponse = await database?.getSpaceHierarchy(roomId);
     if (cachedResponse == null) {
       final response = await super.getSpaceHierarchy(
@@ -3944,11 +3949,12 @@ class Client extends MatrixApi {
       }
       // store new response
       await database?.storeSpaceHierarchy(
-          roomId,
-          GetSpaceHierarchyResponse(
-            rooms: newRooms,
-            nextBatch: response.nextBatch,
-          ));
+        roomId,
+        GetSpaceHierarchyResponse(
+          rooms: newRooms,
+          nextBatch: response.nextBatch,
+        ),
+      );
 
       // not returning new response since UI is union-ing the responses rooms
       // returning new rooms will cause duplicates
