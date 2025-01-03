@@ -88,29 +88,29 @@ class KeyVerificationManager {
     }
   }
 
-  Future<void> handleEventUpdate(EventUpdate update) async {
-    final event = update.content;
-    final type = event['type'].startsWith('m.key.verification.')
-        ? event['type']
-        : event['content']['msgtype'];
+  Future<void> handleEventUpdate(Event update) async {
+    final type = update.type.startsWith('m.key.verification.')
+        ? update.type
+        : update.content.tryGet<String>('msgtype');
     if (type == null ||
         !type.startsWith('m.key.verification.') ||
         client.verificationMethods.isEmpty) {
       return;
     }
     if (type == EventTypes.KeyVerificationRequest) {
-      event['content']['timestamp'] = event['origin_server_ts'];
+      update.content['timestamp'] =
+          update.originServerTs.millisecondsSinceEpoch;
     }
 
     final transactionId =
-        KeyVerification.getTransactionId(event['content']) ?? event['event_id'];
+        KeyVerification.getTransactionId(update.content) ?? update.eventId;
 
     final req = _requests[transactionId];
     if (req != null) {
-      final otherDeviceId = event['content']['from_device'];
-      if (event['sender'] != client.userID) {
-        await req.handlePayload(type, event['content'], event['event_id']);
-      } else if (event['sender'] == client.userID &&
+      final otherDeviceId = update.content.tryGet<String>('from_device');
+      if (update.senderId != client.userID) {
+        await req.handlePayload(type, update.content, update.eventId);
+      } else if (update.senderId == client.userID &&
           otherDeviceId != null &&
           otherDeviceId != client.deviceID) {
         // okay, another of our devices answered
@@ -118,22 +118,22 @@ class KeyVerificationManager {
         req.dispose();
         _requests.remove(transactionId);
       }
-    } else if (event['sender'] != client.userID) {
+    } else if (update.senderId != client.userID) {
       if (!{EventTypes.KeyVerificationRequest, EventTypes.KeyVerificationStart}
           .contains(type)) {
         return; // we can only start on these
       }
-      final room = client.getRoomById(update.roomID) ??
-          Room(id: update.roomID, client: client);
+      final room = client.getRoomById(update.roomId!) ??
+          Room(id: update.roomId!, client: client);
       final newKeyRequest = KeyVerification(
         encryption: encryption,
-        userId: event['sender'],
+        userId: update.senderId,
         room: room,
       );
       await newKeyRequest.handlePayload(
         type,
-        event['content'],
-        event['event_id'],
+        update.content,
+        update.eventId,
       );
       if (newKeyRequest.state != KeyVerificationState.askAccept) {
         // something went wrong, let's just dispose the request

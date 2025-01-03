@@ -1647,7 +1647,14 @@ class Client extends MatrixApi {
   /// the app receives a new synchronization, this event is called for every signal
   /// to update the GUI. For example, for a new message, it is called:
   /// onRoomEvent( "m.room.message", "!chat_id:server.com", "timeline", {sender: "@bob:server.com", body: "Hello world"} )
+  // ignore: deprecated_member_use_from_same_package
+  @Deprecated('Use `onTimelineEvent()` or `onHistoryEvent()` instead.')
   final CachedStreamController<EventUpdate> onEvent = CachedStreamController();
+
+  final CachedStreamController<Event> onTimelineEvent =
+      CachedStreamController();
+
+  final CachedStreamController<Event> onHistoryEvent = CachedStreamController();
 
   /// The onToDeviceEvent is called when there comes a new to device event. It is
   /// already decrypted if necessary.
@@ -1889,11 +1896,9 @@ class Client extends MatrixApi {
     if (storeInDatabase) {
       await database?.transaction(() async {
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomId,
-            type: EventUpdateType.timeline,
-            content: event.toJson(),
-          ),
+          roomId,
+          event,
+          EventUpdateType.timeline,
           this,
         );
       });
@@ -2768,12 +2773,6 @@ class Client extends MatrixApi {
         }
       }
 
-      final update = EventUpdate(
-        roomID: room.id,
-        type: type,
-        content: event.toJson(),
-      );
-
       // Any kind of member change? We should invalidate the profile then:
       if (event.type == EventTypes.RoomMember) {
         final userId = event.stateKey;
@@ -2797,23 +2796,41 @@ class Client extends MatrixApi {
           room.setState(user);
         }
       }
-      _updateRoomsByEventUpdate(room, update);
+      _updateRoomsByEventUpdate(room, event, type);
       if (store) {
-        await database?.storeEventUpdate(update, this);
+        await database?.storeEventUpdate(room.id, event, type, this);
       }
-      if (encryptionEnabled) {
-        await encryption?.handleEventUpdate(update);
+      if (event is MatrixEvent && encryptionEnabled) {
+        await encryption?.handleEventUpdate(
+          Event.fromMatrixEvent(event, room),
+          type,
+        );
       }
-      onEvent.add(update);
+
+      // ignore: deprecated_member_use_from_same_package
+      onEvent.add(
+        // ignore: deprecated_member_use_from_same_package
+        EventUpdate(
+          roomID: room.id,
+          type: type,
+          content: event.toJson(),
+        ),
+      );
+      if (event is MatrixEvent) {
+        if (type == EventUpdateType.timeline) {
+          onTimelineEvent.add(Event.fromMatrixEvent(event, room));
+        }
+        if (type == EventUpdateType.history) {
+          onHistoryEvent.add(Event.fromMatrixEvent(event, room));
+        }
+      }
 
       if (prevBatch != null &&
           (type == EventUpdateType.timeline ||
               type == EventUpdateType.decryptedTimelineQueue)) {
-        if ((update.content
-                .tryGet<String>('type')
-                ?.startsWith(CallConstants.callEventsRegxp) ??
-            false)) {
-          final callEvent = Event.fromJson(update.content, room);
+        if (event is MatrixEvent &&
+            (event.type.startsWith(CallConstants.callEventsRegxp))) {
+          final callEvent = Event.fromMatrixEvent(event, room);
           callEvents.add(callEvent);
         }
       }
@@ -2913,23 +2930,34 @@ class Client extends MatrixApi {
     return room;
   }
 
-  void _updateRoomsByEventUpdate(Room room, EventUpdate eventUpdate) {
-    if (eventUpdate.type == EventUpdateType.history) return;
+  void _updateRoomsByEventUpdate(
+    Room room,
+    StrippedStateEvent eventUpdate,
+    EventUpdateType type,
+  ) {
+    if (type == EventUpdateType.history) return;
 
-    switch (eventUpdate.type) {
+    switch (type) {
       case EventUpdateType.inviteState:
-        room.setState(StrippedStateEvent.fromJson(eventUpdate.content));
+        room.setState(eventUpdate);
         break;
       case EventUpdateType.state:
       case EventUpdateType.timeline:
-        final event = Event.fromJson(eventUpdate.content, room);
+        if (eventUpdate is! MatrixEvent) {
+          Logs().wtf(
+            'Passed in a ${eventUpdate.runtimeType} with $type to _updateRoomsByEventUpdate(). This should never happen!',
+          );
+          assert(eventUpdate is! MatrixEvent);
+          return;
+        }
+        final event = Event.fromMatrixEvent(eventUpdate, room);
 
         // Update the room state:
         if (event.stateKey != null &&
             (!room.partial || importantStateEvents.contains(event.type))) {
           room.setState(event);
         }
-        if (eventUpdate.type != EventUpdateType.timeline) break;
+        if (type != EventUpdateType.timeline) break;
 
         // If last event is null or not a valid room preview event anyway,
         // just use this:

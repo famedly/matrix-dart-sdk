@@ -88,6 +88,7 @@ class Event extends MatrixEvent {
     Map<String, dynamic>? unsigned,
     Map<String, dynamic>? prevContent,
     String? stateKey,
+    super.redacts,
     required this.room,
     MatrixEvent? originalSource,
   })  : _originalSource = originalSource,
@@ -171,7 +172,7 @@ class Event extends MatrixEvent {
               status: status ??
                   eventStatusFromInt(
                     matrixEvent.unsigned
-                            ?.tryGet<int>('messageSendingStatusKey') ??
+                            ?.tryGet<int>(messageSendingStatusKey) ??
                         defaultStatus.intValue,
                   ),
               content: matrixEvent.content,
@@ -212,6 +213,7 @@ class Event extends MatrixEvent {
       ),
       unsigned: unsigned,
       room: room,
+      redacts: jsonPayload['redacts'],
       originalSource:
           originalSource.isEmpty ? null : MatrixEvent.fromJson(originalSource),
     );

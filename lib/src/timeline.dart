@@ -41,7 +41,8 @@ class Timeline {
   final void Function(int index)? onRemove;
   final void Function()? onNewEvent;
 
-  StreamSubscription<EventUpdate>? sub;
+  StreamSubscription<Event>? timelineSub;
+  StreamSubscription<Event>? historySub;
   StreamSubscription<SyncUpdate>? roomSub;
   StreamSubscription<String>? sessionIdReceivedSub;
   StreamSubscription<String>? cancelSendEventSub;
@@ -322,7 +323,18 @@ class Timeline {
     this.onNewEvent,
     required this.chunk,
   }) {
-    sub = room.client.onEvent.stream.listen(_handleEventUpdate);
+    timelineSub = room.client.onTimelineEvent.stream.listen(
+      (event) => _handleEventUpdate(
+        event,
+        EventUpdateType.timeline,
+      ),
+    );
+    historySub = room.client.onHistoryEvent.stream.listen(
+      (event) => _handleEventUpdate(
+        event,
+        EventUpdateType.history,
+      ),
+    );
 
     // If the timeline is limited we want to clear our events cache
     roomSub = room.client.onSync.stream
@@ -368,7 +380,9 @@ class Timeline {
   /// Don't forget to call this before you dismiss this object!
   void cancelSubscriptions() {
     // ignore: discarded_futures
-    sub?.cancel();
+    timelineSub?.cancel();
+    // ignore: discarded_futures
+    historySub?.cancel();
     // ignore: discarded_futures
     roomSub?.cancel();
     // ignore: discarded_futures
@@ -512,43 +526,35 @@ class Timeline {
     }
   }
 
-  void _handleEventUpdate(EventUpdate eventUpdate, {bool update = true}) {
+  void _handleEventUpdate(
+    Event event,
+    EventUpdateType type, {
+    bool update = true,
+  }) {
     try {
-      if (eventUpdate.roomID != room.id) return;
+      if (event.roomId != room.id) return;
 
-      if (eventUpdate.type != EventUpdateType.timeline &&
-          eventUpdate.type != EventUpdateType.history) {
+      if (type != EventUpdateType.timeline && type != EventUpdateType.history) {
         return;
       }
 
-      if (eventUpdate.type == EventUpdateType.timeline) {
+      if (type == EventUpdateType.timeline) {
         onNewEvent?.call();
       }
 
       if (!allowNewEvent) return;
 
-      final status = eventStatusFromInt(
-        eventUpdate.content['status'] ??
-            (eventUpdate.content['unsigned'] is Map<String, dynamic>
-                ? eventUpdate.content['unsigned'][messageSendingStatusKey]
-                : null) ??
-            EventStatus.synced.intValue,
-      );
+      final status = event.status;
 
       final i = _findEvent(
-        event_id: eventUpdate.content['event_id'],
-        unsigned_txid: eventUpdate.content['unsigned'] is Map
-            ? eventUpdate.content['unsigned']['transaction_id']
-            : null,
+        event_id: event.eventId,
+        unsigned_txid: event.unsigned?.tryGet<String>('transaction_id'),
       );
 
       if (i < events.length) {
         // if the old status is larger than the new one, we also want to preserve the old status
         final oldStatus = events[i].status;
-        events[i] = Event.fromJson(
-          eventUpdate.content,
-          room,
-        );
+        events[i] = event;
         // do we preserve the status? we should allow 0 -> -1 updates and status increases
         if ((latestEventStatus(status, oldStatus) == oldStatus) &&
             !(status.isError && oldStatus.isSending)) {
@@ -557,34 +563,28 @@ class Timeline {
         addAggregatedEvent(events[i]);
         onChange?.call(i);
       } else {
-        final newEvent = Event.fromJson(
-          eventUpdate.content,
-          room,
-        );
-
-        if (eventUpdate.type == EventUpdateType.history &&
+        if (type == EventUpdateType.history &&
             events.indexWhere(
-                  (e) => e.eventId == eventUpdate.content['event_id'],
+                  (e) => e.eventId == event.eventId,
                 ) !=
                 -1) {
           return;
         }
         var index = events.length;
-        if (eventUpdate.type == EventUpdateType.history) {
-          events.add(newEvent);
+        if (type == EventUpdateType.history) {
+          events.add(event);
         } else {
           index = events.firstIndexWhereNotError;
-          events.insert(index, newEvent);
+          events.insert(index, event);
         }
         onInsert?.call(index);
 
-        addAggregatedEvent(newEvent);
+        addAggregatedEvent(event);
       }
 
       // Handle redaction events
-      if (eventUpdate.content['type'] == EventTypes.Redaction) {
-        final index =
-            _findEvent(event_id: eventUpdate.content.tryGet<String>('redacts'));
+      if (event.type == EventTypes.Redaction) {
+        final index = _findEvent(event_id: event.redacts);
         if (index < events.length) {
           removeAggregatedEvent(events[index]);
 
@@ -598,12 +598,7 @@ class Timeline {
             }
           }
 
-          events[index].setRedactionEvent(
-            Event.fromJson(
-              eventUpdate.content,
-              room,
-            ),
-          );
+          events[index].setRedactionEvent(event);
           onChange?.call(index);
         }
       }

@@ -142,11 +142,9 @@ void main() {
       ); // expect no new events to have been added
 
       final eventId = '1844295642248BcDkn:example.org';
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'test'},
             'sender': '@alice:example.com',
@@ -155,6 +153,7 @@ void main() {
             'unsigned': {'transaction_id': '1234'},
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
+          room,
         ),
       ); // just assume that it was on the server for this call but not for the following.
 
@@ -208,11 +207,9 @@ void main() {
       expect(eventId.startsWith('\$event'), true);
       expect(timeline.events[0].status, EventStatus.sent);
 
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'test'},
             'sender': '@alice:example.com',
@@ -221,6 +218,7 @@ void main() {
             'unsigned': {'transaction_id': '1234'},
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
+          room,
         ),
       );
 
@@ -238,11 +236,9 @@ void main() {
       await timeline.requestFuture();
       await waitForCount(6);
 
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -250,6 +246,7 @@ void main() {
             'event_id': 'abc',
             'origin_server_ts': testTimeStamp,
           },
+          room,
         ),
       );
 
@@ -296,11 +293,9 @@ void main() {
       await timeline.requestFuture();
       await timeline.requestFuture();
       // send a failed message
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -308,6 +303,7 @@ void main() {
             'event_id': 'abc',
             'origin_server_ts': testTimeStamp,
           },
+          room,
         ),
       );
       await waitForCount(7);
@@ -327,11 +323,9 @@ void main() {
     test('getEventById', () async {
       await timeline.requestFuture();
       await timeline.requestFuture();
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -339,6 +333,7 @@ void main() {
             'event_id': 'abc',
             'origin_server_ts': testTimeStamp,
           },
+          room,
         ),
       );
       await waitForCount(7);
@@ -360,11 +355,9 @@ void main() {
       timeline.events.clear();
       await timeline.requestFuture();
       await timeline.requestFuture();
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -373,6 +366,7 @@ void main() {
             'origin_server_ts': testTimeStamp,
             'unsigned': {'transaction_id': 'newresend'},
           },
+          room,
         ),
       );
       await waitForCount(7);
@@ -438,11 +432,9 @@ void main() {
       timeline.events.clear();
       await timeline.requestFuture();
       await timeline.requestFuture();
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -450,13 +442,12 @@ void main() {
             'event_id': 'abc',
             'origin_server_ts': testTimeStamp,
           },
+          room,
         ),
       );
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -464,6 +455,7 @@ void main() {
             'event_id': 'def',
             'origin_server_ts': testTimeStamp + 5,
           },
+          room,
         ),
       );
       await waitForCount(8);
@@ -475,11 +467,9 @@ void main() {
       timeline.events.clear();
       await timeline.requestFuture();
       await timeline.requestFuture();
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -487,16 +477,15 @@ void main() {
             'event_id': 'will-fail',
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
+          room,
         ),
       );
       await waitForCount(7);
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 4);
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -504,6 +493,7 @@ void main() {
             'event_id': 'will-fail',
             'origin_server_ts': testTimeStamp,
           },
+          room,
         ),
       );
       await waitForCount(8);
@@ -513,11 +503,9 @@ void main() {
     test('setReadMarker', () async {
       await timeline.requestFuture();
       await timeline.requestFuture();
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -525,6 +513,7 @@ void main() {
             'event_id': 'will-work',
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
+          room,
         ),
       );
       await waitForCount(7);
@@ -539,11 +528,9 @@ void main() {
       await timeline.requestFuture();
       await timeline.requestFuture();
 
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -551,16 +538,15 @@ void main() {
             'event_id': 'transaction',
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
+          room,
         ),
       );
       await waitForCount(7);
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 4);
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -569,16 +555,15 @@ void main() {
             'origin_server_ts': testTimeStamp,
             'unsigned': {'transaction_id': 'transaction'},
           },
+          room,
         ),
       );
       await waitForCount(8);
       expect(timeline.events[0].status, EventStatus.sent);
       expect(timeline.events.length, 4);
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -587,6 +572,7 @@ void main() {
             'origin_server_ts': testTimeStamp,
             'unsigned': {'transaction_id': 'transaction'},
           },
+          room,
         ),
       );
       await waitForCount(9);
@@ -599,11 +585,9 @@ void main() {
       await timeline.requestFuture();
       await timeline.requestFuture();
 
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -614,16 +598,15 @@ void main() {
               'transaction_id': 'transaction',
             },
           },
+          room,
         ),
       );
       await waitForCount(7);
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 4);
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -634,16 +617,15 @@ void main() {
               messageSendingStatusKey: EventStatus.synced.intValue,
             },
           },
+          room,
         ),
       );
       await waitForCount(8);
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 4);
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -654,6 +636,7 @@ void main() {
               messageSendingStatusKey: EventStatus.sent.intValue,
             },
           },
+          room,
         ),
       );
       await waitForCount(9);
@@ -665,11 +648,9 @@ void main() {
       await timeline.requestFuture();
       await timeline.requestFuture();
 
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -677,16 +658,15 @@ void main() {
             'event_id': 'transaction',
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
+          room,
         ),
       );
       await waitForCount(7);
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 4);
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -694,16 +674,15 @@ void main() {
             'origin_server_ts': testTimeStamp,
             'unsigned': {'transaction_id': 'transaction'},
           },
+          room,
         ),
       );
       await waitForCount(8);
       expect(timeline.events[0].status, EventStatus.error);
       expect(timeline.events.length, 4);
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -712,6 +691,7 @@ void main() {
             'origin_server_ts': testTimeStamp,
             'unsigned': {'transaction_id': 'transaction'},
           },
+          room,
         ),
       );
       await waitForCount(9);
@@ -723,11 +703,9 @@ void main() {
       await timeline.requestFuture();
       await timeline.requestFuture();
 
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -735,16 +713,15 @@ void main() {
             'event_id': 'transaction',
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
+          room,
         ),
       );
       await waitForCount(7);
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 4);
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -753,16 +730,15 @@ void main() {
             'origin_server_ts': testTimeStamp,
             'unsigned': {'transaction_id': 'transaction'},
           },
+          room,
         ),
       );
       await waitForCount(8);
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 4);
-      client.onEvent.add(
-        EventUpdate(
-          type: EventUpdateType.timeline,
-          roomID: roomID,
-          content: {
+      client.onTimelineEvent.add(
+        Event.fromJson(
+          {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -770,6 +746,7 @@ void main() {
             'origin_server_ts': testTimeStamp,
             'unsigned': {'transaction_id': 'transaction'},
           },
+          room,
         ),
       );
       await waitForCount(9);

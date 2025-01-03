@@ -114,7 +114,7 @@ void main() {
         httpClient: FakeMatrixApi(),
         databaseBuilder: getDatabase,
       );
-      final eventUpdateListFuture = matrix.onEvent.stream.toList();
+      final eventUpdateListFuture = matrix.onTimelineEvent.stream.toList();
       final toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
       var presenceCounter = 0;
       var accountDataCounter = 0;
@@ -278,43 +278,20 @@ void main() {
         null,
       );
 
-      await matrix.onEvent.close();
+      await matrix.onTimelineEvent.close();
 
       final eventUpdateList = await eventUpdateListFuture;
 
-      expect(eventUpdateList.length, 13);
+      expect(eventUpdateList.length, 3);
 
-      expect(eventUpdateList[0].content['type'], 'm.room.member');
-      expect(eventUpdateList[0].roomID, '!726s6s6q:example.com');
-      expect(eventUpdateList[0].type, EventUpdateType.state);
+      expect(eventUpdateList[0].type, 'm.room.member');
+      expect(eventUpdateList[0].roomId, '!726s6s6q:example.com');
 
-      expect(eventUpdateList[1].content['type'], 'm.room.canonical_alias');
-      expect(eventUpdateList[1].roomID, '!726s6s6q:example.com');
-      expect(eventUpdateList[1].type, EventUpdateType.state);
+      expect(eventUpdateList[1].type, 'm.room.message');
+      expect(eventUpdateList[1].roomId, '!726s6s6q:example.com');
 
-      expect(eventUpdateList[2].content['type'], 'm.room.encryption');
-      expect(eventUpdateList[2].roomID, '!726s6s6q:example.com');
-      expect(eventUpdateList[2].type, EventUpdateType.state);
-
-      expect(eventUpdateList[3].content['type'], 'm.room.pinned_events');
-      expect(eventUpdateList[3].roomID, '!726s6s6q:example.com');
-      expect(eventUpdateList[3].type, EventUpdateType.state);
-
-      expect(eventUpdateList[4].content['type'], 'm.room.member');
-      expect(eventUpdateList[4].roomID, '!726s6s6q:example.com');
-      expect(eventUpdateList[4].type, EventUpdateType.timeline);
-
-      expect(eventUpdateList[5].content['type'], 'm.room.message');
-      expect(eventUpdateList[5].roomID, '!726s6s6q:example.com');
-      expect(eventUpdateList[5].type, EventUpdateType.timeline);
-
-      expect(eventUpdateList[6].content['type'], 'm.room.member');
-      expect(eventUpdateList[6].roomID, '!calls:example.com');
-      expect(eventUpdateList[6].type, EventUpdateType.state);
-
-      expect(eventUpdateList[7].content['type'], 'm.room.member');
-      expect(eventUpdateList[7].roomID, '!calls:example.com');
-      expect(eventUpdateList[7].type, EventUpdateType.state);
+      expect(eventUpdateList[2].type, 'm.room.message');
+      expect(eventUpdateList[2].roomId, '!726s6s6f:example.com');
 
       expect(
         matrix
