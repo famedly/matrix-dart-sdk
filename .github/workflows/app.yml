@@ -52,6 +52,7 @@ jobs:
   coverage:
     #runs-on: arm-ubuntu-latest-16core
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
