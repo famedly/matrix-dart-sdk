@@ -1084,9 +1084,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeRoomAccountData(BasicRoomEvent event) async {
+  Future<void> storeRoomAccountData(String roomId, BasicRoomEvent event) async {
     await _roomAccountDataBox.put(
-      TupleKey(event.roomId ?? '', event.type).toString(),
+      TupleKey(roomId, event.type).toString(),
       event.toJson(),
     );
     return;

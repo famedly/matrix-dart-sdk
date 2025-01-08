@@ -2670,7 +2670,7 @@ class Client extends MatrixApi {
         final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
           for (final event in accountData) {
-            await database?.storeRoomAccountData(event);
+            await database?.storeRoomAccountData(room.id, event);
             room.roomAccountData[event.type] = event;
           }
         }
@@ -2739,7 +2739,7 @@ class Client extends MatrixApi {
         roomId: room.id,
         content: receiptStateContent.toJson(),
       );
-      await database?.storeRoomAccountData(event);
+      await database?.storeRoomAccountData(room.id, event);
       room.roomAccountData[event.type] = event;
     }
   }
