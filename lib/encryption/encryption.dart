@@ -154,20 +154,20 @@ class Encryption {
     }
   }
 
-  Future<void> handleEventUpdate(EventUpdate update) async {
-    if (update.type == EventUpdateType.history) {
+  Future<void> handleEventUpdate(Event event, EventUpdateType type) async {
+    if (type == EventUpdateType.history) {
       return;
     }
-    if (update.content['type'].startsWith('m.key.verification.') ||
-        (update.content['type'] == EventTypes.Message &&
-            (update.content['content']['msgtype'] is String) &&
-            update.content['content']['msgtype']
-                .startsWith('m.key.verification.'))) {
+    if (event.type.startsWith('m.key.verification.') ||
+        (event.type == EventTypes.Message &&
+            event.content
+                    .tryGet<String>('msgtype')
+                    ?.startsWith('m.key.verification.') ==
+                true)) {
       // "just" key verification, no need to do this in sync
-      runInRoot(() => keyVerificationManager.handleEventUpdate(update));
+      runInRoot(() => keyVerificationManager.handleEventUpdate(event));
     }
-    if (update.content['sender'] == client.userID &&
-        update.content['unsigned']?['transaction_id'] == null) {
+    if (event.senderId == client.userID && event.status.isSynced) {
       // maybe we need to re-try SSSS secrets
       runInRoot(() => ssss.periodicallyRequestMissingCache());
     }
@@ -348,11 +348,9 @@ class Encryption {
           event.room.setState(event);
         }
         await client.database?.storeEventUpdate(
-          EventUpdate(
-            content: event.toJson(),
-            roomID: event.room.id,
-            type: updateType,
-          ),
+          event.room.id,
+          event,
+          updateType,
           client,
         );
       }

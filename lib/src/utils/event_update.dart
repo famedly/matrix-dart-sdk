@@ -33,8 +33,7 @@ enum EventUpdateType {
   decryptedTimelineQueue,
 }
 
-/// Represents a new event (e.g. a message in a room) or an update for an
-/// already known event.
+@Deprecated('Use `Event` class directly instead.')
 class EventUpdate {
   /// Usually 'timeline', 'state' or whatever.
   final EventUpdateType type;

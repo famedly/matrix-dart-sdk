@@ -1093,45 +1093,37 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
-    final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
-        Room(id: eventUpdate.roomID, client: client);
+  Future<void> storeEventUpdate(
+    String roomId,
+    StrippedStateEvent event,
+    EventUpdateType type,
+    Client client,
+  ) async {
+    final tmpRoom =
+        client.getRoomById(roomId) ?? Room(id: roomId, client: client);
 
     // In case of this is a redaction event
-    if (eventUpdate.content['type'] == EventTypes.Redaction) {
-      final eventId = eventUpdate.content.tryGet<String>('redacts');
-      final event =
+    if (event.type == EventTypes.Redaction && event is MatrixEvent) {
+      final redactionEvent = Event.fromMatrixEvent(event, tmpRoom);
+      final eventId = redactionEvent.redacts;
+      final redactedEvent =
           eventId != null ? await getEventById(eventId, tmpRoom) : null;
-      if (event != null) {
-        event.setRedactionEvent(Event.fromJson(eventUpdate.content, tmpRoom));
+      if (redactedEvent != null) {
+        redactedEvent.setRedactionEvent(redactionEvent);
         await _eventsBox.put(
-          TupleKey(eventUpdate.roomID, event.eventId).toString(),
-          event.toJson(),
+          TupleKey(roomId, redactedEvent.eventId).toString(),
+          redactedEvent.toJson(),
         );
-
-        if (tmpRoom.lastEvent?.eventId == event.eventId) {
-          if (client.importantStateEvents.contains(event.type)) {
-            await _preloadRoomStateBox.put(
-              TupleKey(eventUpdate.roomID, event.type, '').toString(),
-              event.toJson(),
-            );
-          } else {
-            await _nonPreloadRoomStateBox.put(
-              TupleKey(eventUpdate.roomID, event.type, '').toString(),
-              event.toJson(),
-            );
-          }
-        }
       }
     }
 
     // Store a common message event
-    if ({EventUpdateType.timeline, EventUpdateType.history}
-        .contains(eventUpdate.type)) {
-      final eventId = eventUpdate.content['event_id'];
+    if ({EventUpdateType.timeline, EventUpdateType.history}.contains(type) &&
+        event is MatrixEvent) {
+      final timelineEvent = Event.fromMatrixEvent(event, tmpRoom);
       // Is this ID already in the store?
-      final prevEvent = await _eventsBox
-          .get(TupleKey(eventUpdate.roomID, eventId).toString());
+      final prevEvent =
+          await _eventsBox.get(TupleKey(roomId, event.eventId).toString());
       final prevStatus = prevEvent == null
           ? null
           : () {
@@ -1144,13 +1136,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
             }();
 
       // calculate the status
-      final newStatus = eventStatusFromInt(
-        eventUpdate.content.tryGet<int>('status') ??
-            eventUpdate.content
-                .tryGetMap<String, dynamic>('unsigned')
-                ?.tryGet<int>(messageSendingStatusKey) ??
-            EventStatus.synced.intValue,
-      );
+      final newStatus = timelineEvent.status;
 
       // Is this the response to a sending event which is already synced? Then
       // there is nothing to do here.
@@ -1165,29 +1151,25 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
               newStatus,
             );
 
-      // Add the status and the sort order to the content so it get stored
-      eventUpdate.content['unsigned'] ??= <String, dynamic>{};
-      eventUpdate.content['unsigned'][messageSendingStatusKey] =
-          eventUpdate.content['status'] = status.intValue;
+      timelineEvent.status = status;
 
+      final eventId = timelineEvent.eventId;
       // In case this event has sent from this account we have a transaction ID
-      final transactionId = eventUpdate.content
-          .tryGetMap<String, dynamic>('unsigned')
-          ?.tryGet<String>('transaction_id');
+      final transactionId =
+          timelineEvent.unsigned?.tryGet<String>('transaction_id');
       await _eventsBox.put(
-        TupleKey(eventUpdate.roomID, eventId).toString(),
-        eventUpdate.content,
+        TupleKey(roomId, eventId).toString(),
+        timelineEvent.toJson(),
       );
 
       // Update timeline fragments
-      final key = TupleKey(eventUpdate.roomID, status.isSent ? '' : 'SENDING')
-          .toString();
+      final key = TupleKey(roomId, status.isSent ? '' : 'SENDING').toString();
 
       final eventIds =
           List<String>.from(await _timelineFragmentsBox.get(key) ?? []);
 
       if (!eventIds.contains(eventId)) {
-        if (eventUpdate.type == EventUpdateType.history) {
+        if (type == EventUpdateType.history) {
           eventIds.add(eventId);
         } else {
           eventIds.insert(0, eventId);
@@ -1196,7 +1178,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       } else if (status.isSynced &&
           prevStatus != null &&
           prevStatus.isSent &&
-          eventUpdate.type != EventUpdateType.history) {
+          type != EventUpdateType.history) {
         // Status changes from 1 -> 2? Make sure event is correctly sorted.
         eventIds.remove(eventId);
         eventIds.insert(0, eventId);
@@ -1204,7 +1186,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
       // If event comes from server timeline, remove sending events with this ID
       if (status.isSent) {
-        final key = TupleKey(eventUpdate.roomID, 'SENDING').toString();
+        final key = TupleKey(roomId, 'SENDING').toString();
         final eventIds =
             List<String>.from(await _timelineFragmentsBox.get(key) ?? []);
         final i = eventIds.indexWhere((id) => id == eventId);
@@ -1215,37 +1197,38 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
       // Is there a transaction id? Then delete the event with this id.
       if (!status.isError && !status.isSending && transactionId != null) {
-        await removeEvent(transactionId, eventUpdate.roomID);
+        await removeEvent(transactionId, roomId);
       }
     }
 
-    final stateKey = eventUpdate.content['state_key'];
+    final stateKey = event.stateKey;
     // Store a common state event
     if (stateKey != null &&
         // Don't store events as state updates when paginating backwards.
-        (eventUpdate.type == EventUpdateType.timeline ||
-            eventUpdate.type == EventUpdateType.state ||
-            eventUpdate.type == EventUpdateType.inviteState)) {
-      if (eventUpdate.content['type'] == EventTypes.RoomMember) {
+        {
+          EventUpdateType.timeline,
+          EventUpdateType.state,
+          EventUpdateType.inviteState,
+        }.contains(type)) {
+      if (event.type == EventTypes.RoomMember) {
         await _roomMembersBox.put(
           TupleKey(
-            eventUpdate.roomID,
-            eventUpdate.content['state_key'],
+            roomId,
+            stateKey,
           ).toString(),
-          eventUpdate.content,
+          event.toJson(),
         );
       } else {
-        final type = eventUpdate.content['type'] as String;
-        final roomStateBox = client.importantStateEvents.contains(type)
+        final roomStateBox = client.importantStateEvents.contains(event.type)
             ? _preloadRoomStateBox
             : _nonPreloadRoomStateBox;
         final key = TupleKey(
-          eventUpdate.roomID,
-          type,
+          roomId,
+          event.type,
           stateKey,
         ).toString();
 
-        await roomStateBox.put(key, eventUpdate.content);
+        await roomStateBox.put(key, event.toJson());
       }
     }
   }
