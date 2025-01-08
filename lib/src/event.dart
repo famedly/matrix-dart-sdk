@@ -78,6 +78,8 @@ class Event extends MatrixEvent {
 
   MatrixEvent? get originalSource => _originalSource;
 
+  String? get transactionId => unsigned?.tryGet<String>('transaction_id');
+
   Event({
     this.status = defaultStatus,
     required Map<String, dynamic> super.content,
@@ -439,10 +441,9 @@ class Event extends MatrixEvent {
       final inReplyTo = credentials.inReplyTo == null
           ? null
           : await room.getEventById(credentials.inReplyTo!);
-      txid ??= unsigned?.tryGet<String>('transaction_id');
       return await room.sendFileEvent(
         file,
-        txid: txid,
+        txid: txid ?? transactionId,
         thumbnail: thumbnail,
         inReplyTo: inReplyTo,
         editEventId: credentials.editEventId,
@@ -455,7 +456,7 @@ class Event extends MatrixEvent {
     // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
     return await room.sendEvent(
       content,
-      txid: txid ?? unsigned?.tryGet<String>('transaction_id') ?? eventId,
+      txid: txid ?? transactionId ?? eventId,
     );
   }
 
@@ -967,7 +968,7 @@ class Event extends MatrixEvent {
     if (eventId == search) {
       return true;
     }
-    return unsigned?['transaction_id'] == search;
+    return transactionId == search;
   }
 
   /// Get the relationship type of an event. `null` if there is none
