@@ -1155,8 +1155,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
       final eventId = timelineEvent.eventId;
       // In case this event has sent from this account we have a transaction ID
-      final transactionId =
-          timelineEvent.unsigned?.tryGet<String>('transaction_id');
+      final transactionId = timelineEvent.transactionId;
       await _eventsBox.put(
         TupleKey(roomId, eventId).toString(),
         timelineEvent.toJson(),

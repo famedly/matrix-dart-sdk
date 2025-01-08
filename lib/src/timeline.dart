@@ -473,7 +473,7 @@ class Timeline {
     for (i = 0; i < events.length; i++) {
       final searchHaystack = <String>{events[i].eventId};
 
-      final txnid = events[i].unsigned?.tryGet<String>('transaction_id');
+      final txnid = events[i].transactionId;
       if (txnid != null) {
         searchHaystack.add(txnid);
       }
@@ -489,9 +489,7 @@ class Timeline {
       (e) =>
           e.matchesEventOrTransactionId(event.eventId) ||
           event.unsigned != null &&
-              e.matchesEventOrTransactionId(
-                event.unsigned?.tryGet<String>('transaction_id'),
-              ),
+              e.matchesEventOrTransactionId(event.transactionId),
     );
   }
 
@@ -516,8 +514,8 @@ class Timeline {
 
   void removeAggregatedEvent(Event event) {
     aggregatedEvents.remove(event.eventId);
-    if (event.unsigned != null) {
-      aggregatedEvents.remove(event.unsigned?['transaction_id']);
+    if (event.transactionId != null) {
+      aggregatedEvents.remove(event.transactionId);
     }
     for (final types in aggregatedEvents.values) {
       for (final events in types.values) {
@@ -548,7 +546,7 @@ class Timeline {
 
       final i = _findEvent(
         event_id: event.eventId,
-        unsigned_txid: event.unsigned?.tryGet<String>('transaction_id'),
+        unsigned_txid: event.transactionId,
       );
 
       if (i < events.length) {
