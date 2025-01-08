@@ -2,9 +2,9 @@ import 'dart:convert';
 
 /// Push Notification object from https://spec.matrix.org/v1.2/push-gateway-api/
 class PushNotification {
-  final Map<String, dynamic>? content;
+  final Map<String, Object?>? content;
   final PushNotificationCounts? counts;
-  final List<PushNotificationDevice> devices;
+  final List<PushNotificationDevice>? devices;
   final String? eventId;
   final String? prio;
   final String? roomAlias;
@@ -17,7 +17,7 @@ class PushNotification {
   const PushNotification({
     this.content,
     this.counts,
-    required this.devices,
+    this.devices,
     this.eventId,
     this.prio,
     this.roomAlias,
@@ -30,39 +30,44 @@ class PushNotification {
 
   /// Generate a Push Notification object from JSON. It also supports a
   /// `map<String, String>` which usually comes from Firebase Cloud Messaging.
-  factory PushNotification.fromJson(Map<String, dynamic> json) =>
+  factory PushNotification.fromJson(Map<String, Object?> json) =>
       PushNotification(
         content: json['content'] is Map
-            ? Map<String, dynamic>.from(json['content'])
+            ? Map<String, Object?>.from(json['content'] as Map)
             : json['content'] is String
-                ? jsonDecode(json['content'])
+                ? jsonDecode(json['content'] as String)
                 : null,
         counts: json['counts'] is Map
-            ? PushNotificationCounts.fromJson(json['counts'])
+            ? PushNotificationCounts.fromJson(
+                json['counts'] as Map<String, Object?>,
+              )
             : json['counts'] is String
-                ? PushNotificationCounts.fromJson(jsonDecode(json['counts']))
+                ? PushNotificationCounts.fromJson(
+                    jsonDecode(json['counts'] as String),
+                  )
                 : null,
         devices: json['devices'] is List
             ? (json['devices'] as List)
                 .map((d) => PushNotificationDevice.fromJson(d))
                 .toList()
-            : (jsonDecode(json['devices']) as List)
+            : (jsonDecode(json['devices'] as String) as List)
                 .map((d) => PushNotificationDevice.fromJson(d))
                 .toList(),
-        eventId: json['event_id'],
-        prio: json['prio'],
-        roomAlias: json['room_alias'],
-        roomId: json['room_id'],
-        roomName: json['room_name'],
-        sender: json['sender'],
-        senderDisplayName: json['sender_display_name'],
-        type: json['type'],
+        eventId: json['event_id'] as String?,
+        prio: json['prio'] as String?,
+        roomAlias: json['room_alias'] as String?,
+        roomId: json['room_id'] as String?,
+        roomName: json['room_name'] as String?,
+        sender: json['sender'] as String?,
+        senderDisplayName: json['sender_display_name'] as String?,
+        type: json['type'] as String?,
       );
 
-  Map<String, dynamic> toJson() => {
+  Map<String, Object?> toJson() => {
         if (content != null) 'content': content,
         if (counts != null) 'counts': counts?.toJson(),
-        'devices': devices.map((i) => i.toJson()).toList(),
+        if (devices != null)
+          'devices': devices?.map((i) => i.toJson()).toList(),
         if (eventId != null) 'event_id': eventId,
         if (prio != null) 'prio': prio,
         if (roomAlias != null) 'room_alias': roomAlias,
@@ -83,45 +88,47 @@ class PushNotificationCounts {
     this.unread,
   });
 
-  factory PushNotificationCounts.fromJson(Map<String, dynamic> json) =>
+  factory PushNotificationCounts.fromJson(Map<String, Object?> json) =>
       PushNotificationCounts(
-        missedCalls: json['missed_calls'],
-        unread: json['unread'],
+        missedCalls: json['missed_calls'] as int?,
+        unread: json['unread'] as int?,
       );
 
-  Map<String, dynamic> toJson() => {
+  Map<String, Object?> toJson() => {
         if (missedCalls != null) 'missed_calls': missedCalls,
         if (unread != null) 'unread': unread,
       };
 }
 
 class PushNotificationDevice {
-  final String appId;
-  final Map<String, dynamic>? data;
-  final String pushkey;
+  final String? appId;
+  final Map<String, Object?>? data;
+  final String? pushkey;
   final int? pushkeyTs;
   final Tweaks? tweaks;
 
   const PushNotificationDevice({
-    required this.appId,
+    this.appId,
     this.data,
-    required this.pushkey,
+    this.pushkey,
     this.pushkeyTs,
     this.tweaks,
   });
 
-  factory PushNotificationDevice.fromJson(Map<String, dynamic> json) =>
+  factory PushNotificationDevice.fromJson(Map<String, Object?> json) =>
       PushNotificationDevice(
-        appId: json['app_id'],
+        appId: json['app_id'] as String?,
         data: json['data'] == null
             ? null
-            : Map<String, dynamic>.from(json['data']),
-        pushkey: json['pushkey'],
-        pushkeyTs: json['pushkey_ts'],
-        tweaks: json['tweaks'] == null ? null : Tweaks.fromJson(json['tweaks']),
+            : Map<String, Object?>.from(json['data'] as Map),
+        pushkey: json['pushkey'] as String?,
+        pushkeyTs: json['pushkey_ts'] as int?,
+        tweaks: json['tweaks'] == null
+            ? null
+            : Tweaks.fromJson(json['tweaks'] as Map<String, Object?>),
       );
 
-  Map<String, dynamic> toJson() => {
+  Map<String, Object?> toJson() => {
         'app_id': appId,
         if (data != null) 'data': data,
         'pushkey': pushkey,
@@ -137,11 +144,11 @@ class Tweaks {
     this.sound,
   });
 
-  factory Tweaks.fromJson(Map<String, dynamic> json) => Tweaks(
-        sound: json['sound'],
+  factory Tweaks.fromJson(Map<String, Object?> json) => Tweaks(
+        sound: json['sound'] as String?,
       );
 
-  Map<String, dynamic> toJson() => {
+  Map<String, Object?> toJson() => {
         if (sound != null) 'sound': sound,
       };
 }
