@@ -134,7 +134,7 @@ abstract class DatabaseApi {
 
   Future storeAccountData(String type, Map<String, Object?> content);
 
-  Future storeRoomAccountData(String roomId, BasicRoomEvent event);
+  Future storeRoomAccountData(String roomId, BasicEvent event);
 
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client);
 

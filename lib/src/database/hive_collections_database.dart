@@ -580,7 +580,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
     for (final data in roomAccountDataList) {
       if (data == null) continue;
-      final event = BasicRoomEvent.fromJson(copyMap(data));
+      final event = BasicEvent.fromJson(copyMap(data));
       room.roomAccountData[event.type] = event;
     }
 
@@ -696,7 +696,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
         final roomAccountDataRaws = await _roomAccountDataBox.getAllValues();
         for (final entry in roomAccountDataRaws.entries) {
           final keys = TupleKey.fromString(entry.key);
-          final basicRoomEvent = BasicRoomEvent.fromJson(
+          final basicRoomEvent = BasicEvent.fromJson(
             copyMap(entry.value),
           );
           final roomId = keys.parts.first;
@@ -1096,7 +1096,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeRoomAccountData(String roomId, BasicRoomEvent event) async {
+  Future<void> storeRoomAccountData(String roomId, BasicEvent event) async {
     await _roomAccountDataBox.put(
       TupleKey(roomId, event.type).toString(),
       copyMap(event.toJson()),

@@ -177,7 +177,7 @@ void main() {
             join: {
               timeline.room.id: JoinedRoomUpdate(
                 ephemeral: [
-                  BasicRoomEvent.fromJson({
+                  BasicEvent.fromJson({
                     'type': 'm.receipt',
                     'content': {
                       timeline.events.first.eventId: {
@@ -294,7 +294,7 @@ void main() {
             join: {
               timeline.room.id: JoinedRoomUpdate(
                 ephemeral: [
-                  BasicRoomEvent.fromJson({
+                  BasicEvent.fromJson({
                     'type': 'm.receipt',
                     'content': {
                       '\$2': {
@@ -328,7 +328,7 @@ void main() {
             join: {
               timeline.room.id: JoinedRoomUpdate(
                 ephemeral: [
-                  BasicRoomEvent.fromJson({
+                  BasicEvent.fromJson({
                     'type': 'm.receipt',
                     'content': {
                       '\$2': {
@@ -371,7 +371,7 @@ void main() {
             join: {
               timeline.room.id: JoinedRoomUpdate(
                 ephemeral: [
-                  BasicRoomEvent.fromJson({
+                  BasicEvent.fromJson({
                     'type': 'm.receipt',
                     'content': {
                       '\$2': {
@@ -421,7 +421,7 @@ void main() {
             join: {
               timeline.room.id: JoinedRoomUpdate(
                 ephemeral: [
-                  BasicRoomEvent.fromJson({
+                  BasicEvent.fromJson({
                     'type': 'm.receipt',
                     'content': {
                       '\$1': {
@@ -467,7 +467,7 @@ void main() {
             join: {
               timeline.room.id: JoinedRoomUpdate(
                 ephemeral: [
-                  BasicRoomEvent.fromJson({
+                  BasicEvent.fromJson({
                     'type': 'm.receipt',
                     'content': {
                       '\$2': {
@@ -511,7 +511,7 @@ void main() {
             join: {
               timeline.room.id: JoinedRoomUpdate(
                 ephemeral: [
-                  BasicRoomEvent.fromJson({
+                  BasicEvent.fromJson({
                     'type': 'm.receipt',
                     'content': {
                       '\$2': {
@@ -559,7 +559,7 @@ void main() {
                   ],
                 ),
                 ephemeral: [
-                  BasicRoomEvent.fromJson({
+                  BasicEvent.fromJson({
                     'type': 'm.receipt',
                     'content': {
                       '\$2': {

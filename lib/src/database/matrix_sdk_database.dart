@@ -626,7 +626,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
     for (final data in roomAccountDataList) {
       if (data == null) continue;
-      final event = BasicRoomEvent.fromJson(copyMap(data));
+      final event = BasicEvent.fromJson(copyMap(data));
       room.roomAccountData[event.type] = event;
     }
 
@@ -683,7 +683,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         final roomAccountDataRaws = await _roomAccountDataBox.getAllValues();
         for (final entry in roomAccountDataRaws.entries) {
           final keys = TupleKey.fromString(entry.key);
-          final basicRoomEvent = BasicRoomEvent.fromJson(
+          final basicRoomEvent = BasicEvent.fromJson(
             copyMap(entry.value),
           );
           final roomId = keys.parts.first;
@@ -1084,7 +1084,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeRoomAccountData(String roomId, BasicRoomEvent event) async {
+  Future<void> storeRoomAccountData(String roomId, BasicEvent event) async {
     await _roomAccountDataBox.put(
       TupleKey(roomId, event.type).toString(),
       event.toJson(),

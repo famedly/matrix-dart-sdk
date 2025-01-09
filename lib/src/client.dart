@@ -1200,7 +1200,7 @@ class Client extends MatrixApi {
           roomAccountData: roomUpdate.accountData
                   ?.asMap()
                   .map((k, v) => MapEntry(v.type, v)) ??
-              <String, BasicRoomEvent>{},
+              <String, BasicEvent>{},
         );
     // Set membership of room to leave, in the case we got a left room passed, otherwise
     // the left room would have still membership join, which would be wrong for the setState later
@@ -2713,7 +2713,7 @@ class Client extends MatrixApi {
     }
   }
 
-  Future<void> _handleEphemerals(Room room, List<BasicRoomEvent> events) async {
+  Future<void> _handleEphemerals(Room room, List<BasicEvent> events) async {
     final List<ReceiptEventContent> receipts = [];
 
     for (final event in events) {
@@ -2734,9 +2734,8 @@ class Client extends MatrixApi {
         await receiptStateContent.update(e, room);
       }
 
-      final event = BasicRoomEvent(
+      final event = BasicEvent(
         type: LatestReceiptState.eventType,
-        roomId: room.id,
         content: receiptStateContent.toJson(),
       );
       await database?.storeRoomAccountData(room.id, event);

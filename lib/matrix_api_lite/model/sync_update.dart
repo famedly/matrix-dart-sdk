@@ -170,8 +170,8 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
   RoomSummary? summary;
   List<MatrixEvent>? state;
   TimelineUpdate? timeline;
-  List<BasicRoomEvent>? ephemeral;
-  List<BasicRoomEvent>? accountData;
+  List<BasicEvent>? ephemeral;
+  List<BasicEvent>? accountData;
   UnreadNotificationCounts? unreadNotifications;
 
   JoinedRoomUpdate({
@@ -192,11 +192,11 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
         timeline = json.tryGetFromJson('timeline', TimelineUpdate.fromJson),
         ephemeral = json
             .tryGetMap<String, List<Object?>>('ephemeral')?['events']
-            ?.map((i) => BasicRoomEvent.fromJson(i as Map<String, Object?>))
+            ?.map((i) => BasicEvent.fromJson(i as Map<String, Object?>))
             .toList(),
         accountData = json
             .tryGetMap<String, List<Object?>>('account_data')?['events']
-            ?.map((i) => BasicRoomEvent.fromJson(i as Map<String, Object?>))
+            ?.map((i) => BasicEvent.fromJson(i as Map<String, Object?>))
             .toList(),
         unreadNotifications = json.tryGetFromJson(
           'unread_notifications',
@@ -280,7 +280,7 @@ class KnockRoomUpdate extends SyncRoomUpdate {
 class LeftRoomUpdate extends SyncRoomUpdate {
   List<MatrixEvent>? state;
   TimelineUpdate? timeline;
-  List<BasicRoomEvent>? accountData;
+  List<BasicEvent>? accountData;
 
   LeftRoomUpdate({
     this.state,
@@ -296,7 +296,7 @@ class LeftRoomUpdate extends SyncRoomUpdate {
         timeline = json.tryGetFromJson('timeline', TimelineUpdate.fromJson),
         accountData = json
             .tryGetMap<String, List<Object?>>('account_data')?['events']
-            ?.map((i) => BasicRoomEvent.fromJson(i as Map<String, Object?>))
+            ?.map((i) => BasicEvent.fromJson(i as Map<String, Object?>))
             .toList();
 
   Map<String, Object?> toJson() {
