@@ -82,11 +82,11 @@ void main() {
           'm.heroes': heroes,
         }),
         roomAccountData: {
-          'com.test.foo': BasicRoomEvent(
+          'com.test.foo': BasicEvent(
             type: 'com.test.foo',
             content: {'foo': 'bar'},
           ),
-          'm.fully_read': BasicRoomEvent(
+          'm.fully_read': BasicEvent(
             type: 'm.fully_read',
             content: {'event_id': '\$event_id:example.com'},
           ),
@@ -1292,7 +1292,7 @@ void main() {
       await room.addTag(TagType.favourite, order: 0.1);
       await room.removeTag(TagType.favourite);
       expect(room.isFavourite, false);
-      room.roomAccountData['m.tag'] = BasicRoomEvent.fromJson({
+      room.roomAccountData['m.tag'] = BasicEvent.fromJson({
         'content': {
           'tags': {
             'm.favourite': {'order': 0.1},
@@ -1311,7 +1311,7 @@ void main() {
       await room.markUnread(true);
       await room.markUnread(false);
       expect(room.markedUnread, false);
-      room.roomAccountData['m.marked_unread'] = BasicRoomEvent.fromJson({
+      room.roomAccountData['m.marked_unread'] = BasicEvent.fromJson({
         'content': {'unread': true},
         'type': 'm.marked_unread',
       });

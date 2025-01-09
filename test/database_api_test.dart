@@ -257,10 +257,9 @@ void main() {
 
         await database.storeRoomAccountData(
           roomid,
-          BasicRoomEvent(
+          BasicEvent(
             content: {'foo': 'bar'},
             type: 'm.test',
-            roomId: roomid,
           ),
         );
 

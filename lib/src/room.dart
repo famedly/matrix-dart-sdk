@@ -67,10 +67,10 @@ class Room {
   Map<String, Map<String, StrippedStateEvent>> states = {};
 
   /// Key-Value store for ephemerals.
-  Map<String, BasicRoomEvent> ephemerals = {};
+  Map<String, BasicEvent> ephemerals = {};
 
   /// Key-Value store for private account data only visible for this user.
-  Map<String, BasicRoomEvent> roomAccountData = {};
+  Map<String, BasicEvent> roomAccountData = {};
 
   final _sendingQueue = <Completer>[];
 
@@ -372,7 +372,7 @@ class Room {
 
   Event? lastEvent;
 
-  void setEphemeral(BasicRoomEvent ephemeral) {
+  void setEphemeral(BasicEvent ephemeral) {
     ephemerals[ephemeral.type] = ephemeral;
     if (ephemeral.type == 'm.typing') {
       _clearTypingIndicatorTimer?.cancel();
@@ -403,10 +403,10 @@ class Room {
     this.highlightCount = 0,
     this.prev_batch,
     required this.client,
-    Map<String, BasicRoomEvent>? roomAccountData,
+    Map<String, BasicEvent>? roomAccountData,
     RoomSummary? summary,
     this.lastEvent,
-  })  : roomAccountData = roomAccountData ?? <String, BasicRoomEvent>{},
+  })  : roomAccountData = roomAccountData ?? <String, BasicEvent>{},
         summary = summary ??
             RoomSummary.fromJson({
               'm.joined_member_count': 0,
@@ -572,9 +572,8 @@ class Room {
           join: {
             id: JoinedRoomUpdate(
               accountData: [
-                BasicRoomEvent(
+                BasicEvent(
                   content: content,
-                  roomId: id,
                   type: EventType.markedUnread,
                 ),
               ],

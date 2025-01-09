@@ -245,10 +245,9 @@ class FakeMatrixApi extends BaseClient {
             join: {
               roomId: JoinedRoomUpdate(
                 accountData: [
-                  sdk.BasicRoomEvent(
+                  sdk.BasicEvent(
                     content: decodeJson(data),
                     type: type,
-                    roomId: roomId,
                   ),
                 ],
               ),
