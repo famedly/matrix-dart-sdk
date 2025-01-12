@@ -1234,6 +1234,9 @@ void main() {
           'preset': 'private_chat',
         },
       );
+
+      // we wait for the rooms to be added to sync in the fake matrix api
+      await Future.delayed(Duration(milliseconds: 100));
     });
     test('Test the fake store api', () async {
       final database = await getDatabase(null);
@@ -1255,7 +1258,7 @@ void main() {
       await client1.abortSync();
 
       expect(client1.isLogged(), true);
-      expect(client1.rooms.length, 3);
+      expect(client1.rooms.length, 8);
 
       final client2 = Client(
         'testclient',
@@ -1273,7 +1276,7 @@ void main() {
       expect(client2.homeserver, client1.homeserver);
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
-      expect(client2.rooms.length, 3);
+      expect(client2.rooms.length, 4);
       if (client2.encryptionEnabled) {
         expect(
           client2.encryption?.fingerprintKey,

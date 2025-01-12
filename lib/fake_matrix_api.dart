@@ -43,6 +43,7 @@ class FakeMatrixApi extends BaseClient {
 
   static Map<String, List<dynamic>> get calledEndpoints =>
       currentApi!._calledEndpoints;
+
   static int get eventCounter => currentApi!._eventCounter;
   static set eventCounter(int c) {
     currentApi!._eventCounter = c;
@@ -68,6 +69,8 @@ class FakeMatrixApi extends BaseClient {
   final _apiCallStream = StreamController<String>.broadcast();
 
   static FakeMatrixApi? currentApi;
+
+  static RoomsUpdate? _pendingRoomsUpdate;
 
   static Future<String> firstWhereValue(String value) {
     return firstWhere((v) => v == value);
@@ -105,20 +108,17 @@ class FakeMatrixApi extends BaseClient {
           '${request.url.path.split('/_matrix').last}?${request.url.query}';
     }
 
-    // ignore: avoid_print
-    if (_trace) print('called $action');
-
     if (action.endsWith('?')) {
       action = action.substring(0, action.length - 1);
     }
-    if (action.endsWith('?server_name')) {
-      // This can be removed after matrix_api_lite is released with:
-      // https://gitlab.com/famedly/libraries/matrix_api_lite/-/merge_requests/16
-      action = action.substring(0, action.length - 12);
-    }
+
     if (action.endsWith('/')) {
       action = action.substring(0, action.length - 1);
     }
+
+    // ignore: avoid_print
+    if (_trace) print('called $action');
+
     final method = request.method;
     final dynamic data =
         method == 'GET' ? request.url.queryParameters : request.body;
@@ -214,6 +214,8 @@ class FakeMatrixApi extends BaseClient {
             'curve25519': 10,
             'signed_curve25519': 100,
           },
+          if (_pendingRoomsUpdate != null)
+            'rooms': _pendingRoomsUpdate?.toJson(),
         };
       } else if (method == 'PUT' &&
           _client != null &&
@@ -2536,9 +2538,19 @@ class FakeMatrixApi extends BaseClient {
       '/client/v3/pushers/set': (var reqI) => {},
       '/client/v3/join/1234': (var reqI) => {'room_id': '1234'},
       '/client/v3/logout/all': (var reqI) => {},
-      '/client/v3/createRoom': (var reqI) => {
-            'room_id': '!1234:fakeServer.notExisting',
-          },
+      '/client/v3/createRoom': (var reqI) {
+        final roomId = '!1234:fakeServer.notExisting';
+        unawaited(
+          Future.delayed(Duration(milliseconds: 100)).then((_) {
+            _pendingRoomsUpdate =
+                RoomsUpdate(join: {roomId: JoinedRoomUpdate()});
+          }),
+        );
+
+        return {
+          'room_id': roomId,
+        };
+      },
       '/client/v3/rooms/!localpart%3Aserver.abc/read_markers': (var reqI) => {},
       '/client/v3/rooms/!localpart:server.abc/kick': (var reqI) => {},
       '/client/v3/rooms/!localpart%3Aserver.abc/ban': (var reqI) => {},
