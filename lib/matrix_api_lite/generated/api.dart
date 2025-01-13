@@ -68,7 +68,7 @@ class Api {
   }
 
   /// This API asks the homeserver to call the
-  /// [`/_matrix/app/v1/ping`](#post_matrixappv1ping) endpoint on the
+  /// [`/_matrix/app/v1/ping`](https://spec.matrix.org/unstable/application-service-api/#post_matrixappv1ping) endpoint on the
   /// application service to ensure that the homeserver can communicate
   /// with the application service.
   ///
@@ -86,7 +86,7 @@ class Api {
   ///
   /// returns `duration_ms`:
   /// The duration in milliseconds that the
-  /// [`/_matrix/app/v1/ping`](#post_matrixappv1ping)
+  /// [`/_matrix/app/v1/ping`](https://spec.matrix.org/unstable/application-service-api/#post_matrixappv1ping)
   /// request took from the homeserver's point of view.
   Future<int> pingAppservice(
     String appserviceId, {
@@ -432,14 +432,14 @@ class Api {
   /// Where a child room is unknown to the local server, federation is used to fill in the details.
   /// The servers listed in the `via` array should be contacted to attempt to fill in missing rooms.
   ///
-  /// Only [`m.space.child`](#mspacechild) state events of the room are considered. Invalid child
-  /// rooms and parent events are not covered by this endpoint.
+  /// Only [`m.space.child`](https://spec.matrix.org/unstable/client-server-api/#mspacechild) state events of the room are considered.
+  /// Invalid child rooms and parent events are not covered by this endpoint.
   ///
   /// [roomId] The room ID of the space to get a hierarchy for.
   ///
   /// [suggestedOnly] Optional (default `false`) flag to indicate whether or not the server should only consider
-  /// suggested rooms. Suggested rooms are annotated in their [`m.space.child`](#mspacechild) event
-  /// contents.
+  /// suggested rooms. Suggested rooms are annotated in their [`m.space.child`](https://spec.matrix.org/unstable/client-server-api/#mspacechild)
+  /// event contents.
   ///
   /// [limit] Optional limit for the maximum number of rooms to include per response. Must be an integer
   /// greater than zero.
@@ -788,7 +788,7 @@ class Api {
   /// to ask other servers for a suitable event.
   ///
   /// After calling this endpoint, clients can call
-  /// [`/rooms/{roomId}/context/{eventId}`](#get_matrixclientv3roomsroomidcontexteventid)
+  /// [`/rooms/{roomId}/context/{eventId}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidcontexteventid)
   /// to obtain a pagination token to retrieve the events around the returned event.
   ///
   /// The event returned by this endpoint could be an event that the client
@@ -2241,6 +2241,20 @@ class Api {
   }
 
   /// Claims one-time keys for use in pre-key messages.
+  ///
+  /// The request contains the user ID, device ID and algorithm name of the
+  /// keys that are required. If a key matching these requirements can be
+  /// found, the response contains it. The returned key is a one-time key
+  /// if one is available, and otherwise a fallback key.
+  ///
+  /// One-time keys are given out in the order that they were uploaded via
+  /// [/keys/upload](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3keysupload). (All
+  /// keys uploaded within a given call to `/keys/upload` are considered
+  /// equivalent in this regard; no ordering is specified within them.)
+  ///
+  /// Servers must ensure that each one-time key is returned at most once,
+  /// so when a key has been returned, no other request will ever return
+  /// the same key.
   ///
   /// [oneTimeKeys] The keys to be claimed. A map from user ID, to a map from
   /// device ID to algorithm name.
@@ -4606,6 +4620,34 @@ class Api {
     return ((v) => v != null ? v as String : null)(json['event_id']);
   }
 
+  /// Reports a room as inappropriate to the server, which may then notify
+  /// the appropriate people. How such information is delivered is left up to
+  /// implementations. The caller is not required to be joined to the room to
+  /// report it.
+  ///
+  /// [roomId] The room being reported.
+  ///
+  /// [reason] The reason the room is being reported.
+  Future<void> reportRoom(String roomId, {String? reason}) async {
+    final requestUri = Uri(
+      path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/report',
+    );
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(
+      jsonEncode({
+        if (reason != null) 'reason': reason,
+      }),
+    );
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
   /// Reports an event as inappropriate to the server, which may then notify
   /// the appropriate people. The caller must be joined to the room to report
   /// it.
@@ -4620,11 +4662,11 @@ class Api {
   ///
   /// [eventId] The event to report.
   ///
-  /// [reason] The reason the content is being reported. May be blank.
+  /// [reason] The reason the content is being reported.
   ///
   /// [score] The score to rate this content as where -100 is most offensive
   /// and 0 is inoffensive.
-  Future<void> reportContent(
+  Future<void> reportEvent(
     String roomId,
     String eventId, {
     String? reason,
@@ -4974,7 +5016,8 @@ class Api {
   /// incremental deltas to the state, and to receive new messages.
   ///
   /// *Note*: This endpoint supports lazy-loading. See [Filtering](https://spec.matrix.org/unstable/client-server-api/#filtering)
-  /// for more information. Lazy-loading members is only supported on a `StateFilter`
+  /// for more information. Lazy-loading members is only supported on the `state` part of a
+  /// [`RoomFilter`](#post_matrixclientv3useruseridfilter_request_roomfilter)
   /// for this endpoint. When lazy-loading is enabled, servers MUST include the
   /// syncing user's own membership event when they join a room, or when the
   /// full state of rooms is requested, to aid discovering the user's avatar &
@@ -5231,7 +5274,7 @@ class Api {
   /// Set some account data for the client. This config is only visible to the user
   /// that set the account data. The config will be available to clients through the
   /// top-level `account_data` field in the homeserver response to
-  /// [/sync](#get_matrixclientv3sync).
+  /// [/sync](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync).
   ///
   /// [userId] The ID of the user to set account data for. The access token must be
   /// authorized to make requests for this user ID.
@@ -5374,7 +5417,7 @@ class Api {
 
   /// Set some account data for the client on a given room. This config is only
   /// visible to the user that set the account data. The config will be delivered to
-  /// clients in the per-room entries via [/sync](#get_matrixclientv3sync).
+  /// clients in the per-room entries via [/sync](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync).
   ///
   /// [userId] The ID of the user to set account data for. The access token must be
   /// authorized to make requests for this user ID.
@@ -5639,7 +5682,7 @@ class Api {
   /// {{% /boxes/note %}}
   ///
   /// {{% boxes/warning %}}
-  /// {{< changed-in v="1.11" >}} This endpoint MAY return `404 M_NOT_FOUND`
+  /// {{% changed-in v="1.11" %}} This endpoint MAY return `404 M_NOT_FOUND`
   /// for media which exists, but is after the server froze unauthenticated
   /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
   /// information.
@@ -5705,7 +5748,7 @@ class Api {
   /// provided by the caller.
   ///
   /// {{% boxes/warning %}}
-  /// {{< changed-in v="1.11" >}} This endpoint MAY return `404 M_NOT_FOUND`
+  /// {{% changed-in v="1.11" %}} This endpoint MAY return `404 M_NOT_FOUND`
   /// for media which exists, but is after the server froze unauthenticated
   /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
   /// information.
@@ -5810,7 +5853,7 @@ class Api {
   /// See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails) section for more information.
   ///
   /// {{% boxes/warning %}}
-  /// {{< changed-in v="1.11" >}} This endpoint MAY return `404 M_NOT_FOUND`
+  /// {{% changed-in v="1.11" %}} This endpoint MAY return `404 M_NOT_FOUND`
   /// for media which exists, but is after the server froze unauthenticated
   /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
   /// information.
