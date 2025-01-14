@@ -185,6 +185,7 @@ class Event extends MatrixEvent {
               unsigned: matrixEvent.unsigned,
               prevContent: matrixEvent.prevContent,
               stateKey: matrixEvent.stateKey,
+              redacts: matrixEvent.redacts,
               room: room,
             );
 
