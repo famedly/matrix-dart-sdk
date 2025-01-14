@@ -241,6 +241,9 @@ class Event extends MatrixEvent {
     if (originalSource != null) {
       data['original_source'] = originalSource?.toJson();
     }
+    if (redacts != null) {
+      data['redacts'] = redacts;
+    }
     data['status'] = status.intValue;
     return data;
   }
