@@ -3936,9 +3936,7 @@ class Client extends MatrixApi {
       await database?.storeSpaceHierarchy(roomId, response);
       return response;
     }
-    if (cachedResponse.nextBatch != null &&
-        from != null &&
-        cachedResponse.nextBatch == from) {
+    if (from != null) {
       final response = await super.getSpaceHierarchy(
         roomId,
         suggestedOnly: suggestedOnly,
