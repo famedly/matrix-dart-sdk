@@ -239,7 +239,6 @@ void main() {
         expect(event.redacted, true);
         expect(event.redactedBecause?.toJson(), redactedBecause.toJson());
         expect(event.content.isEmpty, true);
-        redactionEventJson.remove('redacts');
         expect(event.unsigned?['redacted_because'], redactionEventJson);
 
         await client.dispose();
@@ -2829,6 +2828,39 @@ void main() {
       );
       expect(event.onlyEmotes, false);
       expect(event.numberEmotes, 2);
+    });
+
+    test('Check conversion between types', () {
+      final matrixEvent = MatrixEvent.fromJson(
+        {
+          'content': {
+            'body': 'filename.jpg',
+            'info': {
+              'h': 398,
+              'mimetype': 'image/jpeg',
+              'size': 31037,
+              'w': 394,
+            },
+            'msgtype': 'm.image',
+            'url': 'mxc://example.org/JWEIFJgwEIhweiWJE',
+          },
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': room.id,
+          'sender': '@example:example.org',
+          'type': 'm.room.message',
+          'unsigned': {'age': 1234},
+          'redacts': 'abcd',
+          'prev_content': <String, Object?>{
+            'foo': 'bar',
+          },
+        },
+      );
+      final event = Event.fromMatrixEvent(matrixEvent, room);
+      expect(
+        event.toJson()..remove('status'),
+        matrixEvent.toJson(),
+      );
     });
   });
 }
