@@ -303,6 +303,30 @@ extension CommandsClientExtension on Client {
       await unignoreUser(mxid);
       return null;
     });
+    addCommand('setRoomState', (args) async {
+      final arguments = args.msg.split(' ');
+      final roomId = arguments.removeAt(0);
+      final eventType = arguments.removeAt(0);
+      final stateKey = arguments.removeAt(0);
+      final body = jsonDecode(arguments.join(' '));
+      await setRoomStateWithKey(roomId, eventType, stateKey, body);
+      return null;
+    });
+    addCommand('setAccountData', (args) async {
+      final arguments = args.msg.split(' ');
+      final eventType = arguments.removeAt(0);
+      final body = jsonDecode(arguments.join(' '));
+      await setAccountData(userID!, eventType, body);
+      return null;
+    });
+    addCommand('setRoomAccountData', (args) async {
+      final arguments = args.msg.split(' ');
+      final roomId = arguments.removeAt(0);
+      final eventType = arguments.removeAt(0);
+      final body = jsonDecode(arguments.join(' '));
+      await setAccountDataPerRoom(userID!, roomId, eventType, body);
+      return null;
+    });
   }
 }
 
