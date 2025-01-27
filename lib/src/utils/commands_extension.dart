@@ -460,6 +460,32 @@ extension CommandsClientExtension on Client {
       stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
       return null;
     });
+    addCommand('setRoomState', (args, stdout) async {
+      final arguments = args.msg.split(' ');
+      final roomId = arguments.removeAt(0);
+      final eventType = arguments.removeAt(0);
+      final stateKey = arguments.removeAt(0);
+      final body = jsonDecode(arguments.join(' '));
+      final eventId =
+          await setRoomStateWithKey(roomId, eventType, stateKey, body);
+      stdout?.write(DefaultCommandOutput(rooms: [eventId]).toString());
+      return null;
+    });
+    addCommand('setAccountData', (args, stdout) async {
+      final arguments = args.msg.split(' ');
+      final eventType = arguments.removeAt(0);
+      final body = jsonDecode(arguments.join(' '));
+      await setAccountData(userID!, eventType, body);
+      return null;
+    });
+    addCommand('setRoomAccountData', (args, stdout) async {
+      final arguments = args.msg.split(' ');
+      final roomId = arguments.removeAt(0);
+      final eventType = arguments.removeAt(0);
+      final body = jsonDecode(arguments.join(' '));
+      await setAccountDataPerRoom(userID!, roomId, eventType, body);
+      return null;
+    });
   }
 }
 
