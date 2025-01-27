@@ -1,3 +1,55 @@
+## 0.37.0
+
+Bigger release with a lot of refactorings under the hood. Those do not necessarily make the SDK more performant but more robust and type safe.
+
+There are multiple breaking changes:
+
+- The SDK now uses spec v1.13
+- Rename timeCreated to latestEventReceivedTime in Room
+- Push Notification helper class make all fields optional and migrate `dynamics` to `Object?`
+- Remove deprecated Hive Database
+
+Also `Client.onEvent` has been deprecated in favor of:
+
+```dart
+Client.onTimelineEvent // For timeline events (after decryption)
+Client.onHistoryEvent // Same for timeline events when fetching history
+Client.onNotification // Events which would trigger a notification like messages or room invites (after decryption)
+```
+
+If you are using `Client.onEvent` to filter for state events, please from now on use `Client.onSync` and filter the state events out of it (as they are unencrypted anyway). Same with "Account Data" or ephemeral events.
+For notifications the usage should now be much easier as `Client.onNotification` already filters out events which should not
+trigger a notification.
+
+#### All changes:
+
+- feat: support push rule conditions event_property_is & event_property_contains (Karthikeyan S)
+- build: Add timeouts to all ci jobs (Krille)
+- build: Update dev dependencies and remove unused dependencies (Krille)
+- chore: (BREAKING CHANGE) spec v1.13 autogen (td)
+- chore: Add tests for converting event types (Krille)
+- chore: add transactionId getter to Event class (Karthikeyan S)
+- chore: BREAKING rename timeCreated to latestEventReceivedTime in Room (Karthikeyan S)
+- chore: Dispose all clients in test (Krille)
+- chore: Follow up store unable to decrypt information correctly (Krille)
+- fix: Add missing redacts parameter when transforming to Event type (Krille)
+- fix: Also load room account data in getSingleRoom() (Krille)
+- fix: clear cache when clearing DB in MatrixSdkDatabase (Karthikeyan S)
+- fix: Coverage CI job is timing out (Krille)
+- fix: No roomId in BasicRoomEvent stores roomaccountdata silently wrong (Krille)
+- fix: Use MB and KB instead of MiB and KiB for file sizes (Krille)
+- refactor: (BREAKING) Push Notification helper class make all fields optional and migrate dynamics to Object? (Krille)
+- refactor: (BREAKING) Remove deprecated Hive Database (Krille)
+- refactor: Do not handle ephemerals as EventUpdates (Krille)
+- refactor: Do not unnecessarily serialize and deserialize json for every account data object (Krille)
+- refactor: Do not use eventupdate type for verification requests (Krille)
+- refactor: Handle Room Account Data outside of Room Event Updates (Krille)
+- refactor: Remove BasicRoomEvent type (Krille)
+- refactor: Replace enhanced enum with native dart enum (Krille)
+- refactor: Update rooms by event not event update (Krille)
+- refactor: Use Event instead of EventUpdate for pending decryption event queue and for decrypt events in general (Krille)
+- refactor: Use Event instead of EventUpdate for storing in db (Krille)
+
 ## [0.36.0] 17th December 2024
 
 #### How to migrate from onMigration to onInitStateChanged
