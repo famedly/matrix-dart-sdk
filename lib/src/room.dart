@@ -249,8 +249,10 @@ class Room {
     }
 
     final directChatMatrixID = this.directChatMatrixID;
-    final heroes = summary.mHeroes ??
-        (directChatMatrixID == null ? [] : [directChatMatrixID]);
+    final heroes = summary.mHeroes ?? [];
+    if (directChatMatrixID != null && heroes.isEmpty) {
+      heroes.add(directChatMatrixID);
+    }
     if (heroes.isNotEmpty) {
       final result = heroes
           .where(
