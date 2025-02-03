@@ -50,9 +50,11 @@ class PushNotification {
             ? (json['devices'] as List)
                 .map((d) => PushNotificationDevice.fromJson(d))
                 .toList()
-            : (jsonDecode(json['devices'] as String) as List)
-                .map((d) => PushNotificationDevice.fromJson(d))
-                .toList(),
+            : json['devices'] is String
+                ? (jsonDecode(json['devices'] as String) as List)
+                    .map((d) => PushNotificationDevice.fromJson(d))
+                    .toList()
+                : null,
         eventId: json['event_id'] as String?,
         prio: json['prio'] as String?,
         roomAlias: json['room_alias'] as String?,
