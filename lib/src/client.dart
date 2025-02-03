@@ -107,6 +107,8 @@ class Client extends MatrixApi {
 
   String? get syncFilterId => _syncFilterId;
 
+  final bool convertLinebreaksInFormatting;
+
   final ComputeCallback? compute;
 
   @Deprecated('Use [nativeImplementations] instead')
@@ -233,6 +235,10 @@ class Client extends MatrixApi {
     /// support.
     this.customRefreshTokenLifetime,
     this.typingIndicatorTimeout = const Duration(seconds: 30),
+
+    /// When sending a formatted message, converting linebreaks in markdown to
+    /// <br/> tags:
+    this.convertLinebreaksInFormatting = true,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
