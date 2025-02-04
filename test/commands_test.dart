@@ -395,7 +395,7 @@ void main() {
       await room.sendTextEvent('/dm @alice:example.com --no-encryption');
       expect(
           json.decode(
-            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last,
           ),
           {
             'invite': ['@alice:example.com'],
@@ -406,12 +406,15 @@ void main() {
 
     test('create', () async {
       FakeMatrixApi.calledEndpoints.clear();
-      await room.sendTextEvent('/create @alice:example.com --no-encryption');
+      await room.sendTextEvent('/create New room --no-encryption');
       expect(
         json.decode(
-          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first,
+          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last,
         ),
-        {'preset': 'private_chat'},
+        {
+          'name': 'New room',
+          'preset': 'private_chat',
+        },
       );
     });
 
@@ -525,6 +528,22 @@ void main() {
       await room.sendTextEvent('/cuddle');
       final sent = getLastMessagePayload();
       expect(sent, CuteEventContent.cuddle);
+    });
+
+    test('client - clearcache', () async {
+      await client.parseAndRunCommand(null, '/clearcache');
+      expect(client.prevBatch, null);
+    });
+
+    test('client - missing room - discardsession', () async {
+      Object? error;
+      try {
+        await client.parseAndRunCommand(null, '/discardsession');
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error is RoomCommandException, isTrue);
     });
 
     test('dispose client', () async {
