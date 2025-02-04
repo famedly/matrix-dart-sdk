@@ -21,31 +21,45 @@ import 'dart:convert';
 
 import 'package:matrix/matrix.dart';
 
+/// callback taking [CommandArgs] as input and a [StringBuffer] as standard output
+/// optionally returns an event ID as in the [Room.sendEvent] syntax.
+/// a [CommandException] should be thrown if the specified arguments are considered invalid
+typedef CommandExecutionCallback = FutureOr<String?> Function(
+  CommandArgs,
+  StringBuffer? stdout,
+);
+
 extension CommandsClientExtension on Client {
   /// Add a command to the command handler. `command` is its name, and `callback` is the
   /// callback to invoke
-  void addCommand(
-    String command,
-    FutureOr<String?> Function(CommandArgs) callback,
-  ) {
+  void addCommand(String command, CommandExecutionCallback callback) {
     commands[command.toLowerCase()] = callback;
   }
 
-  /// Parse and execute a string, `msg` is the input. Optionally `inReplyTo` is the event being
-  /// replied to and `editEventId` is the eventId of the event being replied to
+  /// Parse and execute a command on Client level
+  /// - `room`: a [Room] to run the command on. Can be null unless you execute a command strictly requiring a [Room] to run on
+  /// - `msg`: the complete input to process
+  /// - `inReplyTo`: an optional [Event] the command is supposed to reply to
+  /// - `editEventId`: an optional event ID the command is supposed to edit
+  /// - `txid`: an optional transaction ID
+  /// - `threadRootEventId`: an optional root event ID of a thread the command is supposed to run on
+  /// - `threadLastEventId`: an optional most recent event ID of a thread the command is supposed to run on
+  /// - `stdout`: an optional [StringBuffer] the command can write output to. This is meant as tiny implementation of https://en.wikipedia.org/wiki/Standard_streams in order to process advanced command output to the matrix client. See [DefaultCommandOutput] for a rough idea.
   Future<String?> parseAndRunCommand(
-    Room room,
+    Room? room,
     String msg, {
     Event? inReplyTo,
     String? editEventId,
     String? txid,
     String? threadRootEventId,
     String? threadLastEventId,
+    StringBuffer? stdout,
   }) async {
     final args = CommandArgs(
       inReplyTo: inReplyTo,
       editEventId: editEventId,
       msg: '',
+      client: this,
       room: room,
       txid: txid,
       threadRootEventId: threadRootEventId,
@@ -55,7 +69,7 @@ extension CommandsClientExtension on Client {
       final sendCommand = commands['send'];
       if (sendCommand != null) {
         args.msg = msg;
-        return await sendCommand(args);
+        return await sendCommand(args, stdout);
       }
       return null;
     }
@@ -71,14 +85,14 @@ extension CommandsClientExtension on Client {
     }
     final commandOp = commands[command];
     if (commandOp != null) {
-      return await commandOp(args);
+      return await commandOp(args, stdout);
     }
     if (msg.startsWith('/') && commands.containsKey('send')) {
       // re-set to include the "command"
       final sendCommand = commands['send'];
       if (sendCommand != null) {
         args.msg = msg;
-        return await sendCommand(args);
+        return await sendCommand(args, stdout);
       }
     }
     return null;
@@ -91,8 +105,12 @@ extension CommandsClientExtension on Client {
 
   /// Register all default commands
   void registerDefaultCommands() {
-    addCommand('send', (CommandArgs args) async {
-      return await args.room.sendTextEvent(
+    addCommand('send', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+      return await room.sendTextEvent(
         args.msg,
         inReplyTo: args.inReplyTo,
         editEventId: args.editEventId,
@@ -102,8 +120,12 @@ extension CommandsClientExtension on Client {
         threadLastEventId: args.threadLastEventId,
       );
     });
-    addCommand('me', (CommandArgs args) async {
-      return await args.room.sendTextEvent(
+    addCommand('me', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+      return await room.sendTextEvent(
         args.msg,
         inReplyTo: args.inReplyTo,
         editEventId: args.editEventId,
@@ -114,21 +136,44 @@ extension CommandsClientExtension on Client {
         threadLastEventId: args.threadLastEventId,
       );
     });
-    addCommand('dm', (CommandArgs args) async {
+    addCommand('dm', (args, stdout) async {
       final parts = args.msg.split(' ');
-      return await args.room.client.startDirectChat(
-        parts.first,
+      final mxid = parts.first;
+      if (!mxid.isValidMatrixId) {
+        throw CommandException('You must enter a valid mxid when using /dm');
+      }
+
+      final roomId = await args.client.startDirectChat(
+        mxid,
         enableEncryption: !parts.any((part) => part == '--no-encryption'),
       );
-    });
-    addCommand('create', (CommandArgs args) async {
-      final parts = args.msg.split(' ');
-      return await args.room.client.createGroupChat(
-        enableEncryption: !parts.any((part) => part == '--no-encryption'),
+      stdout?.write(
+        DefaultCommandOutput(
+          rooms: [roomId],
+          users: [mxid],
+        ).toString(),
       );
+      return null;
     });
-    addCommand('plain', (CommandArgs args) async {
-      return await args.room.sendTextEvent(
+    addCommand('create', (args, stdout) async {
+      final groupName = args.msg.replaceFirst('--no-encryption', '').trim();
+
+      final parts = args.msg.split(' ');
+
+      final roomId = await args.client.createGroupChat(
+        groupName: groupName.isNotEmpty ? groupName : null,
+        enableEncryption: !parts.any((part) => part == '--no-encryption'),
+        waitForSync: false,
+      );
+      stdout?.write(DefaultCommandOutput(rooms: [roomId]).toString());
+      return null;
+    });
+    addCommand('plain', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+      return await room.sendTextEvent(
         args.msg,
         inReplyTo: args.inReplyTo,
         editEventId: args.editEventId,
@@ -139,168 +184,280 @@ extension CommandsClientExtension on Client {
         threadLastEventId: args.threadLastEventId,
       );
     });
-    addCommand('html', (CommandArgs args) async {
+    addCommand('html', (args, stdout) async {
       final event = <String, dynamic>{
         'msgtype': 'm.text',
         'body': args.msg,
         'format': 'org.matrix.custom.html',
         'formatted_body': args.msg,
       };
-      return await args.room.sendEvent(
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+      return await room.sendEvent(
         event,
         inReplyTo: args.inReplyTo,
         editEventId: args.editEventId,
         txid: args.txid,
       );
     });
-    addCommand('react', (CommandArgs args) async {
+    addCommand('react', (args, stdout) async {
       final inReplyTo = args.inReplyTo;
       if (inReplyTo == null) {
         return null;
       }
-      return await args.room.sendReaction(inReplyTo.eventId, args.msg);
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+      final parts = args.msg.split(' ');
+      final reaction = parts.first.trim();
+      if (reaction.isEmpty) {
+        throw CommandException('You must provide a reaction when using /react');
+      }
+      return await room.sendReaction(inReplyTo.eventId, reaction);
     });
-    addCommand('join', (CommandArgs args) async {
-      await args.room.client.joinRoom(args.msg);
+    addCommand('join', (args, stdout) async {
+      final roomId = await args.client.joinRoom(args.msg);
+      stdout?.write(DefaultCommandOutput(rooms: [roomId]).toString());
       return null;
     });
-    addCommand('leave', (CommandArgs args) async {
-      await args.room.leave();
-      return '';
+    addCommand('leave', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+      await room.leave();
+      return null;
     });
-    addCommand('op', (CommandArgs args) async {
+    addCommand('op', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
       final parts = args.msg.split(' ');
-      if (parts.isEmpty) {
-        return null;
+      if (parts.isEmpty || !parts.first.isValidMatrixId) {
+        throw CommandException('You must enter a valid mxid when using /op');
       }
       int? pl;
       if (parts.length >= 2) {
         pl = int.tryParse(parts[1]);
+        if (pl == null) {
+          throw CommandException(
+            'Invalid power level ${parts[1]} when using /op',
+          );
+        }
       }
       final mxid = parts.first;
-      return await args.room.setPower(mxid, pl ?? 50);
+      return await room.setPower(mxid, pl ?? 50);
     });
-    addCommand('kick', (CommandArgs args) async {
+    addCommand('kick', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
       final parts = args.msg.split(' ');
-      await args.room.kick(parts.first);
-      return '';
+      final mxid = parts.first;
+      if (!mxid.isValidMatrixId) {
+        throw CommandException('You must enter a valid mxid when using /kick');
+      }
+      await room.kick(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
+      return null;
     });
-    addCommand('ban', (CommandArgs args) async {
+    addCommand('ban', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
       final parts = args.msg.split(' ');
-      await args.room.ban(parts.first);
-      return '';
+      final mxid = parts.first;
+      if (!mxid.isValidMatrixId) {
+        throw CommandException('You must enter a valid mxid when using /ban');
+      }
+      await room.ban(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
+      return null;
     });
-    addCommand('unban', (CommandArgs args) async {
+    addCommand('unban', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
       final parts = args.msg.split(' ');
-      await args.room.unban(parts.first);
-      return '';
+      final mxid = parts.first;
+      if (!mxid.isValidMatrixId) {
+        throw CommandException('You must enter a valid mxid when using /unban');
+      }
+      await room.unban(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
+      return null;
     });
-    addCommand('invite', (CommandArgs args) async {
+    addCommand('invite', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+
       final parts = args.msg.split(' ');
-      await args.room.invite(parts.first);
-      return '';
+      final mxid = parts.first;
+      if (!mxid.isValidMatrixId) {
+        throw CommandException(
+          'You must enter a valid mxid when using /invite',
+        );
+      }
+      await room.invite(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
+      return null;
     });
-    addCommand('myroomnick', (CommandArgs args) async {
-      final currentEventJson = args.room
-              .getState(EventTypes.RoomMember, args.room.client.userID!)
+    addCommand('myroomnick', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+
+      final currentEventJson = room
+              .getState(EventTypes.RoomMember, args.client.userID!)
               ?.content
               .copy() ??
           {};
       currentEventJson['displayname'] = args.msg;
-      return await args.room.client.setRoomStateWithKey(
-        args.room.id,
+
+      return await args.client.setRoomStateWithKey(
+        room.id,
         EventTypes.RoomMember,
-        args.room.client.userID!,
+        args.client.userID!,
         currentEventJson,
       );
     });
-    addCommand('myroomavatar', (CommandArgs args) async {
-      final currentEventJson = args.room
-              .getState(EventTypes.RoomMember, args.room.client.userID!)
+    addCommand('myroomavatar', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+
+      final currentEventJson = room
+              .getState(EventTypes.RoomMember, args.client.userID!)
               ?.content
               .copy() ??
           {};
       currentEventJson['avatar_url'] = args.msg;
-      return await args.room.client.setRoomStateWithKey(
-        args.room.id,
+
+      return await args.client.setRoomStateWithKey(
+        room.id,
         EventTypes.RoomMember,
-        args.room.client.userID!,
+        args.client.userID!,
         currentEventJson,
       );
     });
-    addCommand('discardsession', (CommandArgs args) async {
+    addCommand('discardsession', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
       await encryption?.keyManager
-          .clearOrUseOutboundGroupSession(args.room.id, wipe: true);
-      return '';
+          .clearOrUseOutboundGroupSession(room.id, wipe: true);
+      return null;
     });
-    addCommand('clearcache', (CommandArgs args) async {
+    addCommand('clearcache', (args, stdout) async {
       await clearCache();
-      return '';
+      return null;
     });
-    addCommand('markasdm', (CommandArgs args) async {
-      final mxid = args.msg;
+    addCommand('markasdm', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+
+      final mxid = args.msg.split(' ').first;
       if (!mxid.isValidMatrixId) {
-        throw Exception('You must enter a valid mxid when using /maskasdm');
+        throw CommandException(
+          'You must enter a valid mxid when using /maskasdm',
+        );
       }
-      if (await args.room.requestUser(mxid, requestProfile: false) == null) {
-        throw Exception('User $mxid is not in this room');
+      if (await room.requestUser(mxid, requestProfile: false) == null) {
+        throw CommandException('User $mxid is not in this room');
       }
-      await args.room.addToDirectChat(args.msg);
+      await room.addToDirectChat(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
+      return null;
+    });
+    addCommand('markasgroup', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+
+      await room.removeFromDirectChat();
       return;
     });
-    addCommand('markasgroup', (CommandArgs args) async {
-      await args.room.removeFromDirectChat();
-      return;
-    });
-    addCommand('hug', (CommandArgs args) async {
+    addCommand('hug', (args, stdout) async {
       final content = CuteEventContent.hug;
-      return await args.room.sendEvent(
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+      return await room.sendEvent(
         content,
         inReplyTo: args.inReplyTo,
         editEventId: args.editEventId,
         txid: args.txid,
       );
     });
-    addCommand('googly', (CommandArgs args) async {
+    addCommand('googly', (args, stdout) async {
       final content = CuteEventContent.googlyEyes;
-      return await args.room.sendEvent(
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+      return await room.sendEvent(
         content,
         inReplyTo: args.inReplyTo,
         editEventId: args.editEventId,
         txid: args.txid,
       );
     });
-    addCommand('cuddle', (CommandArgs args) async {
+    addCommand('cuddle', (args, stdout) async {
       final content = CuteEventContent.cuddle;
-      return await args.room.sendEvent(
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+      return await room.sendEvent(
         content,
         inReplyTo: args.inReplyTo,
         editEventId: args.editEventId,
         txid: args.txid,
       );
     });
-    addCommand('sendRaw', (args) async {
-      await args.room.sendEvent(
+    addCommand('sendRaw', (args, stdout) async {
+      final room = args.room;
+      if (room == null) {
+        throw RoomCommandException();
+      }
+      return await room.sendEvent(
         jsonDecode(args.msg),
         inReplyTo: args.inReplyTo,
         txid: args.txid,
       );
-      return null;
     });
-    addCommand('ignore', (args) async {
+    addCommand('ignore', (args, stdout) async {
       final mxid = args.msg;
       if (mxid.isEmpty) {
-        throw 'Please provide a User ID';
+        throw CommandException('Please provide a User ID');
       }
       await ignoreUser(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
       return null;
     });
-    addCommand('unignore', (args) async {
+    addCommand('unignore', (args, stdout) async {
       final mxid = args.msg;
       if (mxid.isEmpty) {
-        throw 'Please provide a User ID';
+        throw CommandException('Please provide a User ID');
       }
       await unignoreUser(mxid);
+      stdout?.write(DefaultCommandOutput(users: [mxid]).toString());
       return null;
     });
   }
@@ -310,7 +467,8 @@ class CommandArgs {
   String msg;
   String? editEventId;
   Event? inReplyTo;
-  Room room;
+  Client client;
+  Room? room;
   String? txid;
   String? threadRootEventId;
   String? threadLastEventId;
@@ -319,9 +477,98 @@ class CommandArgs {
     required this.msg,
     this.editEventId,
     this.inReplyTo,
-    required this.room,
+    required this.client,
+    this.room,
     this.txid,
     this.threadRootEventId,
     this.threadLastEventId,
   });
+}
+
+class CommandException implements Exception {
+  final String message;
+
+  const CommandException(this.message);
+
+  @override
+  String toString() {
+    return '${super.toString()}: $message';
+  }
+}
+
+class RoomCommandException extends CommandException {
+  const RoomCommandException() : super('This command must run on a room');
+}
+
+/// Helper class for normalized command output
+///
+/// This class can be used to provide a default, processable output of commands
+/// containing some generic data.
+///
+/// NOTE: Please be careful whether to include event IDs into the output.
+///
+/// If your command actually sends an event to a room, please do not include
+/// the event ID here. The default behavior of the [Room.sendTextEvent] is to
+/// return the event ID of the just sent event. The [DefaultCommandOutput.events]
+/// field is not supposed to replace/duplicate this behavior.
+///
+/// But if your command performs an action such as search, highlight or anything
+/// your matrix client should display different than adding an event to the
+/// [Timeline], you can include the event IDs related to the command output here.
+class DefaultCommandOutput {
+  static const format = 'com.famedly.default_command_output';
+  final List<String>? rooms;
+  final List<String>? events;
+  final List<String>? users;
+  final List<String>? messages;
+  final Map<String, Object?>? custom;
+
+  const DefaultCommandOutput({
+    this.rooms,
+    this.events,
+    this.users,
+    this.messages,
+    this.custom,
+  });
+
+  static DefaultCommandOutput? fromStdout(String stdout) {
+    final Object? json = jsonDecode(stdout);
+    if (json is! Map<String, Object?>) {
+      return null;
+    }
+    if (json['format'] != format) return null;
+    return DefaultCommandOutput(
+      rooms: json['rooms'] == null
+          ? null
+          : List<String>.from(json['rooms'] as Iterable),
+      events: json['events'] == null
+          ? null
+          : List<String>.from(json['events'] as Iterable),
+      users: json['users'] == null
+          ? null
+          : List<String>.from(json['users'] as Iterable),
+      messages: json['messages'] == null
+          ? null
+          : List<String>.from(json['messages'] as Iterable),
+      custom: json['custom'] == null
+          ? null
+          : Map<String, Object?>.from(json['custom'] as Map),
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    return {
+      'format': format,
+      if (rooms != null) 'rooms': rooms,
+      if (events != null) 'events': events,
+      if (users != null) 'users': users,
+      if (messages != null) 'messages': messages,
+      ...?custom,
+    };
+  }
+
+  @override
+  String toString() {
+    return jsonEncode(toJson());
+  }
 }
