@@ -86,6 +86,8 @@ abstract class MatrixLocalizations {
 
   String redactedAnEvent(Event redactedEvent);
 
+  String userCanNowReadAlong(Event event);
+
   String changedTheRoomAliases(String senderName);
 
   String changedTheRoomInvitationLink(String senderName);

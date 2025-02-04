@@ -292,6 +292,43 @@ class KeyManager {
     return roomInboundGroupSessions[sessionId] = dbSess;
   }
 
+  void _sendEncryptionInfoEvent({
+    required String roomId,
+    required List<String> userIds,
+    List<String>? deviceIds,
+  }) async {
+    await client.database?.transaction(() async {
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(
+            join: {
+              roomId: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      eventId:
+                          'fake_event_${client.generateUniqueTransactionId()}',
+                      content: {
+                        'body':
+                            '${userIds.join(', ')} can now read along${deviceIds != null ? ' on ${deviceIds.length} new device(s)' : ''}',
+                        if (deviceIds != null) 'devices': deviceIds,
+                        'users': userIds,
+                      },
+                      type: EventTypes.encryptionInfo,
+                      senderId: client.userID!,
+                      originServerTs: DateTime.now(),
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+    });
+  }
+
   Map<String, Map<String, bool>> _getDeviceKeyIdMap(
     List<DeviceKeys> deviceKeys,
   ) {
@@ -327,21 +364,6 @@ class KeyManager {
       return true;
     }
 
-    if (!wipe) {
-      // first check if it needs to be rotated
-      final encryptionContent =
-          room.getState(EventTypes.Encryption)?.parsedRoomEncryptionContent;
-      final maxMessages = encryptionContent?.rotationPeriodMsgs ?? 100;
-      final maxAge = encryptionContent?.rotationPeriodMs ??
-          604800000; // default of one week
-      if ((sess.sentMessages ?? maxMessages) >= maxMessages ||
-          sess.creationTime
-              .add(Duration(milliseconds: maxAge))
-              .isBefore(DateTime.now())) {
-        wipe = true;
-      }
-    }
-
     final inboundSess = await loadInboundGroupSession(
       room.id,
       sess.outboundGroupSession!.session_id(),
@@ -352,78 +374,97 @@ class KeyManager {
       wipe = true;
     }
 
-    if (!wipe) {
-      // next check if the devices in the room changed
-      final devicesToReceive = <DeviceKeys>[];
-      final newDeviceKeys = await room.getUserDeviceKeys();
-      final newDeviceKeyIds = _getDeviceKeyIdMap(newDeviceKeys);
-      // first check for user differences
-      final oldUserIds = sess.devices.keys.toSet();
-      final newUserIds = newDeviceKeyIds.keys.toSet();
-      if (oldUserIds.difference(newUserIds).isNotEmpty) {
-        // a user left the room, we must wipe the session
-        wipe = true;
-      } else {
-        final newUsers = newUserIds.difference(oldUserIds);
-        if (newUsers.isNotEmpty) {
-          // new user! Gotta send the megolm session to them
-          devicesToReceive
-              .addAll(newDeviceKeys.where((d) => newUsers.contains(d.userId)));
+    // next check if the devices in the room changed
+    final devicesToReceive = <DeviceKeys>[];
+    final newDeviceKeys = await room.getUserDeviceKeys();
+    final newDeviceKeyIds = _getDeviceKeyIdMap(newDeviceKeys);
+    // first check for user differences
+    final oldUserIds = sess.devices.keys.toSet();
+    final newUserIds = newDeviceKeyIds.keys.toSet();
+    if (oldUserIds.difference(newUserIds).isNotEmpty) {
+      // a user left the room, we must wipe the session
+      wipe = true;
+    } else {
+      final newUsers = newUserIds.difference(oldUserIds);
+      if (newUsers.isNotEmpty) {
+        // new user! Gotta send the megolm session to them
+        devicesToReceive
+            .addAll(newDeviceKeys.where((d) => newUsers.contains(d.userId)));
+        _sendEncryptionInfoEvent(roomId: roomId, userIds: newUsers.toList());
+      }
+      // okay, now we must test all the individual user devices, if anything new got blocked
+      // or if we need to send to any new devices.
+      // for this it is enough if we iterate over the old user Ids, as the new ones already have the needed keys in the list.
+      // we also know that all the old user IDs appear in the old one, else we have already wiped the session
+      for (final userId in oldUserIds) {
+        final oldBlockedDevices = sess.devices.containsKey(userId)
+            ? sess.devices[userId]!.entries
+                .where((e) => e.value)
+                .map((e) => e.key)
+                .toSet()
+            : <String>{};
+        final newBlockedDevices = newDeviceKeyIds.containsKey(userId)
+            ? newDeviceKeyIds[userId]!
+                .entries
+                .where((e) => e.value)
+                .map((e) => e.key)
+                .toSet()
+            : <String>{};
+        // we don't really care about old devices that got dropped (deleted), we only care if new ones got added and if new ones got blocked
+        // check if new devices got blocked
+        if (newBlockedDevices.difference(oldBlockedDevices).isNotEmpty) {
+          wipe = true;
         }
-        // okay, now we must test all the individual user devices, if anything new got blocked
-        // or if we need to send to any new devices.
-        // for this it is enough if we iterate over the old user Ids, as the new ones already have the needed keys in the list.
-        // we also know that all the old user IDs appear in the old one, else we have already wiped the session
-        for (final userId in oldUserIds) {
-          final oldBlockedDevices = sess.devices.containsKey(userId)
-              ? sess.devices[userId]!.entries
-                  .where((e) => e.value)
-                  .map((e) => e.key)
-                  .toSet()
-              : <String>{};
-          final newBlockedDevices = newDeviceKeyIds.containsKey(userId)
-              ? newDeviceKeyIds[userId]!
-                  .entries
-                  .where((e) => e.value)
-                  .map((e) => e.key)
-                  .toSet()
-              : <String>{};
-          // we don't really care about old devices that got dropped (deleted), we only care if new ones got added and if new ones got blocked
-          // check if new devices got blocked
-          if (newBlockedDevices.difference(oldBlockedDevices).isNotEmpty) {
-            wipe = true;
-            break;
-          }
-          // and now add all the new devices!
-          final oldDeviceIds = sess.devices.containsKey(userId)
-              ? sess.devices[userId]!.entries
-                  .where((e) => !e.value)
-                  .map((e) => e.key)
-                  .toSet()
-              : <String>{};
-          final newDeviceIds = newDeviceKeyIds.containsKey(userId)
-              ? newDeviceKeyIds[userId]!
-                  .entries
-                  .where((e) => !e.value)
-                  .map((e) => e.key)
-                  .toSet()
-              : <String>{};
+        // and now add all the new devices!
+        final oldDeviceIds = sess.devices.containsKey(userId)
+            ? sess.devices[userId]!.entries
+                .where((e) => !e.value)
+                .map((e) => e.key)
+                .toSet()
+            : <String>{};
+        final newDeviceIds = newDeviceKeyIds.containsKey(userId)
+            ? newDeviceKeyIds[userId]!
+                .entries
+                .where((e) => !e.value)
+                .map((e) => e.key)
+                .toSet()
+            : <String>{};
 
-          // check if a device got removed
-          if (oldDeviceIds.difference(newDeviceIds).isNotEmpty) {
-            wipe = true;
-            break;
-          }
+        // check if a device got removed
+        if (oldDeviceIds.difference(newDeviceIds).isNotEmpty) {
+          wipe = true;
+        }
 
-          // check if any new devices need keys
-          final newDevices = newDeviceIds.difference(oldDeviceIds);
-          if (newDeviceIds.isNotEmpty) {
-            devicesToReceive.addAll(
-              newDeviceKeys.where(
-                (d) => d.userId == userId && newDevices.contains(d.deviceId),
-              ),
+        // check if any new devices need keys
+        final newDevices = newDeviceIds.difference(oldDeviceIds);
+        if (newDeviceIds.isNotEmpty) {
+          devicesToReceive.addAll(
+            newDeviceKeys.where(
+              (d) => d.userId == userId && newDevices.contains(d.deviceId),
+            ),
+          );
+          if (userId != client.userID && newDevices.isNotEmpty) {
+            _sendEncryptionInfoEvent(
+              roomId: roomId,
+              userIds: [userId],
+              deviceIds: newDevices.toList(),
             );
           }
+        }
+      }
+
+      if (!wipe) {
+        // first check if it needs to be rotated
+        final encryptionContent =
+            room.getState(EventTypes.Encryption)?.parsedRoomEncryptionContent;
+        final maxMessages = encryptionContent?.rotationPeriodMsgs ?? 100;
+        final maxAge = encryptionContent?.rotationPeriodMs ??
+            604800000; // default of one week
+        if ((sess.sentMessages ?? maxMessages) >= maxMessages ||
+            sess.creationTime
+                .add(Duration(milliseconds: maxAge))
+                .isBefore(DateTime.now())) {
+          wipe = true;
         }
       }
 
