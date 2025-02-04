@@ -90,7 +90,7 @@ class Client extends MatrixApi {
 
   final bool mxidLocalPartFallback;
 
-  bool shareKeysWithUnverifiedDevices;
+  ShareKeysWith shareKeysWith;
 
   Future<void> Function(Client client)? onSoftLogout;
 
@@ -219,7 +219,7 @@ class Client extends MatrixApi {
     Duration defaultNetworkRequestTimeout = const Duration(seconds: 35),
     this.sendTimelineEventTimeout = const Duration(minutes: 1),
     this.customImageResizer,
-    this.shareKeysWithUnverifiedDevices = true,
+    this.shareKeysWith = ShareKeysWith.crossVerifiedIfEnabled,
     this.enableDehydratedDevices = false,
     this.receiptsPublicByDefault = true,
 
@@ -4081,4 +4081,26 @@ enum InitState {
 
   /// Initialization has been completed with an error.
   error,
+}
+
+/// Sets the security level with which devices keys should be shared with
+enum ShareKeysWith {
+  /// Keys are shared with all devices if they are not explicitely blocked
+  all,
+
+  /// Once a user has enabled cross signing, keys are no longer shared with
+  /// devices which are not cross verified by the cross signing keys of this
+  /// user. This does not require that the user needs to be verified.
+  crossVerifiedIfEnabled,
+
+  /// Keys are only shared with cross verified devices. If a user has not
+  /// enabled cross signing, then all devices must be verified manually first.
+  /// This does not require that the user needs to be verified.
+  crossVerified,
+
+  /// Keys are only shared with direct verified devices. So either the device
+  /// or the user must be manually verified first, before keys are shared. By
+  /// using cross signing, it is enough to verify the user and then the user
+  /// can verify their devices.
+  directlyVerifiedOnly,
 }
