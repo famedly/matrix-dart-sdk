@@ -357,8 +357,8 @@ class KeyManager {
       final newDeviceKeys = await room.getUserDeviceKeys();
       final newDeviceKeyIds = _getDeviceKeyIdMap(newDeviceKeys);
       // first check for user differences
-      final oldUserIds = Set.from(sess.devices.keys);
-      final newUserIds = Set.from(newDeviceKeyIds.keys);
+      final oldUserIds = sess.devices.keys.toSet();
+      final newUserIds = newDeviceKeyIds.keys.toSet();
       if (oldUserIds.difference(newUserIds).isNotEmpty) {
         // a user left the room, we must wipe the session
         wipe = true;
@@ -375,19 +375,17 @@ class KeyManager {
         // we also know that all the old user IDs appear in the old one, else we have already wiped the session
         for (final userId in oldUserIds) {
           final oldBlockedDevices = sess.devices.containsKey(userId)
-              ? Set.from(
-                  sess.devices[userId]!.entries
-                      .where((e) => e.value)
-                      .map((e) => e.key),
-                )
+              ? sess.devices[userId]!.entries
+                  .where((e) => e.value)
+                  .map((e) => e.key)
+                  .toSet()
               : <String>{};
           final newBlockedDevices = newDeviceKeyIds.containsKey(userId)
-              ? Set.from(
-                  newDeviceKeyIds[userId]!
-                      .entries
-                      .where((e) => e.value)
-                      .map((e) => e.key),
-                )
+              ? newDeviceKeyIds[userId]!
+                  .entries
+                  .where((e) => e.value)
+                  .map((e) => e.key)
+                  .toSet()
               : <String>{};
           // we don't really care about old devices that got dropped (deleted), we only care if new ones got added and if new ones got blocked
           // check if new devices got blocked
@@ -397,19 +395,17 @@ class KeyManager {
           }
           // and now add all the new devices!
           final oldDeviceIds = sess.devices.containsKey(userId)
-              ? Set.from(
-                  sess.devices[userId]!.entries
-                      .where((e) => !e.value)
-                      .map((e) => e.key),
-                )
+              ? sess.devices[userId]!.entries
+                  .where((e) => !e.value)
+                  .map((e) => e.key)
+                  .toSet()
               : <String>{};
           final newDeviceIds = newDeviceKeyIds.containsKey(userId)
-              ? Set.from(
-                  newDeviceKeyIds[userId]!
-                      .entries
-                      .where((e) => !e.value)
-                      .map((e) => e.key),
-                )
+              ? newDeviceKeyIds[userId]!
+                  .entries
+                  .where((e) => !e.value)
+                  .map((e) => e.key)
+                  .toSet()
               : <String>{};
 
           // check if a device got removed
