@@ -289,8 +289,7 @@ class KeyManager {
         dbSess.sessionId != sessionId) {
       return null;
     }
-    roomInboundGroupSessions[sessionId] = dbSess;
-    return sess;
+    return roomInboundGroupSessions[sessionId] = dbSess;
   }
 
   Map<String, Map<String, bool>> _getDeviceKeyIdMap(
@@ -348,6 +347,8 @@ class KeyManager {
       sess.outboundGroupSession!.session_id(),
     );
     if (inboundSess == null) {
+      Logs().w('No inbound megolm session found for outbound session!');
+      assert(inboundSess != null);
       wipe = true;
     }
 
