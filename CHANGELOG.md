@@ -1,3 +1,56 @@
+## 0.38.0
+
+### Migration notes
+
+Now you can pass a `StringBuffer` object to the command handler to pass some arbitrary data back to the caller.
+
+**Before:**
+```
+addCommand('newCommand', (CommandArgs args){});
+```
+
+**After:**
+```
+addCommand('newCommand', (CommandArgs args, StringBuffer? stdout){});
+```
+
+In order to use the stdout, you should create a `StringBuffer` stdout object and 
+pass it to the `parseAndRunCommand` method or `sendTextEvent` (that uses `parseAndRunCommand` internally).
+
+Like this:
+```
+final stdout = StringBuffer();
+
+await client.parseAndRunCommand(
+  null, // Room can be null now, if the command isn't room specific
+  "/newCommand options",
+  ...
+  stdout: stdout,
+);
+
+// OR
+
+await room.sendTextEvent(
+  "/newCommand options"
+  ...
+  commandStdout: stdout,
+);
+
+final output = DefaultCommandOutput.fromStdout(stdout);
+if(output != null) {
+  print(output.toString());
+}
+```
+
+### All changes:
+- feat: (BREAKING) Make share keys with logic configurable (Krille)
+- feat: BREAKING improve command_extension (The one with the braid)
+- fix: Megolm sessions become invalid after restarting client (Krille)
+- fix: priorize direct chat users over empty hero user list (The one with the braid)
+- fix: PushNotification fromJson - toJson fails (Krille)
+- refactor: Make converting linebreaks in markdowntohtml optional (Krille)
+- refactor: Use .toSet() instead of Set.from() (Krille)
+
 ## 0.37.0
 
 Bigger release with a lot of refactorings under the hood. Those do not necessarily make the SDK more performant but more robust and type safe.
