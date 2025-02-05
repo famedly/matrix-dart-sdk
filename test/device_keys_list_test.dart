@@ -150,11 +150,29 @@ void main() {
         },
         client,
       );
-      expect(client.shareKeysWithUnverifiedDevices, true);
+
+      client.shareKeysWith = ShareKeysWith.all;
       expect(key.encryptToDevice, true);
-      client.shareKeysWithUnverifiedDevices = false;
+
+      client.shareKeysWith = ShareKeysWith.directlyVerifiedOnly;
       expect(key.encryptToDevice, false);
-      client.shareKeysWithUnverifiedDevices = true;
+      await key.setVerified(true);
+      expect(key.encryptToDevice, true);
+      await key.setVerified(false);
+
+      client.shareKeysWith = ShareKeysWith.crossVerified;
+      expect(key.encryptToDevice, true);
+
+      client.shareKeysWith = ShareKeysWith.crossVerified;
+      // Disable cross signing for this user manually so encryptToDevice should return `false`
+      final dropUserDeviceKeys = client.userDeviceKeys.remove(key.userId);
+      expect(key.encryptToDevice, false);
+      // But crossVerifiedIfEnabled should return `true` now:
+      client.shareKeysWith = ShareKeysWith.crossVerifiedIfEnabled;
+      expect(key.encryptToDevice, true);
+
+      client.userDeviceKeys[key.userId] = dropUserDeviceKeys!;
+      client.shareKeysWith = ShareKeysWith.all;
       final masterKey = client.userDeviceKeys[client.userID]!.masterKey!;
       masterKey.setDirectVerified(true);
       // we need to populate the ssss cache to be able to test signing easily
