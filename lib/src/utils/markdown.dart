@@ -212,7 +212,7 @@ String markdown(
   bool convertLinebreaks = true,
 }) {
   var ret = markdownToHtml(
-    text,
+    text.replaceNewlines(),
     extensionSet: ExtensionSet.commonMark,
     blockSyntaxes: [
       BlockLatexSyntax(),
@@ -270,6 +270,18 @@ String markdown(
 }
 
 extension on String {
+  String replaceNewlines() {
+    // RegEx for at least 3 following \n
+    final regExp = RegExp(r'(\n{3,})');
+
+    return replaceAllMapped(regExp, (match) {
+      final newLineGroup = match.group(0)!;
+      return newLineGroup
+          .replaceAll('\n', '<br/>')
+          .replaceFirst('<br/><br/>', '\n\n');
+    });
+  }
+
   String convertLinebreaksToBr(
     String tagName, {
     bool exclude = false,

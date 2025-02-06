@@ -70,14 +70,29 @@ void main() {
         'Snape killed <span data-mx-spoiler="">Dumbledoor <strong>bold</strong></span>',
       );
     });
-    test('multiple paragraphs', () {
+    test('linebreaks', () {
+      expect(markdown('Heya!\nBeep'), 'Heya!<br/>Beep');
       expect(markdown('Heya!\n\nBeep'), '<p>Heya!</p><p>Beep</p>');
+      expect(markdown('Heya!\n\n\nBeep'), '<p>Heya!</p><p><br/>Beep</p>');
+      expect(
+        markdown('Heya!\n\n\n\nBeep'),
+        '<p>Heya!</p><p><br/><br/>Beep</p>',
+      );
+      expect(
+        markdown('Heya!\n\n\n\nBeep\n\n'),
+        '<p>Heya!</p><p><br/><br/>Beep</p>',
+      );
+      expect(
+        markdown('\n\nHeya!\n\n\n\nBeep'),
+        '<p>Heya!</p><p><br/><br/>Beep</p>',
+      );
+      expect(
+        markdown('\n\nHeya!\n\n\n\nBeep\n '),
+        '<p>Heya!</p><p><br/><br/>Beep</p>',
+      );
     });
     test('Other block elements', () {
-      expect(markdown('# blah\n\nblubb'), '<h1>blah</h1><p>blubb</p>');
-    });
-    test('linebreaks', () {
-      expect(markdown('foxies\ncute'), 'foxies<br/>cute');
+      expect(markdown('# blah\n\nblubb'), '<h1>blah</h1><p><br/>blubb</p>');
     });
     test('lists', () {
       expect(
