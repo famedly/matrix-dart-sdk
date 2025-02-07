@@ -38,7 +38,6 @@ abstract class DatabaseApi {
     DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
-    String? deviceId,
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
@@ -51,7 +50,6 @@ abstract class DatabaseApi {
     DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
-    String? deviceId,
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
@@ -356,6 +354,18 @@ abstract class DatabaseApi {
   Future<void> storeWellKnown(DiscoveryInformation? discoveryInformation);
 
   Future<DiscoveryInformation?> getWellKnown();
+
+  Future<void> storeDeviceId(String deviceId);
+
+  Future<String?> getDeviceId();
+
+  Future<void> storeOidcAuthMetadata(Map<String, Object?>? authMetadata);
+
+  Future<Map<String, Object?>?> getOidcAuthMetadata();
+
+  Future<void> storeOidcDynamicClientId(String? oidcClientId);
+
+  Future<String?> getOidcDynamicClientId();
 
   /// Deletes the whole database. The database needs to be created again after
   /// this.

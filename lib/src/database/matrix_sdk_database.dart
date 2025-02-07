@@ -31,11 +31,10 @@ import 'package:matrix/src/utils/copy_map.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
-import 'package:matrix/src/database/sqflite_box.dart'
-    if (dart.library.js_interop) 'package:matrix/src/database/indexeddb_box.dart';
-
 import 'package:matrix/src/database/database_file_storage_stub.dart'
     if (dart.library.io) 'package:matrix/src/database/database_file_storage_io.dart';
+import 'package:matrix/src/database/sqflite_box.dart'
+    if (dart.library.js_interop) 'package:matrix/src/database/indexeddb_box.dart';
 
 /// Database based on SQlite3 on native and IndexedDB on web. For native you
 /// have to pass a `Database` object, which can be created with the sqflite
@@ -844,7 +843,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
-    String? deviceId,
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
@@ -866,11 +864,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await _clientBox.put('refresh_token', refreshToken);
       }
       await _clientBox.put('user_id', userId);
-      if (deviceId == null) {
-        await _clientBox.delete('device_id');
-      } else {
-        await _clientBox.put('device_id', deviceId);
-      }
+      await _clientBox.delete('device_id');
       if (deviceName == null) {
         await _clientBox.delete('device_name');
       } else {
@@ -1459,7 +1453,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
-    String? deviceId,
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
@@ -1481,11 +1474,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await _clientBox.put('refresh_token', refreshToken);
       }
       await _clientBox.put('user_id', userId);
-      if (deviceId == null) {
-        await _clientBox.delete('device_id');
-      } else {
-        await _clientBox.put('device_id', deviceId);
-      }
+      await _clientBox.delete('device_id');
       if (deviceName == null) {
         await _clientBox.delete('device_name');
       } else {
@@ -1789,6 +1778,50 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await _clientBox.get('discovery_information');
     if (rawDiscoveryInformation == null) return null;
     return DiscoveryInformation.fromJson(jsonDecode(rawDiscoveryInformation));
+  }
+
+  @override
+  Future<void> storeOidcAuthMetadata(Map<String, Object?>? authMetadata) {
+    if (authMetadata == null) {
+      return _clientBox.delete('auth_metadata');
+    }
+    return _clientBox.put(
+      'auth_metadata',
+      jsonEncode(authMetadata),
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>?> getOidcAuthMetadata() async {
+    final rawAuthMetadata = await _clientBox.get('auth_metadata');
+    if (rawAuthMetadata == null) return null;
+    return jsonDecode(rawAuthMetadata);
+  }
+
+  @override
+  Future<void> storeDeviceId(String? deviceId) {
+    if (deviceId == null) {
+      return _clientBox.delete('device_id');
+    }
+    return _clientBox.put('device_id', deviceId);
+  }
+
+  @override
+  Future<String?> getDeviceId() {
+    return _clientBox.get('device_id');
+  }
+
+  @override
+  Future<void> storeOidcDynamicClientId(String? oidcClientId) {
+    if (oidcClientId == null) {
+      return _clientBox.delete('oidc_dynamic_client_id');
+    }
+    return _clientBox.put('oidc_dynamic_client_id', oidcClientId);
+  }
+
+  @override
+  Future<String?> getOidcDynamicClientId() {
+    return _clientBox.get('oidc_dynamic_client_id');
   }
 
   @override
