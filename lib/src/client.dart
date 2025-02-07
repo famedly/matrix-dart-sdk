@@ -121,13 +121,12 @@ class Client extends MatrixApi {
   final Duration typingIndicatorTimeout;
 
   DiscoveryInformation? _wellKnown;
-  String? _oidcDynamicClientId;
 
   /// the cached .well-known file updated using [getWellknown]
   DiscoveryInformation? get wellKnown => _wellKnown;
 
-  /// the cached OIDC auth metadata as per MSC 2966
-  String? get oidcDynamicClientId => _oidcDynamicClientId;
+  /// the cached OIDC dynamic client ID as per MSC 2966
+  String? oidcDynamicClientId;
 
   /// The homeserver this client is communicating with.
   ///
@@ -605,6 +604,7 @@ class Client extends MatrixApi {
       if (fetchAuthMetadata) {
         try {
           authMetadata = await getAuthMetadata();
+          await database.storeOidcAuthMetadata(authMetadata.toJson());
         } on MatrixException catch (e, s) {
           if (e.error != MatrixError.M_UNRECOGNIZED) {
             Logs().w('Unable to discover OIDC auth metadata.', e, s);
@@ -2213,6 +2213,7 @@ class Client extends MatrixApi {
           encryption?.pickledOlmAccount,
         );
       }
+
       final deviceId = _deviceID;
       if (deviceId != null) {
         await database.storeDeviceId(deviceId);
@@ -2237,7 +2238,7 @@ class Client extends MatrixApi {
       });
       _oidcDynamicClientIdLoading =
           database.getOidcDynamicClientId().then((data) {
-        _oidcDynamicClientId = data;
+        oidcDynamicClientId = data;
       });
       // ignore: deprecated_member_use_from_same_package
       presences.clear();

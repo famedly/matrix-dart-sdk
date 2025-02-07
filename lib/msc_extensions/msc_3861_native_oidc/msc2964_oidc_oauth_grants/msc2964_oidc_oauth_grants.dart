@@ -13,6 +13,7 @@ extension OidcOauthGrantFlowExtension on Client {
     required String oidcClientId,
     required Uri redirectUri,
     required String responseMode,
+    required void Function(Uri oauth2uri) launchOAuth2Uri,
     String? initialDeviceDisplayName,
     bool enforceNewDeviceId = false,
     String? prompt,
@@ -47,8 +48,8 @@ extension OidcOauthGrantFlowExtension on Client {
       rethrow;
     }
 
-    // launch the OAuth2 request at the IDP
-    await oidcStartOAuth2(
+    // generate the OAuth2 uri to authenticate at the IDP
+    final uri = await oidcMakeOAuth2Uri(
       authorizationEndpoint: authEndpoint,
       oidcClientId: oidcClientId,
       redirectUri: redirectUri,
@@ -64,6 +65,8 @@ extension OidcOauthGrantFlowExtension on Client {
       codeVerifier: verifier,
       prompt: prompt,
     );
+    // hand the OAuth2 uri over to the matrix client
+    launchOAuth2Uri.call(uri);
 
     // wait for the matrix client to receive the redirect callback from the IDP
     final nativeResponse = await nativeCompleter.future;
@@ -111,13 +114,14 @@ extension OidcOauthGrantFlowExtension on Client {
     );
   }
 
-  /// Starts an OAuth2 flow
+  /// Computes an OAuth2 flow authorization Uri
   ///
   /// - generates the challenge for the `codeVerifier` as per RFC 7636
-  /// - dispatches the request
+  /// - builds the query to launch for authorization
+  /// - returns the full uri
   ///
   /// Parameters: https://github.com/sandhose/matrix-spec-proposals/blob/msc/sandhose/oauth2-profile/proposals/2964-oauth2-profile.md#flow-parameters
-  Future<void> oidcStartOAuth2({
+  Future<Uri> oidcMakeOAuth2Uri({
     required Uri authorizationEndpoint,
     required String oidcClientId,
     required Uri redirectUri,
@@ -142,13 +146,7 @@ extension OidcOauthGrantFlowExtension on Client {
         'code_challenge_method': 'S256',
       },
     );
-    final request = Request('GET', requestUri);
-    request.headers['content-type'] = 'application/json';
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) {
-      unexpectedResponse(response, responseBody);
-    }
+    return requestUri;
   }
 
   /// Exchanges an OIDC OAuth2 code into an access token

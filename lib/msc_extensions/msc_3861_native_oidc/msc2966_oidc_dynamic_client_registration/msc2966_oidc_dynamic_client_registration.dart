@@ -13,7 +13,8 @@ extension OidcDynamicClientRegistrationExtension on Client {
   Future<String?> oidcEnsureDynamicClientId(
     OidcDynamicRegistrationData registrationData,
   ) async {
-    final storedOidcClientId = await database.getOidcDynamicClientId();
+    final storedOidcClientId =
+        oidcDynamicClientId = await database.getOidcDynamicClientId();
 
     if (storedOidcClientId is String) {
       Logs().d('[OIDC] Reusing Dynamic Client ID $storedOidcClientId.');
@@ -36,7 +37,7 @@ extension OidcDynamicClientRegistrationExtension on Client {
     );
     await database.storeOidcDynamicClientId(oidcClientId);
     Logs().d('[OIDC] Registered Dynamic Client ID $oidcClientId.');
-    return oidcClientId;
+    return oidcDynamicClientId = oidcClientId;
   }
 
   /// MSC 2966
