@@ -11,7 +11,6 @@ extension OidcOauthGrantFlowExtension on Client {
   Future<void> oidcAuthorizationGrantFlow({
     required Completer<OidcCallbackResponse> nativeCompleter,
     required String oidcClientId,
-    required String responseType,
     required Uri redirectUri,
     required String responseMode,
     String? initialDeviceDisplayName,
@@ -52,7 +51,6 @@ extension OidcOauthGrantFlowExtension on Client {
     await oidcStartOAuth2(
       authorizationEndpoint: authEndpoint,
       oidcClientId: oidcClientId,
-      responseType: responseType,
       redirectUri: redirectUri,
       scope: [
         'openid',
@@ -122,7 +120,6 @@ extension OidcOauthGrantFlowExtension on Client {
   Future<void> oidcStartOAuth2({
     required Uri authorizationEndpoint,
     required String oidcClientId,
-    required String responseType,
     required Uri redirectUri,
     required List<String> scope,
     required String responseMode,
@@ -136,7 +133,7 @@ extension OidcOauthGrantFlowExtension on Client {
     final requestUri = authorizationEndpoint.replace(
       queryParameters: {
         'client_id': oidcClientId,
-        'response_type': responseType,
+        'response_type': 'code',
         'response_mode': responseMode,
         'redirect_uri': redirectUri.toString(),
         'scope': scope.join(' '),
