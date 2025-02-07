@@ -129,9 +129,17 @@ class Client extends MatrixApi {
   final Duration typingIndicatorTimeout;
 
   DiscoveryInformation? _wellKnown;
+  Map<String, Object?>? _oidcAuthMetadata;
+  String? _oidcDynamicClientId;
 
   /// the cached .well-known file updated using [getWellknown]
   DiscoveryInformation? get wellKnown => _wellKnown;
+
+  /// the cached OIDC auth metadata as per MSC 2965 updated using [getWellknown]
+  Map<String, Object?>? get oidcAuthMetadata => _oidcAuthMetadata;
+
+  /// the cached OIDC auth metadata as per MSC 2966
+  String? get oidcDynamicClientId => _oidcDynamicClientId;
 
   /// The homeserver this client is communicating with.
   ///
@@ -141,7 +149,10 @@ class Client extends MatrixApi {
   set homeserver(Uri? homeserver) {
     if (this.homeserver != null && homeserver?.host != this.homeserver?.host) {
       _wellKnown = null;
+      _oidcAuthMetadata = null;
       unawaited(database?.storeWellKnown(null));
+      unawaited(database?.storeOidcAuthMetadata(null));
+      unawaited(database?.storeOidcDynamicClientId(null));
     }
     super.homeserver = homeserver;
   }
@@ -293,6 +304,8 @@ class Client extends MatrixApi {
   /// logout case.
   /// Throws an Exception if there is no refresh token available or the
   /// client is not logged in.
+  ///
+  /// This method id OIDC aware as per MSC 3824.
   Future<void> refreshAccessToken() async {
     final storedClient = await database?.getClient(clientName);
     final refreshToken = storedClient?.tryGet<String>('refresh_token');
@@ -306,24 +319,44 @@ class Client extends MatrixApi {
       throw Exception('Cannot refresh access token when not logged in');
     }
 
-    final tokenResponse = await refreshWithCustomRefreshTokenLifetime(
-      refreshToken,
-      refreshTokenLifetimeMs: customRefreshTokenLifetime?.inMilliseconds,
-    );
+    String accessToken;
+    String? newRefreshToken;
+    int? expiresInMs;
 
-    accessToken = tokenResponse.accessToken;
-    final expiresInMs = tokenResponse.expiresInMs;
+    final oidcTokenEndpoint = oidcAuthMetadata?['token_endpoint'];
+    final oidcClientId = oidcDynamicClientId;
+    if (oidcTokenEndpoint is String && oidcClientId != null) {
+      final tokenResponse = await oidcRefreshToken(
+        tokenEndpoint: Uri.parse(oidcTokenEndpoint),
+        refreshToken: refreshToken,
+        oidcClientId: oidcClientId,
+      );
+
+      this.accessToken = accessToken = tokenResponse.accessToken;
+      newRefreshToken = tokenResponse.refreshToken;
+      expiresInMs = tokenResponse.expiresIn;
+    } else {
+      final tokenResponse = await refreshWithCustomRefreshTokenLifetime(
+        refreshToken,
+        refreshTokenLifetimeMs: customRefreshTokenLifetime?.inMilliseconds,
+      );
+
+      this.accessToken = accessToken = tokenResponse.accessToken;
+      newRefreshToken = tokenResponse.refreshToken;
+      expiresInMs = tokenResponse.expiresInMs;
+    }
+
     final tokenExpiresAt = expiresInMs == null
         ? null
         : DateTime.now().add(Duration(milliseconds: expiresInMs));
+
     _accessTokenExpiresAt = tokenExpiresAt;
     await database?.updateClient(
       homeserverUrl,
-      tokenResponse.accessToken,
+      accessToken,
       tokenExpiresAt,
-      tokenResponse.refreshToken,
+      newRefreshToken,
       userId,
-      deviceId,
       deviceName,
       prevBatch,
       encryption?.pickledOlmAccount,
@@ -578,6 +611,9 @@ class Client extends MatrixApi {
   /// Note that this endpoint is not necessarily handled by the homeserver,
   /// but by another webserver, to be used for discovering the homeserver URL.
   ///
+  /// In case the homeserver supports OIDC, this will also request and store
+  /// the OIDC Auth Metadata provided by the homeserver.
+  ///
   /// The result of this call is stored in [wellKnown] for later use at runtime.
   @override
   Future<DiscoveryInformation> getWellknown() async {
@@ -587,6 +623,11 @@ class Client extends MatrixApi {
     super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
     _wellKnown = wellKnown;
     await database?.storeWellKnown(wellKnown);
+    try {
+      final authMetadata = await getOidcAuthMetadata();
+      await database?.storeOidcAuthMetadata(authMetadata);
+      Logs().v('[OIDC] Found auth metadata document.');
+    } catch (_) {}
     return wellKnown;
   }
 
@@ -697,7 +738,7 @@ class Client extends MatrixApi {
     final userId = response.userId;
     final homeserver_ = homeserver;
     if (homeserver_ == null) {
-      throw Exception('Registered but homerserver is null.');
+      throw Exception('Registered but homeserver is null.');
     }
 
     final expiresInMs = response.expiresInMs;
@@ -2030,7 +2071,6 @@ class Client extends MatrixApi {
       // account creds
       if (account != null &&
           account['homeserver_url'] != null &&
-          account['user_id'] != null &&
           account['token'] != null) {
         _id = account['client_id'];
         homeserver = Uri.parse(account['homeserver_url']);
@@ -2041,11 +2081,12 @@ class Client extends MatrixApi {
             ? null
             : DateTime.fromMillisecondsSinceEpoch(tokenExpiresAtMs);
         userID = _userID = account['user_id'];
-        _deviceID = account['device_id'];
         _deviceName = account['device_name'];
         _syncFilterId = account['sync_filter_id'];
         _prevBatch = account['prev_batch'];
         olmAccount = account['olm_account'];
+        // the device ID is stored differently for easier use of MSC 1597
+        _deviceID = await this.database?.getDeviceId();
       }
       if (newToken != null) {
         accessToken = this.accessToken = newToken;
@@ -2075,7 +2116,6 @@ class Client extends MatrixApi {
             accessTokenExpiresAt,
             newRefreshToken,
             userID,
-            _deviceID,
             _deviceName,
             prevBatch,
             encryption?.pickledOlmAccount,
@@ -2130,7 +2170,6 @@ class Client extends MatrixApi {
             accessTokenExpiresAt,
             newRefreshToken,
             userID,
-            _deviceID,
             _deviceName,
             prevBatch,
             encryption?.pickledOlmAccount,
@@ -2143,11 +2182,14 @@ class Client extends MatrixApi {
             accessTokenExpiresAt,
             newRefreshToken,
             userID,
-            _deviceID,
             _deviceName,
             prevBatch,
             encryption?.pickledOlmAccount,
           );
+        }
+        final deviceId = _deviceID;
+        if (deviceId != null) {
+          await database.storeDeviceId(deviceId);
         }
         userDeviceKeysLoading = database
             .getUserDeviceKeys(this)
@@ -2162,6 +2204,13 @@ class Client extends MatrixApi {
         });
         _discoveryDataLoading = database.getWellKnown().then((data) {
           _wellKnown = data;
+        });
+        _oidcAuthMetadataLoading = database.getOidcAuthMetadata().then((data) {
+          _oidcAuthMetadata = data;
+        });
+        _oidcDynamicClientIdLoading =
+            database.getOidcDynamicClientId().then((data) {
+          _oidcDynamicClientId = data;
         });
         // ignore: deprecated_member_use_from_same_package
         presences.clear();
@@ -3123,11 +3172,17 @@ class Client extends MatrixApi {
   Future? roomsLoading;
   Future? _accountDataLoading;
   Future? _discoveryDataLoading;
+  Future? _oidcAuthMetadataLoading;
+  Future? _oidcDynamicClientIdLoading;
   Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
 
   Future? get wellKnownLoading => _discoveryDataLoading;
+
+  Future? get oidcAuthMetadataLoading => _oidcAuthMetadataLoading;
+
+  Future? get oidcDynamicClientIdLoading => _oidcDynamicClientIdLoading;
 
   /// A map of known device keys per user.
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
@@ -3883,11 +3938,11 @@ class Client extends MatrixApi {
           : DateTime.fromMillisecondsSinceEpoch(tokenExpiresAtMs),
       migrateClient['refresh_token'],
       migrateClient['user_id'],
-      migrateClient['device_id'],
       migrateClient['device_name'],
       null,
       migrateClient['olm_account'],
     );
+    await database.storeDeviceId(migrateClient['device_id']);
     Logs().d('Migrate SSSSCache...');
     for (final type in cacheTypes) {
       final ssssCache = await legacyDatabase.getSSSSCache(type);

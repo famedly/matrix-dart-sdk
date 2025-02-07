@@ -847,7 +847,6 @@ class HiveCollectionsDatabase extends DatabaseApi {
     DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
-    String? deviceId,
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
@@ -869,11 +868,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
           tokenExpiresAt.millisecondsSinceEpoch.toString(),
         );
       }
-      if (deviceId == null) {
-        await _clientBox.delete('device_id');
-      } else {
-        await _clientBox.put('device_id', deviceId);
-      }
+      await _clientBox.delete('device_id');
       if (deviceName == null) {
         await _clientBox.delete('device_name');
       } else {
@@ -1480,7 +1475,6 @@ class HiveCollectionsDatabase extends DatabaseApi {
     DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
-    String? deviceId,
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
@@ -1502,11 +1496,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
         await _clientBox.put('refresh_token', refreshToken);
       }
       await _clientBox.put('user_id', userId);
-      if (deviceId == null) {
-        await _clientBox.delete('device_id');
-      } else {
-        await _clientBox.put('device_id', deviceId);
-      }
+      await _clientBox.delete('device_id');
       if (deviceName == null) {
         await _clientBox.delete('device_name');
       } else {
@@ -1752,6 +1742,50 @@ class HiveCollectionsDatabase extends DatabaseApi {
         await _clientBox.get('discovery_information');
     if (rawDiscoveryInformation == null) return null;
     return DiscoveryInformation.fromJson(jsonDecode(rawDiscoveryInformation));
+  }
+
+  @override
+  Future<void> storeOidcAuthMetadata(Map<String, Object?>? authMetadata) {
+    if (authMetadata == null) {
+      return _clientBox.delete('oidc_auth_metadata');
+    }
+    return _clientBox.put(
+      'oidc_auth_metadata',
+      jsonEncode(authMetadata),
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>?> getOidcAuthMetadata() async {
+    final rawAuthMetadata = await _clientBox.get('oidc_auth_metadata');
+    if (rawAuthMetadata == null) return null;
+    return jsonDecode(rawAuthMetadata);
+  }
+
+  @override
+  Future<void> storeDeviceId(String? deviceId) {
+    if (deviceId == null) {
+      return _clientBox.delete('device_id');
+    }
+    return _clientBox.put('device_id', deviceId);
+  }
+
+  @override
+  Future<String?> getDeviceId() {
+    return _clientBox.get('device_id');
+  }
+
+  @override
+  Future<void> storeOidcDynamicClientId(String? oidcClientId) {
+    if (oidcClientId == null) {
+      return _clientBox.delete('oidc_dynamic_client_id');
+    }
+    return _clientBox.put('oidc_dynamic_client_id', oidcClientId);
+  }
+
+  @override
+  Future<String?> getOidcDynamicClientId() {
+    return _clientBox.get('oidc_dynamic_client_id');
   }
 
   @override
