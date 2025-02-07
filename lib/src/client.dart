@@ -122,7 +122,6 @@ class Client extends MatrixApi {
 
   DiscoveryInformation? _wellKnown;
   Map<String, Object?>? _oidcAuthMetadata;
-  String? _oidcDynamicClientId;
 
   /// the cached .well-known file updated using [getWellknown]
   DiscoveryInformation? get wellKnown => _wellKnown;
@@ -131,7 +130,7 @@ class Client extends MatrixApi {
   Map<String, Object?>? get oidcAuthMetadata => _oidcAuthMetadata;
 
   /// the cached OIDC auth metadata as per MSC 2966
-  String? get oidcDynamicClientId => _oidcDynamicClientId;
+  String? oidcDynamicClientId;
 
   /// The homeserver this client is communicating with.
   ///
@@ -610,26 +609,32 @@ class Client extends MatrixApi {
   /// The result of this call is stored in [wellKnown] for later use at runtime.
   @override
   Future<DiscoveryInformation> getWellknown() async {
-    final wellKnownResponse = await httpClient.get(
-      Uri.https(
-        userID?.domain ?? homeserver!.host,
-        '/.well-known/matrix/client',
-      ),
-    );
-    final wellKnown = DiscoveryInformation.fromJson(
-      jsonDecode(utf8.decode(wellKnownResponse.bodyBytes))
-          as Map<String, Object?>,
-    );
-
-    // do not reset the well known here, so super call
-    super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
-    _wellKnown = wellKnown;
-    await database.storeWellKnown(wellKnown);
+    DiscoveryInformation wellKnown;
     try {
-      final authMetadata = await getOidcAuthMetadata();
-      await database.storeOidcAuthMetadata(authMetadata);
-      Logs().v('[OIDC] Found auth metadata document.');
-    } catch (_) {}
+      final wellKnownResponse = await httpClient.get(
+        Uri.https(
+          userID?.domain ?? homeserver!.host,
+          '/.well-known/matrix/client',
+        ),
+      );
+      wellKnown = DiscoveryInformation.fromJson(
+        jsonDecode(utf8.decode(wellKnownResponse.bodyBytes))
+            as Map<String, Object?>,
+      );
+
+      // do not reset the well known here, so super call
+      super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
+      _wellKnown = wellKnown;
+      await database.storeWellKnown(wellKnown);
+    } finally {
+      try {
+        _oidcAuthMetadata = await getOidcAuthMetadata();
+        await database?.storeOidcAuthMetadata(_oidcAuthMetadata);
+        Logs().v('[OIDC] Found auth metadata document.');
+      } catch (e) {
+        Logs().v('[OIDC] Homeserver does not support OIDC delegation.', e);
+      }
+    }
     return wellKnown;
   }
 
@@ -2166,6 +2171,7 @@ class Client extends MatrixApi {
           encryption?.pickledOlmAccount,
         );
       }
+
       final deviceId = _deviceID;
       if (deviceId != null) {
         await database.storeDeviceId(deviceId);
@@ -2189,7 +2195,7 @@ class Client extends MatrixApi {
       });
       _oidcDynamicClientIdLoading =
           database.getOidcDynamicClientId().then((data) {
-        _oidcDynamicClientId = data;
+        oidcDynamicClientId = data;
       });
       // ignore: deprecated_member_use_from_same_package
       presences.clear();
