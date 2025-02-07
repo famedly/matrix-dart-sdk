@@ -22,12 +22,14 @@ import 'package:matrix/matrix.dart';
 class User extends StrippedStateEvent {
   final Room room;
   final Map<String, Object?>? prevContent;
+  final DateTime? originServerTs;
 
   factory User(
     String id, {
     String? membership,
     String? displayName,
     String? avatarUrl,
+    DateTime? originServerTs,
     required Room room,
   }) {
     return User.fromState(
@@ -40,6 +42,7 @@ class User extends StrippedStateEvent {
       },
       typeKey: EventTypes.RoomMember,
       room: room,
+      originServerTs: originServerTs,
     );
   }
 
@@ -49,6 +52,7 @@ class User extends StrippedStateEvent {
     required String typeKey,
     required super.senderId,
     required this.room,
+    this.originServerTs,
     this.prevContent,
   }) : super(
           type: typeKey,
@@ -254,5 +258,6 @@ extension FromStrippedStateEventExtension on StrippedStateEvent {
         typeKey: type,
         senderId: senderId,
         room: room,
+        originServerTs: null,
       );
 }

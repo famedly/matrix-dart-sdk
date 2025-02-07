@@ -695,6 +695,35 @@ void main() {
       );
       expect(room.lastEvent!.content['body'], '* floooof');
 
+      // Older state event should not overwrite current state events
+      room.partial = false;
+      await matrix.handleSync(
+        SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                state: [
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    content: {'displayname': 'Alice Catgirl'},
+                    senderId: '@alice:example.com',
+                    eventId: 'oldEventId',
+                    stateKey: '@alice:example.com',
+                    originServerTs:
+                        DateTime.now().subtract(const Duration(days: 365 * 30)),
+                  ),
+                ],
+              ),
+            },
+          ),
+        ),
+        direction: Direction.b,
+      );
+      room.partial = true;
+      expect(room.getParticipants().first.id, '@alice:example.com');
+      expect(room.getParticipants().first.displayName, 'Alice Margatroid');
+
       // accepts a consecutive edit
       await matrix.handleSync(
         SyncUpdate.fromJson({
