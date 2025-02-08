@@ -630,7 +630,7 @@ class Client extends MatrixApi {
     } finally {
       try {
         _oidcAuthMetadata = await getOidcAuthMetadata();
-        await database?.storeOidcAuthMetadata(_oidcAuthMetadata);
+        await database.storeOidcAuthMetadata(_oidcAuthMetadata);
         Logs().v('[OIDC] Found auth metadata document.');
       } catch (e) {
         Logs().v('[OIDC] Homeserver does not support OIDC delegation.', e);
@@ -2053,6 +2053,17 @@ class Client extends MatrixApi {
       _versionsCache.invalidate();
 
       final account = await database.getClient(clientName);
+
+      // the device ID is stored separately for easier use of MSC 1597
+      _deviceID = await database.getDeviceId();
+      // migrate the device ID if still in account data
+      if (_deviceID == null &&
+          account != null &&
+          account.containsKey('device_id')) {
+        final deviceId = _deviceID = account['device_id'];
+        await database.storeDeviceId(deviceId);
+      }
+
       newRefreshToken ??= account?.tryGet<String>('refresh_token');
       // can have discovery_information so make sure it also has the proper
       // account creds
@@ -2074,7 +2085,7 @@ class Client extends MatrixApi {
         _prevBatch = account['prev_batch'];
         olmAccount = account['olm_account'];
         // the device ID is stored differently for easier use of MSC 1597
-        _deviceID = await this.database.getDeviceId();
+        _deviceID = await database.getDeviceId();
       }
       if (newToken != null) {
         accessToken = this.accessToken = newToken;
