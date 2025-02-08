@@ -132,7 +132,8 @@ extension OidcOauthGrantFlowExtension on Client {
     String? prompt,
   }) async {
     // https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
-    final codeChallenge = sha256.convert(latin1.encode(codeVerifier)).bytes;
+    final digest = sha256.convert(latin1.encode(codeVerifier));
+    final encodedChallenge = base64UrlEncode(digest.bytes);
 
     final requestUri = authorizationEndpoint.replace(
       queryParameters: {
@@ -145,7 +146,9 @@ extension OidcOauthGrantFlowExtension on Client {
         // https://github.com/element-hq/matrix-authentication-service/issues/2869
         'state': state,
         if (prompt != null) 'prompt': prompt,
-        'code_challenge': base64Encode(codeChallenge),
+        'code_challenge':
+            // remove the "=" padding
+            encodedChallenge.substring(0, encodedChallenge.length - 1),
         'code_challenge_method': 'S256',
       },
     );
