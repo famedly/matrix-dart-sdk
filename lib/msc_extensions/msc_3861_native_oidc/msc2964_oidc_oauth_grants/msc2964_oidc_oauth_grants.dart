@@ -40,8 +40,8 @@ extension OidcOauthGrantFlowExtension on Client {
           prompt = null;
         }
       }
-      // we do not check the *_supported flags since we assume the homeserver
-      // is properly set up
+      // we do not check any other *_supported flags since we assume the
+      // homeserver is properly set up
       // https://github.com/sandhose/matrix-spec-proposals/blob/msc/sandhose/oauth2-profile/proposals/2964-oauth2-profile.md#prerequisites
     } catch (e, s) {
       Logs().e('[OIDC] Auth Metadata not valid according to MSC2965.', e, s);
