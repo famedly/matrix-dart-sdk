@@ -11,14 +11,17 @@ extension OidcDynamicClientRegistrationExtension on Client {
   /// returns the registered client ID or null in case the homeserver does not
   /// support OIDC.
   Future<String?> oidcEnsureDynamicClientId(
-    OidcDynamicRegistrationData registrationData,
-  ) async {
-    final storedOidcClientId =
-        oidcDynamicClientId = await database?.getOidcDynamicClientId();
+    OidcDynamicRegistrationData registrationData, {
+    bool enforceNewDynamicClient = false,
+  }) async {
+    if (!enforceNewDynamicClient) {
+      final storedOidcClientId =
+          oidcDynamicClientId = await database?.getOidcDynamicClientId();
 
-    if (storedOidcClientId is String) {
-      Logs().d('[OIDC] Reusing Dynamic Client ID $storedOidcClientId.');
-      return storedOidcClientId;
+      if (storedOidcClientId is String) {
+        Logs().d('[OIDC] Reusing Dynamic Client ID $storedOidcClientId.');
+        return storedOidcClientId;
+      }
     }
 
     final metadata = oidcAuthMetadata;
