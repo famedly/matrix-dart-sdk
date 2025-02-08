@@ -141,6 +141,9 @@ extension OidcOauthGrantFlowExtension on Client {
         'response_mode': responseMode,
         'redirect_uri': redirectUri.toString(),
         'scope': scope.join(' '),
+        // not required per RFC but included due to
+        // https://github.com/element-hq/matrix-authentication-service/issues/2869
+        'state': state,
         if (prompt != null) 'prompt': prompt,
         'code_challenge': base64Encode(codeChallenge),
         'code_challenge_method': 'S256',
