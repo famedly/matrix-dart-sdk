@@ -6,14 +6,20 @@ extension Msc4191AccountManagementExtension on Client {
     String? idTokenHint,
     String? deviceId,
   }) async {
-    final providerMetadata = await getAuthMetadata();
+    GetAuthMetadataResponse? metadata;
 
-    final managementUri = providerMetadata.accountManagementUri;
+    try {
+      metadata = await getAuthMetadata();
+    } catch (_) {
+      return null;
+    }
+
+    final managementUri = metadata.accountManagementUri;
     if (managementUri == null) {
       return null;
     }
 
-    final supportedActions = providerMetadata.accountManagementActionsSupported;
+    final supportedActions = metadata.accountManagementActionsSupported;
 
     final uri = managementUri.resolveUri(
       Uri(
