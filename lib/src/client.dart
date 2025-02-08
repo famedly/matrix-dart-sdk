@@ -2091,6 +2091,17 @@ class Client extends MatrixApi {
       _versionsCache.invalidate();
 
       final account = await database.getClient(clientName);
+
+      // the device ID is stored separately for easier use of MSC 1597
+      _deviceID = await database.getDeviceId();
+      // migrate the device ID if still in account data
+      if (_deviceID == null &&
+          account != null &&
+          account.containsKey('device_id')) {
+        final deviceId = _deviceID = account['device_id'];
+        await database.storeDeviceId(deviceId);
+      }
+
       newRefreshToken ??= account?.tryGet<String>('refresh_token');
       // can have discovery_information so make sure it also has the proper
       // account creds
