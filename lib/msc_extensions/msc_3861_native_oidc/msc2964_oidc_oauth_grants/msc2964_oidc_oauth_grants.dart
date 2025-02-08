@@ -166,14 +166,13 @@ extension OidcOauthGrantFlowExtension on Client {
     required String codeVerifier,
   }) async {
     final request = Request('POST', tokenEndpoint);
-    request.bodyFields.addAll({
+    request.bodyFields = {
       'grant_type': 'authorization_code',
       'code': oAuth2Code,
       'redirect_uri': redirectUri.toString(),
       'client_id': oidcClientId,
       'code_verifier': codeVerifier,
-    });
-    request.headers['content-type'] = 'application/x-www-form-urlencoded';
+    };
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) {
@@ -193,12 +192,11 @@ extension OidcOauthGrantFlowExtension on Client {
     required String oidcClientId,
   }) async {
     final request = Request('POST', tokenEndpoint);
-    request.bodyFields.addAll({
+    request.bodyFields = {
       'grant_type': 'refresh_token',
       'refresh_token': refreshToken,
       'client_id': oidcClientId,
-    });
-    request.headers['content-type'] = 'application/x-www-form-urlencoded';
+    };
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) {
