@@ -1474,7 +1474,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await _clientBox.put('refresh_token', refreshToken);
       }
       await _clientBox.put('user_id', userId);
-      await _clientBox.delete('device_id');
       if (deviceName == null) {
         await _clientBox.delete('device_name');
       } else {
