@@ -868,7 +868,6 @@ class HiveCollectionsDatabase extends DatabaseApi {
           tokenExpiresAt.millisecondsSinceEpoch.toString(),
         );
       }
-      await _clientBox.delete('device_id');
       if (deviceName == null) {
         await _clientBox.delete('device_name');
       } else {
