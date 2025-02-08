@@ -620,14 +620,15 @@ class Client extends MatrixApi {
   /// The result of this call is stored in [wellKnown] for later use at runtime.
   @override
   Future<DiscoveryInformation> getWellknown() async {
-    DiscoveryInformation wellKnown;
     try {
-      wellKnown = await super.getWellknown();
+      final wellKnown = await super.getWellknown();
 
       // do not reset the well known here, so super call
       super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
       _wellKnown = wellKnown;
       await database?.storeWellKnown(wellKnown);
+
+      return wellKnown;
     } finally {
       try {
         _oidcAuthMetadata = await getOidcAuthMetadata();
@@ -637,7 +638,6 @@ class Client extends MatrixApi {
         Logs().v('[OIDC] Homeserver does not support OIDC delegation.', e);
       }
     }
-    return wellKnown;
   }
 
   /// Checks to see if a username is available, and valid, for the server.
