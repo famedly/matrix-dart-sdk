@@ -2096,6 +2096,7 @@ class Client extends MatrixApi {
       // account creds
       if (account != null &&
           account['homeserver_url'] != null &&
+          account['user_id'] != null &&
           account['token'] != null) {
         _id = account['client_id'];
         homeserver = Uri.parse(account['homeserver_url']);
