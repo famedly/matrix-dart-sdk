@@ -603,7 +603,7 @@ class Client extends MatrixApi {
       GetAuthMetadataResponse? authMetadata;
       if (fetchAuthMetadata) {
         try {
-          authMetadata = await getAuthMetadata();
+          authMetadata = await getAuthMetadata(false);
           await database.storeOidcAuthMetadata(authMetadata.toJson());
         } on MatrixException catch (e, s) {
           if (e.error != MatrixError.M_UNRECOGNIZED) {
@@ -780,9 +780,11 @@ class Client extends MatrixApi {
   GetAuthMetadataResponse? _getAuthMetadataResponseCache;
 
   @override
-  Future<GetAuthMetadataResponse> getAuthMetadata() async {
-    final cached = _getAuthMetadataResponseCache;
-    if (cached != null) return cached;
+  Future<GetAuthMetadataResponse> getAuthMetadata([bool cached = true]) async {
+    if (cached) {
+      final cached = _getAuthMetadataResponseCache;
+      if (cached != null) return cached;
+    }
     final metadata = await super.getAuthMetadata();
     await database.storeOidcAuthMetadata(metadata.toJson());
     Logs().v('[OIDC] Found auth metadata document.');
