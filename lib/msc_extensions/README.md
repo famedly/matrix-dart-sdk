@@ -23,7 +23,6 @@ Please try to cover the following conventions:
 - MSC 3861 - Next-generation auth for Matrix, based on OAuth 2.0/OIDC
   - MSC 1597 - Better spec for matrix identifiers
   - MSC 2964 - Usage of OAuth 2.0 authorization code grant and refresh token grant
-  - MSC 2965 - OAuth 2.0 Authorization Server Metadata discovery
   - MSC 2966 - Usage of OAuth 2.0 Dynamic Client Registration in Matrix
   - MSC 2967 - API scopes
   - MSC 3824 - OIDC aware clients
