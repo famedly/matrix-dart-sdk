@@ -250,16 +250,21 @@ class OidcCallbackResponse {
     String redirectUri, [
     String responseMode = 'fragment',
   ]) {
+    Uri search;
+    // parse either fragment or query into Uri for easier search handling
     if (responseMode == 'fragment') {
-      redirectUri = redirectUri.replaceFirst('#', '?');
+      search = Uri(query: Uri.parse(redirectUri).fragment);
+    } else if (responseMode == 'query') {
+      search = Uri(query: Uri.parse(redirectUri).query);
+    } else {
+      search = Uri.parse(redirectUri);
     }
-    final uri = Uri.parse(redirectUri);
     return OidcCallbackResponse(
-      uri.queryParameters['state']!,
-      code: uri.queryParameters['code'],
-      error: uri.queryParameters['error'],
-      errorDescription: uri.queryParameters['error_description'],
-      errorUri: uri.queryParameters['code_uri'],
+      search.queryParameters['state']!,
+      code: search.queryParameters['code'],
+      error: search.queryParameters['error'],
+      errorDescription: search.queryParameters['error_description'],
+      errorUri: search.queryParameters['code_uri'],
     );
   }
 
