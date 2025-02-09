@@ -5,11 +5,40 @@ import 'package:http/http.dart' hide Client;
 import 'package:matrix/matrix.dart';
 
 extension OidcProviderMetadataExtension on Client {
+  /// Loads the Auth Metadata from the homeserver
+  ///
+  /// Even though homeservers might still use the previous proposed approaches
+  /// for delegating OIDC discovery, this is the preferred way to fetch the
+  /// OIDC Auth Metadata.
+  ///
+  /// Since the OIDC spec is very flexible with what to expect in this document,
+  /// the result is simply returned as a [Map].
+  ///
+  /// Reference: https://github.com/sandhose/matrix-spec-proposals/blob/msc/sandhose/oidc-discovery/proposals/2965-auth-metadata.md#get-auth_metadata
   Future<Map<String, Object?>> getOidcAuthMetadata() async {
     /// _matrix/client/v1/auth_metadata
     final requestUri =
         Uri(path: '/_matrix/client/unstable/org.matrix.msc2965/auth_metadata');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['content-type'] = 'application/json';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) {
+      unexpectedResponse(response, responseBody);
+    }
+    final responseString = utf8.decode(responseBody);
+    return jsonDecode(responseString);
+  }
+
+  /// fallback on OIDC discovery via .well-known as per MSC 2965
+  ///
+  /// Reference: https://openid.net/specs/openid-connect-discovery-1_0.html .
+  ///
+  /// https://github.com/sandhose/matrix-spec-proposals/blob/msc/sandhose/oidc-discovery/proposals/2965-auth-metadata.md#discovery-via-openid-connect-discovery
+  @Deprecated('Use [getOidcAuthMetadata] instead.')
+  Future<Map<String, Object?>> getOidcAuthWellKnown(Uri issuer) async {
+    final requestUri = Uri(path: '/.well-known/openid-configuration');
+    final request = Request('GET', issuer.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
