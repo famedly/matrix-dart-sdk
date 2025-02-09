@@ -636,8 +636,27 @@ class Client extends MatrixApi {
 
       return wellKnown;
     } finally {
+      // MSC2965 no longer expects any information on whether OIDC is supported
+      // to be present in .well-known - the only way to figure out is sadly
+      // calling the /auth_metadata endpoint.
       try {
-        _oidcAuthMetadata = await getOidcAuthMetadata();
+        try {
+          _oidcAuthMetadata = await getOidcAuthMetadata();
+        } catch (e) {
+          Logs().v(
+            '[OIDC] auth_metadata endpoint not supported. '
+            'Fallback on legacy .well-known discovery.',
+            e,
+          );
+          // even though no longer required, a homeserver *might* still prefer
+          // the fallback on .well-known discovery as per
+          // https://openid.net/specs/openid-connect-discovery-1_0.html
+          final issuer =
+              // ignore: deprecated_member_use_from_same_package
+              _wellKnown?.authentication?.issuer ?? await oidcAuthIssuer();
+          // ignore: deprecated_member_use_from_same_package
+          _oidcAuthMetadata = await getOidcAuthWellKnown(issuer);
+        }
         await database?.storeOidcAuthMetadata(_oidcAuthMetadata);
         Logs().v('[OIDC] Found auth metadata document.');
       } catch (e) {
