@@ -92,7 +92,7 @@ void main() {
       );
     });
     test('Other block elements', () {
-      expect(markdown('# blah\n\nblubb'), '<h1>blah</h1><p><br/>blubb</p>');
+      expect(markdown('# blah\n\nblubb'), '<h1>blah</h1><p>blubb</p>');
     });
     test('lists', () {
       expect(
