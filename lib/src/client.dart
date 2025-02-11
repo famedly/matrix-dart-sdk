@@ -599,6 +599,7 @@ class Client extends MatrixApi {
   /// The result of this call is stored in [wellKnown] for later use at runtime.
   @override
   Future<DiscoveryInformation> getWellknown() async {
+    DiscoveryInformation wellKnown;
     try {
       final wellKnownResponse = await httpClient.get(
         Uri.https(
@@ -606,7 +607,7 @@ class Client extends MatrixApi {
           '/.well-known/matrix/client',
         ),
       );
-      final wellKnown = DiscoveryInformation.fromJson(
+      wellKnown = DiscoveryInformation.fromJson(
         jsonDecode(utf8.decode(wellKnownResponse.bodyBytes))
             as Map<String, Object?>,
       );
@@ -615,8 +616,6 @@ class Client extends MatrixApi {
       super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
       _wellKnown = wellKnown;
       await database.storeWellKnown(wellKnown);
-
-      return wellKnown;
     } finally {
       // MSC2965 no longer expects any information on whether OIDC is supported
       // to be present in .well-known - the only way to figure out is sadly
@@ -624,11 +623,10 @@ class Client extends MatrixApi {
       try {
         try {
           _oidcAuthMetadata = await getOidcAuthMetadata();
-        } catch (e) {
+        } on http.ClientException {
           Logs().v(
             '[OIDC] auth_metadata endpoint not supported. '
             'Fallback on legacy .well-known discovery.',
-            e,
           );
           // even though no longer required, a homeserver *might* still prefer
           // the fallback on .well-known discovery as per
@@ -641,10 +639,11 @@ class Client extends MatrixApi {
         }
         await database.storeOidcAuthMetadata(_oidcAuthMetadata);
         Logs().v('[OIDC] Found auth metadata document.');
-      } catch (e) {
-        Logs().v('[OIDC] Homeserver does not support OIDC delegation.', e);
+      } on http.ClientException {
+        Logs().v('[OIDC] Homeserver does not support OIDC delegation.');
       }
     }
+    return wellKnown;
   }
 
   /// Checks to see if a username is available, and valid, for the server.
