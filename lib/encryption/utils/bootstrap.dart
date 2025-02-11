@@ -469,12 +469,12 @@ class Bootstrap {
         }
       }
       if (newSsssKey != null) {
-        final storeFutures = <Future<void>>[];
-        for (final entry in secretsToStore.entries) {
-          storeFutures.add(newSsssKey!.store(entry.key, entry.value));
-        }
         Logs().v('Store new SSSS key entries...');
-        await Future.wait(storeFutures);
+        // NOTE(TheOneWithTheBraid): do not use Future.wait due to rate limits
+        // and token refresh trouble
+        for (final entry in secretsToStore.entries) {
+          await newSsssKey!.store(entry.key, entry.value);
+        }
       }
 
       final keysToSign = <SignableKey>[];
