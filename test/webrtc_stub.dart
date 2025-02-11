@@ -844,4 +844,8 @@ class MockVideoRenderer implements VideoRenderer {
     // Mock implementation for disposing VideoRenderer
     Logs().i('Mock: Disposing VideoRenderer');
   }
+
+  @override
+  // TODO: implement videoValue
+  RTCVideoValue get videoValue => RTCVideoValue.empty;
 }
