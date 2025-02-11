@@ -134,7 +134,8 @@ class Client extends MatrixApi {
   /// the cached .well-known file updated using [getWellknown]
   DiscoveryInformation? get wellKnown => _wellKnown;
 
-  /// the cached OIDC auth metadata as per MSC 2965 updated using [getWellknown]
+  /// the cached OIDC auth metadata as per MSC 2965 updated using
+  /// [getOidcDiscoveryInformation]
   Map<String, Object?>? get oidcAuthMetadata => _oidcAuthMetadata;
 
   /// the cached OIDC auth metadata as per MSC 2966
@@ -558,6 +559,7 @@ class Client extends MatrixApi {
       )> checkHomeserver(
     Uri homeserverUrl, {
     bool checkWellKnown = true,
+    bool checkOidcDiscovery = true,
     Set<String>? overrideSupportedVersions,
   }) async {
     final supportedVersions =
@@ -575,15 +577,22 @@ class Client extends MatrixApi {
           Logs().v('Found no well known information', e);
         }
       }
+      if (checkOidcDiscovery) {
+        try {
+          _oidcAuthMetadata = await getOidcDiscoveryInformation();
+        } catch (e) {
+          Logs().v('[OIDC] Error checking OIDC discovery', e);
+        }
+      }
 
       // Check if server supports at least one supported version
       final versions = await getVersions();
       if (!versions.versions
           .any((version) => supportedVersions.contains(version))) {
-        Logs().w(
-          'Server supports the versions: ${versions.toString()} but this application is only compatible with ${supportedVersions.toString()}.',
+        throw BadServerVersionsException(
+          versions.versions.toSet(),
+          supportedVersions,
         );
-        assert(false);
       }
 
       final loginTypes = await getLoginFlows() ?? [];
@@ -610,47 +619,16 @@ class Client extends MatrixApi {
   /// Note that this endpoint is not necessarily handled by the homeserver,
   /// but by another webserver, to be used for discovering the homeserver URL.
   ///
-  /// In case the homeserver supports OIDC, this will also request and store
-  /// the OIDC Auth Metadata provided by the homeserver.
-  ///
   /// The result of this call is stored in [wellKnown] for later use at runtime.
   @override
   Future<DiscoveryInformation> getWellknown() async {
-    DiscoveryInformation wellKnown;
-    try {
-      wellKnown = await super.getWellknown();
+    final wellKnown = await super.getWellknown();
 
-      // do not reset the well known here, so super call
-      super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
-      _wellKnown = wellKnown;
-      await database?.storeWellKnown(wellKnown);
-    } finally {
-      // MSC2965 no longer expects any information on whether OIDC is supported
-      // to be present in .well-known - the only way to figure out is sadly
-      // calling the /auth_metadata endpoint.
-      try {
-        try {
-          _oidcAuthMetadata = await getOidcAuthMetadata();
-        } on http.ClientException {
-          Logs().v(
-            '[OIDC] auth_metadata endpoint not supported. '
-            'Fallback on legacy .well-known discovery.',
-          );
-          // even though no longer required, a homeserver *might* still prefer
-          // the fallback on .well-known discovery as per
-          // https://openid.net/specs/openid-connect-discovery-1_0.html
-          final issuer =
-              // ignore: deprecated_member_use_from_same_package
-              _wellKnown?.authentication?.issuer ?? await oidcAuthIssuer();
-          // ignore: deprecated_member_use_from_same_package
-          _oidcAuthMetadata = await getOidcAuthWellKnown(issuer);
-        }
-        await database?.storeOidcAuthMetadata(_oidcAuthMetadata);
-        Logs().v('[OIDC] Found auth metadata document.');
-      } on http.ClientException {
-        Logs().v('[OIDC] Homeserver does not support OIDC delegation.');
-      }
-    }
+    // do not reset the well known here, so super call
+    super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
+    _wellKnown = wellKnown;
+    await database?.storeWellKnown(wellKnown);
+
     return wellKnown;
   }
 
@@ -1704,22 +1682,7 @@ class Client extends MatrixApi {
     return pushrules != null ? TryGetPushRule.tryFromJson(pushrules) : null;
   }
 
-  static const Set<String> supportedVersions = {
-    'v1.1',
-    'v1.2',
-    'v1.3',
-    'v1.4',
-    'v1.5',
-    'v1.6',
-    'v1.7',
-    'v1.8',
-    'v1.9',
-    'v1.10',
-    'v1.11',
-    'v1.12',
-    'v1.13',
-  };
-
+  static const Set<String> supportedVersions = {'v1.1', 'v1.2'};
   static const List<String> supportedDirectEncryptionAlgorithms = [
     AlgorithmTypes.olmV1Curve25519AesSha2,
   ];
@@ -4105,6 +4068,16 @@ enum SyncStatus {
   cleaningUp,
   finished,
   error,
+}
+
+class BadServerVersionsException implements Exception {
+  final Set<String> serverVersions, supportedVersions;
+
+  BadServerVersionsException(this.serverVersions, this.supportedVersions);
+
+  @override
+  String toString() =>
+      'Server supports the versions: ${serverVersions.toString()} but this application is only compatible with ${supportedVersions.toString()}.';
 }
 
 class BadServerLoginTypesException implements Exception {
