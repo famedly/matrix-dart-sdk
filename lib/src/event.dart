@@ -256,6 +256,7 @@ class Event extends MatrixEvent {
         typeKey: type,
         senderId: senderId,
         room: room,
+        originServerTs: originServerTs,
       );
 
   String get messageType => type == EventTypes.Sticker
