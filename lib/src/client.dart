@@ -3677,6 +3677,25 @@ class Client extends MatrixApi {
         thirdPartySigned: thirdPartySigned,
       );
 
+  @override
+  Future<void> setAccountData(
+    String userId,
+    String type,
+    Map<String, Object?> body, {
+    /// Waits for account data to come down from the sync loop before returns.
+    bool waitForSync = true,
+  }) async {
+    final syncFuture = onSync.stream
+        .where(
+          (syncUpdate) =>
+              syncUpdate.accountData?.any((data) => data.type == type) ?? false,
+        )
+        .first;
+    await super.setAccountData(userId, type, body);
+    if (waitForSync) await syncFuture;
+    return;
+  }
+
   /// Changes the password. You should either set oldPasswort or another authentication flow.
   @override
   Future<void> changePassword(
