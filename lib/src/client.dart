@@ -448,8 +448,13 @@ class Client extends MatrixApi {
     return null;
   }
 
-  Map<String, dynamic> get directChats =>
-      _accountData['m.direct']?.content ?? {};
+  Map<String, List<String>> get directChats =>
+      (_accountData['m.direct']?.content ?? {}).map(
+        (userId, list) => MapEntry(
+          userId,
+          (list is! List) ? [] : list.whereType<String>().toList(),
+        ),
+      );
 
   /// Returns the (first) room ID from the store which is a private chat with the user [userId].
   /// Returns null if there is none.
