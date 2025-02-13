@@ -183,6 +183,8 @@ abstract class MatrixLocalizations {
   String completedKeyVerification(String senderName);
 
   String canceledKeyVerification(String senderName);
+
+  String startedAPoll(String senderName);
 }
 
 extension HistoryVisibilityDisplayString on HistoryVisibility {
