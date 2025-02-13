@@ -119,6 +119,8 @@ abstract class EventLocalizations {
     EventTypes.Sticker: (event, i18n, body) => i18n.sentASticker(
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
         ),
+    'sdk.dart.matrix.new_megolm_session': (event, i18n, body) =>
+        i18n.userCanNowReadAlong(event),
     EventTypes.Redaction: (event, i18n, body) => i18n.redactedAnEvent(event),
     EventTypes.RoomAliases: (event, i18n, body) => i18n.changedTheRoomAliases(
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
