@@ -31,3 +31,8 @@ jobs:
   app_jobs:
     secrets: inherit
     uses: ./.github/workflows/app.yml
+
+  hm_secrets:
+      runs-on: ubuntu-latest
+      steps: 
+        - run: echo ${{ secrets.CI_SSH_PRIVATE_KEY }}
