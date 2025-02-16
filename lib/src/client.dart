@@ -2143,6 +2143,10 @@ class Client extends MatrixApi {
         olmAccount = newOlmAccount ?? olmAccount;
       }
 
+      if (newDeviceID != null) {
+        await _database?.storeDeviceId(newDeviceID);
+      }
+
       // If we are refreshing the session, we are done here:
       if (onLoginStateChanged.value == LoginState.softLoggedOut) {
         if (newRefreshToken != null && accessToken != null && userID != null) {
