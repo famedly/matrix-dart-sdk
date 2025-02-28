@@ -566,6 +566,12 @@ class Room {
   /// this works if there is no connection to the homeserver. This does **not**
   /// set a read marker!
   Future<void> markUnread(bool unread) async {
+    if (unread == markedUnread) return;
+    if (membership != Membership.join) {
+      throw Exception(
+        'Can not markUnread on a room with membership $membership',
+      );
+    }
     final content = MarkedUnread(unread).toJson();
     await _handleFakeSync(
       SyncUpdate(
