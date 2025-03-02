@@ -2613,6 +2613,10 @@ class FakeMatrixApi extends BaseClient {
           (var req) => {'event_id': '1234'},
       '/client/v3/rooms/!1234%3Aexample.com/redact/1143273582443PhrSn%3Aexample.org/1234':
           (var req) => {'event_id': '1234'},
+      '/client/v3/rooms/!696r7674%3Aexample.com/send/org.matrix.msc3381.poll.start/1234':
+          (var req) => {'event_id': '1234'},
+      '/client/v3/rooms/!696r7674%3Aexample.com/send/org.matrix.msc3381.poll.response/1234':
+          (var req) => {'event_id': '1234'},
       '/client/v3/pushrules/global/room/!localpart%3Aserver.abc': (var req) =>
           {},
       '/client/v3/pushrules/global/override/.m.rule.master/enabled':
