@@ -31,3 +31,4 @@ dart test --concurrency=$thread_count test
 
 - Adding the `-x olm` flag will skip tests which require olm
 - Using `-t olm` will run only olm specific tests, but these will probably break as they need prior setup (which is not marked as olm and hence won't be run)
+
