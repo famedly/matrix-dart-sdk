@@ -1565,9 +1565,10 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   String _calculateMac(String input, String info) {
-    if ({'hkdf-hmac-sha256', 'hkdf-hmac-sha256.v2'}
-        .contains(messageAuthenticationCode)) {
+    if (messageAuthenticationCode == 'hkdf-hmac-sha256.v2') {
       return sas!.calculate_mac_fixed_base64(input, info);
+    } else if (messageAuthenticationCode == 'hkdf-hmac-sha256') {
+      return sas!.calculate_mac(input, info);
     } else {
       throw Exception('Unknown message authentification code');
     }
