@@ -20,6 +20,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     needs: [publish]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Create release

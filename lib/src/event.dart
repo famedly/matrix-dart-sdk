@@ -78,6 +78,8 @@ class Event extends MatrixEvent {
 
   MatrixEvent? get originalSource => _originalSource;
 
+  String? get transactionId => unsigned?.tryGet<String>('transaction_id');
+
   Event({
     this.status = defaultStatus,
     required Map<String, dynamic> super.content,
@@ -88,6 +90,7 @@ class Event extends MatrixEvent {
     Map<String, dynamic>? unsigned,
     Map<String, dynamic>? prevContent,
     String? stateKey,
+    super.redacts,
     required this.room,
     MatrixEvent? originalSource,
   })  : _originalSource = originalSource,
@@ -163,20 +166,28 @@ class Event extends MatrixEvent {
   factory Event.fromMatrixEvent(
     MatrixEvent matrixEvent,
     Room room, {
-    EventStatus status = defaultStatus,
+    EventStatus? status,
   }) =>
-      Event(
-        status: status,
-        content: matrixEvent.content,
-        type: matrixEvent.type,
-        eventId: matrixEvent.eventId,
-        senderId: matrixEvent.senderId,
-        originServerTs: matrixEvent.originServerTs,
-        unsigned: matrixEvent.unsigned,
-        prevContent: matrixEvent.prevContent,
-        stateKey: matrixEvent.stateKey,
-        room: room,
-      );
+      matrixEvent is Event
+          ? matrixEvent
+          : Event(
+              status: status ??
+                  eventStatusFromInt(
+                    matrixEvent.unsigned
+                            ?.tryGet<int>(messageSendingStatusKey) ??
+                        defaultStatus.intValue,
+                  ),
+              content: matrixEvent.content,
+              type: matrixEvent.type,
+              eventId: matrixEvent.eventId,
+              senderId: matrixEvent.senderId,
+              originServerTs: matrixEvent.originServerTs,
+              unsigned: matrixEvent.unsigned,
+              prevContent: matrixEvent.prevContent,
+              stateKey: matrixEvent.stateKey,
+              redacts: matrixEvent.redacts,
+              room: room,
+            );
 
   /// Get a State event from a table row or from the event stream.
   factory Event.fromJson(
@@ -205,6 +216,7 @@ class Event extends MatrixEvent {
       ),
       unsigned: unsigned,
       room: room,
+      redacts: jsonPayload['redacts'],
       originalSource:
           originalSource.isEmpty ? null : MatrixEvent.fromJson(originalSource),
     );
@@ -229,6 +241,9 @@ class Event extends MatrixEvent {
     if (originalSource != null) {
       data['original_source'] = originalSource?.toJson();
     }
+    if (redacts != null) {
+      data['redacts'] = redacts;
+    }
     data['status'] = status.intValue;
     return data;
   }
@@ -241,6 +256,7 @@ class Event extends MatrixEvent {
         typeKey: type,
         senderId: senderId,
         room: room,
+        originServerTs: originServerTs,
       );
 
   String get messageType => type == EventTypes.Sticker
@@ -430,10 +446,9 @@ class Event extends MatrixEvent {
       final inReplyTo = credentials.inReplyTo == null
           ? null
           : await room.getEventById(credentials.inReplyTo!);
-      txid ??= unsigned?.tryGet<String>('transaction_id');
       return await room.sendFileEvent(
         file,
-        txid: txid,
+        txid: txid ?? transactionId,
         thumbnail: thumbnail,
         inReplyTo: inReplyTo,
         editEventId: credentials.editEventId,
@@ -446,7 +461,7 @@ class Event extends MatrixEvent {
     // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
     return await room.sendEvent(
       content,
-      txid: txid ?? unsigned?.tryGet<String>('transaction_id') ?? eventId,
+      txid: txid ?? transactionId ?? eventId,
     );
   }
 
@@ -958,7 +973,7 @@ class Event extends MatrixEvent {
     if (eventId == search) {
       return true;
     }
-    return unsigned?['transaction_id'] == search;
+    return transactionId == search;
   }
 
   /// Get the relationship type of an event. `null` if there is none

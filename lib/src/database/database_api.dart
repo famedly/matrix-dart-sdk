@@ -26,7 +26,7 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 
 abstract class DatabaseApi {
-  int get maxFileSize => 1 * 1024 * 1024;
+  int get maxFileSize => 1 * 1000 * 1000;
 
   bool get supportsFileStoring => false;
 
@@ -80,7 +80,12 @@ abstract class DatabaseApi {
 
   /// Stores an EventUpdate object in the database. Must be called inside of
   /// [transaction].
-  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client);
+  Future<void> storeEventUpdate(
+    String roomId,
+    StrippedStateEvent event,
+    EventUpdateType type,
+    Client client,
+  );
 
   Future<Event?> getEventById(String eventId, Room room);
 
@@ -127,7 +132,9 @@ abstract class DatabaseApi {
     String syncFilterId,
   );
 
-  Future storeAccountData(String type, String content);
+  Future storeAccountData(String type, Map<String, Object?> content);
+
+  Future storeRoomAccountData(String roomId, BasicEvent event);
 
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client);
 

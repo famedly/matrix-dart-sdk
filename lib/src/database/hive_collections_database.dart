@@ -570,6 +570,20 @@ class HiveCollectionsDatabase extends DatabaseApi {
     if (roomData == null) return null;
     final room = Room.fromJson(copyMap(roomData), client);
 
+    // Get the room account data
+    final allKeys = await _roomAccountDataBox.getAllKeys();
+    final roomAccountDataKeys = allKeys
+        .where((key) => TupleKey.fromString(key).parts.first == roomId)
+        .toList();
+    final roomAccountDataList =
+        await _roomAccountDataBox.getAll(roomAccountDataKeys);
+
+    for (final data in roomAccountDataList) {
+      if (data == null) continue;
+      final event = BasicEvent.fromJson(copyMap(data));
+      room.roomAccountData[event.type] = event;
+    }
+
     // Get important states:
     if (loadImportantStates) {
       final dbKeys = client.importantStateEvents
@@ -682,7 +696,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
         final roomAccountDataRaws = await _roomAccountDataBox.getAllValues();
         for (final entry in roomAccountDataRaws.entries) {
           final keys = TupleKey.fromString(entry.key);
-          final basicRoomEvent = BasicRoomEvent.fromJson(
+          final basicRoomEvent = BasicEvent.fromJson(
             copyMap(entry.value),
           );
           final roomId = keys.parts.first;
@@ -1073,16 +1087,35 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeAccountData(String type, String content) async {
-    await _accountDataBox.put(type, copyMap(jsonDecode(content)));
+  Future<void> storeAccountData(
+    String type,
+    Map<String, Object?> content,
+  ) async {
+    await _accountDataBox.put(type, copyMap(content));
     return;
   }
 
   @override
-  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
-    // Ephemerals should not be stored
-    if (eventUpdate.type == EventUpdateType.ephemeral) return;
+  Future<void> storeRoomAccountData(String roomId, BasicEvent event) async {
+    await _roomAccountDataBox.put(
+      TupleKey(roomId, event.type).toString(),
+      copyMap(event.toJson()),
+    );
+    return;
+  }
 
+  @override
+  Future<void> storeEventUpdate(
+    String roomId,
+    StrippedStateEvent event,
+    EventUpdateType type,
+    Client client,
+  ) async {
+    final eventUpdate = EventUpdate(
+      roomID: roomId,
+      content: event.toJson(),
+      type: type,
+    );
     final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
         Room(id: eventUpdate.roomID, client: client);
 
@@ -1229,17 +1262,6 @@ class HiveCollectionsDatabase extends DatabaseApi {
         stateMap[stateKey] = eventUpdate.content;
         await _roomStateBox.put(key, stateMap);
       }
-    }
-
-    // Store a room account data event
-    if (eventUpdate.type == EventUpdateType.accountData) {
-      await _roomAccountDataBox.put(
-        TupleKey(
-          eventUpdate.roomID,
-          eventUpdate.content['type'],
-        ).toString(),
-        eventUpdate.content,
-      );
     }
   }
 

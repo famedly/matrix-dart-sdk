@@ -115,7 +115,9 @@ class ReceiptEventContent {
 
           if (userId is! String ||
               !userId.isValidMatrixId ||
-              receiptContent is! Map) continue;
+              receiptContent is! Map) {
+            continue;
+          }
 
           final ts = receiptContent['ts'];
           final threadId = receiptContent['thread_id'];

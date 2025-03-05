@@ -163,7 +163,17 @@ abstract class SignableKey extends MatrixSignableKey {
 
     if (identifier == null || ed25519Key == null) return false;
 
-    return client.shareKeysWithUnverifiedDevices || verified;
+    switch (client.shareKeysWith) {
+      case ShareKeysWith.all:
+        return true;
+      case ShareKeysWith.crossVerifiedIfEnabled:
+        if (client.userDeviceKeys[userId]?.masterKey == null) return true;
+        return hasValidSignatureChain(verifiedByTheirMasterKey: true);
+      case ShareKeysWith.crossVerified:
+        return hasValidSignatureChain(verifiedByTheirMasterKey: true);
+      case ShareKeysWith.directlyVerifiedOnly:
+        return directVerified;
+    }
   }
 
   void setDirectVerified(bool isVerified) {

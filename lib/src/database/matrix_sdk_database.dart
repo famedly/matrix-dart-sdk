@@ -52,7 +52,7 @@ import 'package:matrix/src/database/database_file_storage_stub.dart'
 /// Learn more at:
 /// https://github.com/famedly/matrix-dart-sdk/issues/1642#issuecomment-1865827227
 class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
-  static const int version = 9;
+  static const int version = 10;
   final String name;
 
   late BoxCollection _collection;
@@ -61,12 +61,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   late Box<Map> _roomsBox;
   late Box<Map> _toDeviceQueueBox;
 
-  /// Key is a tuple as TupleKey(roomId, type) where stateKey can be
+  /// Key is a tuple as TupleKey(roomId, type, stateKey) where stateKey can be
   /// an empty string. Must contain only states of type
   /// client.importantRoomStates.
   late Box<Map> _preloadRoomStateBox;
 
-  /// Key is a tuple as TupleKey(roomId, type) where stateKey can be
+  /// Key is a tuple as TupleKey(roomId, type, stateKey) where stateKey can be
   /// an empty string. Must NOT contain states of a type from
   /// client.importantRoomStates.
   late Box<Map> _nonPreloadRoomStateBox;
@@ -338,7 +338,32 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> clear() => _collection.clear();
+  Future<void> clear() async {
+    _clientBox.clearQuickAccessCache();
+    _accountDataBox.clearQuickAccessCache();
+    _roomsBox.clearQuickAccessCache();
+    _preloadRoomStateBox.clearQuickAccessCache();
+    _nonPreloadRoomStateBox.clearQuickAccessCache();
+    _roomMembersBox.clearQuickAccessCache();
+    _toDeviceQueueBox.clearQuickAccessCache();
+    _roomAccountDataBox.clearQuickAccessCache();
+    _inboundGroupSessionsBox.clearQuickAccessCache();
+    _inboundGroupSessionsUploadQueueBox.clearQuickAccessCache();
+    _outboundGroupSessionsBox.clearQuickAccessCache();
+    _olmSessionsBox.clearQuickAccessCache();
+    _userDeviceKeysBox.clearQuickAccessCache();
+    _userDeviceKeysOutdatedBox.clearQuickAccessCache();
+    _userCrossSigningKeysBox.clearQuickAccessCache();
+    _ssssCacheBox.clearQuickAccessCache();
+    _presencesBox.clearQuickAccessCache();
+    _timelineFragmentsBox.clearQuickAccessCache();
+    _eventsBox.clearQuickAccessCache();
+    _seenDeviceIdsBox.clearQuickAccessCache();
+    _seenDeviceKeysBox.clearQuickAccessCache();
+    _userProfilesBox.clearQuickAccessCache();
+
+    await _collection.clear();
+  }
 
   @override
   Future<void> clearCache() => transaction(() async {
@@ -591,15 +616,31 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     if (roomData == null) return null;
     final room = Room.fromJson(copyMap(roomData), client);
 
+    // Get the room account data
+    final allKeys = await _roomAccountDataBox.getAllKeys();
+    final roomAccountDataKeys = allKeys
+        .where((key) => TupleKey.fromString(key).parts.first == roomId)
+        .toList();
+    final roomAccountDataList =
+        await _roomAccountDataBox.getAll(roomAccountDataKeys);
+
+    for (final data in roomAccountDataList) {
+      if (data == null) continue;
+      final event = BasicEvent.fromJson(copyMap(data));
+      room.roomAccountData[event.type] = event;
+    }
+
     // Get important states:
     if (loadImportantStates) {
-      final dbKeys = client.importantStateEvents
-          .map((state) => TupleKey(roomId, state).toString())
+      final preloadRoomStateKeys = await _preloadRoomStateBox.getAllKeys();
+      final keysForRoom = preloadRoomStateKeys
+          .where((key) => TupleKey.fromString(key).parts.first == roomId)
           .toList();
-      final rawStates = await _preloadRoomStateBox.getAll(dbKeys);
-      for (final rawState in rawStates) {
-        if (rawState == null || rawState[''] == null) continue;
-        room.setState(Event.fromJson(copyMap(rawState['']), room));
+      final rawStates = await _preloadRoomStateBox.getAll(keysForRoom);
+
+      for (final raw in rawStates) {
+        if (raw == null) continue;
+        room.setState(Event.fromJson(copyMap(raw), room));
       }
     }
 
@@ -630,24 +671,19 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
             Logs().w('Found event in store for unknown room', entry.value);
             continue;
           }
-          final states = entry.value;
-          final stateEvents = states.values
-              .map(
-                (raw) => room.membership == Membership.invite
-                    ? StrippedStateEvent.fromJson(copyMap(raw))
-                    : Event.fromJson(copyMap(raw), room),
-              )
-              .toList();
-          for (final state in stateEvents) {
-            room.setState(state);
-          }
+          final raw = entry.value;
+          room.setState(
+            room.membership == Membership.invite
+                ? StrippedStateEvent.fromJson(copyMap(raw))
+                : Event.fromJson(copyMap(raw), room),
+          );
         }
 
         // Get the room account data
         final roomAccountDataRaws = await _roomAccountDataBox.getAllValues();
         for (final entry in roomAccountDataRaws.entries) {
           final keys = TupleKey.fromString(entry.key);
-          final basicRoomEvent = BasicRoomEvent.fromJson(
+          final basicRoomEvent = BasicEvent.fromJson(
             copyMap(entry.value),
           );
           final roomId = keys.parts.first;
@@ -697,11 +733,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
     final unimportantEvents = <Event>[];
     for (final key in keys) {
-      final states = await _nonPreloadRoomStateBox.get(key);
-      if (states == null) continue;
-      unimportantEvents.addAll(
-        states.values.map((raw) => Event.fromJson(copyMap(raw), room)),
-      );
+      final raw = await _nonPreloadRoomStateBox.get(key);
+      if (raw == null) continue;
+      unimportantEvents.add(Event.fromJson(copyMap(raw), room));
     }
 
     return unimportantEvents.where((event) => event.stateKey != null).toList();
@@ -1041,53 +1075,55 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeAccountData(String type, String content) async {
-    await _accountDataBox.put(type, jsonDecode(content));
+  Future<void> storeAccountData(
+    String type,
+    Map<String, Object?> content,
+  ) async {
+    await _accountDataBox.put(type, content);
     return;
   }
 
   @override
-  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
-    // Ephemerals should not be stored
-    if (eventUpdate.type == EventUpdateType.ephemeral) return;
-    final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
-        Room(id: eventUpdate.roomID, client: client);
+  Future<void> storeRoomAccountData(String roomId, BasicEvent event) async {
+    await _roomAccountDataBox.put(
+      TupleKey(roomId, event.type).toString(),
+      event.toJson(),
+    );
+    return;
+  }
+
+  @override
+  Future<void> storeEventUpdate(
+    String roomId,
+    StrippedStateEvent event,
+    EventUpdateType type,
+    Client client,
+  ) async {
+    final tmpRoom =
+        client.getRoomById(roomId) ?? Room(id: roomId, client: client);
 
     // In case of this is a redaction event
-    if (eventUpdate.content['type'] == EventTypes.Redaction) {
-      final eventId = eventUpdate.content.tryGet<String>('redacts');
-      final event =
+    if (event.type == EventTypes.Redaction && event is MatrixEvent) {
+      final redactionEvent = Event.fromMatrixEvent(event, tmpRoom);
+      final eventId = redactionEvent.redacts;
+      final redactedEvent =
           eventId != null ? await getEventById(eventId, tmpRoom) : null;
-      if (event != null) {
-        event.setRedactionEvent(Event.fromJson(eventUpdate.content, tmpRoom));
+      if (redactedEvent != null) {
+        redactedEvent.setRedactionEvent(redactionEvent);
         await _eventsBox.put(
-          TupleKey(eventUpdate.roomID, event.eventId).toString(),
-          event.toJson(),
+          TupleKey(roomId, redactedEvent.eventId).toString(),
+          redactedEvent.toJson(),
         );
-
-        if (tmpRoom.lastEvent?.eventId == event.eventId) {
-          if (client.importantStateEvents.contains(event.type)) {
-            await _preloadRoomStateBox.put(
-              TupleKey(eventUpdate.roomID, event.type).toString(),
-              {'': event.toJson()},
-            );
-          } else {
-            await _nonPreloadRoomStateBox.put(
-              TupleKey(eventUpdate.roomID, event.type).toString(),
-              {'': event.toJson()},
-            );
-          }
-        }
       }
     }
 
     // Store a common message event
-    if ({EventUpdateType.timeline, EventUpdateType.history}
-        .contains(eventUpdate.type)) {
-      final eventId = eventUpdate.content['event_id'];
+    if ({EventUpdateType.timeline, EventUpdateType.history}.contains(type) &&
+        event is MatrixEvent) {
+      final timelineEvent = Event.fromMatrixEvent(event, tmpRoom);
       // Is this ID already in the store?
-      final prevEvent = await _eventsBox
-          .get(TupleKey(eventUpdate.roomID, eventId).toString());
+      final prevEvent =
+          await _eventsBox.get(TupleKey(roomId, event.eventId).toString());
       final prevStatus = prevEvent == null
           ? null
           : () {
@@ -1100,13 +1136,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
             }();
 
       // calculate the status
-      final newStatus = eventStatusFromInt(
-        eventUpdate.content.tryGet<int>('status') ??
-            eventUpdate.content
-                .tryGetMap<String, dynamic>('unsigned')
-                ?.tryGet<int>(messageSendingStatusKey) ??
-            EventStatus.synced.intValue,
-      );
+      final newStatus = timelineEvent.status;
 
       // Is this the response to a sending event which is already synced? Then
       // there is nothing to do here.
@@ -1121,29 +1151,24 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
               newStatus,
             );
 
-      // Add the status and the sort order to the content so it get stored
-      eventUpdate.content['unsigned'] ??= <String, dynamic>{};
-      eventUpdate.content['unsigned'][messageSendingStatusKey] =
-          eventUpdate.content['status'] = status.intValue;
+      timelineEvent.status = status;
 
+      final eventId = timelineEvent.eventId;
       // In case this event has sent from this account we have a transaction ID
-      final transactionId = eventUpdate.content
-          .tryGetMap<String, dynamic>('unsigned')
-          ?.tryGet<String>('transaction_id');
+      final transactionId = timelineEvent.transactionId;
       await _eventsBox.put(
-        TupleKey(eventUpdate.roomID, eventId).toString(),
-        eventUpdate.content,
+        TupleKey(roomId, eventId).toString(),
+        timelineEvent.toJson(),
       );
 
       // Update timeline fragments
-      final key = TupleKey(eventUpdate.roomID, status.isSent ? '' : 'SENDING')
-          .toString();
+      final key = TupleKey(roomId, status.isSent ? '' : 'SENDING').toString();
 
       final eventIds =
           List<String>.from(await _timelineFragmentsBox.get(key) ?? []);
 
       if (!eventIds.contains(eventId)) {
-        if (eventUpdate.type == EventUpdateType.history) {
+        if (type == EventUpdateType.history) {
           eventIds.add(eventId);
         } else {
           eventIds.insert(0, eventId);
@@ -1152,7 +1177,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       } else if (status.isSynced &&
           prevStatus != null &&
           prevStatus.isSent &&
-          eventUpdate.type != EventUpdateType.history) {
+          type != EventUpdateType.history) {
         // Status changes from 1 -> 2? Make sure event is correctly sorted.
         eventIds.remove(eventId);
         eventIds.insert(0, eventId);
@@ -1160,7 +1185,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
       // If event comes from server timeline, remove sending events with this ID
       if (status.isSent) {
-        final key = TupleKey(eventUpdate.roomID, 'SENDING').toString();
+        final key = TupleKey(roomId, 'SENDING').toString();
         final eventIds =
             List<String>.from(await _timelineFragmentsBox.get(key) ?? []);
         final i = eventIds.indexWhere((id) => id == eventId);
@@ -1171,50 +1196,39 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
       // Is there a transaction id? Then delete the event with this id.
       if (!status.isError && !status.isSending && transactionId != null) {
-        await removeEvent(transactionId, eventUpdate.roomID);
+        await removeEvent(transactionId, roomId);
       }
     }
 
-    final stateKey = eventUpdate.content['state_key'];
+    final stateKey = event.stateKey;
     // Store a common state event
     if (stateKey != null &&
         // Don't store events as state updates when paginating backwards.
-        (eventUpdate.type == EventUpdateType.timeline ||
-            eventUpdate.type == EventUpdateType.state ||
-            eventUpdate.type == EventUpdateType.inviteState)) {
-      if (eventUpdate.content['type'] == EventTypes.RoomMember) {
+        {
+          EventUpdateType.timeline,
+          EventUpdateType.state,
+          EventUpdateType.inviteState,
+        }.contains(type)) {
+      if (event.type == EventTypes.RoomMember) {
         await _roomMembersBox.put(
           TupleKey(
-            eventUpdate.roomID,
-            eventUpdate.content['state_key'],
+            roomId,
+            stateKey,
           ).toString(),
-          eventUpdate.content,
+          event.toJson(),
         );
       } else {
-        final type = eventUpdate.content['type'] as String;
-        final roomStateBox = client.importantStateEvents.contains(type)
+        final roomStateBox = client.importantStateEvents.contains(event.type)
             ? _preloadRoomStateBox
             : _nonPreloadRoomStateBox;
         final key = TupleKey(
-          eventUpdate.roomID,
-          type,
+          roomId,
+          event.type,
+          stateKey,
         ).toString();
-        final stateMap = copyMap(await roomStateBox.get(key) ?? {});
 
-        stateMap[stateKey] = eventUpdate.content;
-        await roomStateBox.put(key, stateMap);
+        await roomStateBox.put(key, event.toJson());
       }
-    }
-
-    // Store a room account data event
-    if (eventUpdate.type == EventUpdateType.accountData) {
-      await _roomAccountDataBox.put(
-        TupleKey(
-          eventUpdate.roomID,
-          eventUpdate.content['type'],
-        ).toString(),
-        eventUpdate.content,
-      );
     }
   }
 

@@ -39,7 +39,6 @@ export 'matrix_api_lite/model/auth/authentication_types.dart';
 export 'matrix_api_lite/model/auth/authentication_user_identifier.dart';
 export 'matrix_api_lite/model/basic_event.dart';
 export 'matrix_api_lite/model/basic_event_with_sender.dart';
-export 'matrix_api_lite/model/basic_room_event.dart';
 export 'matrix_api_lite/model/event_types.dart';
 export 'matrix_api_lite/model/events/forwarded_room_key_content.dart';
 export 'matrix_api_lite/model/events/image_pack_content.dart';

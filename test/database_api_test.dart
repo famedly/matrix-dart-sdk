@@ -38,7 +38,6 @@ String createLargeString(String character, int desiredSize) {
 void main() {
   final databaseBuilders = {
     'Matrix SDK Database': getMatrixSdkDatabase,
-    'Hive Database': getHiveDatabase,
     'Hive Collections Database': getHiveCollectionsDatabase,
   };
 
@@ -192,11 +191,11 @@ void main() {
         await database.getAccountData();
       });
       test('storeAccountData', () async {
-        await database.storeAccountData('m.test', '{"foo":"bar"}');
+        await database.storeAccountData('m.test', {'foo': 'bar'});
         final events = await database.getAccountData();
         expect(events.values.single.type, 'm.test');
 
-        await database.storeAccountData('m.abc+de', '{"foo":"bar"}');
+        await database.storeAccountData('m.abc+de', {'foo': 'bar'});
         final events2 = await database.getAccountData();
         expect(
           events2.values.any((element) => element.type == 'm.abc+de'),
@@ -204,11 +203,11 @@ void main() {
         );
       });
       test('Database can write and read 5MB data', () async {
-        final hugeDataObject = {'foo': createLargeString('A', 5 * 1024 * 1024)};
+        final hugeDataObject = {'foo': createLargeString('A', 5 * 1000 * 1000)};
 
         await database.storeAccountData(
           'm.huge_data_test',
-          jsonEncode(hugeDataObject),
+          hugeDataObject,
         );
 
         final events = await database.getAccountData();
@@ -220,10 +219,9 @@ void main() {
       });
       test('storeEventUpdate', () async {
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: '!testroom:example.com',
-            type: EventUpdateType.timeline,
-            content: {
+          '!testroom:example.com',
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.Message,
               'content': {
                 'body': '* edit 3',
@@ -237,10 +235,12 @@ void main() {
                   'rel_type': RelationshipTypes.edit,
                 },
               },
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
               'event_id': '\$event:example.com',
               'sender': '@bob:example.org',
             },
           ),
+          EventUpdateType.timeline,
           Client('testclient'),
         );
       });
@@ -255,11 +255,18 @@ void main() {
           client,
         );
 
+        await database.storeRoomAccountData(
+          roomid,
+          BasicEvent(
+            content: {'foo': 'bar'},
+            type: 'm.test',
+          ),
+        );
+
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.timeline,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'start',
@@ -267,8 +274,10 @@ void main() {
               'event_id': '\$eventstart:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.timeline,
           client,
         );
 
@@ -278,11 +287,12 @@ void main() {
 
         expect(room?.name, 'start');
 
+        expect(room?.roomAccountData['m.test']?.content, {'foo': 'bar'});
+
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.timeline,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update',
@@ -290,8 +300,10 @@ void main() {
               'event_id': '\$eventupdate:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.timeline,
           client,
         );
 
@@ -300,10 +312,9 @@ void main() {
         expect(room?.name, 'update');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.state,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update2',
@@ -311,8 +322,10 @@ void main() {
               'event_id': '\$eventupdate2:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.state,
           client,
         );
 
@@ -321,10 +334,9 @@ void main() {
         expect(room?.name, 'update2');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.inviteState,
-            content: {
+          roomid,
+          StrippedStateEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update3',
@@ -334,6 +346,7 @@ void main() {
               'state_key': '',
             },
           ),
+          EventUpdateType.inviteState,
           client,
         );
 
@@ -342,10 +355,9 @@ void main() {
         expect(room?.name, 'update3');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.history,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'notupdate',
@@ -353,8 +365,10 @@ void main() {
               'event_id': '\$eventnotupdate:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.history,
           client,
         );
 
@@ -660,9 +674,7 @@ void main() {
             ),
           );
           // ignore: deprecated_member_use_from_same_package
-          if (database is! HiveCollectionsDatabase &&
-              // ignore: deprecated_member_use_from_same_package
-              database is! FamedlySdkHiveDatabase) {
+          if (database is! HiveCollectionsDatabase) {
             final profile2 =
                 await database.getUserProfile('@alice:example.com');
             expect(profile2?.displayname, 'Alice M');
@@ -694,7 +706,7 @@ void main() {
         final database = await getMatrixSdkDatabase(null);
         await database.storeAccountData(
           'm.test.data',
-          jsonEncode({'foo': 'bar'}),
+          {'foo': 'bar'},
         );
         await database.delete();
 

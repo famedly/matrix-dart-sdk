@@ -67,10 +67,10 @@ class Room {
   Map<String, Map<String, StrippedStateEvent>> states = {};
 
   /// Key-Value store for ephemerals.
-  Map<String, BasicRoomEvent> ephemerals = {};
+  Map<String, BasicEvent> ephemerals = {};
 
   /// Key-Value store for private account data only visible for this user.
-  Map<String, BasicRoomEvent> roomAccountData = {};
+  Map<String, BasicEvent> roomAccountData = {};
 
   final _sendingQueue = <Completer>[];
 
@@ -249,8 +249,10 @@ class Room {
     }
 
     final directChatMatrixID = this.directChatMatrixID;
-    final heroes = summary.mHeroes ??
-        (directChatMatrixID == null ? [] : [directChatMatrixID]);
+    final heroes = summary.mHeroes ?? [];
+    if (directChatMatrixID != null && heroes.isEmpty) {
+      heroes.add(directChatMatrixID);
+    }
     if (heroes.isNotEmpty) {
       final result = heroes
           .where(
@@ -372,7 +374,7 @@ class Room {
 
   Event? lastEvent;
 
-  void setEphemeral(BasicRoomEvent ephemeral) {
+  void setEphemeral(BasicEvent ephemeral) {
     ephemerals[ephemeral.type] = ephemeral;
     if (ephemeral.type == 'm.typing') {
       _clearTypingIndicatorTimer?.cancel();
@@ -403,10 +405,10 @@ class Room {
     this.highlightCount = 0,
     this.prev_batch,
     required this.client,
-    Map<String, BasicRoomEvent>? roomAccountData,
+    Map<String, BasicEvent>? roomAccountData,
     RoomSummary? summary,
     this.lastEvent,
-  })  : roomAccountData = roomAccountData ?? <String, BasicRoomEvent>{},
+  })  : roomAccountData = roomAccountData ?? <String, BasicEvent>{},
         summary = summary ??
             RoomSummary.fromJson({
               'm.joined_member_count': 0,
@@ -437,8 +439,9 @@ class Room {
   @Deprecated('Use `getLocalizedDisplayname()` instead')
   String get displayname => getLocalizedDisplayname();
 
-  /// When the last message received.
-  DateTime get timeCreated => lastEvent?.originServerTs ?? DateTime.now();
+  /// When was the last event received.
+  DateTime get latestEventReceivedTime =>
+      lastEvent?.originServerTs ?? DateTime.now();
 
   /// Call the Matrix API to change the name of this room. Returns the event ID of the
   /// new m.room.name event.
@@ -518,7 +521,9 @@ class Room {
     // There is no known event or the last event is only a state fallback event,
     // we assume there is no new messages.
     if (lastEvent == null ||
-        !client.roomPreviewLastEvents.contains(lastEvent.type)) return false;
+        !client.roomPreviewLastEvents.contains(lastEvent.type)) {
+      return false;
+    }
 
     // Read marker is on the last event so no new messages.
     if (lastEvent.receipts
@@ -561,6 +566,12 @@ class Room {
   /// this works if there is no connection to the homeserver. This does **not**
   /// set a read marker!
   Future<void> markUnread(bool unread) async {
+    if (unread == markedUnread) return;
+    if (membership != Membership.join) {
+      throw Exception(
+        'Can not markUnread on a room with membership $membership',
+      );
+    }
     final content = MarkedUnread(unread).toJson();
     await _handleFakeSync(
       SyncUpdate(
@@ -569,9 +580,8 @@ class Room {
           join: {
             id: JoinedRoomUpdate(
               accountData: [
-                BasicRoomEvent(
+                BasicEvent(
                   content: content,
-                  roomId: id,
                   type: EventType.markedUnread,
                 ),
               ],
@@ -621,6 +631,7 @@ class Room {
     String msgtype = MessageTypes.Text,
     String? threadRootEventId,
     String? threadLastEventId,
+    StringBuffer? commandStdout,
   }) {
     if (parseCommands) {
       return client.parseAndRunCommand(
@@ -631,6 +642,7 @@ class Room {
         txid: txid,
         threadRootEventId: threadRootEventId,
         threadLastEventId: threadLastEventId,
+        stdout: commandStdout,
       );
     }
     final event = <String, dynamic>{
@@ -642,6 +654,7 @@ class Room {
         event['body'],
         getEmotePacks: () => getImagePacksFlat(ImagePackUsage.emoticon),
         getMention: getMention,
+        convertLinebreaks: client.convertLinebreaksInFormatting,
       );
       // if the decoded html is the same as the body, there is no need in sending a formatted message
       if (HtmlUnescape().convert(html.replaceAll(RegExp(r'<br />\n?'), '\n')) !=
@@ -1128,7 +1141,10 @@ class Room {
           await _handleFakeSync(syncUpdate);
           completer.complete();
           _sendingQueue.remove(completer);
-          if (e is EventTooLarge) rethrow;
+          if (e is EventTooLarge ||
+              (e is MatrixException && e.error == MatrixError.M_FORBIDDEN)) {
+            rethrow;
+          }
           return null;
         } else {
           Logs()
@@ -1150,21 +1166,29 @@ class Room {
   /// Call the Matrix API to join this room if the user is not already a member.
   /// If this room is intended to be a direct chat, the direct chat flag will
   /// automatically be set.
-  Future<void> join({bool leaveIfNotFound = true}) async {
+  Future<void> join({
+    /// In case of the room is not found on the server, the client leaves the
+    /// room and rethrows the exception.
+    bool leaveIfNotFound = true,
+  }) async {
+    final dmId = directChatMatrixID;
     try {
       // If this is a DM, mark it as a DM first, because otherwise the current member
       // event might be the join event already and there is also a race condition there for SDK users.
-      final dmId = directChatMatrixID;
-      if (dmId != null) {
-        await addToDirectChat(dmId);
-      }
+      if (dmId != null) await addToDirectChat(dmId);
 
       // now join
       await client.joinRoomById(id);
     } on MatrixException catch (exception) {
+      if (dmId != null) await removeFromDirectChat();
       if (leaveIfNotFound &&
-          [MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
-              .contains(exception.error)) {
+          membership == Membership.invite &&
+          // Right now Synapse responses with `M_UNKNOWN` when the room can not
+          // be found. This is the case for example when User A invites User B
+          // to a direct chat and then User A leaves the chat before User B
+          // joined.
+          // See: https://github.com/element-hq/synapse/issues/1533
+          exception.error == MatrixError.M_UNKNOWN) {
         await leave();
       }
       rethrow;
@@ -1177,9 +1201,13 @@ class Room {
   Future<void> leave() async {
     try {
       await client.leaveRoom(id);
-    } on MatrixException catch (exception) {
-      if ([MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
-          .contains(exception.error)) {
+    } on MatrixException catch (e, s) {
+      if ([MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN].contains(e.error)) {
+        Logs().w(
+          'Unable to leave room. Deleting manually from database...',
+          e,
+          s,
+        );
         await _handleFakeSync(
           SyncUpdate(
             nextBatch: '',
@@ -1261,18 +1289,26 @@ class Room {
         reason: reason,
       );
 
-  /// Request more previous events from the server. [historyCount] defines how much events should
+  /// Request more previous events from the server. [historyCount] defines how many events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
-  /// the historical events will be published in the onEvent stream.
+  /// the historical events will be published in the onEvent stream. [filter] allows you to specify a
+  /// [StateFilter] object to filter the events, which can include various criteria such as event types
+  /// (e.g., [EventTypes.Message]) and other state-related filters. The [StateFilter] object will have
+  /// [lazyLoadMembers] set to true by default, but this can be overridden.
   /// Returns the actual count of received timeline events.
   Future<int> requestHistory({
     int historyCount = defaultHistoryCount,
     void Function()? onHistoryReceived,
     direction = Direction.b,
+    StateFilter? filter,
   }) async {
     final prev_batch = this.prev_batch;
 
     final storeInDatabase = !isArchived;
+
+    // Ensure stateFilter is not null and set lazyLoadMembers to true if not already set
+    filter ??= StateFilter(lazyLoadMembers: true);
+    filter.lazyLoadMembers ??= true;
 
     if (prev_batch == null) {
       throw 'Tried to request history without a prev_batch token';
@@ -1282,7 +1318,7 @@ class Room {
       direction,
       from: prev_batch,
       limit: historyCount,
-      filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
+      filter: jsonEncode(filter.toJson()),
     );
 
     if (onHistoryReceived != null) onHistoryReceived();
@@ -1435,10 +1471,7 @@ class Room {
       for (var i = 0; i < events.length; i++) {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].content['can_request_session'] == true) {
-          events[i] = await client.encryption!.decryptRoomEvent(
-            id,
-            events[i],
-          );
+          events[i] = await client.encryption!.decryptRoomEvent(events[i]);
         }
       }
     }
@@ -1504,10 +1537,7 @@ class Room {
         // Try to decrypt encrypted events but don't update the database.
         if (encrypted && client.encryptionEnabled) {
           if (events[i].type == EventTypes.Encrypted) {
-            events[i] = await client.encryption!.decryptRoomEvent(
-              id,
-              events[i],
-            );
+            events[i] = await client.encryption!.decryptRoomEvent(events[i]);
           }
         }
       }
@@ -1551,7 +1581,6 @@ class Room {
             // for the fragmented timeline, we don't cache the decrypted
             //message in the database
             chunk.events[i] = await client.encryption!.decryptRoomEvent(
-              id,
               chunk.events[i],
             );
           } else if (client.database != null) {
@@ -1560,7 +1589,6 @@ class Room {
               for (var i = 0; i < chunk.events.length; i++) {
                 if (chunk.events[i].content['can_request_session'] == true) {
                   chunk.events[i] = await client.encryption!.decryptRoomEvent(
-                    id,
                     chunk.events[i],
                     store: !isArchived,
                     updateType: EventUpdateType.history,
@@ -1656,11 +1684,9 @@ class Room {
       for (final user in users) {
         setState(user); // at *least* cache this in-memory
         await client.database?.storeEventUpdate(
-          EventUpdate(
-            roomID: id,
-            type: EventUpdateType.state,
-            content: user.toJson(),
-          ),
+          id,
+          user,
+          EventUpdateType.state,
           client,
         );
       }
@@ -1737,11 +1763,9 @@ class Room {
       // Store user in database:
       await client.database?.transaction(() async {
         await client.database?.storeEventUpdate(
-          EventUpdate(
-            content: foundUser.toJson(),
-            roomID: id,
-            type: EventUpdateType.state,
-          ),
+          id,
+          foundUser,
+          EventUpdateType.state,
           client,
         );
       });
@@ -1888,10 +1912,7 @@ class Room {
       final event = Event.fromMatrixEvent(matrixEvent, this);
       if (event.type == EventTypes.Encrypted && client.encryptionEnabled) {
         // attempt decryption
-        return await client.encryption?.decryptRoomEvent(
-          id,
-          event,
-        );
+        return await client.encryption?.decryptRoomEvent(event);
       }
       return event;
     } on MatrixException catch (err) {
@@ -2174,7 +2195,11 @@ class Room {
           id,
           [],
           conditions: [
-            PushCondition(kind: 'event_match', key: 'room_id', pattern: id),
+            PushCondition(
+              kind: PushRuleConditions.eventMatch.name,
+              key: 'room_id',
+              pattern: id,
+            ),
           ],
         );
     }

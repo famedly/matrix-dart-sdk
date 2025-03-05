@@ -154,21 +154,20 @@ class Encryption {
     }
   }
 
-  Future<void> handleEventUpdate(EventUpdate update) async {
-    if (update.type == EventUpdateType.ephemeral ||
-        update.type == EventUpdateType.history) {
+  Future<void> handleEventUpdate(Event event, EventUpdateType type) async {
+    if (type == EventUpdateType.history) {
       return;
     }
-    if (update.content['type'].startsWith('m.key.verification.') ||
-        (update.content['type'] == EventTypes.Message &&
-            (update.content['content']['msgtype'] is String) &&
-            update.content['content']['msgtype']
-                .startsWith('m.key.verification.'))) {
+    if (event.type.startsWith('m.key.verification.') ||
+        (event.type == EventTypes.Message &&
+            event.content
+                    .tryGet<String>('msgtype')
+                    ?.startsWith('m.key.verification.') ==
+                true)) {
       // "just" key verification, no need to do this in sync
-      runInRoot(() => keyVerificationManager.handleEventUpdate(update));
+      runInRoot(() => keyVerificationManager.handleEventUpdate(event));
     }
-    if (update.content['sender'] == client.userID &&
-        update.content['unsigned']?['transaction_id'] == null) {
+    if (event.senderId == client.userID && event.status.isSynced) {
       // maybe we need to re-try SSSS secrets
       runInRoot(() => ssss.periodicallyRequestMissingCache());
     }
@@ -193,7 +192,7 @@ class Encryption {
     }
   }
 
-  Event decryptRoomEventSync(String roomId, Event event) {
+  Event decryptRoomEventSync(Event event) {
     if (event.type != EventTypes.Encrypted || event.redacted) {
       return event;
     }
@@ -214,7 +213,7 @@ class Encryption {
       }
 
       final inboundGroupSession =
-          keyManager.getInboundGroupSession(roomId, sessionId);
+          keyManager.getInboundGroupSession(event.room.id, sessionId);
       if (!(inboundGroupSession?.isValid ?? false)) {
         canRequestSession = true;
         throw DecryptException(DecryptException.unknownSession);
@@ -249,7 +248,7 @@ class Encryption {
             // ignore: discarded_futures
             ?.updateInboundGroupSessionIndexes(
               json.encode(inboundGroupSession.indexes),
-              roomId,
+              event.room.id,
               sessionId,
             )
             // ignore: discarded_futures
@@ -260,14 +259,16 @@ class Encryption {
       // alright, if this was actually by our own outbound group session, we might as well clear it
       if (exception.toString() != DecryptException.unknownSession &&
           (keyManager
-                      .getOutboundGroupSession(roomId)
+                      .getOutboundGroupSession(event.room.id)
                       ?.outboundGroupSession
                       ?.session_id() ??
                   '') ==
               content.sessionId) {
         runInRoot(
-          () async =>
-              keyManager.clearOrUseOutboundGroupSession(roomId, wipe: true),
+          () async => keyManager.clearOrUseOutboundGroupSession(
+            event.room.id,
+            wipe: true,
+          ),
         );
       }
       if (canRequestSession) {
@@ -308,37 +309,36 @@ class Encryption {
   }
 
   Future<Event> decryptRoomEvent(
-    String roomId,
     Event event, {
     bool store = false,
     EventUpdateType updateType = EventUpdateType.timeline,
   }) async {
-    if (event.type != EventTypes.Encrypted || event.redacted) {
-      return event;
-    }
-    final content = event.parsedRoomEncryptedContent;
-    final sessionId = content.sessionId;
     try {
+      if (event.type != EventTypes.Encrypted || event.redacted) {
+        return event;
+      }
+      final content = event.parsedRoomEncryptedContent;
+      final sessionId = content.sessionId;
       if (client.database != null &&
           sessionId != null &&
           !(keyManager
                   .getInboundGroupSession(
-                    roomId,
+                    event.room.id,
                     sessionId,
                   )
                   ?.isValid ??
               false)) {
         await keyManager.loadInboundGroupSession(
-          roomId,
+          event.room.id,
           sessionId,
         );
       }
-      event = decryptRoomEventSync(roomId, event);
+      event = decryptRoomEventSync(event);
       if (event.type == EventTypes.Encrypted &&
           event.content['can_request_session'] == true &&
           sessionId != null) {
         keyManager.maybeAutoRequest(
-          roomId,
+          event.room.id,
           sessionId,
           content.senderKey,
         );
@@ -348,11 +348,9 @@ class Encryption {
           event.room.setState(event);
         }
         await client.database?.storeEventUpdate(
-          EventUpdate(
-            content: event.toJson(),
-            roomID: roomId,
-            type: updateType,
-          ),
+          event.room.id,
+          event,
+          updateType,
           client,
         );
       }
