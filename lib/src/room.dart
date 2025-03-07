@@ -2248,13 +2248,22 @@ class Room {
   }
 
   /// Changes the join rules. You should check first if the user is able to change it.
-  Future<void> setJoinRules(JoinRules joinRules) async {
+  Future<void> setJoinRules(
+    JoinRules joinRules, {
+    /// For restricted rooms, the id of the room where a user needs to be member.
+    /// Learn more at https://spec.matrix.org/latest/client-server-api/#restricted-rooms
+    String? allowConditionRoomId,
+  }) async {
     await client.setRoomStateWithKey(
       id,
       EventTypes.RoomJoinRules,
       '',
       {
         'join_rule': joinRules.toString().replaceAll('JoinRules.', ''),
+        if (allowConditionRoomId != null)
+          'allow': [
+            {'room_id': allowConditionRoomId, 'type': 'm.room_membership'},
+          ],
       },
     );
     return;
