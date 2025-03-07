@@ -2046,6 +2046,8 @@ class Room {
   /// `m.sticker` use `canSendEvent('<event-type>')`.
   bool get canSendDefaultMessages {
     if (encrypted && !client.encryptionEnabled) return false;
+    if (isExtinct) return false;
+    if (membership != Membership.join) return false;
 
     return canSendEvent(encrypted ? EventTypes.Encrypted : EventTypes.Message);
   }
