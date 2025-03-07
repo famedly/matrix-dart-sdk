@@ -20,6 +20,7 @@ import 'package:collection/collection.dart';
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/msc_extensions/msc_3381_polls/models/poll_event_content.dart';
 
 abstract class EventLocalizations {
   // As we need to create the localized body off of a different set of parameters, we
@@ -289,6 +290,9 @@ abstract class EventLocalizations {
                   .tryGetMap<String, Object?>('m.relates_to')
                   ?.tryGet<String>('key') ??
               body,
+        ),
+    PollEventContent.startType: (event, i18n, body) => i18n.startedAPoll(
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
         ),
   };
 }
