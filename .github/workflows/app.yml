@@ -92,6 +92,10 @@ jobs:
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           files: "merged.info"
+      - name: Codecov - Upload test results
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
       - uses: actions/upload-artifact@v4
         with:
           name: merged
