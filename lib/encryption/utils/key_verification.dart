@@ -1238,7 +1238,10 @@ class QRCode {
 
 const knownKeyAgreementProtocols = ['curve25519-hkdf-sha256', 'curve25519'];
 const knownHashes = ['sha256'];
-const knownHashesAuthentificationCodes = ['hkdf-hmac-sha256'];
+const knownHashesAuthentificationCodes = [
+  'hkdf-hmac-sha256.v2',
+  'hkdf-hmac-sha256',
+];
 
 class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   _KeyVerificationMethodSas({required super.request});
@@ -1396,6 +1399,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     if (possibleMessageAuthenticationCodes.isEmpty) {
       return false;
     }
+
+    // intersect should make sure we choose v2 over the dep'd one
     messageAuthenticationCode = possibleMessageAuthenticationCodes.first;
     final possibleAuthenticationTypes = _intersect(
       knownAuthentificationTypes,
@@ -1560,7 +1565,9 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   String _calculateMac(String input, String info) {
-    if (messageAuthenticationCode == 'hkdf-hmac-sha256') {
+    if (messageAuthenticationCode == 'hkdf-hmac-sha256.v2') {
+      return sas!.calculate_mac_fixed_base64(input, info);
+    } else if (messageAuthenticationCode == 'hkdf-hmac-sha256') {
       return sas!.calculate_mac(input, info);
     } else {
       throw Exception('Unknown message authentification code');
