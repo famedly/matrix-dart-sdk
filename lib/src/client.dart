@@ -783,12 +783,21 @@ class Client extends MatrixApi {
     bool waitForSync = true,
     Map<String, dynamic>? powerLevelContentOverride,
     CreateRoomPreset? preset = CreateRoomPreset.trustedPrivateChat,
+
+    /// Throws an exception if the DM room has more than two members, if enabled
+    bool ensureIsOnlyTwoMembers = false,
   }) async {
     // Try to find an existing direct chat
     final directChatRoomId = getDirectChatFromUserId(mxid);
     if (directChatRoomId != null) {
       final room = getRoomById(directChatRoomId);
       if (room != null) {
+        if (ensureIsOnlyTwoMembers &&
+            (room.summary.mInvitedMemberCount ?? 0) +
+                    (room.summary.mJoinedMemberCount ?? 1) >
+                2) {
+          throw Exception('Room $directChatRoomId has more than two members.');
+        }
         if (room.membership == Membership.join) {
           return directChatRoomId;
         } else if (room.membership == Membership.invite) {
@@ -835,7 +844,9 @@ class Client extends MatrixApi {
       powerLevelContentOverride: powerLevelContentOverride,
     );
 
-    if (waitForSync) {
+    // If we are ensuring that the room has only two members, we need to wait
+    // for the room to be joined.
+    if (waitForSync || ensureIsOnlyTwoMembers) {
       final room = getRoomById(roomId);
       if (room == null || room.membership != Membership.join) {
         // Wait for room actually appears in sync
@@ -844,6 +855,13 @@ class Client extends MatrixApi {
     }
 
     await Room(id: roomId, client: this).addToDirectChat(mxid);
+
+    if (ensureIsOnlyTwoMembers) {
+      final room = getRoomById(roomId);
+      if ((room?.summary.mJoinedMemberCount ?? 1) > 2) {
+        throw Exception('Room $roomId has more than two members.');
+      }
+    }
 
     return roomId;
   }
