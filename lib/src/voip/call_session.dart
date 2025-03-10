@@ -1218,7 +1218,9 @@ class CallSession {
         }
       };
     } catch (e) {
-      Logs().v('[VOIP] prepareMediaStream error => ${e.toString()}');
+      Logs().v('[VOIP] preparePeerConnection error => ${e.toString()}');
+      await _createPeerConnectionFailed(e);
+      rethrow;
     }
   }
 
@@ -1454,10 +1456,19 @@ class CallSession {
     }
   }
 
+  Future<void> _createPeerConnectionFailed(dynamic err) async {
+    Logs().e('Failed to create peer connection object ${err.toString()}');
+    fireCallEvent(CallStateChange.kError);
+    await terminate(
+      CallParty.kLocal,
+      CallErrorCode.createPeerConnectionFailed,
+      true,
+    );
+  }
+
   Future<void> _getLocalOfferFailed(dynamic err) async {
     Logs().e('Failed to get local offer ${err.toString()}');
     fireCallEvent(CallStateChange.kError);
-
     await terminate(CallParty.kLocal, CallErrorCode.localOfferFailed, true);
   }
 

@@ -40,6 +40,9 @@ enum CallErrorCode {
   /// The user chose to end the call
   userHangup('user_hangup'),
 
+  /// An error code when creating peer connection object fails locally.
+  createPeerConnectionFailed('create_peer_connection_failed'),
+
   /// An error code when the local client failed to create an offer.
   localOfferFailed('local_offer_failed'),
 
