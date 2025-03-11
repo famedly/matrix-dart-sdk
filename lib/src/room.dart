@@ -1322,7 +1322,7 @@ class Room {
     );
 
     if (onHistoryReceived != null) onHistoryReceived();
-    this.prev_batch = resp.end;
+    final newPrevBatch = direction == Direction.b ? resp.end : resp.start;
 
     Future<void> loadFn() async {
       if (!((resp.chunk.isNotEmpty) && resp.end != null)) return;
@@ -1340,8 +1340,7 @@ class Room {
                         events: direction == Direction.b
                             ? resp.chunk
                             : resp.chunk.reversed.toList(),
-                        prevBatch:
-                            direction == Direction.b ? resp.end : resp.start,
+                        prevBatch: newPrevBatch,
                       ),
                     ),
                   }
@@ -1355,8 +1354,7 @@ class Room {
                         events: direction == Direction.b
                             ? resp.chunk
                             : resp.chunk.reversed.toList(),
-                        prevBatch:
-                            direction == Direction.b ? resp.end : resp.start,
+                        prevBatch: newPrevBatch,
                       ),
                     ),
                   }
@@ -1370,7 +1368,7 @@ class Room {
     if (client.database != null) {
       await client.database?.transaction(() async {
         if (storeInDatabase) {
-          await client.database?.setRoomPrevBatch(resp.end, id, client);
+          await client.database?.setRoomPrevBatch(newPrevBatch, id, client);
         }
         await loadFn();
       });
