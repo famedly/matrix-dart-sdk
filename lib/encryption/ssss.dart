@@ -211,6 +211,7 @@ class SSSS {
       client.userID!,
       EventTypes.SecretStorageDefaultKey,
       SecretStorageDefaultKeyContent(key: keyId).toJson(),
+      waitForSync: true,
     );
   }
 
@@ -270,12 +271,8 @@ class SSSS {
       client.userID!,
       accountDataTypeKeyId,
       content.toJson(),
+      waitForSync: true,
     );
-
-    while (!client.accountData.containsKey(accountDataTypeKeyId)) {
-      Logs().v('Waiting accountData to have $accountDataTypeKeyId');
-      await client.oneShotSync();
-    }
 
     final key = open(keyId);
     await key.setPrivateKey(privateKey);
@@ -396,7 +393,12 @@ class SSSS {
       'mac': encrypted.mac,
     };
     // store the thing in your account data
-    await client.setAccountData(client.userID!, type, content);
+    await client.setAccountData(
+      client.userID!,
+      type,
+      content,
+      waitForSync: true,
+    );
     final db = client.database;
     if (cacheTypes.contains(type) && db != null) {
       // cache the thing
@@ -789,14 +791,6 @@ class OpenSSSS {
       throw Exception('SSSS not unlocked');
     }
     await ssss.store(type, secret, keyId, privateKey, add: add);
-    while (!ssss.client.accountData.containsKey(type) ||
-        !(ssss.client.accountData[type]!.content
-            .tryGetMap<String, Object?>('encrypted')!
-            .containsKey(keyId)) ||
-        await getStored(type) != secret) {
-      Logs().d('Wait for secret of $type to match in accountdata');
-      await ssss.client.oneShotSync();
-    }
   }
 
   Future<void> validateAndStripOtherKeys(String type, String secret) async {

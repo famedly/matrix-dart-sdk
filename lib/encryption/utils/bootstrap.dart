@@ -296,12 +296,6 @@ class Bootstrap {
         // alright, we re-encrypted all the secrets. We delete the dead weight only *after* we set our key to the default key
       }
       await encryption.ssss.setDefaultKeyId(newSsssKey!.keyId);
-      while (encryption.ssss.defaultKeyId != newSsssKey!.keyId) {
-        Logs().v(
-          'Waiting accountData to have the correct m.secret_storage.default_key',
-        );
-        await client.oneShotSync();
-      }
       if (oldSsssKeys != null) {
         for (final entry in secretMap!.entries) {
           Logs().v('Validate and stripe other keys ${entry.key}...');
@@ -485,12 +479,12 @@ class Bootstrap {
       );
       Logs().v('Device signing keys have been uploaded.');
       // aaaand set the SSSS secrets
-      if (masterKey != null) {
-        while (!(masterKey.publicKey != null &&
-            client.userDeviceKeys[client.userID]?.masterKey?.ed25519Key ==
-                masterKey.publicKey)) {
+      if (masterKey?.publicKey != null) {
+        while (!(client.userDeviceKeys[client.userID]?.masterKey?.ed25519Key ==
+            masterKey?.publicKey)) {
           Logs().v('Waiting for master to be created');
-          await client.oneShotSync();
+          await client.onSyncStatus.stream
+              .firstWhere((status) => status.status == SyncStatus.finished);
         }
       }
       if (newSsssKey != null) {
