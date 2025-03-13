@@ -744,6 +744,8 @@ class Room {
                     'msgtype': file.msgType,
                     'body': file.name,
                     'filename': file.name,
+                    'info': file.info,
+                    if (extraContent != null) ...extraContent,
                   },
                   type: EventTypes.Message,
                   eventId: txid,
