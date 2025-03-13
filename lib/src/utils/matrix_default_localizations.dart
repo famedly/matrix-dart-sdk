@@ -310,4 +310,8 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
   @override
   String startedKeyVerification(String senderName) =>
       '$senderName started key verification';
+
+  @override
+  String userCanNowReadAlong(List<String> userIds, List<String>? devices) =>
+      '${userIds.join(', ')} can now read along${devices == null ? '' : ' on ${devices.length} new device(s)'}';
 }

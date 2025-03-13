@@ -114,4 +114,7 @@ abstract class EventTypes {
   static const String GroupCallMemberReplaces = '$GroupCallMember.replaces';
   static const String GroupCallMemberAssertedIdentity =
       '$GroupCallMember.asserted_identity';
+
+  // Internal
+  static const String encryptionInfo = 'sdk.dart.matrix.new_megolm_session';
 }
