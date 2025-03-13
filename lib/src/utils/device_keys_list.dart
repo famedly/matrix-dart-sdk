@@ -82,6 +82,7 @@ class DeviceKeysList {
         enableEncryption: newDirectChatEnableEncryption,
         initialState: newDirectChatInitialState,
         waitForSync: false,
+        ensureIsOnlyTwoMembers: true,
       );
 
       final room =
