@@ -744,6 +744,8 @@ class Room {
                     'msgtype': file.msgType,
                     'body': file.name,
                     'filename': file.name,
+                    'info': file.info,
+                    if (extraContent != null) ...extraContent,
                   },
                   type: EventTypes.Message,
                   eventId: txid,
@@ -1322,7 +1324,6 @@ class Room {
     );
 
     if (onHistoryReceived != null) onHistoryReceived();
-    this.prev_batch = resp.end;
 
     Future<void> loadFn() async {
       if (!((resp.chunk.isNotEmpty) && resp.end != null)) return;
@@ -1363,13 +1364,14 @@ class Room {
                 : null,
           ),
         ),
-        direction: Direction.b,
+        direction: direction,
       );
     }
 
     if (client.database != null) {
       await client.database?.transaction(() async {
-        if (storeInDatabase) {
+        if (storeInDatabase && direction == Direction.b) {
+          this.prev_batch = resp.end;
           await client.database?.setRoomPrevBatch(resp.end, id, client);
         }
         await loadFn();

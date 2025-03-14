@@ -792,7 +792,13 @@ class Event extends MatrixEvent {
         throw ('Unable to decrypt file');
       }
     }
-    return MatrixFile(bytes: uint8list, name: body);
+
+    final filename = content.tryGet<String>('filename') ?? body;
+    return MatrixFile(
+      bytes: uint8list,
+      name: filename,
+      mimeType: attachmentMimetype,
+    );
   }
 
   /// Returns if this is a known event type.

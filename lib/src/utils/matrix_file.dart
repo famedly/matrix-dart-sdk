@@ -41,9 +41,10 @@ class MatrixFile {
   }
 
   MatrixFile({required this.bytes, required String name, String? mimeType})
-      : mimeType = mimeType ??
-            lookupMimeType(name, headerBytes: bytes) ??
-            'application/octet-stream',
+      : mimeType = mimeType != null && mimeType.isNotEmpty
+            ? mimeType
+            : lookupMimeType(name, headerBytes: bytes) ??
+                'application/octet-stream',
         name = name.split('/').last;
 
   /// derivatives the MIME type from the [bytes] and correspondingly creates a
