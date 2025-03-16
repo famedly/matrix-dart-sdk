@@ -823,7 +823,7 @@ class CallSession {
             final oldSender = transceiver.sender;
             await oldSender.replaceTrack(newTrack);
             await transceiver.setDirection(
-              await transceiver.getDirection() ==
+              await transceiver.getCurrentDirection() ==
                       TransceiverDirection.Inactive // upgrade, send now
                   ? TransceiverDirection.SendOnly
                   : TransceiverDirection.SendRecv,
