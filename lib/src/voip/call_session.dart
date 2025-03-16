@@ -490,6 +490,10 @@ class CallSession {
     );
   }
 
+  SDPStreamPurpose? getRemoteSDPStreamMetadata(String streamId) {
+    return _remoteSDPStreamMetadata?.sdpStreamMetadatas[streamId];
+  }
+
   void _updateRemoteSDPStreamMetadata(SDPStreamMetadata metadata) {
     _remoteSDPStreamMetadata = metadata;
     _remoteSDPStreamMetadata?.sdpStreamMetadatas
