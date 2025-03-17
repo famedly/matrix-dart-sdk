@@ -594,7 +594,7 @@ class FakeMatrixApi extends BaseClient {
               }
             ],
             'limited': true,
-            'prev_batch': 't34-23535_0_0',
+            'prev_batch': 't44-23535_0_0',
           },
           'ephemeral': {
             'events': [
@@ -711,7 +711,7 @@ class FakeMatrixApi extends BaseClient {
               },
             ],
             'limited': true,
-            'prev_batch': 't34-23535_0_0',
+            'prev_batch': 't34-23535_0_1',
           },
           'account_data': {
             'events': [

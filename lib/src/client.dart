@@ -2989,7 +2989,9 @@ class Client extends MatrixApi {
           chatUpdate.unreadNotifications?.notificationCount ?? 0;
       rooms[roomIndex].highlightCount =
           chatUpdate.unreadNotifications?.highlightCount ?? 0;
-
+      if (chatUpdate.timeline?.prevBatch != null) {
+        rooms[roomIndex].prev_batch = chatUpdate.timeline?.prevBatch;
+      }
       final summary = chatUpdate.summary;
       if (summary != null) {
         final roomSummaryJson = rooms[roomIndex].summary.toJson()
