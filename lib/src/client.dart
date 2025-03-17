@@ -783,10 +783,11 @@ class Client extends MatrixApi {
     bool waitForSync = true,
     Map<String, dynamic>? powerLevelContentOverride,
     CreateRoomPreset? preset = CreateRoomPreset.trustedPrivateChat,
+    bool skipExistingChat = false,
   }) async {
     // Try to find an existing direct chat
     final directChatRoomId = getDirectChatFromUserId(mxid);
-    if (directChatRoomId != null) {
+    if (directChatRoomId != null && !skipExistingChat) {
       final room = getRoomById(directChatRoomId);
       if (room != null) {
         if (room.membership == Membership.join) {
@@ -2266,8 +2267,8 @@ class Client extends MatrixApi {
 
   /// Immediately start a sync and wait for completion.
   /// If there is an active sync already, wait for the active sync instead.
-  Future<void> oneShotSync() {
-    return _sync();
+  Future<void> oneShotSync({Duration? timeout}) {
+    return _sync(timeout: timeout);
   }
 
   /// Pass a timeout to set how long the server waits before sending an empty response.
