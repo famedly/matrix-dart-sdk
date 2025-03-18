@@ -761,6 +761,31 @@ void main() {
       expect(room.lastEvent!.content['body'], '* foxies');
     });
 
+    test('set prev_batch if in sync', () async {
+      final roomId = '!726s6s6q:example.com';
+      final room = matrix.getRoomById(roomId)!;
+
+      expect(room.prev_batch, 't44-23535_0_0');
+      // put an important state event in-memory
+      await matrix.handleSync(
+        SyncUpdate.fromJson({
+          'next_batch': 'fakesync',
+          'rooms': {
+            'join': {
+              roomId: {
+                'timeline': {
+                  'events': [],
+                  'prev_batch': 'prev_batch_1',
+                },
+              },
+            },
+          },
+        }),
+      );
+
+      expect(room.prev_batch, 'prev_batch_1');
+    });
+
     test('getProfileFromUserId', () async {
       final cachedProfile = await matrix.getUserProfile('@getme:example.com');
       expect(cachedProfile.outdated, false);
