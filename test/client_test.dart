@@ -761,21 +761,59 @@ void main() {
       expect(room.lastEvent!.content['body'], '* foxies');
     });
 
-    test('set prev_batch if in sync', () async {
-      final roomId = '!726s6s6q:example.com';
-      final room = matrix.getRoomById(roomId)!;
-
-      expect(room.prev_batch, 't44-23535_0_0');
-      // put an important state event in-memory
+    test('set prev_batch when invite then join', () async {
       await matrix.handleSync(
         SyncUpdate.fromJson({
-          'next_batch': 'fakesync',
+          'next_batch': '1',
+          'rooms': {
+            'invite': {
+              'new_room_id': {
+                'invite_state': {
+                  'events': [
+                    MatrixEvent(
+                      eventId: '0',
+                      type: EventTypes.RoomCreate,
+                      content: {'body': '0'},
+                      senderId: '@alice:example.com',
+                      stateKey: '@alice:example.com',
+                      originServerTs: DateTime.now(),
+                    ).toJson(),
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      );
+      expect(
+        matrix.rooms.singleWhereOrNull(
+          (element) => element.id == 'new_room_id',
+        ),
+        isNotNull,
+      );
+
+      final newRoom = matrix.getRoomById('new_room_id')!;
+
+      expect(newRoom.prev_batch, null);
+
+      await matrix.handleSync(
+        SyncUpdate.fromJson({
+          'next_batch': '3',
           'rooms': {
             'join': {
-              roomId: {
+              'new_room_id': {
                 'timeline': {
-                  'events': [],
-                  'prev_batch': 'prev_batch_1',
+                  'events': [
+                    MatrixEvent(
+                      eventId: '2',
+                      type: EventTypes.RoomCreate,
+                      content: {'body': '2'},
+                      senderId: '@alice:example.com',
+                      stateKey: '@alice:example.com',
+                      originServerTs: DateTime.now(),
+                    ).toJson(),
+                  ],
+                  'prev_batch': '1',
                 },
               },
             },
@@ -783,7 +821,56 @@ void main() {
         }),
       );
 
-      expect(room.prev_batch, 'prev_batch_1');
+      final timeline = await newRoom.getTimeline();
+      expect(newRoom.prev_batch, '1');
+      expect(timeline.events.length, 1);
+      expect(timeline.events.first.eventId, '2');
+
+      await matrix.handleSync(
+        SyncUpdate.fromJson({
+          'next_batch': '4',
+          'rooms': {
+            'join': {
+              'new_room_id': {
+                'timeline': {
+                  'events': [
+                    MatrixEvent(
+                      eventId: '3',
+                      type: EventTypes.Message,
+                      content: {'body': '3'},
+                      senderId: '@alice2:example.com',
+                      stateKey: '@alice2:example.com',
+                      originServerTs: DateTime.now(),
+                    ).toJson(),
+                  ],
+                  'prev_batch': '2',
+                },
+              },
+            },
+          },
+        }),
+      );
+
+      expect(newRoom.prev_batch, '1');
+      expect(timeline.events.length, 2);
+      expect(timeline.events.last.eventId, '2');
+      expect(timeline.events.first.eventId, '3');
+
+      if (timeline.canRequestHistory) {
+        await timeline.requestHistory();
+      }
+      expect(newRoom.prev_batch, 'emptyHistoryResponse');
+      expect(timeline.events.length, 3);
+      expect(timeline.events.last.eventId, '0');
+      expect(timeline.events.first.eventId, '3');
+
+      while (timeline.canRequestHistory) {
+        await timeline.requestHistory();
+      }
+      expect(newRoom.prev_batch, null);
+      expect(timeline.events.length, 3);
+      expect(timeline.events.last.eventId, '0');
+      expect(timeline.events.first.eventId, '3');
     });
 
     test('getProfileFromUserId', () async {
