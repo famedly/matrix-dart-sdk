@@ -331,6 +331,29 @@ class FakeMatrixApi extends BaseClient {
     };
   }
 
+  static const Map<String, dynamic> emptyHistoryResponse = {
+    'start': 'start-emptyHistoryResponse',
+    'chunk': [],
+    'state': [],
+  };
+  static const Map<String, dynamic> simpleHistoryResponse = {
+    'start': 'start-simpleHistoryResponse',
+    'end': 'end-simpleHistoryResponse',
+    'chunk': [
+      {
+        'content': {'body': '0'},
+        'type': 'm.room.message',
+        'event_id': '0',
+        'room_id': 'new_room_id',
+        'sender': '@example:example.org',
+        'origin_server_ts': 1432735824653,
+        'unsigned': {'age': 1234},
+        'state_key': '',
+      },
+    ],
+    'state': [],
+  };
+
   static const Map<String, dynamic> messagesResponsePast = {
     'start': 't47429-4392820_219380_26003_2265',
     'end': 't47409-4357353_219380_26003_2265',
@@ -1724,6 +1747,10 @@ class FakeMatrixApi extends BaseClient {
             'origin_server_ts': 1432735824653,
             'unsigned': {'age': 1234},
           },
+      '/client/v3/rooms/new_room_id/messages?from=end-simpleHistoryResponse&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+          (var req) => emptyHistoryResponse,
+      '/client/v3/rooms/new_room_id/messages?from=1&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+          (var req) => simpleHistoryResponse,
       '/client/v3/rooms/!localpart%3Aserver.abc/messages?from=1234&dir=b&to=1234&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponsePast,
       '/client/v3/rooms/!localpart%3Aserver.abc/messages?from=&dir=b&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':

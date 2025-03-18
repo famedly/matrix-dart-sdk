@@ -2925,6 +2925,13 @@ class Client extends MatrixApi {
   /// stores when we last checked for stale calls
   DateTime lastStaleCallRun = DateTime(0);
 
+  /// we don't want to reset the prev_batch everytime
+  /// because that would break our search and export
+  /// but if we find a room update with just state,
+  /// we make sure to update the prev_batch in the next sync update
+  /// just once.
+  final Set<String> _justSeenInvites = {};
+
   Future<Room> _updateRoomsByRoomUpdate(
     String roomId,
     SyncRoomUpdate chatUpdate,
@@ -2954,6 +2961,21 @@ class Client extends MatrixApi {
                 client: this,
               )
             : Room(id: roomId, membership: membership, client: this));
+
+    if (_justSeenInvites.contains(roomId) && found) {
+      // next sync for that kinda room
+      if (chatUpdate is JoinedRoomUpdate &&
+          chatUpdate.timeline?.prevBatch != null &&
+          room.prev_batch == null) {
+        room.prev_batch = chatUpdate.timeline?.prevBatch;
+        _justSeenInvites.remove(roomId);
+      }
+    }
+    if (chatUpdate is InvitedRoomUpdate && !found) {
+      // this means that the rooms are found now
+      // but we still need to update the prev_batch in the next sync
+      _justSeenInvites.add(roomId);
+    }
 
     // Does the chat already exist in the list rooms?
     if (!found && membership != Membership.leave) {
@@ -2989,9 +3011,7 @@ class Client extends MatrixApi {
           chatUpdate.unreadNotifications?.notificationCount ?? 0;
       rooms[roomIndex].highlightCount =
           chatUpdate.unreadNotifications?.highlightCount ?? 0;
-      if (chatUpdate.timeline?.prevBatch != null) {
-        rooms[roomIndex].prev_batch = chatUpdate.timeline?.prevBatch;
-      }
+
       final summary = chatUpdate.summary;
       if (summary != null) {
         final roomSummaryJson = rooms[roomIndex].summary.toJson()
