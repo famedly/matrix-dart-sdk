@@ -22,10 +22,10 @@ dependencies:
   html_unescape: ^2.0.0
   http: ">=0.13.0 <2.0.0"
   image: ^4.0.15
-  js: ^0.6.3
+  js: ">=0.6.3 <0.8.0"
   markdown: ^7.1.1
   mime: ">=1.0.0 <3.0.0"
-  olm: ^2.0.2
+  olm: ">=2.0.2 <4.0.0"
   random_string: ^2.3.1
   sdp_transform: ^0.3.2
   slugify: ^2.0.0
