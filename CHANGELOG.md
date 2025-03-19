@@ -1,4 +1,23 @@
-## 0.38.0
+## [0.38.1] 19th March 2025
+
+- chore: Export event localizations (Krille)
+- chore: Remove unnecessary template (Krille)
+- feat: Add command to upgrade room (Krille)
+- feat: Add parameter for allow condition for restricted rooms (Krille)
+- feat: allow skipping existing chat when calling startDirectChat (td)
+- feat: export timeline events (Karthikeyan S)
+- feat: upload code coverage to codecov (td)
+- fix: incorrect filename when caption is used in body of event (Karthikeyan S)
+- fix: incorrect mimeType for files when downloading (Karthikeyan S)
+- fix: Older state events overwrite newer ones on fetching history (Krille)
+- fix: room prev_batch set incorrectly (Karthikeyan S)
+- fix: WebRTC videoValue missing (Krille)
+- refactor: Add file info to placeholder before sending file event (Krille)
+- refactor: Add missing versions to supportedVersions and use warning instead of blocking (Krille)
+- refactor: Improve linebreak logic for html messages (Krille)
+- refactor: Make markUnread a noop if unread is already as intendend and throw exception if room membership is not join (Krille)
+
+## [0.38.0] 5th February 2025
 
 ### Migration notes
 
@@ -51,7 +70,7 @@ if(output != null) {
 - refactor: Make converting linebreaks in markdowntohtml optional (Krille)
 - refactor: Use .toSet() instead of Set.from() (Krille)
 
-## 0.37.0
+## [0.37.0] 27th January 2025
 
 Bigger release with a lot of refactorings under the hood. Those do not necessarily make the SDK more performant but more robust and type safe.
 
