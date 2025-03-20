@@ -303,7 +303,8 @@ class KeyManager {
         continue;
       }
       final userDeviceKeyIds = deviceKeyIds[device.userId] ??= <String, bool>{};
-      userDeviceKeyIds[deviceId] = !device.encryptToDevice;
+      userDeviceKeyIds[deviceId] =
+          !device.encryptToDevice && device.userId == client.userID!;
     }
     return deviceKeyIds;
   }
@@ -440,7 +441,9 @@ class KeyManager {
           'session_key': sess.outboundGroupSession!.session_key(),
         };
         try {
-          devicesToReceive.removeWhere((k) => !k.encryptToDevice);
+          devicesToReceive.removeWhere(
+            (k) => (!k.encryptToDevice && k.userId == client.userID!),
+          );
           if (devicesToReceive.isNotEmpty) {
             // update allowedAtIndex
             for (final device in devicesToReceive) {
@@ -552,7 +555,8 @@ class KeyManager {
 
     final deviceKeys = await room.getUserDeviceKeys();
     final deviceKeyIds = _getDeviceKeyIdMap(deviceKeys);
-    deviceKeys.removeWhere((k) => !k.encryptToDevice);
+    deviceKeys
+        .removeWhere((k) => !k.encryptToDevice && k.userId == client.userID!);
     final outboundGroupSession = olm.OutboundGroupSession();
     try {
       outboundGroupSession.create();
