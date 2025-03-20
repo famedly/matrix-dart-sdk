@@ -43,3 +43,9 @@ dev_dependencies:
   path: ^1.9.1
   sqflite_common_ffi: ^2.3.4+4 # sqflite_common_ffi aggressively requires newer dart versions
   test: ^1.25.13
+
+dependency_overrides:
+  olm:
+    git:
+      url: https://github.com/famedly/dart-olm
+      ref: td/ffigen
