@@ -92,7 +92,7 @@ class CallSession {
   /// The ID of the user being called. If omitted, any user in the room can answer.
   String? remoteUserId;
 
-  User? get remoteUser => remoteUserId != null
+  Member? get remoteUser => remoteUserId != null
       ? room.unsafeGetUserFromMemoryOrFallback(remoteUserId!)
       : null;
 

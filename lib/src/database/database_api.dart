@@ -104,9 +104,9 @@ abstract class DatabaseApi {
 
   Future<void> clear();
 
-  Future<User?> getUser(String userId, Room room);
+  Future<Member?> getUser(String userId, Room room);
 
-  Future<List<User>> getUsers(Room room);
+  Future<List<Member>> getUsers(Room room);
 
   Future<List<Event>> getEventList(
     Room room, {
