@@ -18,7 +18,12 @@
 
 import 'package:matrix/matrix.dart';
 
+// ignore_for_file: deprecated_member_use_from_same_package
+
+typedef Member = User;
+
 /// Represents a Matrix User which may be a participant in a Matrix Room.
+@Deprecated('Use Member instead')
 class User extends StrippedStateEvent {
   final Room room;
   final Map<String, Object?>? prevContent;
