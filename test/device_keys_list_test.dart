@@ -275,10 +275,216 @@ void main() {
       expect(req != null, true);
       expect(req?.room != null, false);
 
-      req = await client.userDeviceKeys['@alice:example.com']
-          ?.startVerification(newDirectChatEnableEncryption: false);
-      expect(req != null, true);
-      expect(req?.room != null, true);
+      final createRoomRequestCount =
+          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.length ?? 0;
+
+      Future<void> verifyDeviceKeys() async {
+        req = await client.userDeviceKeys['@alice:example.com']
+            ?.startVerification(newDirectChatEnableEncryption: false);
+        expect(req != null, true);
+        expect(req?.room != null, true);
+      }
+
+      await verifyDeviceKeys();
+      // a new room should be created since there is no existing DM room
+      expect(
+        FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.length,
+        createRoomRequestCount + 1,
+      );
+
+      await verifyDeviceKeys();
+      // no new room should be created since the room already exists
+      expect(
+        FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.length,
+        createRoomRequestCount + 1,
+      );
+
+      final dmRoomId = client.getDirectChatFromUserId('@alice:example.com');
+      expect(dmRoomId != null, true);
+      final dmRoom = client.getRoomById(dmRoomId!);
+      expect(dmRoom != null, true);
+      // old state event should not overwrite current state events
+      dmRoom!.partial = false;
+
+      // mock invite bob to the room
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              dmRoomId: JoinedRoomUpdate(
+                state: [
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    content: {
+                      'displayname': 'testclient',
+                      'is_direct': true,
+                      'membership': Membership.join.name,
+                    },
+                    senderId: client.userID!,
+                    eventId: 'eventId',
+                    stateKey: client.userID!,
+                    originServerTs: DateTime.now(),
+                  ),
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    content: {
+                      'displayname': 'Bob the builder',
+                      'is_direct': true,
+                      'membership': Membership.invite.name,
+                    },
+                    senderId: '@bob:example.com',
+                    eventId: 'eventId',
+                    stateKey: '@bob:example.com',
+                    originServerTs: DateTime.now(),
+                  ),
+                ],
+                summary: RoomSummary.fromJson({
+                  'm.joined_member_count': 1,
+                  'm.invited_member_count': 1,
+                  'm.heroes': [],
+                }),
+              ),
+            },
+          ),
+        ),
+      );
+      expect(
+        dmRoom.getParticipants([Membership.invite, Membership.join]).length,
+        2,
+      );
+      dmRoom.partial = true;
+
+      await verifyDeviceKeys();
+      // a second room should now be created because bob(someone else other than
+      // alice) is invited into the first DM room
+      expect(
+        FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.length,
+        createRoomRequestCount + 2,
+      );
+
+      final dmRoomId2 = client.getDirectChatFromUserId('@alice:example.com');
+      expect(dmRoomId2 != null, true);
+      final dmRoom2 = client.getRoomById(dmRoomId2!);
+      expect(dmRoom2 != null, true);
+      // old state event should not overwrite current state events
+      dmRoom2!.partial = false;
+
+      // mock invite alice and ban bob to the room
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              dmRoomId2: JoinedRoomUpdate(
+                state: [
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    content: {
+                      'displayname': 'Alice Catgirl',
+                      'is_direct': true,
+                      'membership': Membership.invite.name,
+                    },
+                    senderId: '@alice:example.com',
+                    eventId: 'eventId',
+                    stateKey: '@alice:example.com',
+                    originServerTs: DateTime.now(),
+                  ),
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    content: {
+                      'displayname': 'Bob the builder',
+                      'is_direct': true,
+                      'membership': Membership.ban.name,
+                    },
+                    senderId: '@bob:example.com',
+                    eventId: 'eventId',
+                    stateKey: '@bob:example.com',
+                    originServerTs: DateTime.now(),
+                  ),
+                ],
+                summary: RoomSummary.fromJson({
+                  'm.joined_member_count': 1,
+                  'm.invited_member_count': 1,
+                  'm.heroes': [],
+                }),
+              ),
+            },
+          ),
+        ),
+      );
+      expect(
+        dmRoom2.getParticipants([Membership.invite, Membership.join]).length,
+        2,
+      );
+      dmRoom2.partial = true;
+
+      await verifyDeviceKeys();
+      // no new room should be created because only alice has been invited to the
+      // second room
+      expect(
+        FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.length,
+        createRoomRequestCount + 2,
+      );
+
+      // old state event should not overwrite current state events
+      dmRoom2.partial = false;
+      // mock join alice and invite bob to the room
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              dmRoomId2: JoinedRoomUpdate(
+                state: [
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    content: {
+                      'displayname': 'Alice Catgirl',
+                      'is_direct': true,
+                      'membership': Membership.join.name,
+                    },
+                    senderId: '@alice:example.com',
+                    eventId: 'eventId',
+                    stateKey: '@alice:example.com',
+                    originServerTs: DateTime.now(),
+                  ),
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    content: {
+                      'displayname': 'Bob the builder',
+                      'is_direct': true,
+                      'membership': Membership.invite.name,
+                    },
+                    senderId: '@bob:example.com',
+                    eventId: 'eventId',
+                    stateKey: '@bob:example.com',
+                    originServerTs: DateTime.now(),
+                  ),
+                ],
+                summary: RoomSummary.fromJson({
+                  'm.joined_member_count': 2,
+                  'm.invited_member_count': 1,
+                  'm.heroes': [],
+                }),
+              ),
+            },
+          ),
+        ),
+      );
+      expect(
+        dmRoom.getParticipants([Membership.invite, Membership.join]).length,
+        3,
+      );
+      dmRoom2.partial = true;
+
+      await verifyDeviceKeys();
+      // a third room should now be created because someone else (other than
+      // alice) is also invited into the second DM room
+      expect(
+        FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.length,
+        createRoomRequestCount + 3,
+      );
     });
 
     test('dispose client', () async {

@@ -451,7 +451,8 @@ class Client extends MatrixApi {
   Map<String, dynamic> get directChats =>
       _accountData['m.direct']?.content ?? {};
 
-  /// Returns the (first) room ID from the store which is a private chat with the user [userId].
+  /// Returns the first room ID from the store (the room with the latest event)
+  /// which is a private chat with the user [userId].
   /// Returns null if there is none.
   String? getDirectChatFromUserId(String userId) {
     final directChats = _accountData['m.direct']?.content[userId];
