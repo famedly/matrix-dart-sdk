@@ -1273,6 +1273,23 @@ void main() {
     });
     test('startDirectChat', () async {
       await matrix.startDirectChat('@alice:example.com', waitForSync: false);
+
+      expect(
+        json.decode(
+          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last,
+        ),
+        {
+          'initial_state': [
+            {
+              'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
+              'type': 'm.room.encryption',
+            }
+          ],
+          'invite': ['@alice:example.com'],
+          'is_direct': true,
+          'preset': 'trusted_private_chat',
+        },
+      );
     });
 
     test('createGroupChat', () async {

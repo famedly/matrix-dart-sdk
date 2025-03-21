@@ -77,15 +77,42 @@ class DeviceKeysList {
     }
     if (userId != client.userID) {
       // in-room verification with someone else
-      final roomId = await client.startDirectChat(
-        userId,
-        enableEncryption: newDirectChatEnableEncryption,
-        initialState: newDirectChatInitialState,
-        waitForSync: false,
-      );
+      Room? room;
+      // we check if there's already a direct chat with the user
+      for (final directChatRoomId in client.directChats[userId] ?? []) {
+        final tempRoom = client.getRoomById(directChatRoomId);
+        if (tempRoom != null &&
+            // check if the room is a direct chat and has less than 2 members
+            // (including the invited users)
+            (tempRoom.summary.mInvitedMemberCount ?? 0) +
+                    (tempRoom.summary.mJoinedMemberCount ?? 1) <=
+                2) {
+          // Now we check if the users in the room are none other than the current
+          // user and the user we want to verify
+          final members = tempRoom.getParticipants([
+            Membership.invite,
+            Membership.join,
+          ]);
+          if (members.every((m) => {userId, client.userID}.contains(m.id))) {
+            // if so, we use that room
+            room = tempRoom;
+            break;
+          }
+        }
+      }
+      // if there's no direct chat that satisfies the conditions, we create a new one
+      if (room == null) {
+        final newRoomId = await client.startDirectChat(
+          userId,
+          enableEncryption: newDirectChatEnableEncryption,
+          initialState: newDirectChatInitialState,
+          waitForSync: false,
+          skipExistingChat: true, // to create a new room directly
+        );
+        room = client.getRoomById(newRoomId) ??
+            Room(id: newRoomId, client: client);
+      }
 
-      final room =
-          client.getRoomById(roomId) ?? Room(id: roomId, client: client);
       final request =
           KeyVerification(encryption: encryption, room: room, userId: userId);
       await request.start();
