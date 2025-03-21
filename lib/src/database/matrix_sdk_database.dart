@@ -742,7 +742,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<User?> getUser(String userId, Room room) async {
+  Future<Member?> getUser(String userId, Room room) async {
     final state =
         await _roomMembersBox.get(TupleKey(room.id, userId).toString());
     if (state == null) return null;
@@ -807,8 +807,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       });
 
   @override
-  Future<List<User>> getUsers(Room room) async {
-    final users = <User>[];
+  Future<List<Member>> getUsers(Room room) async {
+    final users = <Member>[];
     final keys = (await _roomMembersBox.getAllKeys())
         .where((key) => TupleKey.fromString(key).parts.first == room.id)
         .toList();

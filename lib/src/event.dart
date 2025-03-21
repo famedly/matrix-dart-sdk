@@ -37,7 +37,7 @@ abstract class RelationshipTypes {
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event extends MatrixEvent {
   /// Requests the user object of the sender of this event.
-  Future<User?> fetchSenderUser() => room.requestUser(
+  Future<Member?> fetchSenderUser() => room.requestUser(
         senderId,
         ignoreErrors: true,
       );
@@ -45,9 +45,9 @@ class Event extends MatrixEvent {
   @Deprecated(
     'Use eventSender instead or senderFromMemoryOrFallback for a synchronous alternative',
   )
-  User get sender => senderFromMemoryOrFallback;
+  Member get sender => senderFromMemoryOrFallback;
 
-  User get senderFromMemoryOrFallback =>
+  Member get senderFromMemoryOrFallback =>
       room.unsafeGetUserFromMemoryOrFallback(senderId);
 
   /// The room this event belongs to. May be null.
@@ -69,7 +69,7 @@ class Event extends MatrixEvent {
 
   bool get redacted => redactedBecause != null;
 
-  User? get stateKeyUser => stateKey != null
+  Member? get stateKeyUser => stateKey != null
       ? room.unsafeGetUserFromMemoryOrFallback(stateKey!)
       : null;
 
@@ -247,7 +247,7 @@ class Event extends MatrixEvent {
     return data;
   }
 
-  User get asUser => User.fromState(
+  Member get asUser => Member.fromState(
         // state key should always be set for member events
         stateKey: stateKey!,
         prevContent: prevContent,

@@ -22,18 +22,18 @@ import 'package:matrix/matrix.dart';
 
 void main() {
   /// All Tests related to the Event
-  group('User', () {
+  group('Member', () {
     Logs().level = Level.error;
     final client = Client('testclient', httpClient: FakeMatrixApi());
     final room = Room(id: '!localpart:server.abc', client: client);
-    final user1 = User(
+    final user1 = Member(
       '@alice:example.com',
       membership: 'join',
       displayName: 'Alice M',
       avatarUrl: 'mxc://bla',
       room: room,
     );
-    final user2 = User(
+    final user2 = Member(
       '@bob:example.com',
       membership: 'join',
       displayName: 'Bob',
@@ -96,9 +96,9 @@ void main() {
     });
 
     test('calcDisplayname', () async {
-      final user1 = User('@alice:example.com', room: room);
-      final user2 = User('@SuperAlice:example.com', room: room);
-      final user3 = User('@alice_mep:example.com', room: room);
+      final user1 = Member('@alice:example.com', room: room);
+      final user2 = Member('@SuperAlice:example.com', room: room);
+      final user3 = Member('@alice_mep:example.com', room: room);
       expect(user1.calcDisplayname(), 'Alice');
       expect(user2.calcDisplayname(), 'SuperAlice');
       expect(user3.calcDisplayname(), 'Alice Mep');
