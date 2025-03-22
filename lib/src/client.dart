@@ -129,9 +129,17 @@ class Client extends MatrixApi {
   final Duration typingIndicatorTimeout;
 
   DiscoveryInformation? _wellKnown;
+  Map<String, Object?>? _oidcAuthMetadata;
 
   /// the cached .well-known file updated using [getWellknown]
   DiscoveryInformation? get wellKnown => _wellKnown;
+
+  /// the cached OIDC auth metadata as per MSC 2965 updated using
+  /// [getOidcDiscoveryInformation]
+  Map<String, Object?>? get oidcAuthMetadata => _oidcAuthMetadata;
+
+  /// the cached OIDC auth metadata as per MSC 2966
+  String? oidcDynamicClientId;
 
   /// The homeserver this client is communicating with.
   ///
@@ -141,7 +149,10 @@ class Client extends MatrixApi {
   set homeserver(Uri? homeserver) {
     if (this.homeserver != null && homeserver?.host != this.homeserver?.host) {
       _wellKnown = null;
+      _oidcAuthMetadata = null;
       unawaited(database?.storeWellKnown(null));
+      unawaited(database?.storeOidcAuthMetadata(null));
+      unawaited(database?.storeOidcDynamicClientId(null));
     }
     super.homeserver = homeserver;
   }
@@ -293,6 +304,8 @@ class Client extends MatrixApi {
   /// logout case.
   /// Throws an Exception if there is no refresh token available or the
   /// client is not logged in.
+  ///
+  /// This method id OIDC aware as per MSC 3824.
   Future<void> refreshAccessToken() async {
     final storedClient = await database?.getClient(clientName);
     final refreshToken = storedClient?.tryGet<String>('refresh_token');
@@ -306,24 +319,44 @@ class Client extends MatrixApi {
       throw Exception('Cannot refresh access token when not logged in');
     }
 
-    final tokenResponse = await refreshWithCustomRefreshTokenLifetime(
-      refreshToken,
-      refreshTokenLifetimeMs: customRefreshTokenLifetime?.inMilliseconds,
-    );
+    String accessToken;
+    String? newRefreshToken;
+    int? expiresInMs;
 
-    accessToken = tokenResponse.accessToken;
-    final expiresInMs = tokenResponse.expiresInMs;
+    final oidcTokenEndpoint = oidcAuthMetadata?['token_endpoint'];
+    final oidcClientId = oidcDynamicClientId;
+    if (oidcTokenEndpoint is String && oidcClientId != null) {
+      final tokenResponse = await oidcRefreshToken(
+        tokenEndpoint: Uri.parse(oidcTokenEndpoint),
+        refreshToken: refreshToken,
+        oidcClientId: oidcClientId,
+      );
+
+      this.accessToken = accessToken = tokenResponse.accessToken;
+      newRefreshToken = tokenResponse.refreshToken;
+      expiresInMs = tokenResponse.expiresIn;
+    } else {
+      final tokenResponse = await refreshWithCustomRefreshTokenLifetime(
+        refreshToken,
+        refreshTokenLifetimeMs: customRefreshTokenLifetime?.inMilliseconds,
+      );
+
+      this.accessToken = accessToken = tokenResponse.accessToken;
+      newRefreshToken = tokenResponse.refreshToken;
+      expiresInMs = tokenResponse.expiresInMs;
+    }
+
     final tokenExpiresAt = expiresInMs == null
         ? null
         : DateTime.now().add(Duration(milliseconds: expiresInMs));
+
     _accessTokenExpiresAt = tokenExpiresAt;
     await database?.updateClient(
       homeserverUrl,
-      tokenResponse.accessToken,
+      accessToken,
       tokenExpiresAt,
-      tokenResponse.refreshToken,
+      newRefreshToken,
       userId,
-      deviceId,
       deviceName,
       prevBatch,
       encryption?.pickledOlmAccount,
@@ -526,6 +559,7 @@ class Client extends MatrixApi {
       )> checkHomeserver(
     Uri homeserverUrl, {
     bool checkWellKnown = true,
+    bool checkOidcDiscovery = true,
     Set<String>? overrideSupportedVersions,
   }) async {
     final supportedVersions =
@@ -543,15 +577,22 @@ class Client extends MatrixApi {
           Logs().v('Found no well known information', e);
         }
       }
+      if (checkOidcDiscovery) {
+        try {
+          _oidcAuthMetadata = await getOidcDiscoveryInformation();
+        } catch (e) {
+          Logs().v('[OIDC] Error checking OIDC discovery', e);
+        }
+      }
 
       // Check if server supports at least one supported version
       final versions = await getVersions();
       if (!versions.versions
           .any((version) => supportedVersions.contains(version))) {
-        Logs().w(
-          'Server supports the versions: ${versions.toString()} but this application is only compatible with ${supportedVersions.toString()}.',
+        throw BadServerVersionsException(
+          versions.versions.toSet(),
+          supportedVersions,
         );
-        assert(false);
       }
 
       final loginTypes = await getLoginFlows() ?? [];
@@ -587,6 +628,7 @@ class Client extends MatrixApi {
     super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
     _wellKnown = wellKnown;
     await database?.storeWellKnown(wellKnown);
+
     return wellKnown;
   }
 
@@ -697,7 +739,7 @@ class Client extends MatrixApi {
     final userId = response.userId;
     final homeserver_ = homeserver;
     if (homeserver_ == null) {
-      throw Exception('Registered but homerserver is null.');
+      throw Exception('Registered but homeserver is null.');
     }
 
     final expiresInMs = response.expiresInMs;
@@ -1641,22 +1683,7 @@ class Client extends MatrixApi {
     return pushrules != null ? TryGetPushRule.tryFromJson(pushrules) : null;
   }
 
-  static const Set<String> supportedVersions = {
-    'v1.1',
-    'v1.2',
-    'v1.3',
-    'v1.4',
-    'v1.5',
-    'v1.6',
-    'v1.7',
-    'v1.8',
-    'v1.9',
-    'v1.10',
-    'v1.11',
-    'v1.12',
-    'v1.13',
-  };
-
+  static const Set<String> supportedVersions = {'v1.1', 'v1.2'};
   static const List<String> supportedDirectEncryptionAlgorithms = [
     AlgorithmTypes.olmV1Curve25519AesSha2,
   ];
@@ -2026,6 +2053,17 @@ class Client extends MatrixApi {
       _versionsCache.invalidate();
 
       final account = await this.database?.getClient(clientName);
+
+      // the device ID is stored separately for easier use of MSC 1597
+      _deviceID = await this.database?.getDeviceId();
+      // migrate the device ID if still in account data
+      if (_deviceID == null &&
+          account != null &&
+          account.containsKey('device_id')) {
+        final deviceId = _deviceID = account['device_id'];
+        await this.database?.storeDeviceId(deviceId);
+      }
+
       newRefreshToken ??= account?.tryGet<String>('refresh_token');
       // can have discovery_information so make sure it also has the proper
       // account creds
@@ -2042,7 +2080,6 @@ class Client extends MatrixApi {
             ? null
             : DateTime.fromMillisecondsSinceEpoch(tokenExpiresAtMs);
         userID = _userID = account['user_id'];
-        _deviceID = account['device_id'];
         _deviceName = account['device_name'];
         _syncFilterId = account['sync_filter_id'];
         _prevBatch = account['prev_batch'];
@@ -2066,6 +2103,10 @@ class Client extends MatrixApi {
         olmAccount = newOlmAccount ?? olmAccount;
       }
 
+      if (newDeviceID != null) {
+        await _database?.storeDeviceId(newDeviceID);
+      }
+
       // If we are refreshing the session, we are done here:
       if (onLoginStateChanged.value == LoginState.softLoggedOut) {
         if (newRefreshToken != null && accessToken != null && userID != null) {
@@ -2076,7 +2117,6 @@ class Client extends MatrixApi {
             accessTokenExpiresAt,
             newRefreshToken,
             userID,
-            _deviceID,
             _deviceName,
             prevBatch,
             encryption?.pickledOlmAccount,
@@ -2131,7 +2171,6 @@ class Client extends MatrixApi {
             accessTokenExpiresAt,
             newRefreshToken,
             userID,
-            _deviceID,
             _deviceName,
             prevBatch,
             encryption?.pickledOlmAccount,
@@ -2144,11 +2183,14 @@ class Client extends MatrixApi {
             accessTokenExpiresAt,
             newRefreshToken,
             userID,
-            _deviceID,
             _deviceName,
             prevBatch,
             encryption?.pickledOlmAccount,
           );
+        }
+        final deviceId = _deviceID;
+        if (deviceId != null) {
+          await database.storeDeviceId(deviceId);
         }
         userDeviceKeysLoading = database
             .getUserDeviceKeys(this)
@@ -2163,6 +2205,13 @@ class Client extends MatrixApi {
         });
         _discoveryDataLoading = database.getWellKnown().then((data) {
           _wellKnown = data;
+        });
+        _oidcAuthMetadataLoading = database.getOidcAuthMetadata().then((data) {
+          _oidcAuthMetadata = data;
+        });
+        _oidcDynamicClientIdLoading =
+            database.getOidcDynamicClientId().then((data) {
+          oidcDynamicClientId = data;
         });
         // ignore: deprecated_member_use_from_same_package
         presences.clear();
@@ -3127,11 +3176,17 @@ class Client extends MatrixApi {
   Future? roomsLoading;
   Future? _accountDataLoading;
   Future? _discoveryDataLoading;
+  Future? _oidcAuthMetadataLoading;
+  Future? _oidcDynamicClientIdLoading;
   Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
 
   Future? get wellKnownLoading => _discoveryDataLoading;
+
+  Future? get oidcAuthMetadataLoading => _oidcAuthMetadataLoading;
+
+  Future? get oidcDynamicClientIdLoading => _oidcDynamicClientIdLoading;
 
   /// A map of known device keys per user.
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
@@ -3887,11 +3942,11 @@ class Client extends MatrixApi {
           : DateTime.fromMillisecondsSinceEpoch(tokenExpiresAtMs),
       migrateClient['refresh_token'],
       migrateClient['user_id'],
-      migrateClient['device_id'],
       migrateClient['device_name'],
       null,
       migrateClient['olm_account'],
     );
+    await database.storeDeviceId(migrateClient['device_id']);
     Logs().d('Migrate SSSSCache...');
     for (final type in cacheTypes) {
       final ssssCache = await legacyDatabase.getSSSSCache(type);
@@ -4024,6 +4079,16 @@ enum SyncStatus {
   cleaningUp,
   finished,
   error,
+}
+
+class BadServerVersionsException implements Exception {
+  final Set<String> serverVersions, supportedVersions;
+
+  BadServerVersionsException(this.serverVersions, this.supportedVersions);
+
+  @override
+  String toString() =>
+      'Server supports the versions: ${serverVersions.toString()} but this application is only compatible with ${supportedVersions.toString()}.';
 }
 
 class BadServerLoginTypesException implements Exception {
