@@ -825,6 +825,9 @@ class KeyManager {
         },
       );
       outgoingShareRequests[request.requestId] = request;
+      Logs().i(
+        '[Key Manager] Sent key verification request $requestId for sessoin $sessionId',
+      );
     } catch (e, s) {
       Logs().e('[Key Manager] Sending key verification request failed', e, s);
     }
