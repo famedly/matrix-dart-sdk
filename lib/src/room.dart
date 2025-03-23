@@ -159,7 +159,7 @@ class Room {
 
     if (stateKey == null) {
       Logs().w(
-        'Tried to set a non state event with type "${state.type}" as state event for a room',
+        'Tried to set a non state event "${state.toJson()}" as state event for a room',
       );
       assert(stateKey != null);
       return;
