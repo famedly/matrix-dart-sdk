@@ -3676,7 +3676,6 @@ class Client extends MatrixApi {
   }) =>
       super.joinRoom(
         roomIdOrAlias,
-        serverName: via ?? serverName,
         via: via ?? serverName,
         reason: reason,
         thirdPartySigned: thirdPartySigned,
