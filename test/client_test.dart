@@ -1521,10 +1521,14 @@ void main() {
     test('object equality', () async {
       final time1 = DateTime.fromMillisecondsSinceEpoch(1);
       final time2 = DateTime.fromMillisecondsSinceEpoch(0);
-      final user1 =
-          User('@user1:example.org', room: Room(id: '!room1', client: matrix));
-      final user2 =
-          User('@user2:example.org', room: Room(id: '!room1', client: matrix));
+      final user1 = Member(
+        '@user1:example.org',
+        room: Room(id: '!room1', client: matrix),
+      );
+      final user2 = Member(
+        '@user2:example.org',
+        room: Room(id: '!room1', client: matrix),
+      );
       // receipts
       expect(Receipt(user1, time1) == Receipt(user1, time1), true);
       expect(Receipt(user1, time1) == Receipt(user1, time2), false);
@@ -1536,7 +1540,7 @@ void main() {
       expect(user1 == user2, false);
       expect(
         user1 ==
-            User(
+            Member(
               '@user1:example.org',
               room: Room(id: '!room2', client: matrix),
             ),
@@ -1544,7 +1548,7 @@ void main() {
       );
       expect(
         user1 ==
-            User(
+            Member(
               '@user1:example.org',
               room: Room(id: '!room1', client: matrix),
               membership: 'leave',

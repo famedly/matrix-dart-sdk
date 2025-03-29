@@ -67,7 +67,7 @@ class WrappedMediaStream {
 
   String? get displayName => getUser().displayName;
 
-  User getUser() {
+  Member getUser() {
     return room.unsafeGetUserFromMemoryOrFallback(participant.userId);
   }
 
