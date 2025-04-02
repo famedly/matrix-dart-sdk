@@ -1,3 +1,12 @@
+## [0.39.0] 2nd April 2025
+- feat: endpoints for spec v1.14 (BREAKING CHANGE)
+- feat: Make dehydrated device name configurable
+- feat: ensure direct chats have only 2 members before sending verification requests
+- fix: Trim plaintext after removeMarkdown
+- fix: use macv2 for correct base64 encoding
+- chore: add v1.14 to supported versions
+- chore: upgrade webrtc_interface to v1.2.2+hotfix.1
+
 ## [0.38.1] 19th March 2025
 
 - chore: Export event localizations (Krille)
