@@ -239,6 +239,7 @@ class Client extends MatrixApi {
     /// When sending a formatted message, converting linebreaks in markdown to
     /// <br/> tags:
     this.convertLinebreaksInFormatting = true,
+    this.dehydratedDeviceDisplayName = 'Dehydrated Device',
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -375,6 +376,8 @@ class Client extends MatrixApi {
   List<ArchivedRoom> get archivedRooms => _archivedRooms;
 
   bool enableDehydratedDevices = false;
+
+  final String dehydratedDeviceDisplayName;
 
   /// Whether read receipts are sent as public receipts by default or just as private receipts.
   bool receiptsPublicByDefault = true;
