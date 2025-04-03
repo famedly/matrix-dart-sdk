@@ -20,16 +20,16 @@ import 'package:matrix/matrix.dart';
 
 // ignore_for_file: deprecated_member_use_from_same_package
 
-typedef Member = User;
+@Deprecated('Use Member instead')
+typedef User = Member;
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
-@Deprecated('Use Member instead')
-class User extends StrippedStateEvent {
+class Member extends StrippedStateEvent {
   final Room room;
   final Map<String, Object?>? prevContent;
   final DateTime? originServerTs;
 
-  factory User(
+  factory Member(
     String id, {
     String? membership,
     String? displayName,
@@ -37,7 +37,7 @@ class User extends StrippedStateEvent {
     DateTime? originServerTs,
     required Room room,
   }) {
-    return User.fromState(
+    return Member.fromState(
       stateKey: id,
       senderId: id,
       content: {
@@ -51,7 +51,7 @@ class User extends StrippedStateEvent {
     );
   }
 
-  User.fromState({
+  Member.fromState({
     required String super.stateKey,
     super.content = const {},
     required String typeKey,
