@@ -132,7 +132,7 @@ class Room {
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].
   /// If no [stateKey] is provided, it defaults to an empty string.
   /// This returns either a `StrippedStateEvent` for rooms with membership
-  /// "invite" or a `User`/`Event`. If you need additional information like
+  /// "invite" or a `Member`/`Event`. If you need additional information like
   /// the Event ID or originServerTs you need to do a type check like:
   /// ```dart
   /// if (state is Event) { /*...*/ }
@@ -197,11 +197,11 @@ class Room {
     return pinned is Iterable ? pinned.map((e) => e.toString()).toList() : [];
   }
 
-  /// Returns the heroes as `User` objects.
+  /// Returns the heroes as `Member` objects.
   /// This is very useful if you want to make sure that all users are loaded
   /// from the database, that you need to correctly calculate the displayname
   /// and the avatar of the room.
-  Future<List<User>> loadHeroUsers() async {
+  Future<List<Member>> loadHeroUsers() async {
     // For invite rooms request own user and invitor.
     if (membership == Membership.invite) {
       final ownUser = await requestUser(client.userID!, requestProfile: false);
@@ -225,7 +225,7 @@ class Room {
               hero,
               ignoreErrors: true,
             )) ??
-            User(hero, room: this),
+            Member(hero, room: this),
       ),
     );
   }
@@ -385,7 +385,7 @@ class Room {
   }
 
   /// Returns a list of all current typing users.
-  List<User> get typingUsers {
+  List<Member> get typingUsers {
     final typingMxid = ephemerals['m.typing']?.content['user_ids'];
     return (typingMxid is List)
         ? typingMxid
@@ -1186,8 +1186,8 @@ class Room {
       if (leaveIfNotFound &&
           membership == Membership.invite &&
           // Right now Synapse responses with `M_UNKNOWN` when the room can not
-          // be found. This is the case for example when User A invites User B
-          // to a direct chat and then User A leaves the chat before User B
+          // be found. This is the case for example when Member A invites Member B
+          // to a direct chat and then Member A leaves the chat before Member B
           // joined.
           // See: https://github.com/element-hq/synapse/issues/1533
           exception.error == MatrixError.M_UNKNOWN) {
@@ -1612,7 +1612,7 @@ class Room {
   /// List `membershipFilter` defines with what membership do you want the
   /// participants, default set to
   /// [[Membership.join, Membership.invite, Membership.knock]]
-  List<User> getParticipants([
+  List<Member> getParticipants([
     List<Membership> membershipFilter = const [
       Membership.join,
       Membership.invite,
@@ -1627,7 +1627,7 @@ class Room {
           .where((user) => membershipFilter.contains(user.membership))
           .toList();
     }
-    return <User>[];
+    return <Member>[];
   }
 
   /// Request the full list of participants from the server. The local list
@@ -1639,7 +1639,7 @@ class Room {
   /// for this session which is highly recommended for large public rooms.
   /// By default users are only cached in encrypted rooms as encrypted rooms
   /// need a full member list.
-  Future<List<User>> requestParticipants([
+  Future<List<Member>> requestParticipants([
     List<Membership> membershipFilter = const [
       Membership.join,
       Membership.invite,
@@ -1714,14 +1714,14 @@ class Room {
   @Deprecated(
     'The method was renamed unsafeGetUserFromMemoryOrFallback. Please prefer requestParticipants.',
   )
-  User getUserByMXIDSync(String mxID) {
+  Member getUserByMXIDSync(String mxID) {
     return unsafeGetUserFromMemoryOrFallback(mxID);
   }
 
-  /// Returns the [User] object for the given [mxID] or return
-  /// a fallback [User] and start a request to get the user
+  /// Returns the [Member] object for the given [mxID] or return
+  /// a fallback [Member] and start a request to get the user
   /// from the homeserver.
-  User unsafeGetUserFromMemoryOrFallback(String mxID) {
+  Member unsafeGetUserFromMemoryOrFallback(String mxID) {
     final user = getState(EventTypes.RoomMember, mxID);
     if (user != null) {
       return user.asUser(this);
@@ -1733,12 +1733,12 @@ class Room {
           ignoreErrors: true,
         );
       }
-      return User(mxID, room: this);
+      return Member(mxID, room: this);
     }
   }
 
   // Internal helper to implement requestUser
-  Future<User?> _requestSingleParticipantViaState(
+  Future<Member?> _requestSingleParticipantViaState(
     String mxID, {
     required bool ignoreErrors,
   }) async {
@@ -1754,7 +1754,7 @@ class Room {
       final membership = resp.tryGet<String>('membership', TryGet.required);
       assert(membership != null);
 
-      final foundUser = User(
+      final foundUser = Member(
         mxID,
         room: this,
         displayName: resp.tryGet<String>('displayname', TryGet.silent),
@@ -1787,7 +1787,7 @@ class Room {
   }
 
   // Internal helper to implement requestUser
-  Future<User?> _requestUser(
+  Future<Member?> _requestUser(
     String mxID, {
     required bool ignoreErrors,
     required bool requestState,
@@ -1796,7 +1796,7 @@ class Room {
     // Is user already in cache?
 
     // If not in cache, try the database
-    User? foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
+    Member? foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     // If the room is not postloaded, check the database
     if (partial && foundUser == null) {
@@ -1815,13 +1815,13 @@ class Room {
     if (requestProfile) {
       if (foundUser
           case null ||
-              User(
+              Member(
                 membership: Membership.ban || Membership.leave,
                 displayName: null
               )) {
         try {
           final profile = await client.getUserProfile(mxID);
-          foundUser = User(
+          foundUser = Member(
             mxID,
             displayName: profile.displayname,
             avatarUrl: profile.avatarUrl?.toString(),
@@ -1863,14 +1863,14 @@ class Room {
         bool requestState,
         bool requestProfile,
       }),
-      AsyncCache<User?>> _inflightUserRequests = {};
+      AsyncCache<Member?>> _inflightUserRequests = {};
 
-  /// Requests a missing [User] for this room. Important for clients using
+  /// Requests a missing [Member] for this room. Important for clients using
   /// lazy loading. If the user can't be found this method tries to fetch
   /// the displayname and avatar from the server if [requestState] is true.
   /// If that fails, it falls back to requesting the global profile if
   /// [requestProfile] is true.
-  Future<User?> requestUser(
+  Future<Member?> requestUser(
     String mxID, {
     bool ignoreErrors = false,
     bool requestState = true,
@@ -2466,7 +2466,7 @@ class Room {
     final users = await requestParticipants([Membership.join]);
     final currentPowerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
 
-    final temp = List<User>.from(users);
+    final temp = List<Member>.from(users);
     temp.removeWhere((user) => user.powerLevel < 50);
     if (currentPowerLevelsMap != null) {
       // just for weird rooms

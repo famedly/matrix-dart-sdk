@@ -1911,7 +1911,9 @@ class Client extends MatrixApi {
       Logs().w('Unable to request user for push helper', e, s);
       final senderDisplayName = notification.senderDisplayName;
       if (senderDisplayName != null && sender != null) {
-        room.setState(User(sender, displayName: senderDisplayName, room: room));
+        room.setState(
+          Member(sender, displayName: senderDisplayName, room: room),
+        );
       }
     }
 
@@ -2679,7 +2681,7 @@ class Client extends MatrixApi {
             final existingState =
                 room.getState(state.type, state.stateKey ?? '');
             if (existingState == null) return false;
-            if (existingState is User) {
+            if (existingState is Member) {
               return existingState.originServerTs
                       ?.isAfter(state.originServerTs) ??
                   true;

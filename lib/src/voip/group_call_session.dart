@@ -97,7 +97,7 @@ class GroupCallSession {
 
   String? get displayName => _getUser().displayName;
 
-  User _getUser() {
+  Member _getUser() {
     return room.unsafeGetUserFromMemoryOrFallback(client.userID!);
   }
 
