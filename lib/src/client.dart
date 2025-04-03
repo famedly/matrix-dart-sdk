@@ -239,6 +239,7 @@ class Client extends MatrixApi {
     /// When sending a formatted message, converting linebreaks in markdown to
     /// <br/> tags:
     this.convertLinebreaksInFormatting = true,
+    this.dehydratedDeviceDisplayName = 'Dehydrated Device',
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -376,6 +377,8 @@ class Client extends MatrixApi {
 
   bool enableDehydratedDevices = false;
 
+  final String dehydratedDeviceDisplayName;
+
   /// Whether read receipts are sent as public receipts by default or just as private receipts.
   bool receiptsPublicByDefault = true;
 
@@ -451,7 +454,8 @@ class Client extends MatrixApi {
   Map<String, dynamic> get directChats =>
       _accountData['m.direct']?.content ?? {};
 
-  /// Returns the (first) room ID from the store which is a private chat with the user [userId].
+  /// Returns the first room ID from the store (the room with the latest event)
+  /// which is a private chat with the user [userId].
   /// Returns null if there is none.
   String? getDirectChatFromUserId(String userId) {
     final directChats = _accountData['m.direct']?.content[userId];
@@ -1655,6 +1659,7 @@ class Client extends MatrixApi {
     'v1.11',
     'v1.12',
     'v1.13',
+    'v1.14',
   };
 
   static const List<String> supportedDirectEncryptionAlgorithms = [
@@ -3677,7 +3682,6 @@ class Client extends MatrixApi {
   }) =>
       super.joinRoom(
         roomIdOrAlias,
-        serverName: via ?? serverName,
         via: via ?? serverName,
         reason: reason,
         thirdPartySigned: thirdPartySigned,

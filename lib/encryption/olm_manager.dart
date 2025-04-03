@@ -253,7 +253,7 @@ class OlmManager {
 
         await client.uploadDehydratedDevice(
           deviceId: ourDeviceId!,
-          initialDeviceDisplayName: 'Dehydrated Device',
+          initialDeviceDisplayName: client.dehydratedDeviceDisplayName,
           deviceKeys:
               uploadDeviceKeys ? MatrixDeviceKeys.fromJson(deviceKeys) : null,
           oneTimeKeys: signedOneTimeKeys,

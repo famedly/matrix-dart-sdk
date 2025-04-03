@@ -685,6 +685,16 @@ class GetSpaceHierarchyResponse {
   String? nextBatch;
 
   /// The rooms for the current page, with the current filters.
+  ///
+  /// The server should return any rooms where at least one of the following conditions is true:
+  ///
+  /// * The requesting user is currently a member (their [room membership](#room-membership) is `join`).
+  /// * The requesting user already has permission to join, i.e. one of the following:
+  ///   * The user's room membership is `invite`.
+  ///   * The room's [join rules](#mroomjoin_rules) are set to `public`.
+  ///   * The room's join rules are set to [`restricted`](#restricted-rooms), provided the user meets one of the specified conditions.
+  /// * The room is "knockable" (the room's join rules are set to `knock`, or `knock_restricted`, in a room version that supports those settings).
+  /// * The room's [`m.room.history_visibility`](#room-history-visibility) is set to `world_readable`.
   List<SpaceRoomsChunk> rooms;
 
   @dart.override
@@ -3414,7 +3424,9 @@ class RoomKeysUpdateResponse {
   int count;
 
   /// The new etag value representing stored keys in the backup.
-  /// See `GET /room_keys/version/{version}` for more details.
+  ///
+  /// See [`GET /room_keys/version/{version}`](client-server-api/#get_matrixclientv3room_keysversionversion)
+  /// for more details.
   String etag;
 
   @dart.override
@@ -5002,6 +5014,68 @@ class FieldType {
 
 ///
 @_NameSource('spec')
+class Protocol {
+  Protocol({
+    required this.fieldTypes,
+    required this.icon,
+    required this.locationFields,
+    required this.userFields,
+  });
+
+  Protocol.fromJson(Map<String, Object?> json)
+      : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
+          (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
+        ),
+        icon = json['icon'] as String,
+        locationFields =
+            (json['location_fields'] as List).map((v) => v as String).toList(),
+        userFields =
+            (json['user_fields'] as List).map((v) => v as String).toList();
+  Map<String, Object?> toJson() => {
+        'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
+        'icon': icon,
+        'location_fields': locationFields.map((v) => v).toList(),
+        'user_fields': userFields.map((v) => v).toList(),
+      };
+
+  /// The type definitions for the fields defined in `user_fields` and
+  /// `location_fields`. Each entry in those arrays MUST have an entry here.
+  /// The `string` key for this object is the field name itself.
+  ///
+  /// May be an empty object if no fields are defined.
+  Map<String, FieldType> fieldTypes;
+
+  /// A content URI representing an icon for the third-party protocol.
+  String icon;
+
+  /// Fields which may be used to identify a third-party location. These should be
+  /// ordered to suggest the way that entities may be grouped, where higher
+  /// groupings are ordered first. For example, the name of a network should be
+  /// searched before the name of a channel.
+  List<String> locationFields;
+
+  /// Fields which may be used to identify a third-party user. These should be
+  /// ordered to suggest the way that entities may be grouped, where higher
+  /// groupings are ordered first. For example, the name of a network should be
+  /// searched before the nickname of a user.
+  List<String> userFields;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Protocol &&
+          other.runtimeType == runtimeType &&
+          other.fieldTypes == fieldTypes &&
+          other.icon == icon &&
+          other.locationFields == locationFields &&
+          other.userFields == userFields);
+
+  @dart.override
+  int get hashCode => Object.hash(fieldTypes, icon, locationFields, userFields);
+}
+
+///
+@_NameSource('spec')
 class ProtocolInstance {
   ProtocolInstance({
     required this.desc,
@@ -5053,77 +5127,378 @@ class ProtocolInstance {
 }
 
 ///
-@_NameSource('spec')
-class Protocol {
-  Protocol({
-    required this.fieldTypes,
-    required this.icon,
-    required this.instances,
-    required this.locationFields,
-    required this.userFields,
+@_NameSource('generated')
+class Instances$1 {
+  Instances$1({
+    this.instanceId,
   });
 
-  Protocol.fromJson(Map<String, Object?> json)
+  Instances$1.fromJson(Map<String, Object?> json)
+      : instanceId =
+            ((v) => v != null ? v as String : null)(json['instance_id']);
+  Map<String, Object?> toJson() {
+    final instanceId = this.instanceId;
+    return {
+      if (instanceId != null) 'instance_id': instanceId,
+    };
+  }
+
+  /// A unique identifier for this instance on the homeserver. This field is added
+  /// to the response of [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
+  /// by the homeserver.
+  ///
+  /// This is the identifier to use as the `third_party_instance_id` in a request to
+  /// [`POST /_matrix/client/v3/publicRooms`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3publicrooms).
+  String? instanceId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Instances$1 &&
+          other.runtimeType == runtimeType &&
+          other.instanceId == instanceId);
+
+  @dart.override
+  int get hashCode => instanceId.hashCode;
+}
+
+///
+@_NameSource('generated')
+class Instances$2 implements ProtocolInstance, Instances$1 {
+  Instances$2({
+    required this.desc,
+    required this.fields,
+    this.icon,
+    required this.networkId,
+    this.instanceId,
+  });
+
+  Instances$2.fromJson(Map<String, Object?> json)
+      : desc = json['desc'] as String,
+        fields = json['fields'] as Map<String, Object?>,
+        icon = ((v) => v != null ? v as String : null)(json['icon']),
+        networkId = json['network_id'] as String,
+        instanceId =
+            ((v) => v != null ? v as String : null)(json['instance_id']);
+  @override
+  Map<String, Object?> toJson() {
+    final icon = this.icon;
+    final instanceId = this.instanceId;
+    return {
+      'desc': desc,
+      'fields': fields,
+      if (icon != null) 'icon': icon,
+      'network_id': networkId,
+      if (instanceId != null) 'instance_id': instanceId,
+    };
+  }
+
+  /// A human-readable description for the protocol, such as the name.
+  @override
+  String desc;
+
+  /// Preset values for `fields` the client may use to search by.
+  @override
+  Map<String, Object?> fields;
+
+  /// An optional content URI representing the protocol. Overrides the one provided
+  /// at the higher level Protocol object.
+  @override
+  String? icon;
+
+  /// A unique identifier across all instances.
+  @override
+  String networkId;
+
+  /// A unique identifier for this instance on the homeserver. This field is added
+  /// to the response of [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
+  /// by the homeserver.
+  ///
+  /// This is the identifier to use as the `third_party_instance_id` in a request to
+  /// [`POST /_matrix/client/v3/publicRooms`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3publicrooms).
+  @override
+  String? instanceId;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Instances$2 &&
+          other.runtimeType == runtimeType &&
+          other.desc == desc &&
+          other.fields == fields &&
+          other.icon == icon &&
+          other.networkId == networkId &&
+          other.instanceId == instanceId);
+
+  @dart.override
+  int get hashCode => Object.hash(desc, fields, icon, networkId, instanceId);
+}
+
+///
+@_NameSource('generated')
+class GetProtocolMetadataResponse$1 {
+  GetProtocolMetadataResponse$1({
+    this.instances,
+  });
+
+  GetProtocolMetadataResponse$1.fromJson(Map<String, Object?> json)
+      : instances = ((v) => v != null
+            ? (v as List)
+                .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['instances']);
+  Map<String, Object?> toJson() {
+    final instances = this.instances;
+    return {
+      if (instances != null)
+        'instances': instances.map((v) => v.toJson()).toList(),
+    };
+  }
+
+  /// A list of objects representing independent instances of configuration.
+  /// For example, multiple networks on IRC if multiple are provided by the
+  /// same application service.
+  ///
+  /// The instances are modified by the homeserver from the response of
+  /// [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
+  /// to include an `instance_id` to serve as a unique identifier for each
+  /// instance on the homeserver.
+  List<Instances$2>? instances;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetProtocolMetadataResponse$1 &&
+          other.runtimeType == runtimeType &&
+          other.instances == instances);
+
+  @dart.override
+  int get hashCode => instances.hashCode;
+}
+
+///
+@_NameSource('generated')
+class GetProtocolMetadataResponse$2
+    implements Protocol, GetProtocolMetadataResponse$1 {
+  GetProtocolMetadataResponse$2({
+    required this.fieldTypes,
+    required this.icon,
+    required this.locationFields,
+    required this.userFields,
+    this.instances,
+  });
+
+  GetProtocolMetadataResponse$2.fromJson(Map<String, Object?> json)
       : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
           (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
         ),
         icon = json['icon'] as String,
-        instances = (json['instances'] as List)
-            .map((v) => ProtocolInstance.fromJson(v as Map<String, Object?>))
-            .toList(),
         locationFields =
             (json['location_fields'] as List).map((v) => v as String).toList(),
         userFields =
-            (json['user_fields'] as List).map((v) => v as String).toList();
-  Map<String, Object?> toJson() => {
-        'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
-        'icon': icon,
+            (json['user_fields'] as List).map((v) => v as String).toList(),
+        instances = ((v) => v != null
+            ? (v as List)
+                .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['instances']);
+  @override
+  Map<String, Object?> toJson() {
+    final instances = this.instances;
+    return {
+      'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
+      'icon': icon,
+      'location_fields': locationFields.map((v) => v).toList(),
+      'user_fields': userFields.map((v) => v).toList(),
+      if (instances != null)
         'instances': instances.map((v) => v.toJson()).toList(),
-        'location_fields': locationFields.map((v) => v).toList(),
-        'user_fields': userFields.map((v) => v).toList(),
-      };
+    };
+  }
 
   /// The type definitions for the fields defined in `user_fields` and
   /// `location_fields`. Each entry in those arrays MUST have an entry here.
   /// The `string` key for this object is the field name itself.
   ///
   /// May be an empty object if no fields are defined.
+  @override
   Map<String, FieldType> fieldTypes;
 
   /// A content URI representing an icon for the third-party protocol.
+  @override
   String icon;
-
-  /// A list of objects representing independent instances of configuration.
-  /// For example, multiple networks on IRC if multiple are provided by the
-  /// same application service.
-  List<ProtocolInstance> instances;
 
   /// Fields which may be used to identify a third-party location. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the name of a channel.
+  @override
   List<String> locationFields;
 
   /// Fields which may be used to identify a third-party user. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the nickname of a user.
+  @override
   List<String> userFields;
+
+  /// A list of objects representing independent instances of configuration.
+  /// For example, multiple networks on IRC if multiple are provided by the
+  /// same application service.
+  ///
+  /// The instances are modified by the homeserver from the response of
+  /// [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
+  /// to include an `instance_id` to serve as a unique identifier for each
+  /// instance on the homeserver.
+  @override
+  List<Instances$2>? instances;
 
   @dart.override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Protocol &&
+      (other is GetProtocolMetadataResponse$2 &&
           other.runtimeType == runtimeType &&
           other.fieldTypes == fieldTypes &&
           other.icon == icon &&
-          other.instances == instances &&
           other.locationFields == locationFields &&
-          other.userFields == userFields);
+          other.userFields == userFields &&
+          other.instances == instances);
 
   @dart.override
   int get hashCode =>
-      Object.hash(fieldTypes, icon, instances, locationFields, userFields);
+      Object.hash(fieldTypes, icon, locationFields, userFields, instances);
+}
+
+///
+@_NameSource('generated')
+class GetProtocolsResponse$1 {
+  GetProtocolsResponse$1({
+    this.instances,
+  });
+
+  GetProtocolsResponse$1.fromJson(Map<String, Object?> json)
+      : instances = ((v) => v != null
+            ? (v as List)
+                .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['instances']);
+  Map<String, Object?> toJson() {
+    final instances = this.instances;
+    return {
+      if (instances != null)
+        'instances': instances.map((v) => v.toJson()).toList(),
+    };
+  }
+
+  /// A list of objects representing independent instances of configuration.
+  /// For example, multiple networks on IRC if multiple are provided by the
+  /// same application service.
+  ///
+  /// The instances are modified by the homeserver from the response of
+  /// [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
+  /// to include an `instance_id` to serve as a unique identifier for each
+  /// instance on the homeserver.
+  List<Instances$2>? instances;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetProtocolsResponse$1 &&
+          other.runtimeType == runtimeType &&
+          other.instances == instances);
+
+  @dart.override
+  int get hashCode => instances.hashCode;
+}
+
+///
+@_NameSource('generated')
+class GetProtocolsResponse$2 implements Protocol, GetProtocolsResponse$1 {
+  GetProtocolsResponse$2({
+    required this.fieldTypes,
+    required this.icon,
+    required this.locationFields,
+    required this.userFields,
+    this.instances,
+  });
+
+  GetProtocolsResponse$2.fromJson(Map<String, Object?> json)
+      : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
+          (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
+        ),
+        icon = json['icon'] as String,
+        locationFields =
+            (json['location_fields'] as List).map((v) => v as String).toList(),
+        userFields =
+            (json['user_fields'] as List).map((v) => v as String).toList(),
+        instances = ((v) => v != null
+            ? (v as List)
+                .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+                .toList()
+            : null)(json['instances']);
+  @override
+  Map<String, Object?> toJson() {
+    final instances = this.instances;
+    return {
+      'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
+      'icon': icon,
+      'location_fields': locationFields.map((v) => v).toList(),
+      'user_fields': userFields.map((v) => v).toList(),
+      if (instances != null)
+        'instances': instances.map((v) => v.toJson()).toList(),
+    };
+  }
+
+  /// The type definitions for the fields defined in `user_fields` and
+  /// `location_fields`. Each entry in those arrays MUST have an entry here.
+  /// The `string` key for this object is the field name itself.
+  ///
+  /// May be an empty object if no fields are defined.
+  @override
+  Map<String, FieldType> fieldTypes;
+
+  /// A content URI representing an icon for the third-party protocol.
+  @override
+  String icon;
+
+  /// Fields which may be used to identify a third-party location. These should be
+  /// ordered to suggest the way that entities may be grouped, where higher
+  /// groupings are ordered first. For example, the name of a network should be
+  /// searched before the name of a channel.
+  @override
+  List<String> locationFields;
+
+  /// Fields which may be used to identify a third-party user. These should be
+  /// ordered to suggest the way that entities may be grouped, where higher
+  /// groupings are ordered first. For example, the name of a network should be
+  /// searched before the nickname of a user.
+  @override
+  List<String> userFields;
+
+  /// A list of objects representing independent instances of configuration.
+  /// For example, multiple networks on IRC if multiple are provided by the
+  /// same application service.
+  ///
+  /// The instances are modified by the homeserver from the response of
+  /// [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
+  /// to include an `instance_id` to serve as a unique identifier for each
+  /// instance on the homeserver.
+  @override
+  List<Instances$2>? instances;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetProtocolsResponse$2 &&
+          other.runtimeType == runtimeType &&
+          other.fieldTypes == fieldTypes &&
+          other.icon == icon &&
+          other.locationFields == locationFields &&
+          other.userFields == userFields &&
+          other.instances == instances);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(fieldTypes, icon, locationFields, userFields, instances);
 }
 
 ///

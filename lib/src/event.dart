@@ -955,10 +955,8 @@ class Event extends MatrixEvent {
     // return the html tags free body
     if (removeMarkdown == true) {
       final html = markdown(body, convertLinebreaks: false);
-      final document = parse(
-        html,
-      );
-      body = document.documentElement?.text ?? body;
+      final document = parse(html);
+      body = document.documentElement?.text.trim() ?? body;
     }
     return body;
   }
