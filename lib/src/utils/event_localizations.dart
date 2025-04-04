@@ -119,6 +119,12 @@ abstract class EventLocalizations {
     EventTypes.Sticker: (event, i18n, body) => i18n.sentASticker(
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
         ),
+    EventTypes.encryptionInfo: (event, i18n, body) {
+      return i18n.userCanNowReadAlong(
+        event.content.tryGetList<String>('users') ?? [i18n.unknownUser],
+        event.content.tryGetList<String>('devices'),
+      );
+    },
     EventTypes.Redaction: (event, i18n, body) => i18n.redactedAnEvent(event),
     EventTypes.RoomAliases: (event, i18n, body) => i18n.changedTheRoomAliases(
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
