@@ -31,6 +31,13 @@ extension DehydratedDeviceHandler on Client {
         return;
       }
 
+      final versions = await getVersions();
+      if (versions.unstableFeatures?.tryGet<bool>('org.matrix.msc3814') !=
+          true) {
+        Logs().i('Dehydrated devices not found at /client/versions, skipping.');
+        return;
+      }
+
       DehydratedDevice? device;
       try {
         device = await getDehydratedDevice();

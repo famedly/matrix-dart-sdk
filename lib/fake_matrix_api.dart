@@ -165,7 +165,10 @@ class FakeMatrixApi extends BaseClient {
           'v1.9',
           'v1.10.1',
         ],
-        'unstable_features': {'m.lazy_load_members': true},
+        'unstable_features': {
+          'm.lazy_load_members': true,
+          'org.matrix.msc3814': true,
+        },
       };
     } else {
       final act = api[method]?[action];
