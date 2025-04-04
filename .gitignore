@@ -18,6 +18,7 @@ coverage/
 coverage_badge.svg
 coverage.xml
 TEST-report.*
+coverage_dir/*
 
 # IntelliJ related
 *.iml
