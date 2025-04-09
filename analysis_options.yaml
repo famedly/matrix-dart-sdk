@@ -26,7 +26,6 @@ linter:
     throw_in_finally: true
     unawaited_futures: true
     unnecessary_statements: true
-    unsafe_html: true
 
     # Readability & Style
     # These are opinionated choices, where Dart gives us 2 ways to express the same thing.
