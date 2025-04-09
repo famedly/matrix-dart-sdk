@@ -104,9 +104,15 @@ abstract class DatabaseApi {
 
   Future<void> clear();
 
-  Future<Member?> getUser(String userId, Room room);
+  Future<Member?> getMember(String userId, Room room);
 
-  Future<List<Member>> getUsers(Room room);
+  @Deprecated('Use getMember instead')
+  Future<User?> getUser(String userId, Room room);
+
+  Future<List<Member>> getMembers(Room room);
+
+  @Deprecated('Use getMembers instead')
+  Future<List<User>> getUsers(Room room);
 
   Future<List<Event>> getEventList(
     Room room, {

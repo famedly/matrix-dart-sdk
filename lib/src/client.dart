@@ -1905,7 +1905,7 @@ class Client extends MatrixApi {
     // Load the sender of this event
     try {
       await room
-          .requestUser(matrixEvent.senderId)
+          .requestMember(matrixEvent.senderId)
           .timeout(timeoutForServerRequests);
     } catch (e, s) {
       Logs().w('Unable to request user for push helper', e, s);
@@ -2851,9 +2851,9 @@ class Client extends MatrixApi {
           event is MatrixEvent &&
           room.getState(EventTypes.RoomMember, event.senderId) == null) {
         // In order to correctly render room list previews we need to fetch the member from the database
-        final user = await database?.getUser(event.senderId, room);
-        if (user != null) {
-          room.setState(user);
+        final member = await database?.getMember(event.senderId, room);
+        if (member != null) {
+          room.setState(member);
         }
       }
       _updateRoomsByEventUpdate(room, event, type);

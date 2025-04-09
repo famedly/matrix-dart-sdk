@@ -37,7 +37,7 @@ abstract class RelationshipTypes {
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event extends MatrixEvent {
   /// Requests the user object of the sender of this event.
-  Future<Member?> fetchSenderUser() => room.requestUser(
+  Future<Member?> fetchSenderUser() => room.requestMember(
         senderId,
         ignoreErrors: true,
       );

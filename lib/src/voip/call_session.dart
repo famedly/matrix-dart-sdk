@@ -92,7 +92,11 @@ class CallSession {
   /// The ID of the user being called. If omitted, any user in the room can answer.
   String? remoteUserId;
 
-  Member? get remoteUser => remoteUserId != null
+  // ignore: deprecated_member_use_from_same_package
+  Member? get remoteMember => remoteUser;
+
+  @Deprecated('Use remoteMember instead')
+  User? get remoteUser => remoteUserId != null
       ? room.unsafeGetUserFromMemoryOrFallback(remoteUserId!)
       : null;
 

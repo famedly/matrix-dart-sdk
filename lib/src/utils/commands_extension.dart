@@ -376,7 +376,7 @@ extension CommandsClientExtension on Client {
           'You must enter a valid mxid when using /maskasdm',
         );
       }
-      if (await room.requestUser(mxid, requestProfile: false) == null) {
+      if (await room.requestMember(mxid, requestProfile: false) == null) {
         throw CommandException('User $mxid is not in this room');
       }
       await room.addToDirectChat(mxid);

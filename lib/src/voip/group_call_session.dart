@@ -93,11 +93,17 @@ class GroupCallSession {
   });
 
   String get avatarName =>
-      _getUser().calcDisplayname(mxidLocalPartFallback: false);
+      _getMember().calcDisplayname(mxidLocalPartFallback: false);
 
-  String? get displayName => _getUser().displayName;
+  String? get displayName => _getMember().displayName;
 
-  Member _getUser() {
+  Member _getMember() {
+    // ignore: deprecated_member_use_from_same_package
+    return _getUser();
+  }
+
+  @Deprecated('Use _getMember instead')
+  User _getUser() {
     return room.unsafeGetUserFromMemoryOrFallback(client.userID!);
   }
 

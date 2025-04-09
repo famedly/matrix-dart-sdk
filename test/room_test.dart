@@ -878,7 +878,7 @@ void main() {
       });
 
       FakeMatrixApi.calledEndpoints.clear();
-      final user = await room.requestUser('@getme:example.com');
+      final user = await room.requestMember('@getme:example.com');
       expect(FakeMatrixApi.calledEndpoints.keys, [
         '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.member/%40getme%3Aexample.com',
       ]);
@@ -896,7 +896,7 @@ void main() {
       expect(called2.length, 1);
 
       FakeMatrixApi.calledEndpoints.clear();
-      final user2 = await room.requestUser('@getmeprofile:example.com');
+      final user2 = await room.requestMember('@getmeprofile:example.com');
       expect(FakeMatrixApi.calledEndpoints.keys, [
         '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.member/%40getmeprofile%3Aexample.com',
         '/client/v3/profile/%40getmeprofile%3Aexample.com',
@@ -915,7 +915,7 @@ void main() {
       expect(called2.length, 2);
 
       FakeMatrixApi.calledEndpoints.clear();
-      final userAgain = await room.requestUser('@getme:example.com');
+      final userAgain = await room.requestMember('@getme:example.com');
       expect(FakeMatrixApi.calledEndpoints.keys, []);
       expect(userAgain?.stateKey, '@getme:example.com');
       expect(userAgain?.calcDisplayname(), 'You got me');
@@ -935,7 +935,7 @@ void main() {
       );
 
       FakeMatrixApi.calledEndpoints.clear();
-      final user3 = await room.requestUser('@getmeempty:example.com');
+      final user3 = await room.requestMember('@getmeempty:example.com');
       expect(FakeMatrixApi.calledEndpoints.keys, [
         '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.member/%40getmeempty%3Aexample.com',
         '/client/v3/profile/%40getmeempty%3Aexample.com',

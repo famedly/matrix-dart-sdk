@@ -756,6 +756,11 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
+  Future<Member?> getMember(String userId, Room room) {
+    return getUser(userId, room);
+  }
+
+  @override
   Future<User?> getUser(String userId, Room room) async {
     final state =
         await _roomMembersBox.get(TupleKey(room.id, userId).toString());
@@ -823,6 +828,11 @@ class HiveCollectionsDatabase extends DatabaseApi {
         }
         return res;
       });
+
+  @override
+  Future<List<Member>> getMembers(Room room) {
+    return getUsers(room);
+  }
 
   @override
   Future<List<User>> getUsers(Room room) async {

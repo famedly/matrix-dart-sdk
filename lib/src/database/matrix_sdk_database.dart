@@ -742,7 +742,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<Member?> getUser(String userId, Room room) async {
+  Future<Member?> getMember(String userId, Room room) {
+    return getUser(userId, room);
+  }
+
+  @override
+  // ignore: deprecated_member_use_from_same_package
+  Future<User?> getUser(String userId, Room room) async {
     final state =
         await _roomMembersBox.get(TupleKey(room.id, userId).toString());
     if (state == null) return null;
@@ -805,6 +811,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         }
         return res;
       });
+
+  @override
+  Future<List<Member>> getMembers(Room room) {
+    return getUsers(room);
+  }
 
   @override
   Future<List<Member>> getUsers(Room room) async {

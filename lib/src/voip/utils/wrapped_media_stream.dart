@@ -60,14 +60,20 @@ class WrappedMediaStream {
     stream = null;
   }
 
-  Uri? get avatarUrl => getUser().avatarUrl;
+  Uri? get avatarUrl => getMember().avatarUrl;
 
   String get avatarName =>
-      getUser().calcDisplayname(mxidLocalPartFallback: false);
+      getMember().calcDisplayname(mxidLocalPartFallback: false);
 
-  String? get displayName => getUser().displayName;
+  String? get displayName => getMember().displayName;
 
-  Member getUser() {
+  Member getMember() {
+    // ignore: deprecated_member_use_from_same_package
+    return getUser();
+  }
+
+  @Deprecated('Use getMember instead')
+  User getUser() {
     return room.unsafeGetUserFromMemoryOrFallback(participant.userId);
   }
 

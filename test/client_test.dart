@@ -1521,42 +1521,42 @@ void main() {
     test('object equality', () async {
       final time1 = DateTime.fromMillisecondsSinceEpoch(1);
       final time2 = DateTime.fromMillisecondsSinceEpoch(0);
-      final user1 = Member(
-        '@user1:example.org',
+      final member1 = Member(
+        '@member1:example.org',
         room: Room(id: '!room1', client: matrix),
       );
-      final user2 = Member(
-        '@user2:example.org',
+      final member2 = Member(
+        '@member2:example.org',
         room: Room(id: '!room1', client: matrix),
       );
       // receipts
-      expect(Receipt(user1, time1) == Receipt(user1, time1), true);
-      expect(Receipt(user1, time1) == Receipt(user1, time2), false);
-      expect(Receipt(user1, time1) == Receipt(user2, time1), false);
+      expect(Receipt(member1, time1) == Receipt(member1, time1), true);
+      expect(Receipt(member1, time1) == Receipt(member1, time2), false);
+      expect(Receipt(member1, time1) == Receipt(member2, time1), false);
       // ignore: unrelated_type_equality_checks
-      expect(Receipt(user1, time1) == 'beep', false);
+      expect(Receipt(member1, time1) == 'beep', false);
       // users
-      expect(user1 == user1, true);
-      expect(user1 == user2, false);
+      expect(member1 == member1, true);
+      expect(member1 == member2, false);
       expect(
-        user1 ==
+        member1 ==
             Member(
-              '@user1:example.org',
+              '@member1:example.org',
               room: Room(id: '!room2', client: matrix),
             ),
         false,
       );
       expect(
-        user1 ==
+        member1 ==
             Member(
-              '@user1:example.org',
+              '@member1:example.org',
               room: Room(id: '!room1', client: matrix),
               membership: 'leave',
             ),
         false,
       );
       // ignore: unrelated_type_equality_checks
-      expect(user1 == 'beep', false);
+      expect(member1 == 'beep', false);
       // rooms
       expect(
         Room(id: '!room1', client: matrix) ==

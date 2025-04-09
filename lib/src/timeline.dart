@@ -158,7 +158,7 @@ class Timeline {
             continue;
           }
           final dbUser =
-              await room.client.database?.getUser(event.senderId, room);
+              await room.client.database?.getMember(event.senderId, room);
           if (dbUser != null) room.setState(dbUser);
         }
 

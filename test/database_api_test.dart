@@ -389,15 +389,15 @@ void main() {
         );
         expect(events.single.type, EventTypes.Message);
       });
-      test('getUser', () async {
-        final user = await database.getUser(
+      test('getMember', () async {
+        final user = await database.getMember(
           '@bob:example.org',
           Room(id: '!testroom:example.com', client: Client('testclient')),
         );
         expect(user, null);
       });
-      test('getUsers', () async {
-        final users = await database.getUsers(
+      test('getMembers', () async {
+        final users = await database.getMembers(
           Room(id: '!testroom:example.com', client: Client('testclient')),
         );
         expect(users.isEmpty, true);

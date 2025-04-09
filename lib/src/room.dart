@@ -204,8 +204,9 @@ class Room {
   Future<List<Member>> loadHeroUsers() async {
     // For invite rooms request own user and invitor.
     if (membership == Membership.invite) {
-      final ownUser = await requestUser(client.userID!, requestProfile: false);
-      if (ownUser != null) await requestUser(ownUser.senderId);
+      final ownUser =
+          await requestMember(client.userID!, requestProfile: false);
+      if (ownUser != null) await requestMember(ownUser.senderId);
     }
 
     var heroes = summary.mHeroes;
@@ -221,7 +222,7 @@ class Room {
     return await Future.wait(
       heroes.map(
         (hero) async =>
-            (await requestUser(
+            (await requestMember(
               hero,
               ignoreErrors: true,
             )) ??
@@ -1569,7 +1570,7 @@ class Room {
       final userIds = events.map((event) => event.senderId).toSet();
       for (final userId in userIds) {
         if (getState(EventTypes.RoomMember, userId) != null) continue;
-        final dbUser = await client.database?.getUser(userId, this);
+        final dbUser = await client.database?.getMember(userId, this);
         if (dbUser != null) setState(dbUser);
       }
     }
@@ -1654,7 +1655,7 @@ class Room {
       // events won't get written to memory in this case and someone new could
       // have joined, while someone else left, which might lead to the same
       // count in the completeness check.
-      final users = await client.database?.getUsers(this) ?? [];
+      final users = await client.database?.getMembers(this) ?? [];
       for (final user in users) {
         setState(user);
       }
@@ -1728,7 +1729,7 @@ class Room {
     } else {
       if (mxID.isValidMatrixId) {
         // ignore: discarded_futures
-        requestUser(
+        requestMember(
           mxID,
           ignoreErrors: true,
         );
@@ -1800,7 +1801,7 @@ class Room {
 
     // If the room is not postloaded, check the database
     if (partial && foundUser == null) {
-      foundUser = await client.database?.getUser(mxID, this);
+      foundUser = await client.database?.getMember(mxID, this);
     }
 
     // If not in the database, try fetching the member from the server
@@ -1870,7 +1871,28 @@ class Room {
   /// the displayname and avatar from the server if [requestState] is true.
   /// If that fails, it falls back to requesting the global profile if
   /// [requestProfile] is true.
-  Future<Member?> requestUser(
+  Future<Member?> requestMember(
+    String mxID, {
+    bool ignoreErrors = false,
+    bool requestState = true,
+    bool requestProfile = true,
+  }) async {
+    // ignore: deprecated_member_use_from_same_package
+    return await requestUser(
+      mxID,
+      ignoreErrors: ignoreErrors,
+      requestState: requestState,
+      requestProfile: requestProfile,
+    );
+  }
+
+  /// Requests a missing [Member] for this room. Important for clients using
+  /// lazy loading. If the user can't be found this method tries to fetch
+  /// the displayname and avatar from the server if [requestState] is true.
+  /// If that fails, it falls back to requesting the global profile if
+  /// [requestProfile] is true.
+  @Deprecated('Use requestMember instead')
+  Future<User?> requestUser(
     String mxID, {
     bool ignoreErrors = false,
     bool requestState = true,

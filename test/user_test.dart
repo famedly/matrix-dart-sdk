@@ -26,22 +26,22 @@ void main() {
     Logs().level = Level.error;
     final client = Client('testclient', httpClient: FakeMatrixApi());
     final room = Room(id: '!localpart:server.abc', client: client);
-    final user1 = Member(
+    final member1 = Member(
       '@alice:example.com',
       membership: 'join',
       displayName: 'Alice M',
       avatarUrl: 'mxc://bla',
       room: room,
     );
-    final user2 = Member(
+    final member2 = Member(
       '@bob:example.com',
       membership: 'join',
       displayName: 'Bob',
       avatarUrl: 'mxc://bla',
       room: room,
     );
-    room.setState(user1);
-    room.setState(user2);
+    room.setState(member1);
+    room.setState(member2);
     setUp(() async {
       await client.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),
@@ -58,12 +58,12 @@ void main() {
       await client.logout();
     });
     test('create', () async {
-      expect(user1.powerLevel, 0);
-      expect(user1.stateKey, '@alice:example.com');
-      expect(user1.id, '@alice:example.com');
-      expect(user1.membership, Membership.join);
-      expect(user1.avatarUrl.toString(), 'mxc://bla');
-      expect(user1.displayName, 'Alice M');
+      expect(member1.powerLevel, 0);
+      expect(member1.stateKey, '@alice:example.com');
+      expect(member1.id, '@alice:example.com');
+      expect(member1.membership, Membership.join);
+      expect(member1.avatarUrl.toString(), 'mxc://bla');
+      expect(member1.displayName, 'Alice M');
     });
     test('Create from json', () async {
       final id = '@alice:server.abc';
@@ -96,11 +96,11 @@ void main() {
     });
 
     test('calcDisplayname', () async {
-      final user1 = Member('@alice:example.com', room: room);
-      final user2 = Member('@SuperAlice:example.com', room: room);
+      final member1 = Member('@alice:example.com', room: room);
+      final member2 = Member('@SuperAlice:example.com', room: room);
       final user3 = Member('@alice_mep:example.com', room: room);
-      expect(user1.calcDisplayname(), 'Alice');
-      expect(user2.calcDisplayname(), 'SuperAlice');
+      expect(member1.calcDisplayname(), 'Alice');
+      expect(member2.calcDisplayname(), 'SuperAlice');
       expect(user3.calcDisplayname(), 'Alice Mep');
       expect(user3.calcDisplayname(formatLocalpart: false), 'alice_mep');
       expect(
@@ -109,19 +109,19 @@ void main() {
       );
     });
     test('kick', () async {
-      await user1.kick();
+      await member1.kick();
     });
     test('ban', () async {
-      await user1.ban();
+      await member1.ban();
     });
     test('unban', () async {
-      await user1.unban();
+      await member1.unban();
     });
     test('setPower', () async {
-      await user1.setPower(50);
+      await member1.setPower(50);
     });
     test('startDirectChat', () async {
-      await user1.startDirectChat(waitForSync: false);
+      await member1.startDirectChat(waitForSync: false);
     });
     test('getPresence', () async {
       await client.handleSync(
@@ -139,37 +139,37 @@ void main() {
         }),
       );
       expect(
-        (await user1.fetchCurrentPresence()).presence,
+        (await member1.fetchCurrentPresence()).presence,
         PresenceType.online,
       );
     });
     test('canBan', () async {
-      expect(user1.canBan, false);
+      expect(member1.canBan, false);
     });
     test('canKick', () async {
-      expect(user1.canKick, false);
+      expect(member1.canKick, false);
     });
     test('canChangePowerLevel', () async {
-      expect(user1.canChangeUserPowerLevel, false);
+      expect(member1.canChangeUserPowerLevel, false);
     });
     test('mention', () async {
-      expect(user1.mention, '@[Alice M]');
-      expect(user2.mention, '@Bob');
-      user1.content['displayname'] = '[Alice M]';
-      expect(user1.mention, '@alice:example.com');
-      user1.content['displayname'] = 'Alice:M';
-      expect(user1.mention, '@alice:example.com');
-      user1.content['displayname'] = 'Alice M';
-      user2.content['displayname'] = 'Alice M';
-      expect(user1.mention, '@[Alice M]#1745');
-      user1.content['displayname'] = 'Bob';
-      user2.content['displayname'] = 'Bob';
-      expect(user1.mention, '@Bob#1745');
-      user1.content['displayname'] = 'Alice M';
+      expect(member1.mention, '@[Alice M]');
+      expect(member2.mention, '@Bob');
+      member1.content['displayname'] = '[Alice M]';
+      expect(member1.mention, '@alice:example.com');
+      member1.content['displayname'] = 'Alice:M';
+      expect(member1.mention, '@alice:example.com');
+      member1.content['displayname'] = 'Alice M';
+      member2.content['displayname'] = 'Alice M';
+      expect(member1.mention, '@[Alice M]#1745');
+      member1.content['displayname'] = 'Bob';
+      member2.content['displayname'] = 'Bob';
+      expect(member1.mention, '@Bob#1745');
+      member1.content['displayname'] = 'Alice M';
     });
     test('mentionFragments', () async {
-      expect(user1.mentionFragments, {'@[Alice M]', '@[Alice M]#1745'});
-      expect(user2.mentionFragments, {'@Bob', '@Bob#1542'});
+      expect(member1.mentionFragments, {'@[Alice M]', '@[Alice M]#1745'});
+      expect(member2.mentionFragments, {'@Bob', '@Bob#1542'});
     });
     test('dispose client', () async {
       await Future.delayed(Duration(milliseconds: 50));
