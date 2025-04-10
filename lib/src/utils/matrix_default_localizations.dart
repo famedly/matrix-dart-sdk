@@ -310,4 +310,7 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
   @override
   String startedKeyVerification(String senderName) =>
       '$senderName started key verification';
+
+  @override
+  String startedAPoll(String senderName) => '$senderName started a poll';
 }
