@@ -1,4 +1,9 @@
+## [0.39.1] 10th April 2025
+
+- fix: deleting last message is edited (Mohammad Reza Moradi)
+
 ## [0.39.0] 2nd April 2025
+
 - feat: endpoints for spec v1.14 (BREAKING CHANGE)
 - feat: Make dehydrated device name configurable
 - feat: ensure direct chats have only 2 members before sending verification requests
