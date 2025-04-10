@@ -509,7 +509,8 @@ void main() {
           nextBatch: '',
         ),
       );
-      expect(room.lastEvent?.eventId, 'testLastEventAfterEdit');
+      // We do not delete the last edited event. Manually set the last event to original redacted event.
+      expect(room.lastEvent?.eventId, 'testLastEventBeforeEdit');
       expect(room.lastEvent?.body, 'Redacted');
     });
 

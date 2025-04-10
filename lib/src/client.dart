@@ -2854,7 +2854,7 @@ class Client extends MatrixApi {
           room.setState(user);
         }
       }
-      _updateRoomsByEventUpdate(room, event, type);
+      await _updateRoomsByEventUpdate(room, event, type);
       if (store) {
         await database?.storeEventUpdate(room.id, event, type, this);
       }
@@ -3020,11 +3020,11 @@ class Client extends MatrixApi {
     return room;
   }
 
-  void _updateRoomsByEventUpdate(
+  Future<void> _updateRoomsByEventUpdate(
     Room room,
     StrippedStateEvent eventUpdate,
     EventUpdateType type,
-  ) {
+  ) async {
     if (type == EventUpdateType.history) return;
 
     switch (type) {
@@ -3060,11 +3060,27 @@ class Client extends MatrixApi {
         if (event.type == EventTypes.Redaction &&
             ({
               room.lastEvent?.eventId,
-              room.lastEvent?.relationshipEventId,
             }.contains(
               event.redacts ?? event.content.tryGet<String>('redacts'),
             ))) {
           room.lastEvent?.setRedactionEvent(event);
+          break;
+        }
+        // Is this event redacting the last event which is a edited event.
+        final relationshipEventId = room.lastEvent?.relationshipEventId;
+        if (relationshipEventId != null &&
+            relationshipEventId ==
+                (event.redacts ?? event.content.tryGet<String>('redacts')) &&
+            event.type == EventTypes.Redaction &&
+            room.lastEvent?.relationshipType == RelationshipTypes.edit) {
+          final originalEvent = await database?.getEventById(
+                relationshipEventId,
+                room,
+              ) ??
+              room.lastEvent;
+          // Manually remove the data as it's already in cache until relogin.
+          originalEvent?.setRedactionEvent(event);
+          room.lastEvent = originalEvent;
           break;
         }
 
