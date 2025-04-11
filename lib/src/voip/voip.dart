@@ -384,7 +384,7 @@ class VoIP {
       '[glare] got new call ${content.tryGet('call_id')} and currently room id is mapped to ${incomingCallRoomId.tryGet(room.id)}',
     );
 
-    if (call != null && call.state == CallState.kEnded) {
+    if (call != null && call.state != CallState.kEnded) {
       // Session already exist.
       Logs().v('[VOIP] onCallInvite: Session [$callId] already exist.');
       return;
@@ -860,10 +860,10 @@ class VoIP {
     if (!room.canJoinGroupCall) {
       throw MatrixSDKVoipException(
         '''
-        User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room ${room.id}, 
-        canJoinGroupCall: ${room.canJoinGroupCall}, 
-        groupCallsEnabledForEveryone: ${room.groupCallsEnabledForEveryone}, 
-        needed: ${room.powerForChangingStateEvent(EventTypes.GroupCallMember)}, 
+        User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room ${room.id},
+        canJoinGroupCall: ${room.canJoinGroupCall},
+        groupCallsEnabledForEveryone: ${room.groupCallsEnabledForEveryone},
+        needed: ${room.powerForChangingStateEvent(EventTypes.GroupCallMember)},
         own: ${room.ownPowerLevel}}
         plMap: ${room.getState(EventTypes.RoomPowerLevels)?.content}
         ''',
