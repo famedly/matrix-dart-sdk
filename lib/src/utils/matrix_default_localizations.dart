@@ -310,4 +310,12 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
   @override
   String startedKeyVerification(String senderName) =>
       '$senderName started key verification';
+
+  @override
+  String voiceMessage(String senderName, Duration? duration) {
+    final durationString = duration == null
+        ? ''
+        : '${duration.inMinutes.toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')} ';
+    return '$senderName: ${durationString}Voice message';
+  }
 }
