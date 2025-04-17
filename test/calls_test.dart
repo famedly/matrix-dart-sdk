@@ -932,5 +932,70 @@ void main() {
       expect(room.groupCallParticipantCount('participants_count'), 2);
       expect(room.hasActiveGroupCall, true);
     });
+
+    test('call persists after sending invite', () async {
+      // Check that no call is active and no PC exists
+      expect(voip.currentCID, null);
+      expect(voip.calls.isEmpty, true);
+
+      // Send an invite to the call
+      final outgoingCall = await voip.inviteToCall(
+        room,
+        CallType.kVoice,
+        userId: '@alice:testing.com',
+      );
+
+      // Acknowledge the invite by simulating a sync event
+      await matrix.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      type: 'm.call.invite',
+                      content: {
+                        'lifetime': 60000,
+                        'call_id': outgoingCall.callId,
+                        'party_id': outgoingCall.localPartyId,
+                        'version': '1',
+                        'offer': {'type': 'offer', 'sdp': 'sdp'},
+                      },
+                      senderId: '@alice:testing.com',
+                      eventId: 'outgoingCallInviteEvent',
+                      originServerTs: DateTime.now(),
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      // Call should still be in `CreateOffer` state and have a PC
+      expect(outgoingCall.pc, isNotNull);
+      expect(outgoingCall.state, CallState.kCreateOffer);
+
+      // Verifies that the call persists in the calls map after sending an invite.
+      // This verification is crucial as it confirms the call remains active.
+      //
+      // Log: [Matrix] [VOIP] onCallInvite: "Session [1744890383309cqpctbWxBV8reT5U] already exists"
+      //
+      // The log indicates the call was properly maintained in the calls map.
+      //
+      // If this test fails, it means the previous call was replaced
+      // by a new one without properly terminating the previous one.
+      expect(
+        voip.calls.containsKey(
+          VoipId(roomId: room.id, callId: outgoingCall.callId),
+        ),
+        true,
+      );
+
+      await outgoingCall.hangup(reason: CallErrorCode.userHangup);
+    });
   });
 }
