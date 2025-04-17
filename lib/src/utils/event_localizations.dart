@@ -42,6 +42,15 @@ abstract class EventLocalizations {
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
         );
       case MessageTypes.Audio:
+        if (event.content.tryGetMap('org.matrix.msc3245.voice') != null) {
+          final durationInt = event.content
+              .tryGetMap<String, Object?>('info')
+              ?.tryGet<int>('duration');
+          return i18n.voiceMessage(
+            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+            durationInt == null ? null : Duration(milliseconds: durationInt),
+          );
+        }
         return i18n.sentAnAudio(
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
         );
