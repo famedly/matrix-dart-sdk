@@ -384,7 +384,7 @@ class VoIP {
       '[glare] got new call ${content.tryGet('call_id')} and currently room id is mapped to ${incomingCallRoomId.tryGet(room.id)}',
     );
 
-    if (call != null && call.state == CallState.kEnded) {
+    if (call != null && call.state != CallState.kEnded) {
       // Session already exist.
       Logs().v('[VOIP] onCallInvite: Session [$callId] already exist.');
       return;
