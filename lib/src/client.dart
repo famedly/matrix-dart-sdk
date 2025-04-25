@@ -1777,6 +1777,7 @@ class Client extends MatrixApi {
     Duration timeoutForServerRequests = const Duration(seconds: 8),
     bool returnNullIfSeen = true,
   }) async {
+
     // Get access token if necessary:
     final database = _database ??= await databaseBuilder?.call(this);
     if (!isLogged()) {
@@ -1807,6 +1808,7 @@ class Client extends MatrixApi {
           id: roomId,
           client: this,
         );
+    await room.loadHeroUsers();
     final roomName = notification.roomName;
     final roomAlias = notification.roomAlias;
     if (roomName != null) {
@@ -1969,6 +1971,7 @@ class Client extends MatrixApi {
     String? newOlmAccount,
     bool waitForFirstSync = true,
     bool waitUntilLoadCompletedLoaded = true,
+    bool startSyncLoop = true,
 
     /// Will be called if the app performs a migration task from the [legacyDatabaseBuilder]
     @Deprecated('Use onInitStateChanged and listen to `InitState.migration`.')
@@ -2180,7 +2183,9 @@ class Client extends MatrixApi {
       );
 
       /// Timeout of 0, so that we don't see a spinner for 30 seconds.
-      firstSyncReceived = _sync(timeout: Duration.zero);
+      if (startSyncLoop) firstSyncReceived = _sync(timeout: Duration.zero);
+      backgroundSync = startSyncLoop;
+
       if (waitForFirstSync) {
         onInitStateChanged?.call(InitState.waitingForFirstSync);
         await firstSyncReceived;
@@ -2267,7 +2272,7 @@ class Client extends MatrixApi {
   /// Immediately start a sync and wait for completion.
   /// If there is an active sync already, wait for the active sync instead.
   Future<void> oneShotSync() {
-    return _sync();
+    return _currentSync ??= _innerSync();
   }
 
   /// Pass a timeout to set how long the server waits before sending an empty response.
