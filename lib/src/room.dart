@@ -1521,6 +1521,7 @@ class Room {
     void Function()? onNewEvent,
     void Function()? onUpdate,
     String? eventContextId,
+    int? limit = Room.defaultHistoryCount,
   }) async {
     await postLoad();
 
@@ -1529,7 +1530,7 @@ class Room {
     if (!isArchived) {
       events = await client.database?.getEventList(
             this,
-            limit: defaultHistoryCount,
+            limit: limit,
           ) ??
           <Event>[];
     } else {
