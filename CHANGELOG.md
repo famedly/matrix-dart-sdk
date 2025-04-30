@@ -1,3 +1,8 @@
+## [0.39.2] 30th April 2025
+- fix: add proper description for `User` class (Yash-Garg)
+- fix: handling of existing calls in `onCallInvite` (Yash-Garg)
+- fix: make sure to keep track of aggregated events after requesting history or future (td)
+
 ## [0.39.1] 10th April 2025
 
 - fix: deleting last message is edited (Mohammad Reza Moradi)
