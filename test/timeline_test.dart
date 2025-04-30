@@ -1098,6 +1098,111 @@ void main() {
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 1);
     });
+
+    test('make sure aggregated events are updated on requestHistory', () async {
+      timeline.events.clear();
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              timeline.room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                      'event_id': '11',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                      'event_id': '22',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {
+                        'msgtype': 'm.text',
+                        'body': '* edit 11',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edit 11',
+                          'm.mentions': {},
+                        },
+                        'm.mentions': {},
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': '11',
+                        },
+                      },
+                      'event_id': '33',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {
+                        'msgtype': 'm.text',
+                        'body': '* edit 22',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edit 22',
+                          'm.mentions': {},
+                        },
+                        'm.mentions': {},
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': '22',
+                        },
+                      },
+                      'event_id': '44',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      final t = await room.getTimeline(limit: 1);
+
+      expect(t.events.length, 1);
+
+      expect(
+        t.events.single.getDisplayEvent(t).body,
+        '* edit 22',
+      );
+
+      await t.requestHistory();
+
+      expect(
+        t.events.reversed
+            .where(
+              (element) => element.relationshipType != RelationshipTypes.edit,
+            )
+            .last
+            .getDisplayEvent(t)
+            .body,
+        'edit 22',
+      );
+      expect(
+        t.events.reversed
+            .where(
+              (element) => element.relationshipType != RelationshipTypes.edit,
+            )
+            .first
+            .getDisplayEvent(t)
+            .body,
+        'edit 11',
+      );
+    });
     test('logout', () async {
       await client.logout();
     });

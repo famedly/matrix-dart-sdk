@@ -152,6 +152,9 @@ class Timeline {
             );
 
       if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
+        for (final e in eventsFromStore) {
+          addAggregatedEvent(e);
+        }
         // Fetch all users from database we have got here.
         for (final event in events) {
           if (room.getState(EventTypes.RoomMember, event.senderId) != null) {
@@ -500,12 +503,12 @@ class Timeline {
     if (relationshipType == null || relationshipEventId == null) {
       return; // nothing to do
     }
-    final events = (aggregatedEvents[relationshipEventId] ??=
+    final e = (aggregatedEvents[relationshipEventId] ??=
         <String, Set<Event>>{})[relationshipType] ??= <Event>{};
     // remove a potential old event
-    _removeEventFromSet(events, event);
+    _removeEventFromSet(e, event);
     // add the new one
-    events.add(event);
+    e.add(event);
     if (onChange != null) {
       final index = _findEvent(event_id: relationshipEventId);
       onChange?.call(index);
@@ -518,8 +521,8 @@ class Timeline {
       aggregatedEvents.remove(event.transactionId);
     }
     for (final types in aggregatedEvents.values) {
-      for (final events in types.values) {
-        _removeEventFromSet(events, event);
+      for (final e in types.values) {
+        _removeEventFromSet(e, event);
       }
     }
   }
