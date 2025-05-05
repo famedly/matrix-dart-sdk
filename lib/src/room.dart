@@ -1525,14 +1525,16 @@ class Room {
   }) async {
     await postLoad();
 
-    List<Event> events;
+    var events = <Event>[];
 
     if (!isArchived) {
-      events = await client.database?.getEventList(
-            this,
-            limit: limit,
-          ) ??
-          <Event>[];
+      await client.database?.transaction(() async {
+        events = await client.database?.getEventList(
+              this,
+              limit: limit,
+            ) ??
+            <Event>[];
+      });
     } else {
       final archive = client.getArchiveRoomFromCache(id);
       events = archive?.timeline.events.toList() ?? [];
