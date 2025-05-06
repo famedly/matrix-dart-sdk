@@ -1,3 +1,9 @@
+## [0.39.4] 6th May 2025
+
+- chore: prev_batch update after a limited timeline follow-up (Karthikeyan S)
+- fix: make sure prev_batch is updated after a limited timeline (td)
+- fix: sanity if room prev_batch null, populate it (td)
+
 ## [0.39.3] 6th May 2025
 - fix: Do not load timeline while sync is processed (Krille)
 
