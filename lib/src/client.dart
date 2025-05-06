@@ -2991,7 +2991,9 @@ class Client extends MatrixApi {
             chatUpdate.timeline?.prevBatch != null)) {
       /// [InvitedRoomUpdate] doesn't have prev_batch, so we want to set it in case
       /// the room first appeared in sync update when membership was invite.
-      if (rooms[roomIndex].membership == Membership.invite &&
+      if ((rooms[roomIndex].membership == Membership.invite ||
+              chatUpdate.timeline?.limited == true ||
+              rooms[roomIndex].prev_batch == null) &&
           chatUpdate.timeline?.prevBatch != null) {
         rooms[roomIndex].prev_batch = chatUpdate.timeline?.prevBatch;
       }

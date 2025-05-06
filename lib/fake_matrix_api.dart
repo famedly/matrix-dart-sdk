@@ -1759,6 +1759,10 @@ class FakeMatrixApi extends BaseClient {
           (var req) => messagesResponsePast,
       '/client/v3/rooms/!1234%3Aexample.com/messages?from=1234&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponsePast,
+      '/client/v3/rooms/!1234%3Aexample.com/messages?from=room_preset_1234&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+          (var req) => messagesResponsePast,
+      '/client/v3/rooms/!1234%3Aexample.com/messages?from=room_preset_1234_after_limited&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+          (var req) => messagesResponsePast,
       '/client/v3/rooms/!localpart%3Aserver.abc/messages?from=t456&dir=f&to=1234&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponseFuture,
       '/client/v3/rooms/!1234%3Aexample.com/messages?from=t456&dir=f&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
