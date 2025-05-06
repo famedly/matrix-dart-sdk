@@ -1,3 +1,6 @@
+## [0.39.3] 6th May 2025
+- fix: Do not load timeline while sync is processed (Krille)
+
 ## [0.39.2] 30th April 2025
 - fix: add proper description for `User` class (Yash-Garg)
 - fix: handling of existing calls in `onCallInvite` (Yash-Garg)
