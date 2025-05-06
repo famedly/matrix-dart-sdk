@@ -78,7 +78,7 @@ void main() {
       room = Room(
         id: roomID,
         client: client,
-        prev_batch: '1234',
+        prev_batch: 'room_preset_1234',
         roomAccountData: {},
       );
       timeline = Timeline(
@@ -1202,6 +1202,110 @@ void main() {
             .body,
         'edit 11',
       );
+    });
+
+    test('make sure a limited timeline resets the prev_batch', () async {
+      timeline.events.clear();
+
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              timeline.room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  prevBatch: 'null',
+                  events: [
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                      'event_id': '11',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                      'event_id': '22',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      Timeline t = await room.getTimeline();
+
+      expect(t.events.length, 2);
+      expect(t.room.prev_batch, 'room_preset_1234');
+
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something2',
+          rooms: RoomsUpdate(
+            join: {
+              timeline.room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  prevBatch: 'room_preset_1234_after_limited',
+                  limited: true,
+                  events: [
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {
+                        'msgtype': 'm.text',
+                        'body': '* edit 11',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edit 11',
+                          'm.mentions': {},
+                        },
+                        'm.mentions': {},
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': '11',
+                        },
+                      },
+                      'event_id': '33',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {
+                        'msgtype': 'm.text',
+                        'body': '* edit 22',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edit 22',
+                          'm.mentions': {},
+                        },
+                        'm.mentions': {},
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': '22',
+                        },
+                      },
+                      'event_id': '44',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      t = await room.getTimeline();
+      expect(t.events.length, 2);
+      expect(t.room.prev_batch, 'room_preset_1234_after_limited');
+      await t.requestHistory();
+      expect(t.room.prev_batch, 't47409-4357353_219380_26003_2265');
     });
     test('logout', () async {
       await client.logout();
