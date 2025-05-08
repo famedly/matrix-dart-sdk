@@ -36,10 +36,7 @@ String createLargeString(String character, int desiredSize) {
 }
 
 void main() {
-  final databaseBuilders = {
-    'Matrix SDK Database': getMatrixSdkDatabase,
-    'Hive Collections Database': getHiveCollectionsDatabase,
-  };
+  final databaseBuilders = {'Matrix SDK Database': getMatrixSdkDatabase};
 
   for (final databaseBuilder in databaseBuilders.entries) {
     group('Test ${databaseBuilder.key}', tags: 'olm', () {
@@ -673,19 +670,14 @@ void main() {
               updated: DateTime.now(),
             ),
           );
-          // ignore: deprecated_member_use_from_same_package
-          if (database is! HiveCollectionsDatabase) {
-            final profile2 =
-                await database.getUserProfile('@alice:example.com');
-            expect(profile2?.displayname, 'Alice M');
-            expect(profile2?.outdated, false);
-            await database.markUserProfileAsOutdated('@alice:example.com');
+          final profile2 = await database.getUserProfile('@alice:example.com');
+          expect(profile2?.displayname, 'Alice M');
+          expect(profile2?.outdated, false);
+          await database.markUserProfileAsOutdated('@alice:example.com');
 
-            final profile3 =
-                await database.getUserProfile('@alice:example.com');
-            expect(profile3?.displayname, 'Alice M');
-            expect(profile3?.outdated, true);
-          }
+          final profile3 = await database.getUserProfile('@alice:example.com');
+          expect(profile3?.displayname, 'Alice M');
+          expect(profile3?.outdated, true);
         },
       );
 

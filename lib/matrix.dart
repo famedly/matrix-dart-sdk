@@ -26,7 +26,6 @@ export 'fake_matrix_api.dart' show FakeMatrixApi;
 export 'src/client.dart';
 export 'src/database/database_api.dart';
 export 'src/database/matrix_sdk_database.dart';
-export 'src/database/hive_collections_database.dart';
 export 'src/database/sqflite_encryption_helper.dart';
 export 'src/event.dart';
 export 'src/presence.dart';

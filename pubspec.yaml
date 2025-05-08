@@ -17,7 +17,6 @@ dependencies:
   crypto: ^3.0.0
   enhanced_enum: ^0.2.4
   ffi: ^2.0.0
-  hive: ^2.2.3
   html: ^0.15.0
   html_unescape: ^2.0.0
   http: ">=0.13.0 <2.0.0"
