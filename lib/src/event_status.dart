@@ -4,13 +4,11 @@
 /// - sending: (http request started)
 /// - sent: (http request successful)
 /// - synced: (event came from sync loop)
-/// - roomState
 enum EventStatus {
   error,
   sending,
   sent,
   synced,
-  roomState,
 }
 
 /// Returns `EventStatusEnum` value from `intValue`.
@@ -19,7 +17,6 @@ enum EventStatus {
 /// - -1 == sending;
 /// -  0 == sent;
 /// -  1 == synced;
-/// -  2 == roomState;
 EventStatus eventStatusFromInt(int intValue) =>
     EventStatus.values[intValue + 2];
 
@@ -35,7 +32,6 @@ extension EventStatusExtension on EventStatus {
   /// - -1 == sending;
   /// -  0 == sent;
   /// -  1 == synced;
-  /// -  2 == roomState;
   int get intValue => (index - 2);
 
   /// Return `true` if the `EventStatus` equals `error`.
@@ -44,21 +40,13 @@ extension EventStatusExtension on EventStatus {
   /// Return `true` if the `EventStatus` equals `sending`.
   bool get isSending => this == EventStatus.sending;
 
-  /// Return `true` if the `EventStatus` equals `roomState`.
-  bool get isRoomState => this == EventStatus.roomState;
-
   /// Returns `true` if the status is sent or later:
-  /// [EventStatus.sent], [EventStatus.synced] or [EventStatus.roomState].
+  /// [EventStatus.sent] or [EventStatus.synced].
   bool get isSent => [
         EventStatus.sent,
         EventStatus.synced,
-        EventStatus.roomState,
       ].contains(this);
 
-  /// Returns `true` if the status is `synced` or `roomState`:
-  /// [EventStatus.synced] or [EventStatus.roomState].
-  bool get isSynced => [
-        EventStatus.synced,
-        EventStatus.roomState,
-      ].contains(this);
+  /// Returns `true` if the status is `synced`: [EventStatus.synced]
+  bool get isSynced => this == EventStatus.synced;
 }
