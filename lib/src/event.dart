@@ -126,7 +126,17 @@ class Event extends MatrixEvent {
           originServerTs.millisecondsSinceEpoch;
 
       final room = this.room;
-      if (age > room.client.sendTimelineEventTimeout.inMilliseconds) {
+
+      if (
+          // We don't want to mark the event as failed if it's the lastEvent in the room
+          // since that would be a race condition (with the same event from timeline)
+          // The `room.lastEvent` is null at the time this constructor is called for it,
+          // there's no other way to check this.
+          room.lastEvent?.eventId != null &&
+              // If the event is in the sending queue, then we don't mess with it.
+              !room.sendingQueueEventsByTxId.contains(transactionId) &&
+              // Else, if the event is older than the timeout, then we mark it as failed.
+              age > room.client.sendTimelineEventTimeout.inMilliseconds) {
         // Update this event in database and open timelines
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};

@@ -72,7 +72,12 @@ class Room {
   /// Key-Value store for private account data only visible for this user.
   Map<String, BasicEvent> roomAccountData = {};
 
-  final _sendingQueue = <Completer>[];
+  /// Queue of sending events
+  /// NOTE: This shouldn't be modified directly, use [sendEvent] instead. This is only used for testing.
+  final sendingQueue = <Completer>[];
+
+  /// List of transaction IDs of events that are currently queued to be sent
+  final sendingQueueEventsByTxId = <String>[];
 
   Timer? _clearTypingIndicatorTimer;
 
@@ -1106,11 +1111,14 @@ class Room {
         },
       ),
     );
+    // we need to add the transaction ID to the set of events that are currently queued to be sent
+    // even before the fake sync is called, so that the event constructor can check if the event is in the sending state
+    sendingQueueEventsByTxId.add(messageID);
     await _handleFakeSync(syncUpdate);
     final completer = Completer();
-    _sendingQueue.add(completer);
-    while (_sendingQueue.first != completer) {
-      await _sendingQueue.first.future;
+    sendingQueue.add(completer);
+    while (sendingQueue.first != completer) {
+      await sendingQueue.first.future;
     }
 
     final timeoutDate = DateTime.now().add(client.sendTimelineEventTimeout);
@@ -1142,7 +1150,8 @@ class Room {
               .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
           await _handleFakeSync(syncUpdate);
           completer.complete();
-          _sendingQueue.remove(completer);
+          sendingQueue.remove(completer);
+          sendingQueueEventsByTxId.remove(messageID);
           if (e is EventTooLarge ||
               (e is MatrixException && e.error == MatrixError.M_FORBIDDEN)) {
             rethrow;
@@ -1160,8 +1169,8 @@ class Room {
     syncUpdate.rooms!.join!.values.first.timeline!.events!.first.eventId = res;
     await _handleFakeSync(syncUpdate);
     completer.complete();
-    _sendingQueue.remove(completer);
-
+    sendingQueue.remove(completer);
+    sendingQueueEventsByTxId.remove(messageID);
     return res;
   }
 
