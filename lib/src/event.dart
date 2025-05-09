@@ -481,13 +481,35 @@ class Event extends MatrixEvent {
   Future<String?> redactEvent({String? reason, String? txid}) async =>
       await room.redactEvent(eventId, reason: reason, txid: txid);
 
-  /// Searches for the reply event in the given timeline.
+  /// Searches for the reply event in the given timeline. Also returns the
+  /// event fallback if the relationship type is `m.thread`.
+  /// https://spec.matrix.org/v1.14/client-server-api/#fallback-for-unthreaded-clients
   Future<Event?> getReplyEvent(Timeline timeline) async {
-    if (relationshipType != RelationshipTypes.reply) return null;
-    final relationshipEventId = this.relationshipEventId;
-    return relationshipEventId == null
-        ? null
-        : await timeline.getEventById(relationshipEventId);
+    switch (relationshipType) {
+      case RelationshipTypes.reply:
+        final relationshipEventId = this.relationshipEventId;
+        return relationshipEventId == null
+            ? null
+            : await timeline.getEventById(relationshipEventId);
+
+      case RelationshipTypes.thread:
+        final relationshipContent =
+            content.tryGetMap<String, Object?>('m.relates_to');
+        if (relationshipContent == null) return null;
+        final String? relationshipEventId;
+        if (relationshipContent.tryGet<bool>('is_falling_back') == true) {
+          relationshipEventId = relationshipContent
+              .tryGetMap<String, Object?>('m.in_reply_to')
+              ?.tryGet<String>('event_id');
+        } else {
+          relationshipEventId = this.relationshipEventId;
+        }
+        return relationshipEventId == null
+            ? null
+            : await timeline.getEventById(relationshipEventId);
+      default:
+        return null;
+    }
   }
 
   /// If this event is encrypted and the decryption was not successful because
