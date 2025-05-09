@@ -150,6 +150,8 @@ abstract class MatrixLocalizations {
 
   String sentAnAudio(String senderName);
 
+  String voiceMessage(String senderName, Duration? duration);
+
   String sentAVideo(String senderName);
 
   String sentReaction(String senderName, String reactionKey);
