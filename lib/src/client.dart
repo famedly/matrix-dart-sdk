@@ -585,7 +585,13 @@ class Client extends MatrixApi {
   /// The result of this call is stored in [wellKnown] for later use at runtime.
   @override
   Future<DiscoveryInformation> getWellknown() async {
-    final wellKnown = await super.getWellknown();
+    final wellKnownResponse = await httpClient.get(
+      Uri.https(userID!.domain!, '/.well-known/matrix/client'),
+    );
+    final wellKnown = DiscoveryInformation.fromJson(
+      jsonDecode(utf8.decode(wellKnownResponse.bodyBytes))
+          as Map<String, Object?>,
+    );
 
     // do not reset the well known here, so super call
     super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
