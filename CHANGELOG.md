@@ -1,3 +1,11 @@
+## [0.40.0] 9th May 2025
+- feat: Add localization for voice message type (Krille)
+- feat: Support fallback for threads in Event.getReplyEvent() (Krille)
+- fix: Fetch well-known from domain from userId, not from homeserver domain (krille-chan)
+- fix: incorrect Event status update in constructor (Karthikeyan S)
+- refactor: (BREAKING) Remove hive database and hive dependencies (Krille)
+- refactor: Remove unused event status roomState (Krille)
+
 ## [0.39.4] 6th May 2025
 
 - chore: prev_batch update after a limited timeline follow-up (Karthikeyan S)
