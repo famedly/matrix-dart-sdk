@@ -141,7 +141,7 @@ void main() {
       );
       expect(
         markdown('https://matrix.to/#/#fox:sorunome.de'),
-        'https://matrix.to/#/#fox:sorunome.de',
+        '<a href="https://matrix.to/#/#fox:sorunome.de">https://matrix.to/#/#fox:sorunome.de</a>',
       );
       expect(
         markdown('Hey @sorunome:sorunome.de:1234!'),
@@ -219,6 +219,15 @@ void main() {
           convertLinebreaks: true,
         ),
         '<p>The first<br/>codeblock</p><pre><code class="language-dart">void main(){\nprint(something);\n}\n</code></pre><p>And the second code block</p><pre><code class="language-js">meow\nmeow\n</code></pre>',
+      );
+    });
+    test('Checkboxes', () {
+      expect(
+        markdown(
+          '- [ ] Check 1\n- [x] Check 2\n- Normal list item',
+          convertLinebreaks: true,
+        ),
+        '<ul class="contains-task-list"><li class="task-list-item"><input type="checkbox"></input>Check 1</li><li class="task-list-item"><input type="checkbox" checked="true"></input>Check 2</li><li>Normal list item</li></ul>',
       );
     });
   });

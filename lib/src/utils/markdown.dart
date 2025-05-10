@@ -213,7 +213,7 @@ String markdown(
 }) {
   var ret = markdownToHtml(
     text.replaceNewlines(),
-    extensionSet: ExtensionSet.commonMark,
+    extensionSet: ExtensionSet.gitHubFlavored,
     blockSyntaxes: [
       BlockLatexSyntax(),
     ],
