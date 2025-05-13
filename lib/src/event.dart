@@ -21,6 +21,7 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:html/parser.dart';
+import 'package:mime/mime.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
@@ -826,9 +827,13 @@ class Event extends MatrixEvent {
     }
 
     final filename = content.tryGet<String>('filename') ?? body;
+    final mimeType = attachmentMimetype;
+
     return MatrixFile(
       bytes: uint8list,
-      name: filename,
+      name: getThumbnail
+          ? '$filename.thumbnail.${extensionFromMime(mimeType)}'
+          : filename,
       mimeType: attachmentMimetype,
     );
   }
