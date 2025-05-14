@@ -121,15 +121,13 @@ class Room {
       return;
     }
     final allStates =
-        await client.database?.getUnimportantRoomEventStatesForRoom(
+        await client.database.getUnimportantRoomEventStatesForRoom(
       client.importantStateEvents.toList(),
       this,
     );
 
-    if (allStates != null) {
-      for (final state in allStates) {
-        setState(state);
-      }
+    for (final state in allStates) {
+      setState(state);
     }
     partial = false;
   }
@@ -1237,7 +1235,7 @@ class Room {
 
   /// Call the Matrix API to forget this room if you already left it.
   Future<void> forget() async {
-    await client.database?.forgetRoom(id);
+    await client.database.forgetRoom(id);
     await client.forgetRoom(id);
     // Update archived rooms, otherwise an archived room may still be in the
     // list after a forget room call
@@ -1377,17 +1375,13 @@ class Room {
       );
     }
 
-    if (client.database != null) {
-      await client.database?.transaction(() async {
-        if (storeInDatabase && direction == Direction.b) {
-          this.prev_batch = resp.end;
-          await client.database?.setRoomPrevBatch(resp.end, id, client);
-        }
-        await loadFn();
-      });
-    } else {
+    await client.database.transaction(() async {
+      if (storeInDatabase && direction == Direction.b) {
+        this.prev_batch = resp.end;
+        await client.database.setRoomPrevBatch(resp.end, id, client);
+      }
       await loadFn();
-    }
+    });
 
     return resp.chunk.length;
   }
@@ -1478,7 +1472,7 @@ class Room {
     ].map((e) => Event.fromMatrixEvent(e, this)).toList();
 
     // Try again to decrypt encrypted events but don't update the database.
-    if (encrypted && client.database != null && client.encryptionEnabled) {
+    if (encrypted && client.encryptionEnabled) {
       for (var i = 0; i < events.length; i++) {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].content['can_request_session'] == true) {
@@ -1537,12 +1531,11 @@ class Room {
     var events = <Event>[];
 
     if (!isArchived) {
-      await client.database?.transaction(() async {
-        events = await client.database?.getEventList(
-              this,
-              limit: limit,
-            ) ??
-            <Event>[];
+      await client.database.transaction(() async {
+        events = await client.database.getEventList(
+          this,
+          limit: limit,
+        );
       });
     } else {
       final archive = client.getArchiveRoomFromCache(id);
@@ -1581,7 +1574,7 @@ class Room {
       final userIds = events.map((event) => event.senderId).toSet();
       for (final userId in userIds) {
         if (getState(EventTypes.RoomMember, userId) != null) continue;
-        final dbUser = await client.database?.getUser(userId, this);
+        final dbUser = await client.database.getUser(userId, this);
         if (dbUser != null) setState(dbUser);
       }
     }
@@ -1597,9 +1590,9 @@ class Room {
             chunk.events[i] = await client.encryption!.decryptRoomEvent(
               chunk.events[i],
             );
-          } else if (client.database != null) {
+          } else {
             // else, we need the database
-            await client.database?.transaction(() async {
+            await client.database.transaction(() async {
               for (var i = 0; i < chunk.events.length; i++) {
                 if (chunk.events[i].content['can_request_session'] == true) {
                   chunk.events[i] = await client.encryption!.decryptRoomEvent(
@@ -1666,7 +1659,7 @@ class Room {
       // events won't get written to memory in this case and someone new could
       // have joined, while someone else left, which might lead to the same
       // count in the completeness check.
-      final users = await client.database?.getUsers(this) ?? [];
+      final users = await client.database.getUsers(this);
       for (final user in users) {
         setState(user);
       }
@@ -1697,7 +1690,7 @@ class Room {
     if (cache) {
       for (final user in users) {
         setState(user); // at *least* cache this in-memory
-        await client.database?.storeEventUpdate(
+        await client.database.storeEventUpdate(
           id,
           user,
           EventUpdateType.state,
@@ -1775,8 +1768,8 @@ class Room {
       );
 
       // Store user in database:
-      await client.database?.transaction(() async {
-        await client.database?.storeEventUpdate(
+      await client.database.transaction(() async {
+        await client.database.storeEventUpdate(
           id,
           foundUser,
           EventUpdateType.state,
@@ -1812,7 +1805,7 @@ class Room {
 
     // If the room is not postloaded, check the database
     if (partial && foundUser == null) {
-      foundUser = await client.database?.getUser(mxID, this);
+      foundUser = await client.database.getUser(mxID, this);
     }
 
     // If not in the database, try fetching the member from the server
@@ -1920,7 +1913,7 @@ class Room {
   /// found. Returns null if not found anywhere.
   Future<Event?> getEventById(String eventID) async {
     try {
-      final dbEvent = await client.database?.getEventById(eventID, this);
+      final dbEvent = await client.database.getEventById(eventID, this);
       if (dbEvent != null) return dbEvent;
       final matrixEvent = await client.getOneRoomEvent(id, eventID);
       final event = Event.fromMatrixEvent(matrixEvent, this);
@@ -2393,13 +2386,9 @@ class Room {
     SyncUpdate syncUpdate, {
     Direction? direction,
   }) async {
-    if (client.database != null) {
-      await client.database?.transaction(() async {
-        await client.handleSync(syncUpdate, direction: direction);
-      });
-    } else {
+    await client.database.transaction(() async {
       await client.handleSync(syncUpdate, direction: direction);
-    }
+    });
   }
 
   /// Whether this is an extinct room which has been archived in favor of a new

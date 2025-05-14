@@ -583,7 +583,7 @@ class Bootstrap {
       Logs().v(
         'And finally set all megolm keys as needing to be uploaded again...',
       );
-      await client.database?.markInboundGroupSessionsAsNeedingUpload();
+      await client.database.markInboundGroupSessionsAsNeedingUpload();
       Logs().v('And uploading keys...');
       await client.encryption?.keyManager.uploadInboundGroupSessions();
     } catch (e, s) {

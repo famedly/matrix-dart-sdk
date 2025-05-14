@@ -68,7 +68,7 @@ class SSSS {
 
   // for testing
   Future<void> clearCache() async {
-    await client.database?.clearSSSSCache();
+    await client.database.clearSSSSCache();
     _cache.clear();
   }
 
@@ -301,10 +301,6 @@ class SSSS {
       client.accountData[type]?.content['encrypted'] is Map;
 
   Future<String?> getCached(String type) async {
-    if (client.database == null) {
-      return null;
-    }
-    // check if it is still valid
     final keys = keyIdsFromType(type);
     if (keys == null) {
       return null;
@@ -323,7 +319,7 @@ class SSSS {
     if (fromCache != null && isValid(fromCache)) {
       return fromCache.content;
     }
-    final ret = await client.database?.getSSSSCache(type);
+    final ret = await client.database.getSSSSCache(type);
     if (ret == null) {
       return null;
     }
@@ -361,7 +357,7 @@ class SSSS {
     );
     final decrypted = await decryptAes(encryptInfo, key, type);
     final db = client.database;
-    if (cacheTypes.contains(type) && db != null) {
+    if (cacheTypes.contains(type)) {
       // cache the thing
       await db.storeSSSSCache(type, keyId, ciphertext, decrypted);
       onSecretStored.add(keyId);
@@ -398,7 +394,7 @@ class SSSS {
     // store the thing in your account data
     await client.setAccountData(client.userID!, type, content);
     final db = client.database;
-    if (cacheTypes.contains(type) && db != null) {
+    if (cacheTypes.contains(type)) {
       // cache the thing
       await db.storeSSSSCache(type, keyId, encrypted.ciphertext, secret);
       onSecretStored.add(keyId);
@@ -444,7 +440,7 @@ class SSSS {
       if (ciphertext == null) {
         throw Exception('Wrong type for ciphertext!');
       }
-      await client.database?.storeSSSSCache(type, keyId, ciphertext, secret);
+      await client.database.storeSSSSCache(type, keyId, ciphertext, secret);
       onSecretStored.add(keyId);
     }
   }
@@ -611,23 +607,21 @@ class SSSS {
       }
       Logs().i('[SSSS] Secret for type ${request.type} is ok, storing it');
       final db = client.database;
-      if (db != null) {
-        final keyId = keyIdFromType(request.type);
-        if (keyId != null) {
-          final ciphertext = (client.accountData[request.type]!.content
-                  .tryGetMap<String, Object?>('encrypted'))
-              ?.tryGetMap<String, Object?>(keyId)
-              ?.tryGet<String>('ciphertext');
-          if (ciphertext == null) {
-            Logs().i('[SSSS] Ciphertext is empty or not a String');
-            return;
-          }
-          await db.storeSSSSCache(request.type, keyId, ciphertext, secret);
-          if (_cacheCallbacks.containsKey(request.type)) {
-            _cacheCallbacks[request.type]!(secret);
-          }
-          onSecretStored.add(keyId);
+      final keyId = keyIdFromType(request.type);
+      if (keyId != null) {
+        final ciphertext = (client.accountData[request.type]!.content
+                .tryGetMap<String, Object?>('encrypted'))
+            ?.tryGetMap<String, Object?>(keyId)
+            ?.tryGet<String>('ciphertext');
+        if (ciphertext == null) {
+          Logs().i('[SSSS] Ciphertext is empty or not a String');
+          return;
         }
+        await db.storeSSSSCache(request.type, keyId, ciphertext, secret);
+        if (_cacheCallbacks.containsKey(request.type)) {
+          _cacheCallbacks[request.type]!(secret);
+        }
+        onSecretStored.add(keyId);
       }
     }
   }
