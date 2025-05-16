@@ -79,7 +79,7 @@ void main() {
       final client = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       );
       expect(client.isLogged(), false);
       final Set<InitState> initStates = {};
@@ -112,7 +112,7 @@ void main() {
       matrix = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       );
       final eventUpdateListFuture = matrix.onTimelineEvent.stream.toList();
       final toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
@@ -369,10 +369,10 @@ void main() {
 
       final key = 'abc def!/_-';
       await matrix.setAccountData(matrix.userID!, key, content);
-      final dbContent = await matrix.database?.getAccountData();
+      final dbContent = await matrix.database.getAccountData();
 
       expect(matrix.accountData[key]?.content, content);
-      expect(dbContent?[key]?.content, content);
+      expect(dbContent[key]?.content, content);
     });
 
     test('roomAccountData', () async {
@@ -383,15 +383,15 @@ void main() {
       final key = 'abc def!/_-';
       final roomId = '!726s6s6q:example.com';
       await matrix.setAccountDataPerRoom(matrix.userID!, roomId, key, content);
-      final roomFromList = (await matrix.database?.getRoomList(matrix))
-          ?.firstWhere((room) => room.id == roomId);
-      final roomFromDb = await matrix.database?.getSingleRoom(matrix, roomId);
+      final roomFromList = (await matrix.database.getRoomList(matrix))
+          .firstWhere((room) => room.id == roomId);
+      final roomFromDb = await matrix.database.getSingleRoom(matrix, roomId);
 
       expect(
         matrix.getRoomById(roomId)?.roomAccountData[key]?.content,
         content,
       );
-      expect(roomFromList?.roomAccountData[key]?.content, content);
+      expect(roomFromList.roomAccountData[key]?.content, content);
       expect(
         roomFromDb?.roomAccountData[key]?.content,
         content,
@@ -418,7 +418,7 @@ void main() {
       matrix = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       );
 
       expect(matrix.homeserver, null);
@@ -504,7 +504,7 @@ void main() {
       matrix = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       );
 
       await matrix.checkHomeserver(
@@ -912,14 +912,14 @@ void main() {
       );
       expect(matrix.onUserProfileUpdate.value, '@alice:example.com');
       final cachedProfileFromDb =
-          await matrix.database?.getUserProfile('@alice:example.com');
+          await matrix.database.getUserProfile('@alice:example.com');
       expect(cachedProfileFromDb?.outdated, true);
     });
     test('joinAfterInviteMembership', () async {
       final client = await getClient();
       await client.abortSync();
       client.rooms.clear();
-      await client.database?.clearCache();
+      await client.database.clearCache();
 
       await client.handleSync(
         SyncUpdate.fromJson(
@@ -955,7 +955,7 @@ void main() {
 
       await client.abortSync();
       client.rooms.clear();
-      await client.database?.clearCache();
+      await client.database.clearCache();
       await client.dispose(closeDatabase: true);
     });
     test('leaveThenInvite should be invited', () async {
@@ -967,7 +967,7 @@ void main() {
       final client = await getClient();
       await client.abortSync();
       client.rooms.clear();
-      await client.database?.clearCache();
+      await client.database.clearCache();
 
       final roomId = '!inviteLeaveRoom:example.com';
       await client.handleSync(
@@ -1015,14 +1015,14 @@ void main() {
 
       await client.abortSync();
       client.rooms.clear();
-      await client.database?.clearCache();
+      await client.database.clearCache();
       await client.dispose(closeDatabase: true);
     });
     test('ownProfile', () async {
       final client = await getClient();
       await client.abortSync();
       client.rooms.clear();
-      await client.database?.clearCache();
+      await client.database.clearCache();
       await client.handleSync(
         SyncUpdate.fromJson(
           jsonDecode(
@@ -1394,11 +1394,11 @@ void main() {
       );
     });
     test('Test the fake store api', () async {
-      final database = await getDatabase(null);
+      final database = await getDatabase();
       final client1 = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: (_) => database,
+        database: database,
       );
 
       await client1.init(
@@ -1418,7 +1418,7 @@ void main() {
       final client2 = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: (_) => database,
+        database: database,
       );
 
       await client2.init();
@@ -1470,8 +1470,8 @@ void main() {
           await client.uploadContent(Uint8List(0), filename: 'file.jpeg');
       expect(response.toString(), 'mxc://example.com/AQwafuaFswefuhsfAFAgsw');
       expect(
-        await client.database?.getFile(response) != null,
-        client.database?.supportsFileStoring,
+        await client.database.getFile(response) != null,
+        client.database.supportsFileStoring,
       );
       await client.dispose(closeDatabase: true);
     });
@@ -1509,7 +1509,7 @@ void main() {
       FakeMatrixApi.expectedAccessToken = null;
       expect(client.accessToken, 'a_new_token');
       expect(softLoggedOut, 1);
-      final storedClient = await client.database?.getClient(client.clientName);
+      final storedClient = await client.database.getClient(client.clientName);
       expect(storedClient?.tryGet<String>('token'), 'a_new_token');
       expect(
         storedClient?.tryGet<String>('refresh_token'),
@@ -1580,11 +1580,11 @@ void main() {
     });
 
     test('Database Migration', () async {
-      final firstDatabase = await getDatabase(null);
+      final firstDatabase = await getDatabase();
       final firstClient = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: (_) => firstDatabase,
+        database: firstDatabase,
       );
       FakeMatrixApi.client = firstClient;
       await firstClient.checkHomeserver(
@@ -1605,7 +1605,7 @@ void main() {
       final newClient = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
         legacyDatabaseBuilder: (_) => firstDatabase,
       );
       final Set<InitState> initStates = {};
@@ -1621,7 +1621,7 @@ void main() {
       await newClient.dispose(closeDatabase: false);
 
       await firstDatabase.close();
-      final sameOldFirstDatabase = await getDatabase(null);
+      final sameOldFirstDatabase = await getDatabase();
       expect(await sameOldFirstDatabase.getClient('testclient'), null);
     });
 
@@ -1629,7 +1629,7 @@ void main() {
       final client = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       )
         ..accessToken = '1234'
         ..baseUri = Uri.parse('https://fakeserver.notexisting');
@@ -1664,8 +1664,8 @@ void main() {
       expect(event?.room.name, 'TestRoomName');
       expect(event?.room.canonicalAlias, '#testalias:blaaa');
       final storedEvent =
-          await client.database?.getEventById('123', event!.room);
-      expect(storedEvent?.eventId, event?.eventId);
+          await client.database.getEventById('123', event!.room);
+      expect(storedEvent?.eventId, event.eventId);
 
       event = await client.getEventByPushNotification(
         PushNotification(
@@ -1680,8 +1680,8 @@ void main() {
       expect(event?.messageType, 'm.text');
       expect(event?.type, 'm.room.message');
       final storedEvent2 = await client.database
-          ?.getEventById('143273582443PhrSn:example.org', event!.room);
-      expect(storedEvent2?.eventId, event?.eventId);
+          .getEventById('143273582443PhrSn:example.org', event!.room);
+      expect(storedEvent2?.eventId, event.eventId);
     });
 
     test('Rooms and archived rooms getter', () async {
@@ -1738,7 +1738,7 @@ void main() {
       () async {
         final customClient = Client(
           'failclient',
-          databaseBuilder: getMatrixSdkDatabase,
+          database: await getMatrixSdkDatabase(),
         );
         try {
           await customClient.init(

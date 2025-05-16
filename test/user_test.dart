@@ -19,30 +19,37 @@
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
+import 'fake_database.dart';
 
-void main() {
+void main() async {
   /// All Tests related to the Event
   group('User', () {
-    Logs().level = Level.error;
-    final client = Client('testclient', httpClient: FakeMatrixApi());
-    final room = Room(id: '!localpart:server.abc', client: client);
-    final user1 = User(
-      '@alice:example.com',
-      membership: 'join',
-      displayName: 'Alice M',
-      avatarUrl: 'mxc://bla',
-      room: room,
-    );
-    final user2 = User(
-      '@bob:example.com',
-      membership: 'join',
-      displayName: 'Bob',
-      avatarUrl: 'mxc://bla',
-      room: room,
-    );
-    room.setState(user1);
-    room.setState(user2);
+    late Client client;
+    late Room room;
+    late User user1, user2;
     setUp(() async {
+      client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
+      room = Room(id: '!localpart:server.abc', client: client);
+      user1 = User(
+        '@alice:example.com',
+        membership: 'join',
+        displayName: 'Alice M',
+        avatarUrl: 'mxc://bla',
+        room: room,
+      );
+      user2 = User(
+        '@bob:example.com',
+        membership: 'join',
+        displayName: 'Bob',
+        avatarUrl: 'mxc://bla',
+        room: room,
+      );
+      room.setState(user1);
+      room.setState(user2);
       await client.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,

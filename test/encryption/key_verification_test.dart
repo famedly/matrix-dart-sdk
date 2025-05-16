@@ -67,7 +67,7 @@ void main() async {
       client2 = Client(
         'othertestclient',
         httpClient: FakeMatrixApi.currentApi!,
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       );
       await client2.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),

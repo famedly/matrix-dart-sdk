@@ -19,13 +19,18 @@
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
+import 'fake_database.dart';
 
 void main() {
   /// All Tests related to the MxContent
   group('MxContent', () {
     Logs().level = Level.error;
     test('Formatting', () async {
-      final client = Client('testclient', httpClient: FakeMatrixApi());
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
       await client.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
@@ -56,7 +61,11 @@ void main() {
       );
     });
     test('other port', () async {
-      final client = Client('testclient', httpClient: FakeMatrixApi());
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
       await client.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
@@ -88,7 +97,11 @@ void main() {
       );
     });
     test('other remote port', () async {
-      final client = Client('testclient', httpClient: FakeMatrixApi());
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
       await client.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
@@ -108,7 +121,11 @@ void main() {
       );
     });
     test('Wrong scheme throw exception', () async {
-      final client = Client('testclient', httpClient: FakeMatrixApi());
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
       await client.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
@@ -119,7 +136,11 @@ void main() {
     });
 
     test('auth media fallback', () async {
-      final client = Client('testclient', httpClient: FakeMatrixApi());
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
       await client.checkHomeserver(
         Uri.parse('https://fakeserverpriortoauthmedia.notexisting'),
         checkWellKnown: false,

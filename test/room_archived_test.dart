@@ -98,12 +98,12 @@ void main() async {
       final archiveRoom = client.getRoomById('!5345234234:example.com');
       expect(archiveRoom != null, true);
 
-      final eventsFromStore = await client.database?.getEventList(
+      final eventsFromStore = await client.database.getEventList(
         archiveRoom!,
         start: 0,
         limit: Room.defaultHistoryCount,
       );
-      expect(eventsFromStore?.isEmpty, true);
+      expect(eventsFromStore.isEmpty, true);
     });
 
     test('discard room from archives when membership change', () async {
