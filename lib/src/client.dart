@@ -583,7 +583,10 @@ class Client extends MatrixApi {
   @override
   Future<DiscoveryInformation> getWellknown() async {
     final wellKnownResponse = await httpClient.get(
-      Uri.https(userID!.domain!, '/.well-known/matrix/client'),
+      Uri.https(
+        userID?.domain ?? homeserver!.host,
+        '/.well-known/matrix/client',
+      ),
     );
     final wellKnown = DiscoveryInformation.fromJson(
       jsonDecode(utf8.decode(wellKnownResponse.bodyBytes))
