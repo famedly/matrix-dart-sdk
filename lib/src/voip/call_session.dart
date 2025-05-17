@@ -129,7 +129,7 @@ class CallSession {
   final CachedStreamController<WrappedMediaStream> onStreamRemoved =
       CachedStreamController();
 
-  SDPStreamMetadata? remoteSDPStreamMetadata;
+  SDPStreamMetadata? _remoteSDPStreamMetadata;
   final List<RTCRtpSender> _usermediaSenders = [];
   final List<RTCRtpSender> _screensharingSenders = [];
   final List<WrappedMediaStream> _streams = <WrappedMediaStream>[];
@@ -495,8 +495,8 @@ class CallSession {
   }
 
   void _updateRemoteSDPStreamMetadata(SDPStreamMetadata metadata) {
-    remoteSDPStreamMetadata = metadata;
-    remoteSDPStreamMetadata?.sdpStreamMetadatas
+    _remoteSDPStreamMetadata = metadata;
+    _remoteSDPStreamMetadata?.sdpStreamMetadatas
         .forEach((streamId, sdpStreamMetadata) {
       Logs().i(
         'Stream purpose update: \nid = "$streamId", \npurpose = "${sdpStreamMetadata.purpose}",  \naudio_muted = ${sdpStreamMetadata.audio_muted}, \nvideo_muted = ${sdpStreamMetadata.video_muted}',
@@ -671,7 +671,7 @@ class CallSession {
 
   Future<void> _addRemoteStream(MediaStream stream) async {
     //final userId = remoteUser.id;
-    final metadata = remoteSDPStreamMetadata?.sdpStreamMetadatas[stream.id];
+    final metadata = _remoteSDPStreamMetadata?.sdpStreamMetadatas[stream.id];
     if (metadata == null) {
       Logs().i(
         'Ignoring stream with id ${stream.id} because we didn\'t get any metadata about it',
@@ -770,7 +770,7 @@ class CallSession {
     if (!muted) {
       final videoToSend = await hasVideoToSend();
       if (!videoToSend) {
-        if (remoteSDPStreamMetadata == null) return;
+        if (_remoteSDPStreamMetadata == null) return;
         await insertVideoTrackToAudioOnlyStream();
       }
     }
