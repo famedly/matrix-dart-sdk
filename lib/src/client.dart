@@ -591,10 +591,10 @@ class Client extends MatrixApi {
       final versions = await getVersions();
       if (!versions.versions
           .any((version) => supportedVersions.contains(version))) {
-        throw BadServerVersionsException(
-          versions.versions.toSet(),
-          supportedVersions,
+        Logs().w(
+          'Server supports the versions: ${versions.toString()} but this application is only compatible with ${supportedVersions.toString()}.',
         );
+        assert(false);
       }
 
       final loginTypes = await getLoginFlows() ?? [];
@@ -4094,16 +4094,6 @@ enum SyncStatus {
   cleaningUp,
   finished,
   error,
-}
-
-class BadServerVersionsException implements Exception {
-  final Set<String> serverVersions, supportedVersions;
-
-  BadServerVersionsException(this.serverVersions, this.supportedVersions);
-
-  @override
-  String toString() =>
-      'Server supports the versions: ${serverVersions.toString()} but this application is only compatible with ${supportedVersions.toString()}.';
 }
 
 class BadServerLoginTypesException implements Exception {
