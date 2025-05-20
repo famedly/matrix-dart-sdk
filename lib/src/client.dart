@@ -2113,7 +2113,7 @@ class Client extends MatrixApi {
       }
 
       if (newDeviceID != null) {
-        await _database?.storeDeviceId(newDeviceID);
+        await database.storeDeviceId(newDeviceID);
       }
 
       // If we are refreshing the session, we are done here:
