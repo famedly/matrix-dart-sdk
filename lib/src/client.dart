@@ -2483,7 +2483,7 @@ class Client extends MatrixApi {
       // room both in invite and leave. If you get an invite and then leave, it
       // will only be included in leave.
       final leave = sync.rooms?.leave;
-      if (leave != null) {
+      if (leave != null && prevBatch != null) {
         await _handleRooms(leave, direction: direction);
       }
       final invite = sync.rooms?.invite;
