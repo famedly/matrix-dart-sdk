@@ -783,7 +783,7 @@ class VoIP {
 
     currentCID = VoipId(roomId: roomId, callId: callId);
     await newCall.initOutboundCall(type).then((_) {
-      delegate.handleNewCall(newCall);
+      unawaited(delegate.handleNewCall(newCall));
     });
     return newCall;
   }
