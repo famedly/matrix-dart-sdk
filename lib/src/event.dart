@@ -404,6 +404,14 @@ class Event extends MatrixEvent {
 
     await room.client.database.removeEvent(eventId, room.id);
 
+    // Delete possible send file requests:
+    await room.client.database?.deleteFile(
+      Uri.parse('com.famedly.sendingAttachment://file/$eventId'),
+    );
+    await room.client.database?.deleteFile(
+      Uri.parse('com.famedly.sendingAttachment://thumbnail/$eventId'),
+    );
+
     if (room.lastEvent != null && room.lastEvent!.eventId == eventId) {
       final redactedBecause = Event.fromMatrixEvent(
         MatrixEvent(
@@ -446,12 +454,29 @@ class Event extends MatrixEvent {
       MessageTypes.Audio,
       MessageTypes.File,
     }.contains(messageType)) {
-      final file = room.sendingFilePlaceholders[eventId];
+      final bytes = await room.client.database?.getFile(
+        Uri.parse('com.famedly.sendingAttachment://file/$eventId'),
+      );
+      final file = bytes == null
+          ? null
+          : MatrixFile(
+              bytes: bytes,
+              name: content.tryGet<String>('filename') ?? 'image',
+            );
       if (file == null) {
         await cancelSend();
         throw Exception('Can not try to send again. File is no longer cached.');
       }
-      final thumbnail = room.sendingFileThumbnails[eventId];
+      final thumbnailBytes = await room.client.database?.getFile(
+        Uri.parse('com.famedly.sendingAttachment://thumbnail/$txid'),
+      );
+      final thumbnail = thumbnailBytes == null
+          ? null
+          : MatrixImageFile(
+              bytes: thumbnailBytes,
+              name:
+                  'thumbnail_${content.tryGet<String>('filename') ?? 'image'}',
+            );
       final credentials = FileSendRequestCredentials.fromJson(unsigned ?? {});
       final inReplyTo = credentials.inReplyTo == null
           ? null
@@ -752,7 +777,15 @@ class Event extends MatrixEvent {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
     if (status.isSending) {
-      final localFile = room.sendingFilePlaceholders[eventId];
+      final bytes = await room.client.database?.getFile(
+        Uri.parse('com.famedly.sendingAttachment://file/$eventId'),
+      );
+      final localFile = bytes == null
+          ? null
+          : MatrixImageFile(
+              bytes: bytes,
+              name: content.tryGet<String>('filename') ?? 'image',
+            );
       if (localFile != null) return localFile;
     }
     final database = room.client.database;
