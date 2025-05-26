@@ -288,7 +288,7 @@ class CallSession {
         Logs().v('[VOIP] Call invite has expired. Hanging up.');
 
         fireCallEvent(CallStateChange.kHangup);
-        hangup(reason: CallErrorCode.inviteTimeout);
+        unawaited(hangup(reason: CallErrorCode.inviteTimeout));
       }
       _ringingTimer?.cancel();
       _ringingTimer = null;
@@ -1117,7 +1117,7 @@ class CallSession {
 
       _inviteTimer = Timer(CallTimeouts.callInviteLifetime, () {
         if (state == CallState.kInviteSent) {
-          hangup(reason: CallErrorCode.inviteTimeout);
+          unawaited(hangup(reason: CallErrorCode.inviteTimeout));
         }
         _inviteTimer?.cancel();
         _inviteTimer = null;
@@ -1173,7 +1173,7 @@ class CallSession {
         final delay = direction == CallDirection.kIncoming ? 500 : 2000;
         if (_candidateSendTries == 0) {
           Timer(Duration(milliseconds: delay), () {
-            _sendCandidateQueue();
+            unawaited(_sendCandidateQueue());
           });
         }
       };
@@ -1424,7 +1424,7 @@ class CallSession {
 
       final delay = 500 * pow(2, _candidateSendTries);
       Timer(Duration(milliseconds: delay as int), () {
-        _sendCandidateQueue();
+        unawaited(_sendCandidateQueue());
       });
     }
   }
