@@ -601,16 +601,6 @@ class FakeMatrixApi extends BaseClient {
           'timeline': {
             'events': [
               {
-                'sender': '@bob:example.com',
-                'type': 'm.room.member',
-                'state_key': '@bob:example.com',
-                'content': {'membership': 'join'},
-                'prev_content': {'membership': 'invite'},
-                'origin_server_ts': 1417731086795,
-                'event_id': '\$7365636s6r6432:example.com',
-                'unsigned': {'foo': 'bar'},
-              },
-              {
                 'sender': '@alice:example.com',
                 'type': 'm.room.message',
                 'content': {'body': 'I am a fish', 'msgtype': 'm.text'},

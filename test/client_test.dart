@@ -282,16 +282,13 @@ void main() {
 
       final eventUpdateList = await eventUpdateListFuture;
 
-      expect(eventUpdateList.length, 3);
+      expect(eventUpdateList.length, 2);
 
-      expect(eventUpdateList[0].type, 'm.room.member');
+      expect(eventUpdateList[0].type, 'm.room.message');
       expect(eventUpdateList[0].roomId, '!726s6s6q:example.com');
 
       expect(eventUpdateList[1].type, 'm.room.message');
-      expect(eventUpdateList[1].roomId, '!726s6s6q:example.com');
-
-      expect(eventUpdateList[2].type, 'm.room.message');
-      expect(eventUpdateList[2].roomId, '!726s6s6f:example.com');
+      expect(eventUpdateList[1].roomId, '!726s6s6f:example.com');
 
       expect(
         matrix

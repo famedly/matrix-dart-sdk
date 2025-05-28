@@ -186,6 +186,7 @@ void main() {
       sess = await client.encryption!.keyManager
           .createOutboundGroupSession(roomId);
       final room = client.getRoomById(roomId)!;
+      room.partial = false;
       final member = room.getState('m.room.member', '@alice:example.com');
       member!.content['membership'] = 'leave';
       room.summary.mJoinedMemberCount = room.summary.mJoinedMemberCount! - 1;
