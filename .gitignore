@@ -18,6 +18,7 @@ coverage/
 coverage_badge.svg
 coverage.xml
 TEST-report.*
+rust
 
 # IntelliJ related
 *.iml

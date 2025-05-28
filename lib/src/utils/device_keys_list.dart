@@ -20,7 +20,7 @@ import 'dart:convert';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart' show IterableExtension;
-import 'package:olm/olm.dart' as olm;
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
@@ -240,24 +240,17 @@ abstract class SignableKey extends MatrixSignableKey {
     String signature, {
     bool isSignatureWithoutLibolmValid = false,
   }) {
-    olm.Utility olmutil;
-    try {
-      olmutil = olm.Utility();
-    } catch (e) {
-      // if no libolm is present we land in this catch block, and return the default
-      // set if no libolm is there. Some signatures should be assumed-valid while others
-      // should be assumed-invalid
-      return isSignatureWithoutLibolmValid;
-    }
     var valid = false;
     try {
-      olmutil.ed25519_verify(pubKey, signingContent, signature);
+      vod.Ed25519PublicKey.fromBase64(pubKey).verify(
+        message: signingContent,
+        signature: vod.Ed25519Signature.fromBase64(signature),
+      );
       valid = true;
-    } catch (_) {
+    } catch (e) {
+      Logs().d('Invalid Ed25519 signature', e);
       // bad signature
       valid = false;
-    } finally {
-      olmutil.free();
     }
     return valid;
   }

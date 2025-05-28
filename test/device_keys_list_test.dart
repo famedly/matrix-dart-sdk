@@ -19,18 +19,26 @@
 import 'dart:convert';
 
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import './fake_client.dart';
 
-void main() {
+void main() async {
   /// All Tests related to device keys
   group('Device keys', tags: 'olm', () {
     Logs().level = Level.error;
 
     late Client client;
 
+    Future? vodInit;
+
     test('setupClient', () async {
+      vodInit ??= vod.init(
+        wasmPath: './pkg/',
+        libraryPath: './rust/target/debug/',
+      );
+      await vodInit;
       client = await getClient();
       await client.abortSync();
     });

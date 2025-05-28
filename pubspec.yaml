@@ -31,6 +31,11 @@ dependencies:
   sqflite_common: ^2.4.5
   sqlite3: ^2.1.0
   typed_data: ^1.3.2
+  vodozemac:
+    git:
+      url: https://github.com/famedly/dart-vodozemac.git
+      path: dart
+      ref: main
   webrtc_interface: ^1.2.0
 
 dev_dependencies:

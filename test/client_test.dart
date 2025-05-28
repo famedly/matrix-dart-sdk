@@ -26,6 +26,7 @@ import 'package:collection/collection.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:path/path.dart' show join;
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
@@ -67,11 +68,15 @@ void main() {
   group('client mem', tags: 'olm', () {
     late Client matrix;
 
-    Logs().level = Level.error;
+    Future? vodInit;
 
     /// Check if all Elements get created
-
     setUp(() async {
+      vodInit ??= vod.init(
+        wasmPath: './pkg/',
+        libraryPath: './rust/target/debug/',
+      );
+      await vodInit;
       matrix = await getClient();
     });
 

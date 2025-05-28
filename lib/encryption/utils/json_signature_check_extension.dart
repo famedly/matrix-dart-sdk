@@ -17,7 +17,7 @@
  */
 
 import 'package:canonical_json/canonical_json.dart';
-import 'package:olm/olm.dart' as olm;
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 
@@ -37,15 +37,15 @@ extension JsonSignatureCheckExtension on Map<String, dynamic> {
     final canonical = canonicalJson.encode(this);
     final message = String.fromCharCodes(canonical);
     var isValid = false;
-    final olmutil = olm.Utility();
     try {
-      olmutil.ed25519_verify(key, message, signature);
+      vod.Ed25519PublicKey.fromBase64(key).verify(
+        message: message,
+        signature: vod.Ed25519Signature.fromBase64(signature),
+      );
       isValid = true;
     } catch (e, s) {
       isValid = false;
       Logs().w('[LibOlm] Signature check failed', e, s);
-    } finally {
-      olmutil.free();
     }
     return isValid;
   }

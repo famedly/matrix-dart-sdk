@@ -21,6 +21,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
@@ -45,19 +46,18 @@ class KeyManager {
 
   KeyManager(this.encryption) {
     encryption.ssss.setValidator(megolmKey, (String secret) async {
-      final keyObj = olm.PkDecryption();
       try {
+        final keyObj = vod.PkDecryption.fromSecretKey(
+          vod.Curve25519PublicKey.fromBase64(secret),
+        );
         final info = await getRoomKeysBackupInfo(false);
         if (info.algorithm !=
             BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2) {
           return false;
         }
-        return keyObj.init_with_private_key(base64decodeUnpadded(secret)) ==
-            info.authData['public_key'];
+        return keyObj.publicKey == info.authData['public_key'];
       } catch (_) {
         return false;
-      } finally {
-        keyObj.free();
       }
     });
     encryption.ssss.setCacheCallback(megolmKey, (String secret) {
@@ -669,54 +669,57 @@ class KeyManager {
     }
     final privateKey =
         base64decodeUnpadded((await encryption.ssss.getCached(megolmKey))!);
-    final decryption = olm.PkDecryption();
     final info = await getRoomKeysBackupInfo();
     String backupPubKey;
-    try {
-      backupPubKey = decryption.init_with_private_key(privateKey);
 
-      if (info.algorithm != BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
-          info.authData['public_key'] != backupPubKey) {
-        return;
-      }
-      for (final roomEntry in keys.rooms.entries) {
-        final roomId = roomEntry.key;
-        for (final sessionEntry in roomEntry.value.sessions.entries) {
-          final sessionId = sessionEntry.key;
-          final session = sessionEntry.value;
-          final sessionData = session.sessionData;
-          Map<String, Object?>? decrypted;
-          try {
-            decrypted = json.decode(
-              decryption.decrypt(
-                sessionData['ephemeral'] as String,
-                sessionData['mac'] as String,
-                sessionData['ciphertext'] as String,
+    final decryption = vod.PkDecryption.fromSecretKey(
+      vod.Curve25519PublicKey.fromBytes(privateKey),
+    );
+    backupPubKey = decryption.publicKey;
+
+    if (info.algorithm != BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
+        info.authData['public_key'] != backupPubKey) {
+      return;
+    }
+    for (final roomEntry in keys.rooms.entries) {
+      final roomId = roomEntry.key;
+      for (final sessionEntry in roomEntry.value.sessions.entries) {
+        final sessionId = sessionEntry.key;
+        final session = sessionEntry.value;
+        final sessionData = session.sessionData;
+        Map<String, Object?>? decrypted;
+        try {
+          decrypted = json.decode(
+            decryption.decrypt(
+              vod.PkMessage(
+                base64decodeUnpadded(sessionData['ciphertext'] as String),
+                base64decodeUnpadded(sessionData['mac'] as String),
+                vod.Curve25519PublicKey.fromBase64(
+                  sessionData['ephemeral'] as String,
+                ),
               ),
-            );
-          } catch (e, s) {
-            Logs().e('[LibOlm] Error decrypting room key', e, s);
-          }
-          final senderKey = decrypted?.tryGet<String>('sender_key');
-          if (decrypted != null && senderKey != null) {
-            decrypted['session_id'] = sessionId;
-            decrypted['room_id'] = roomId;
-            await setInboundGroupSession(
-              roomId,
-              sessionId,
-              senderKey,
-              decrypted,
-              forwarded: true,
-              senderClaimedKeys:
-                  decrypted.tryGetMap<String, String>('sender_claimed_keys') ??
-                      <String, String>{},
-              uploaded: true,
-            );
-          }
+            ),
+          );
+        } catch (e, s) {
+          Logs().e('[LibOlm] Error decrypting room key', e, s);
+        }
+        final senderKey = decrypted?.tryGet<String>('sender_key');
+        if (decrypted != null && senderKey != null) {
+          decrypted['session_id'] = sessionId;
+          decrypted['room_id'] = roomId;
+          await setInboundGroupSession(
+            roomId,
+            sessionId,
+            senderKey,
+            decrypted,
+            forwarded: true,
+            senderClaimedKeys:
+                decrypted.tryGetMap<String, String>('sender_claimed_keys') ??
+                    <String, String>{},
+            uploaded: true,
+          );
         }
       }
-    } finally {
-      decryption.free();
     }
   }
 
@@ -875,57 +878,56 @@ class KeyManager {
         final privateKey =
             base64decodeUnpadded((await encryption.ssss.getCached(megolmKey))!);
         // decryption is needed to calculate the public key and thus see if the claimed information is in fact valid
-        final decryption = olm.PkDecryption();
+
         final info = await getRoomKeysBackupInfo(false);
         String backupPubKey;
-        try {
-          backupPubKey = decryption.init_with_private_key(privateKey);
 
-          if (info.algorithm !=
-                  BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
-              info.authData['public_key'] != backupPubKey) {
-            decryption.free();
-            return;
-          }
-          final args = GenerateUploadKeysArgs(
-            pubkey: backupPubKey,
-            dbSessions: <DbInboundGroupSessionBundle>[],
-            userId: userID,
+        final decryption = vod.PkDecryption.fromSecretKey(
+          vod.Curve25519PublicKey.fromBytes(privateKey),
+        );
+        backupPubKey = decryption.publicKey;
+
+        if (info.algorithm !=
+                BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
+            info.authData['public_key'] != backupPubKey) {
+          return;
+        }
+        final args = GenerateUploadKeysArgs(
+          pubkey: backupPubKey,
+          dbSessions: <DbInboundGroupSessionBundle>[],
+          userId: userID,
+        );
+        // we need to calculate verified beforehand, as else we pass a closure to an isolate
+        // with 500 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
+        // so that the event loop can progress
+        var i = 0;
+        for (final dbSession in dbSessions) {
+          final device =
+              client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
+          args.dbSessions.add(
+            DbInboundGroupSessionBundle(
+              dbSession: dbSession,
+              verified: device?.verified ?? false,
+            ),
           );
-          // we need to calculate verified beforehand, as else we pass a closure to an isolate
-          // with 500 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
-          // so that the event loop can progress
-          var i = 0;
-          for (final dbSession in dbSessions) {
-            final device =
-                client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
-            args.dbSessions.add(
-              DbInboundGroupSessionBundle(
-                dbSession: dbSession,
-                verified: device?.verified ?? false,
-              ),
-            );
-            i++;
-            if (i > 10) {
-              await Future.delayed(Duration(milliseconds: 1));
-              i = 0;
-            }
+          i++;
+          if (i > 10) {
+            await Future.delayed(Duration(milliseconds: 1));
+            i = 0;
           }
-          final roomKeys =
-              await client.nativeImplementations.generateUploadKeys(args);
-          Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
-          // upload the payload...
-          await client.putRoomKeys(info.version, roomKeys);
-          // and now finally mark all the keys as uploaded
-          // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
-          for (final dbSession in dbSessions) {
-            await database.markInboundGroupSessionAsUploaded(
-              dbSession.roomId,
-              dbSession.sessionId,
-            );
-          }
-        } finally {
-          decryption.free();
+        }
+        final roomKeys =
+            await client.nativeImplementations.generateUploadKeys(args);
+        Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
+        // upload the payload...
+        await client.putRoomKeys(info.version, roomKeys);
+        // and now finally mark all the keys as uploaded
+        // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
+        for (final dbSession in dbSessions) {
+          await database.markInboundGroupSessionAsUploaded(
+            dbSession.roomId,
+            dbSession.sessionId,
+          );
         }
       } catch (e, s) {
         Logs().e('[Key Manager] Error uploading room keys', e, s);
@@ -1247,9 +1249,10 @@ class RoomKeyRequest extends ToDeviceEvent {
 /// you would likely want to use [NativeImplementations] and
 /// [Client.nativeImplementations] instead
 RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
-  final enc = olm.PkEncryption();
   try {
-    enc.set_recipient_key(args.pubkey);
+    final enc = vod.PkEncryption.fromPublicKey(
+      vod.Curve25519PublicKey.fromBase64(args.pubkey),
+    );
     // first we generate the payload to upload all the session keys in this chunk
     final roomKeys = RoomKeys(rooms: {});
     for (final dbSession in args.dbSessions) {
@@ -1279,17 +1282,15 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
         forwardedCount: sess.forwardingCurve25519KeyChain.length,
         isVerified: dbSession.verified, //device?.verified ?? false,
         sessionData: {
-          'ephemeral': encrypted.ephemeral,
-          'ciphertext': encrypted.ciphertext,
-          'mac': encrypted.mac,
+          'ephemeral': encrypted.ephemeralKey.toBase64(),
+          'ciphertext': base64Encode(encrypted.ciphertext),
+          'mac': base64Encode(encrypted.mac),
         },
       );
     }
-    enc.free();
     return roomKeys;
   } catch (e, s) {
     Logs().e('[Key Manager] Error generating payload', e, s);
-    enc.free();
     rethrow;
   }
 }

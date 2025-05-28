@@ -18,6 +18,7 @@
 
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
@@ -41,6 +42,10 @@ void main() async {
     late Map<String, dynamic> payload;
 
     setUpAll(() async {
+      await vod.init(
+        wasmPath: './pkg/',
+        libraryPath: './rust/target/debug/',
+      );
       await olm.init();
       olm.get_library_version();
       client = await getClient();

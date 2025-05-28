@@ -22,6 +22,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
@@ -671,12 +672,20 @@ void main() {
       expect(fetchedParticipants.length, newParticipants.length);
     });
 
-    test('calcEncryptionHealthState', () async {
-      expect(
-        await room.calcEncryptionHealthState(),
-        EncryptionHealthState.unverifiedDevices,
-      );
-    });
+    test(
+      'calcEncryptionHealthState',
+      () async {
+        await vod.init(
+          wasmPath: './pkg/',
+          libraryPath: './rust/target/debug/',
+        );
+        expect(
+          await room.calcEncryptionHealthState(),
+          EncryptionHealthState.allVerified,
+        );
+      },
+      tags: 'olm',
+    );
 
     test('getEventByID', () async {
       final event = await room.getEventById('1234');
