@@ -16,8 +16,11 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:olm/olm.dart' as olm;
+import 'dart:convert';
 
+import 'package:vodozemac/vodozemac.dart' as vod;
+
+import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
 
@@ -33,7 +36,7 @@ class SessionKey {
   Map<String, Map<String, int>> allowedAtIndex;
 
   /// Underlying olm [InboundGroupSession] object
-  olm.InboundGroupSession? inboundGroupSession;
+  vod.InboundGroupSession? inboundGroupSession;
 
   /// Key for libolm pickle / unpickle
   final String key;
@@ -81,8 +84,7 @@ class SessionKey {
             .catchMap((k, v) => MapEntry(k, Map<String, int>.from(v))),
         roomId = dbEntry.roomId,
         sessionId = dbEntry.sessionId,
-        senderKey = dbEntry.senderKey,
-        inboundGroupSession = olm.InboundGroupSession() {
+        senderKey = dbEntry.senderKey {
     final parsedSenderClaimedKeys =
         Event.getMapFromPayload(dbEntry.senderClaimedKeys)
             .catchMap((k, v) => MapEntry<String, String>(k, v));
@@ -99,15 +101,20 @@ class SessionKey {
                 : <String, String>{}));
 
     try {
-      inboundGroupSession!.unpickle(key, dbEntry.pickle);
+      inboundGroupSession = vod.InboundGroupSession.fromPickleEncrypted(
+        pickle: dbEntry.pickle,
+        pickleKey: key.toPickleKey(),
+      );
     } catch (e, s) {
-      dispose();
-      Logs().e('[LibOlm] Unable to unpickle inboundGroupSession', e, s);
+      try {
+        inboundGroupSession = vod.InboundGroupSession.fromOlmPickleEncrypted(
+          pickle: dbEntry.pickle,
+          pickleKey: utf8.encode(key),
+        );
+      } catch (_) {
+        Logs().e('[LibOlm] Unable to unpickle inboundGroupSession', e, s);
+        rethrow;
+      }
     }
-  }
-
-  void dispose() {
-    inboundGroupSession?.free();
-    inboundGroupSession = null;
   }
 }

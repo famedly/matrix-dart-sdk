@@ -68,15 +68,8 @@ void main() {
   group('client mem', tags: 'olm', () {
     late Client matrix;
 
-    Future? vodInit;
-
     /// Check if all Elements get created
     setUp(() async {
-      vodInit ??= vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
-      await vodInit;
       matrix = await getClient();
     });
 

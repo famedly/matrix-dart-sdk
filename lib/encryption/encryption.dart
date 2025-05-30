@@ -227,7 +227,7 @@ class Encryption {
       canRequestSession = false;
 
       // we can't have the key be an int, else json-serializing will fail, thus we need it to be a string
-      final messageIndexKey = 'key-${decryptResult.message_index}';
+      final messageIndexKey = 'key-${decryptResult.messageIndex}';
       final messageIndexValue =
           '${event.eventId}|${event.originServerTs.millisecondsSinceEpoch}';
       final haveIndex =
@@ -255,13 +255,14 @@ class Encryption {
             .onError((e, _) => Logs().e('Ignoring error for updating indexes'));
       }
       decryptedPayload = json.decode(decryptResult.plaintext);
-    } catch (exception) {
+    } catch (exception, stackTrace) {
+      Logs().w('Could not decrypt event', exception, stackTrace);
       // alright, if this was actually by our own outbound group session, we might as well clear it
       if (exception.toString() != DecryptException.unknownSession &&
           (keyManager
                       .getOutboundGroupSession(event.room.id)
                       ?.outboundGroupSession
-                      ?.session_id() ??
+                      ?.sessionId ??
                   '') ==
               content.sessionId) {
         runInRoot(
@@ -409,7 +410,7 @@ class Encryption {
       // they're deprecated. Just left here for compatibility
       'device_id': client.deviceID,
       'sender_key': identityKey,
-      'session_id': sess.outboundGroupSession!.session_id(),
+      'session_id': sess.outboundGroupSession!.sessionId,
       if (mRelatesTo != null) 'm.relates_to': mRelatesTo,
     };
     await keyManager.storeOutboundGroupSession(roomId, sess);

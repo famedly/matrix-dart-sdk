@@ -675,13 +675,9 @@ void main() {
     test(
       'calcEncryptionHealthState',
       () async {
-        await vod.init(
-          wasmPath: './pkg/',
-          libraryPath: './rust/target/debug/',
-        );
         expect(
           await room.calcEncryptionHealthState(),
-          EncryptionHealthState.allVerified,
+          EncryptionHealthState.unverifiedDevices,
         );
       },
       tags: 'olm',

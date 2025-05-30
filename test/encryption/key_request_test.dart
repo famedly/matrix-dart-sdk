@@ -314,8 +314,7 @@ void main() {
 
       final session = (await matrix.encryption!.keyManager
           .loadInboundGroupSession(requestRoom.id, validSessionId))!;
-      final sessionKey = session.inboundGroupSession!
-          .export_session(session.inboundGroupSession!.first_known_index());
+      final sessionKey = session.inboundGroupSession!.exportAtFirstKnownIndex();
       matrix.encryption!.keyManager.clearInboundGroupSessions();
       var event = ToDeviceEvent(
         sender: '@alice:example.com',

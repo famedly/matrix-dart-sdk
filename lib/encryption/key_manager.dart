@@ -20,12 +20,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:olm/olm.dart' as olm;
 import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/encryption/utils/outbound_group_session.dart';
+import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/encryption/utils/session_key.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
@@ -118,16 +118,15 @@ class KeyManager {
     if (content['algorithm'] != AlgorithmTypes.megolmV1AesSha2) {
       return;
     }
-    late olm.InboundGroupSession inboundGroupSession;
+    late vod.InboundGroupSession inboundGroupSession;
     try {
-      inboundGroupSession = olm.InboundGroupSession();
       if (forwarded) {
-        inboundGroupSession.import_session(content['session_key']);
+        inboundGroupSession =
+            vod.InboundGroupSession.import(content['session_key']);
       } else {
-        inboundGroupSession.create(content['session_key']);
+        inboundGroupSession = vod.InboundGroupSession(content['session_key']);
       }
     } catch (e, s) {
-      inboundGroupSession.free();
       Logs().e('[LibOlm] Could not create new InboundGroupSession', e, s);
       return Future.value();
     }
@@ -142,19 +141,16 @@ class KeyManager {
       senderClaimedKeys: senderClaimedKeys_,
       allowedAtIndex: allowedAtIndex_,
     );
-    final oldFirstIndex =
-        oldSession?.inboundGroupSession?.first_known_index() ?? 0;
-    final newFirstIndex = newSession.inboundGroupSession!.first_known_index();
+    final oldFirstIndex = oldSession?.inboundGroupSession?.firstKnownIndex ?? 0;
+    final newFirstIndex = newSession.inboundGroupSession!.firstKnownIndex;
     if (oldSession == null ||
         newFirstIndex < oldFirstIndex ||
         (oldFirstIndex == newFirstIndex &&
             newSession.forwardingCurve25519KeyChain.length <
                 oldSession.forwardingCurve25519KeyChain.length)) {
       // use new session
-      oldSession?.dispose();
     } else {
       // we are gonna keep our old session
-      newSession.dispose();
       return;
     }
 
@@ -169,7 +165,7 @@ class KeyManager {
         .storeInboundGroupSession(
       roomId,
       sessionId,
-      inboundGroupSession.pickle(userId),
+      inboundGroupSession.toPickleEncrypted(userId.toPickleKey()),
       json.encode(content),
       json.encode({}),
       json.encode(allowedAtIndex_),
@@ -344,7 +340,7 @@ class KeyManager {
 
     final inboundSess = await loadInboundGroupSession(
       room.id,
-      sess.outboundGroupSession!.session_id(),
+      sess.outboundGroupSession!.sessionId,
     );
     if (inboundSess == null) {
       Logs().w('No inbound megolm session found for outbound session!');
@@ -436,8 +432,8 @@ class KeyManager {
         final rawSession = <String, dynamic>{
           'algorithm': AlgorithmTypes.megolmV1AesSha2,
           'room_id': room.id,
-          'session_id': sess.outboundGroupSession!.session_id(),
-          'session_key': sess.outboundGroupSession!.session_key(),
+          'session_id': sess.outboundGroupSession!.sessionId,
+          'session_key': sess.outboundGroupSession!.sessionKey,
         };
         try {
           devicesToReceive.removeWhere((k) => !k.encryptToDevice);
@@ -449,16 +445,16 @@ class KeyManager {
                       .containsKey(device.curve25519Key) ||
                   inboundSess.allowedAtIndex[device.userId]![
                           device.curve25519Key]! >
-                      sess.outboundGroupSession!.message_index()) {
+                      sess.outboundGroupSession!.messageIndex) {
                 inboundSess
                         .allowedAtIndex[device.userId]![device.curve25519Key!] =
-                    sess.outboundGroupSession!.message_index();
+                    sess.outboundGroupSession!.messageIndex;
               }
             }
             await client.database.updateInboundGroupSessionAllowedAtIndex(
               json.encode(inboundSess!.allowedAtIndex),
               room.id,
-              sess.outboundGroupSession!.session_id(),
+              sess.outboundGroupSession!.sessionId,
             );
             // send out the key
             await client.sendToDeviceEncryptedChunked(
@@ -477,7 +473,6 @@ class KeyManager {
         return false;
       }
     }
-    sess.dispose();
     _outboundGroupSessions.remove(roomId);
     await client.database.removeOutboundGroupSession(roomId);
     return true;
@@ -492,7 +487,7 @@ class KeyManager {
     if (userID == null) return;
     await client.database.storeOutboundGroupSession(
       roomId,
-      sess.outboundGroupSession!.pickle(userID),
+      sess.outboundGroupSession!.toPickleEncrypted(userID.toPickleKey()),
       json.encode(sess.devices),
       sess.creationTime.millisecondsSinceEpoch,
     );
@@ -553,19 +548,13 @@ class KeyManager {
     final deviceKeys = await room.getUserDeviceKeys();
     final deviceKeyIds = _getDeviceKeyIdMap(deviceKeys);
     deviceKeys.removeWhere((k) => !k.encryptToDevice);
-    final outboundGroupSession = olm.OutboundGroupSession();
-    try {
-      outboundGroupSession.create();
-    } catch (e, s) {
-      outboundGroupSession.free();
-      Logs().e('[LibOlm] Unable to create new outboundGroupSession', e, s);
-      rethrow;
-    }
+    final outboundGroupSession = vod.GroupSession();
+
     final rawSession = <String, dynamic>{
       'algorithm': AlgorithmTypes.megolmV1AesSha2,
       'room_id': room.id,
-      'session_id': outboundGroupSession.session_id(),
-      'session_key': outboundGroupSession.session_key(),
+      'session_id': outboundGroupSession.sessionId,
+      'session_key': outboundGroupSession.sessionKey,
     };
     final allowedAtIndex = <String, Map<String, int>>{};
     for (final device in deviceKeys) {
@@ -575,7 +564,7 @@ class KeyManager {
       }
       allowedAtIndex[device.userId] ??= <String, int>{};
       allowedAtIndex[device.userId]![device.curve25519Key!] =
-          outboundGroupSession.message_index();
+          outboundGroupSession.messageIndex;
     }
     await setInboundGroupSession(
       roomId,
@@ -604,7 +593,6 @@ class KeyManager {
         e,
         s,
       );
-      sess.dispose();
       rethrow;
     }
     return sess;
@@ -1163,14 +1151,6 @@ class KeyManager {
   void dispose() {
     // ignore: discarded_futures
     _uploadKeysOnSync?.cancel();
-    for (final sess in _outboundGroupSessions.values) {
-      sess.dispose();
-    }
-    for (final entries in _inboundGroupSessions.values) {
-      for (final sess in entries.values) {
-        sess.dispose();
-      }
-    }
   }
 }
 
@@ -1233,8 +1213,8 @@ class RoomKeyRequest extends ToDeviceEvent {
             (session.forwardingCurve25519KeyChain.isEmpty
                 ? keyManager.encryption.fingerprintKey
                 : null);
-    message['session_key'] = session.inboundGroupSession!.export_session(
-      index ?? session.inboundGroupSession!.first_known_index(),
+    message['session_key'] = session.inboundGroupSession!.exportAt(
+      index ?? session.inboundGroupSession!.firstKnownIndex,
     );
     // send the actual reply of the key back to the requester
     await keyManager.client.sendToDeviceEncrypted(
@@ -1269,8 +1249,7 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
         'forwarding_curve25519_key_chain': sess.forwardingCurve25519KeyChain,
         'sender_key': sess.senderKey,
         'sender_claimed_keys': sess.senderClaimedKeys,
-        'session_key': sess.inboundGroupSession!
-            .export_session(sess.inboundGroupSession!.first_known_index()),
+        'session_key': sess.inboundGroupSession!.exportAtFirstKnownIndex(),
       };
       // encrypt the content
       final encrypted = enc.encrypt(json.encode(payload));
@@ -1278,7 +1257,7 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
       //final device = args.client.getUserDeviceKeysByCurve25519Key(sess.senderKey);
       // aaaand finally add the session key to our payload
       roomKeyBackup.sessions[sess.sessionId] = KeyBackupData(
-        firstMessageIndex: sess.inboundGroupSession!.first_known_index(),
+        firstMessageIndex: sess.inboundGroupSession!.firstKnownIndex,
         forwardedCount: sess.forwardingCurve25519KeyChain.length,
         isVerified: dbSession.verified, //device?.verified ?? false,
         sessionData: {

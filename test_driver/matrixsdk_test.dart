@@ -234,7 +234,7 @@ void main() => group(
             var currentSessionIdA = room.client.encryption!.keyManager
                 .getOutboundGroupSession(room.id)!
                 .outboundGroupSession!
-                .session_id();
+                .sessionId;
             /*expect(room.client.encryption.keyManager
           .getInboundGroupSession(room.id, currentSessionIdA, '') !=
       null);*/
@@ -289,7 +289,7 @@ void main() => group(
               room.client.encryption!.keyManager
                   .getOutboundGroupSession(room.id)!
                   .outboundGroupSession!
-                  .session_id(),
+                  .sessionId,
               currentSessionIdA,
             );
             /*expect(room.client.encryption.keyManager
@@ -320,7 +320,7 @@ void main() => group(
               room.client.encryption!.keyManager
                   .getOutboundGroupSession(room.id)!
                   .outboundGroupSession!
-                  .session_id(),
+                  .sessionId,
               currentSessionIdA,
             );
             final inviteRoomOutboundGroupSession = inviteRoom
@@ -330,12 +330,12 @@ void main() => group(
             expect(inviteRoomOutboundGroupSession.isValid, isTrue);
             /*expect(inviteRoom.client.encryption.keyManager.getInboundGroupSession(
           inviteRoom.id,
-          inviteRoomOutboundGroupSession.outboundGroupSession.session_id(),
+          inviteRoomOutboundGroupSession.outboundGroupSession.sessionId,
           '') !=
       null);
   expect(room.client.encryption.keyManager.getInboundGroupSession(
           room.id,
-          inviteRoomOutboundGroupSession.outboundGroupSession.session_id(),
+          inviteRoomOutboundGroupSession.outboundGroupSession.sessionId,
           '') !=
       null);*/
             expect(inviteRoom.lastEvent!.body, testMessage3);
@@ -397,7 +397,7 @@ void main() => group(
               room.client.encryption!.keyManager
                   .getOutboundGroupSession(room.id)!
                   .outboundGroupSession!
-                  .session_id(),
+                  .sessionId,
               currentSessionIdA,
             );
             /*expect(inviteRoom.client.encryption.keyManager
@@ -445,14 +445,14 @@ void main() => group(
                 room.client.encryption!.keyManager
                     .getOutboundGroupSession(room.id)!
                     .outboundGroupSession!
-                    .session_id(),
+                    .sessionId,
                 isNot(currentSessionIdA),
               );
             }
             currentSessionIdA = room.client.encryption!.keyManager
                 .getOutboundGroupSession(room.id)!
                 .outboundGroupSession!
-                .session_id();
+                .sessionId;
             /*expect(inviteRoom.client.encryption.keyManager
           .getInboundGroupSession(inviteRoom.id, currentSessionIdA, '') !=
       null);*/
