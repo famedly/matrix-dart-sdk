@@ -17,6 +17,7 @@
  */
 
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import 'fake_database.dart';
@@ -27,7 +28,17 @@ void main() async {
     late Client client;
     late Room room;
     late User user1, user2;
+    Future? vodInit;
     setUp(() async {
+      try {
+        vodInit ??= vod.init(
+          wasmPath: './pkg/',
+          libraryPath: './rust/target/debug/',
+        );
+        await vodInit;
+      } catch (_) {
+        Logs().d('Encryption via Vodozemac not enabled');
+      }
       client = Client(
         'testclient',
         httpClient: FakeMatrixApi(),

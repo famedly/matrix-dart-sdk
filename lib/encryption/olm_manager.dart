@@ -21,11 +21,12 @@ import 'dart:convert';
 import 'package:async/async.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
-import 'package:olm/olm.dart' as olm;
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
 import 'package:matrix/encryption/utils/olm_session.dart';
+import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/api.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
@@ -34,20 +35,24 @@ import 'package:matrix/src/utils/run_in_root.dart';
 class OlmManager {
   final Encryption encryption;
   Client get client => encryption.client;
-  olm.Account? _olmAccount;
+  vod.Account? _olmAccount;
   String? ourDeviceId;
 
   /// Returns the base64 encoded keys to store them in a store.
   /// This String should **never** leave the device!
-  String? get pickledOlmAccount =>
-      enabled ? _olmAccount!.pickle(client.userID!) : null;
+  String? get pickledOlmAccount {
+    return enabled
+        ? _olmAccount!.toPickleEncrypted(client.userID!.toPickleKey())
+        : null;
+  }
+
   String? get fingerprintKey =>
-      enabled ? json.decode(_olmAccount!.identity_keys())['ed25519'] : null;
+      enabled ? _olmAccount!.identityKeys.ed25519.toBase64() : null;
   String? get identityKey =>
-      enabled ? json.decode(_olmAccount!.identity_keys())['curve25519'] : null;
+      enabled ? _olmAccount!.identityKeys.curve25519.toBase64() : null;
 
   String? pickleOlmAccountWithKey(String key) =>
-      enabled ? _olmAccount!.pickle(key) : null;
+      enabled ? _olmAccount!.toPickleEncrypted(key.toPickleKey()) : null;
 
   bool get enabled => _olmAccount != null;
 
@@ -66,33 +71,31 @@ class OlmManager {
   }) async {
     ourDeviceId = deviceId;
     if (olmAccount == null) {
-      try {
-        await olm.init();
-        _olmAccount = olm.Account();
-        _olmAccount!.create();
-        if (!await uploadKeys(
-          uploadDeviceKeys: true,
-          updateDatabase: false,
-          dehydratedDeviceAlgorithm: dehydratedDeviceAlgorithm,
-          dehydratedDevicePickleKey:
-              dehydratedDeviceAlgorithm != null ? pickleKey : null,
-        )) {
-          throw ('Upload key failed');
-        }
-      } catch (_) {
-        _olmAccount?.free();
-        _olmAccount = null;
-        rethrow;
+      _olmAccount = vod.Account();
+      if (!await uploadKeys(
+        uploadDeviceKeys: true,
+        updateDatabase: false,
+        dehydratedDeviceAlgorithm: dehydratedDeviceAlgorithm,
+        dehydratedDevicePickleKey:
+            dehydratedDeviceAlgorithm != null ? pickleKey : null,
+      )) {
+        throw ('Upload key failed');
       }
     } else {
       try {
-        await olm.init();
-        _olmAccount = olm.Account();
-        _olmAccount!.unpickle(pickleKey ?? client.userID!, olmAccount);
-      } catch (_) {
-        _olmAccount?.free();
-        _olmAccount = null;
-        rethrow;
+        _olmAccount = vod.Account.fromPickleEncrypted(
+          pickle: olmAccount,
+          pickleKey: (pickleKey ?? client.userID!).toPickleKey(),
+        );
+      } catch (e) {
+        Logs().d(
+          'Unable to unpickle account in vodozemac format. Trying Olm format...',
+          e,
+        );
+        _olmAccount = vod.Account.fromOlmPickleEncrypted(
+          pickle: olmAccount,
+          pickleKey: utf8.encode(pickleKey ?? client.userID!),
+        );
       }
     }
   }
@@ -115,7 +118,8 @@ class OlmManager {
     if (!payload['signatures'].containsKey(client.userID)) {
       payload['signatures'][client.userID] = <String, dynamic>{};
     }
-    payload['signatures'][client.userID]['ed25519:$ourDeviceId'] = signature;
+    payload['signatures'][client.userID]['ed25519:$ourDeviceId'] =
+        signature.toBase64();
     if (unsigned != null) {
       payload['unsigned'] = unsigned;
     }
@@ -123,13 +127,13 @@ class OlmManager {
   }
 
   String signString(String s) {
-    return _olmAccount!.sign(s);
+    return _olmAccount!.sign(s).toBase64();
   }
 
   bool _uploadKeysLock = false;
   CancelableOperation<Map<String, int>>? currentUpload;
 
-  int? get maxNumberOfOneTimeKeys => _olmAccount?.max_number_of_one_time_keys();
+  int? get maxNumberOfOneTimeKeys => _olmAccount?.maxNumberOfOneTimeKeys;
 
   /// Generates new one time keys, signs everything and upload it to the server.
   /// If `retry` is > 0, the request will be retried with new OTKs on upload failure.
@@ -158,26 +162,24 @@ class OlmManager {
       if (oldKeyCount != null) {
         // check if we have OTKs that still need uploading. If we do, we don't try to generate new ones,
         // instead we try to upload the old ones first
-        final oldOTKsNeedingUpload = json
-            .decode(olmAccount.one_time_keys())['curve25519']
-            .entries
-            .length as int;
+        final oldOTKsNeedingUpload = olmAccount.oneTimeKeys.length;
+
         // generate one-time keys
         // we generate 2/3rds of max, so that other keys people may still have can
         // still be used
         final oneTimeKeysCount =
-            (olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
+            (olmAccount.maxNumberOfOneTimeKeys * 2 / 3).floor() -
                 oldKeyCount -
                 oldOTKsNeedingUpload;
         if (oneTimeKeysCount > 0) {
-          olmAccount.generate_one_time_keys(oneTimeKeysCount);
+          olmAccount.generateOneTimeKeys(oneTimeKeysCount);
         }
         uploadedOneTimeKeysCount = oneTimeKeysCount + oldOTKsNeedingUpload;
       }
 
-      if (encryption.isMinOlmVersion(3, 2, 7) && unusedFallbackKey == false) {
+      if (unusedFallbackKey == false) {
         // we don't have an unused fallback key uploaded....so let's change that!
-        olmAccount.generate_fallback_key();
+        olmAccount.generateFallbackKey();
       }
 
       // we save the generated OTKs into the database.
@@ -199,38 +201,32 @@ class OlmManager {
       };
 
       if (uploadDeviceKeys) {
-        final Map<String, dynamic> keys =
-            json.decode(olmAccount.identity_keys());
-        for (final entry in keys.entries) {
-          final algorithm = entry.key;
-          final value = entry.value;
-          deviceKeys['keys']['$algorithm:$ourDeviceId'] = value;
-        }
+        final keys = olmAccount.identityKeys;
+        deviceKeys['keys']['curve25519:$ourDeviceId'] =
+            keys.curve25519.toBase64();
+        deviceKeys['keys']['ed25519:$ourDeviceId'] = keys.ed25519.toBase64();
         deviceKeys = signJson(deviceKeys);
       }
 
       // now sign all the one-time keys
-      for (final entry
-          in json.decode(olmAccount.one_time_keys())['curve25519'].entries) {
+      for (final entry in olmAccount.oneTimeKeys.entries) {
         final key = entry.key;
-        final value = entry.value;
+        final value = entry.value.toBase64();
         signedOneTimeKeys['signed_curve25519:$key'] = signJson({
           'key': value,
         });
       }
 
       final signedFallbackKeys = <String, dynamic>{};
-      if (encryption.isMinOlmVersion(3, 2, 7)) {
-        final fallbackKey = json.decode(olmAccount.unpublished_fallback_key());
-        // now sign all the fallback keys
-        for (final entry in fallbackKey['curve25519'].entries) {
-          final key = entry.key;
-          final value = entry.value;
-          signedFallbackKeys['signed_curve25519:$key'] = signJson({
-            'key': value,
-            'fallback': true,
-          });
-        }
+      final fallbackKey = olmAccount.fallbackKey;
+      // now sign all the fallback keys
+      for (final entry in fallbackKey.entries) {
+        final key = entry.key;
+        final value = entry.value.toBase64();
+        signedFallbackKeys['signed_curve25519:$key'] = signJson({
+          'key': value,
+          'fallback': true,
+        });
       }
 
       if (signedFallbackKeys.isEmpty &&
@@ -281,7 +277,7 @@ class OlmManager {
       }
 
       // mark the OTKs as published and save that to datbase
-      olmAccount.mark_keys_as_published();
+      olmAccount.markKeysAsPublished();
       if (updateDatabase) {
         await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
       }
@@ -301,17 +297,14 @@ class OlmManager {
         Logs().w('Rotating otks because upload failed', exception);
         for (final otk in signedOneTimeKeys.values) {
           // Keys can only be removed by creating a session...
-          final session = olm.Session();
-          try {
-            final String identity =
-                json.decode(olmAccount.identity_keys())['curve25519'];
-            final key = otk.tryGet<String>('key');
-            if (key != null) {
-              session.create_outbound(_olmAccount!, identity, key);
-              olmAccount.remove_one_time_keys(session);
-            }
-          } finally {
-            session.free();
+
+          final identity = olmAccount.identityKeys.curve25519.toBase64();
+          final key = otk.tryGet<String>('key');
+          if (key != null) {
+            olmAccount.createOutboundSession(
+              identityKey: vod.Curve25519PublicKey.fromBase64(identity),
+              oneTimeKey: vod.Curve25519PublicKey.fromBase64(key),
+            );
           }
         }
 
@@ -342,7 +335,6 @@ class OlmManager {
 
     await _otkUpdateDedup.fetch(
       () => runBenchmarked('handleOtkUpdate', () async {
-        final haveFallbackKeys = encryption.isMinOlmVersion(3, 2, 0);
         // Check if there are at least half of max_number_of_one_time_keys left on the server
         // and generate and upload more if not.
 
@@ -357,7 +349,7 @@ class OlmManager {
         }
 
         // fixup accidental too many uploads. We delete only one of them so that the server has time to update the counts and because we will get rate limited anyway.
-        if (keyCount > _olmAccount!.max_number_of_one_time_keys()) {
+        if (keyCount > _olmAccount!.maxNumberOfOneTimeKeys) {
           final requestingKeysFrom = {
             client.userID!: {ourDeviceId!: 'signed_curve25519'},
           };
@@ -365,14 +357,13 @@ class OlmManager {
         }
 
         // Only upload keys if they are less than half of the max or we have no unused fallback key
-        if (keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2) ||
+        if (keyCount < (_olmAccount!.maxNumberOfOneTimeKeys / 2) ||
             !unusedFallbackKey) {
           await uploadKeys(
-            oldKeyCount:
-                keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2)
-                    ? keyCount
-                    : null,
-            unusedFallbackKey: haveFallbackKeys ? unusedFallbackKey : null,
+            oldKeyCount: keyCount < (_olmAccount!.maxNumberOfOneTimeKeys / 2)
+                ? keyCount
+                : null,
+            unusedFallbackKey: unusedFallbackKey,
           );
         }
       }),
@@ -449,9 +440,12 @@ class OlmManager {
         if (session.session == null) {
           continue;
         }
-        if (type == 0 && session.session!.matches_inbound(body)) {
+        if (type == 0) {
           try {
-            plaintext = session.session!.decrypt(type, body);
+            plaintext = session.session!.decrypt(
+              messageType: type,
+              ciphertext: body,
+            );
           } catch (e) {
             // The message was encrypted during this session, but is unable to decrypt
             throw DecryptException(
@@ -463,7 +457,10 @@ class OlmManager {
           break;
         } else if (type == 1) {
           try {
-            plaintext = session.session!.decrypt(type, body);
+            plaintext = session.session!.decrypt(
+              messageType: type,
+              ciphertext: body,
+            );
             await updateSessionUsage(session);
             break;
           } catch (_) {
@@ -477,26 +474,27 @@ class OlmManager {
     }
 
     if (plaintext == null) {
-      final newSession = olm.Session();
       try {
-        newSession.create_inbound_from(_olmAccount!, senderKey, body);
-        _olmAccount!.remove_one_time_keys(newSession);
-        await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
+        final result = _olmAccount!.createInboundSession(
+          theirIdentityKey: vod.Curve25519PublicKey.fromBase64(senderKey),
+          preKeyMessageBase64: body,
+        );
+        plaintext = result.plaintext;
+        final newSession = result.session;
 
-        plaintext = newSession.decrypt(type, body);
+        await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
 
         await storeOlmSession(
           OlmSession(
             key: client.userID!,
             identityKey: senderKey,
-            sessionId: newSession.session_id(),
+            sessionId: newSession.sessionId,
             session: newSession,
             lastReceived: DateTime.now(),
           ),
         );
         await updateSessionUsage();
       } catch (e) {
-        newSession.free();
         throw DecryptException(DecryptException.decryptionFailed, e.toString());
       }
     }
@@ -660,25 +658,25 @@ class OlmManager {
             continue;
           }
           Logs().v('[OlmManager] Starting session with $userId:$deviceId');
-          final session = olm.Session();
           try {
-            session.create_outbound(
-              _olmAccount!,
-              identityKey,
-              deviceKey.tryGet<String>('key')!,
+            final session = _olmAccount!.createOutboundSession(
+              identityKey: vod.Curve25519PublicKey.fromBase64(identityKey),
+              oneTimeKey: vod.Curve25519PublicKey.fromBase64(
+                deviceKey.tryGet<String>('key')!,
+              ),
             );
+
             await storeOlmSession(
               OlmSession(
                 key: client.userID!,
                 identityKey: identityKey,
-                sessionId: session.session_id(),
+                sessionId: session.sessionId,
                 session: session,
                 lastReceived:
                     DateTime.now(), // we want to use a newly created session
               ),
             );
           } catch (e, s) {
-            session.free();
             Logs()
                 .e('[LibOlm] Could not create new outbound olm session', e, s);
           }
@@ -733,8 +731,8 @@ class OlmManager {
       'ciphertext': <String, dynamic>{},
     };
     encryptedBody['ciphertext'][device.curve25519Key] = {
-      'type': encryptResult.type,
-      'body': encryptResult.body,
+      'type': encryptResult.messageType,
+      'body': encryptResult.ciphertext,
     };
     return encryptedBody;
   }
@@ -820,13 +818,6 @@ class OlmManager {
 
   Future<void> dispose() async {
     await currentUpload?.cancel();
-    for (final sessions in olmSessions.values) {
-      for (final sess in sessions) {
-        sess.dispose();
-      }
-    }
-    _olmAccount?.free();
-    _olmAccount = null;
   }
 }
 

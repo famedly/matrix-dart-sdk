@@ -26,7 +26,6 @@ import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
-import 'package:olm/olm.dart' as olm;
 import 'package:random_string/random_string.dart';
 
 import 'package:matrix/encryption.dart';
@@ -2102,9 +2101,6 @@ class Client extends MatrixApi {
 
       await encryption?.dispose();
       try {
-        // make sure to throw an exception if libolm doesn't exist
-        await olm.init();
-        olm.get_library_version();
         _encryption = Encryption(client: this);
       } catch (e) {
         Logs().e('Error initializing encryption $e');

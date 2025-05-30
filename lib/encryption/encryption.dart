@@ -19,7 +19,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:olm/olm.dart' as olm;
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption/cross_signing.dart';
 import 'package:matrix/encryption/key_manager.dart';
@@ -85,18 +85,6 @@ class Encryption {
     );
 
     if (!isDehydratedDevice) keyManager.startAutoUploadKeys();
-  }
-
-  bool isMinOlmVersion(int major, int minor, int patch) {
-    try {
-      final version = olm.get_library_version();
-      return version[0] > major ||
-          (version[0] == major &&
-              (version[1] > minor ||
-                  (version[1] == minor && version[2] >= patch)));
-    } catch (_) {
-      return false;
-    }
   }
 
   Bootstrap bootstrap({void Function(Bootstrap)? onUpdate}) => Bootstrap(
