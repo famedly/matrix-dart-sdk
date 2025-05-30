@@ -296,15 +296,9 @@ class OlmManager {
           exception.error == MatrixError.M_UNKNOWN) {
         Logs().w('Rotating otks because upload failed', exception);
         for (final otk in signedOneTimeKeys.values) {
-          // Keys can only be removed by creating a session...
-
-          final identity = olmAccount.identityKeys.curve25519.toBase64();
           final key = otk.tryGet<String>('key');
           if (key != null) {
-            olmAccount.createOutboundSession(
-              identityKey: vod.Curve25519PublicKey.fromBase64(identity),
-              oneTimeKey: vod.Curve25519PublicKey.fromBase64(key),
-            );
+            olmAccount.removeOneTimeKey(key);
           }
         }
 
@@ -440,32 +434,16 @@ class OlmManager {
         if (session.session == null) {
           continue;
         }
-        if (type == 0) {
-          try {
-            plaintext = session.session!.decrypt(
-              messageType: type,
-              ciphertext: body,
-            );
-          } catch (e) {
-            // The message was encrypted during this session, but is unable to decrypt
-            throw DecryptException(
-              DecryptException.decryptionFailed,
-              e.toString(),
-            );
-          }
+
+        try {
+          plaintext = session.session!.decrypt(
+            messageType: type,
+            ciphertext: body,
+          );
           await updateSessionUsage(session);
           break;
-        } else if (type == 1) {
-          try {
-            plaintext = session.session!.decrypt(
-              messageType: type,
-              ciphertext: body,
-            );
-            await updateSessionUsage(session);
-            break;
-          } catch (_) {
-            plaintext = null;
-          }
+        } catch (_) {
+          plaintext = null;
         }
       }
     }
@@ -677,8 +655,11 @@ class OlmManager {
               ),
             );
           } catch (e, s) {
-            Logs()
-                .e('[LibOlm] Could not create new outbound olm session', e, s);
+            Logs().e(
+              '[Vodozemac] Could not create new outbound olm session',
+              e,
+              s,
+            );
           }
         }
       }
@@ -767,10 +748,10 @@ class OlmManager {
           getFromDb: false,
         );
       } on NoOlmSessionFoundException catch (e) {
-        Logs().d('[LibOlm] Error encrypting to-device event', e);
+        Logs().d('[Vodozemac] Error encrypting to-device event', e);
         continue;
       } catch (e, s) {
-        Logs().wtf('[LibOlm] Error encrypting to-device event', e, s);
+        Logs().wtf('[Vodozemac] Error encrypting to-device event', e, s);
         continue;
       }
     }

@@ -50,6 +50,7 @@ class OlmSession {
           pickle: dbEntry['pickle'],
         );
       } catch (_) {
+        Logs().d('Unable to unpickle Olm session. Try LibOlm format.');
         session = vod.Session.fromOlmPickleEncrypted(
           pickleKey: utf8.encode(key),
           pickle: dbEntry['pickle'],
@@ -60,7 +61,7 @@ class OlmSession {
           DateTime.fromMillisecondsSinceEpoch(dbEntry['last_received'] ?? 0);
       assert(sessionId == session!.sessionId);
     } catch (e, s) {
-      Logs().e('[LibOlm] Could not unpickle olm session', e, s);
+      Logs().e('[Vodozemac] Could not unpickle olm session', e, s);
     }
   }
 }

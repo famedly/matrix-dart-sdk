@@ -45,7 +45,7 @@ extension JsonSignatureCheckExtension on Map<String, dynamic> {
       isValid = true;
     } catch (e, s) {
       isValid = false;
-      Logs().w('[LibOlm] Signature check failed', e, s);
+      Logs().w('[Vodozemac] Signature check failed', e, s);
     }
     return isValid;
   }

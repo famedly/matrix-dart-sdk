@@ -19,8 +19,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/cross_signing.dart';
 import 'package:matrix/encryption/key_manager.dart';
 import 'package:matrix/encryption/key_verification_manager.dart';
@@ -166,7 +164,7 @@ class Encryption {
       return await olmManager.decryptToDeviceEvent(event);
     } catch (e, s) {
       Logs().w(
-        '[LibOlm] Could not decrypt to device event from ${event.sender} with content: ${event.content}',
+        '[Vodozemac] Could not decrypt to device event from ${event.sender} with content: ${event.content}',
         e,
         s,
       );
@@ -243,8 +241,8 @@ class Encryption {
             .onError((e, _) => Logs().e('Ignoring error for updating indexes'));
       }
       decryptedPayload = json.decode(decryptResult.plaintext);
-    } catch (exception, stackTrace) {
-      Logs().w('Could not decrypt event', exception, stackTrace);
+    } catch (exception) {
+      Logs().d('Could not decrypt event', exception);
       // alright, if this was actually by our own outbound group session, we might as well clear it
       if (exception.toString() != DecryptException.unknownSession &&
           (keyManager

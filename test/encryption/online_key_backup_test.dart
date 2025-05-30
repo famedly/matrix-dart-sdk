@@ -18,7 +18,6 @@
 
 import 'dart:convert';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
@@ -40,8 +39,7 @@ void main() {
         wasmPath: './pkg/',
         libraryPath: './rust/target/debug/',
       );
-      await olm.init();
-      olm.get_library_version();
+
       client = await getClient();
     });
 
@@ -91,20 +89,19 @@ void main() {
     });
 
     test('upload key', () async {
-      final session = olm.OutboundGroupSession();
-      session.create();
-      final inbound = olm.InboundGroupSession();
-      inbound.create(session.session_key());
+      final session = vod.GroupSession();
+      final inbound = vod.InboundGroupSession(session.sessionKey);
+
       final senderKey = client.identityKey;
       final roomId = '!someroom:example.org';
-      final sessionId = inbound.session_id();
+      final sessionId = inbound.sessionId;
       // set a payload...
       final sessionPayload = <String, dynamic>{
         'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': roomId,
         'forwarding_curve25519_key_chain': [client.identityKey],
         'session_id': sessionId,
-        'session_key': inbound.export_session(1),
+        'session_key': inbound.exportAt(1),
         'sender_key': senderKey,
         'sender_claimed_ed25519_key': client.fingerprintKey,
       };

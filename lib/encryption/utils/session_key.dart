@@ -107,12 +107,13 @@ class SessionKey {
       );
     } catch (e, s) {
       try {
+        Logs().d('Unable to unpickle inboundGroupSession. Try LibOlm format.');
         inboundGroupSession = vod.InboundGroupSession.fromOlmPickleEncrypted(
           pickle: dbEntry.pickle,
           pickleKey: utf8.encode(key),
         );
       } catch (_) {
-        Logs().e('[LibOlm] Unable to unpickle inboundGroupSession', e, s);
+        Logs().e('[Vodozemac] Unable to unpickle inboundGroupSession', e, s);
         rethrow;
       }
     }

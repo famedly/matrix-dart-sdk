@@ -127,7 +127,7 @@ class KeyManager {
         inboundGroupSession = vod.InboundGroupSession(content['session_key']);
       }
     } catch (e, s) {
-      Logs().e('[LibOlm] Could not create new InboundGroupSession', e, s);
+      Logs().e('[Vodozemac] Could not create new InboundGroupSession', e, s);
       return Future.value();
     }
     final newSession = SessionKey(
@@ -465,7 +465,7 @@ class KeyManager {
           }
         } catch (e, s) {
           Logs().e(
-            '[LibOlm] Unable to re-send the session key at later index to new devices',
+            '[Vodozemac] Unable to re-send the session key at later index to new devices',
             e,
             s,
           );
@@ -589,7 +589,7 @@ class KeyManager {
       _outboundGroupSessions[roomId] = sess;
     } catch (e, s) {
       Logs().e(
-        '[LibOlm] Unable to send the session key to the participating devices',
+        '[Vodozemac] Unable to send the session key to the participating devices',
         e,
         s,
       );
@@ -679,17 +679,15 @@ class KeyManager {
         try {
           decrypted = json.decode(
             decryption.decrypt(
-              vod.PkMessage(
-                base64decodeUnpadded(sessionData['ciphertext'] as String),
-                base64decodeUnpadded(sessionData['mac'] as String),
-                vod.Curve25519PublicKey.fromBase64(
-                  sessionData['ephemeral'] as String,
-                ),
+              vod.PkMessage.fromBase64(
+                ciphertext: sessionData['ciphertext'] as String,
+                mac: sessionData['mac'] as String,
+                ephemeralKey: sessionData['ephemeral'] as String,
               ),
             ),
           );
         } catch (e, s) {
-          Logs().e('[LibOlm] Error decrypting room key', e, s);
+          Logs().e('[Vodozemac] Error decrypting room key', e, s);
         }
         final senderKey = decrypted?.tryGet<String>('sender_key');
         if (decrypted != null && senderKey != null) {
@@ -1256,14 +1254,15 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
       // fetch the device, if available...
       //final device = args.client.getUserDeviceKeysByCurve25519Key(sess.senderKey);
       // aaaand finally add the session key to our payload
+      final (ciphertext, mac, ephemeral) = encrypted.toBase64();
       roomKeyBackup.sessions[sess.sessionId] = KeyBackupData(
         firstMessageIndex: sess.inboundGroupSession!.firstKnownIndex,
         forwardedCount: sess.forwardingCurve25519KeyChain.length,
         isVerified: dbSession.verified, //device?.verified ?? false,
         sessionData: {
-          'ephemeral': encrypted.ephemeralKey.toBase64(),
-          'ciphertext': base64Encode(encrypted.ciphertext),
-          'mac': base64Encode(encrypted.mac),
+          'ephemeral': ephemeral,
+          'ciphertext': ciphertext,
+          'mac': mac,
         },
       );
     }

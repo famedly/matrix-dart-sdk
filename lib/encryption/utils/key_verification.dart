@@ -1460,7 +1460,11 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
 
   void _handleKey(Map<String, dynamic> payload) {
     theirPublicKey = payload['key'];
-    establishedSas = sas!.establishSasSecret(payload['key']);
+    final sas = this.sas;
+    if (sas == null || sas.disposed) {
+      throw Exception('SAS object is disposed');
+    }
+    establishedSas = sas.establishSasSecret(payload['key']);
   }
 
   Future<bool> _validateCommitment() async {
@@ -1553,9 +1557,9 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
 
   Future<String> _makeCommitment(String pubKey, String canonicalJson) async {
     if (hash == 'sha256') {
-      final bytes = utf8.encode(pubKey + canonicalJson);
+      final bytes = utf8.encoder.convert(pubKey + canonicalJson);
       final digest = crypto.sha256.convert(bytes);
-      return base64.encode(digest.bytes);
+      return encodeBase64Unpadded(digest.bytes);
     }
     throw Exception('Unknown hash method');
   }

@@ -18,7 +18,6 @@
 
 import 'dart:io';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
@@ -44,9 +43,6 @@ void main() => group(
               wasmPath: './pkg/',
               libraryPath: './rust/target/debug/',
             );
-            await olm.init();
-            olm.Account();
-            Logs().i('[LibOlm] Enabled');
 
             final homeserverUri = Uri.parse(homeserver);
             Logs().i('++++ Using homeserver $homeserverUri ++++');
@@ -490,10 +486,6 @@ void main() => group(
           Client? testClientA, testClientB;
 
           try {
-            await olm.init();
-            olm.Account();
-            Logs().i('[LibOlm] Enabled');
-
             final homeserverUri = Uri.parse(homeserver);
             Logs().i('++++ Using homeserver $homeserverUri ++++');
 

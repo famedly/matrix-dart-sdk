@@ -28,7 +28,7 @@ jobs:
           export HOMESERVER_IMPLEMENTATION=${{matrix.homeserver}}
           export HOMESERVER="localhost:80"
           scripts/integration-server-${{matrix.homeserver}}.sh 2>&1 > /dev/null &
-          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y libolm3 libssl3 sqlite3 libsqlite3-dev
+          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y libssl3 sqlite3 libsqlite3-dev
           source scripts/integration-create-environment-variables.sh
           scripts/integration-prepare-homeserver.sh
           scripts/prepare.sh
@@ -75,7 +75,7 @@ jobs:
           gitlab_ssh: ${{ secrets.CI_SSH_PRIVATE_KEY}}
       - name: Run tests
         run: |
-          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev libolm3 libssl3
+          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev libssl3
           ./scripts/prepare_vodozemac.sh
           ./scripts/test.sh
       - uses: actions/upload-artifact@v4

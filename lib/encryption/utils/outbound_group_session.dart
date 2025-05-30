@@ -71,7 +71,7 @@ class OutboundGroupSession {
           pickle: dbEntry['pickle'],
         );
       } catch (_) {
-        Logs().e('[LibOlm] Unable to unpickle outboundGroupSession', e, s);
+        Logs().e('[Vodozemac] Unable to unpickle outboundGroupSession', e, s);
       }
     }
   }

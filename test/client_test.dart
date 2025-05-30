@@ -23,9 +23,9 @@ import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
-import 'package:olm/olm.dart' as olm;
 import 'package:path/path.dart' show join;
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
@@ -1069,9 +1069,8 @@ void main() {
 
       final deviceKeys = <DeviceKeys>[];
       for (var i = 0; i < 30; i++) {
-        final account = olm.Account();
-        account.create();
-        final keys = json.decode(account.identity_keys());
+        final account = vod.Account();
+        final keys = account.identityKeys;
         final userId = '@testuser:example.org';
         final deviceId = 'DEVICE$i';
         final keyObj = {
@@ -1082,18 +1081,17 @@ void main() {
             'm.megolm.v1.aes-sha2',
           ],
           'keys': {
-            'curve25519:$deviceId': keys['curve25519'],
-            'ed25519:$deviceId': keys['ed25519'],
+            'curve25519:$deviceId': keys.curve25519.toBase64(),
+            'ed25519:$deviceId': keys.ed25519.toBase64(),
           },
         };
         final signature =
             account.sign(String.fromCharCodes(canonicalJson.encode(keyObj)));
         keyObj['signatures'] = {
           userId: {
-            'ed25519:$deviceId': signature,
+            'ed25519:$deviceId': signature.toBase64(),
           },
         };
-        account.free();
         deviceKeys.add(DeviceKeys.fromJson(keyObj, matrix));
       }
       FakeMatrixApi.calledEndpoints.clear();

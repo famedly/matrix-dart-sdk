@@ -11,12 +11,3 @@ typedef ComputeRunner = Future<T> Function<T, U>(
   FutureOr<T> Function(U arg) function,
   U arg,
 );
-
-ComputeCallback computeCallbackFromRunInBackground(ComputeRunner runner) {
-  return <U, T>(
-    FutureOr<T> Function(U arg) callback,
-    U arg, {
-    String? debugLabel,
-  }) =>
-      runner.call(callback, arg);
-}

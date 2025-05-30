@@ -6,10 +6,12 @@ In your `pubspec.yaml` file add the following dependencies:
 
 ```yaml
   matrix: <latest-version>
-  # If you plan to use the SDK in a Flutter application on IO:
+  # (Optional) If you plan to use the SDK in a Flutter application on IO
+  # you need sqflite or sqflite_ffi:
   sqflite: <latest-version>
-  # For end to end encryption:
-  flutter_olm: <latest-version>
+  # (Optional) For end to end encryption, please head on the
+  # encryption guide and add these dependencies:
+  flutter_vodozemac: <latest-version>
   flutter_openssl_crypto: <latest-version>
 ```
 

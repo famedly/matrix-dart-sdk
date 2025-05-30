@@ -20,7 +20,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
@@ -59,8 +58,7 @@ void main() {
         wasmPath: './pkg/',
         libraryPath: './rust/target/debug/',
       );
-      await olm.init();
-      olm.get_library_version();
+
       client = await getClient();
     });
 
