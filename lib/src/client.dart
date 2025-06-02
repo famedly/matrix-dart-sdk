@@ -2736,6 +2736,10 @@ class Client extends MatrixApi {
           await _handleRoomEvents(room, state, EventUpdateType.inviteState);
         }
       }
+      if (syncRoomUpdate is LeftRoomUpdate && getRoomById(id) == null) {
+        Logs().d('Skip store LeftRoomUpdate for unknown room', id);
+        continue;
+      }
       await database.storeRoomUpdate(id, syncRoomUpdate, room.lastEvent, this);
     }
   }
