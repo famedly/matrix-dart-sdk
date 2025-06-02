@@ -23,11 +23,11 @@ import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 import '../fake_database.dart';
 
-void main() {
+void main() async {
   // key @othertest:fakeServer.notExisting
   const otherPickledOlmAccount =
       'VWhVApbkcilKAEGppsPDf9nNVjaK8/IxT3asSR0sYg0S5KgbfE8vXEPwoiKBX2cEvwX3OessOBOkk+ZE7TTbjlrh/KEd31p8Wo+47qj0AP+Ky+pabnhi+/rTBvZy+gfzTqUfCxZrkzfXI9Op4JnP6gYmy7dVX2lMYIIs9WCO1jcmIXiXum5jnfXu1WLfc7PZtO2hH+k9CDKosOFaXRBmsu8k/BGXPSoWqUpvu6WpEG9t5STk4FeAzA';
-
+  final database = await getDatabase();
   group('Encrypt/Decrypt to-device messages', tags: 'olm', () {
     Logs().level = Level.error;
 
@@ -35,7 +35,7 @@ void main() {
     final otherClient = Client(
       'othertestclient',
       httpClient: FakeMatrixApi(),
-      databaseBuilder: getDatabase,
+      database: database,
     );
     late DeviceKeys device;
     late Map<String, dynamic> payload;

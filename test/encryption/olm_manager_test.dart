@@ -157,7 +157,7 @@ void main() {
       final deviceId = 'JLAFKJWSCS';
       final senderKey = 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8';
       FakeMatrixApi.calledEndpoints.clear();
-      await client.database!.setLastSentMessageUserDeviceKey(
+      await client.database.setLastSentMessageUserDeviceKey(
         json.encode({
           'type': 'm.foxies',
           'content': {
@@ -187,7 +187,7 @@ void main() {
 
       // not encrypted
       FakeMatrixApi.calledEndpoints.clear();
-      await client.database!.setLastSentMessageUserDeviceKey(
+      await client.database.setLastSentMessageUserDeviceKey(
         json.encode({
           'type': 'm.foxies',
           'content': {
@@ -213,7 +213,7 @@ void main() {
 
       // device not found
       FakeMatrixApi.calledEndpoints.clear();
-      await client.database!.setLastSentMessageUserDeviceKey(
+      await client.database.setLastSentMessageUserDeviceKey(
         json.encode({
           'type': 'm.foxies',
           'content': {
@@ -241,7 +241,7 @@ void main() {
 
       // don't replay if the last event is m.dummy itself
       FakeMatrixApi.calledEndpoints.clear();
-      await client.database!.setLastSentMessageUserDeviceKey(
+      await client.database.setLastSentMessageUserDeviceKey(
         json.encode({
           'type': 'm.dummy',
           'content': {},

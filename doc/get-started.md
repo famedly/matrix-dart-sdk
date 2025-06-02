@@ -16,11 +16,30 @@ In your `pubspec.yaml` file add the following dependencies:
 ## Step 2: Create the client
 
 ```dart
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:matrix/matrix.dart';
+
 final client = Client(
-    '<Your Client Name>',
-    databaseBuilder: (client) => MatrixSdkDatabase(
+    '<Client Name>',
+    database: await MatrixSdkDatabase.init(
         '<Database Name>',
-        database: await openDatabase('<path-to-store-database>'),
+        database: await databaseFactoryFfi.openDatabase(':memory:'),
+        sqfliteFactory: databaseFactoryFfi,
+    ),
+);
+```
+
+### Alternative: Create a persistent database with SQFlite:
+
+```dart
+import 'package:sqflite/sqflite.dart';
+import 'package:matrix/matrix.dart';
+
+final client = Client(
+    '<Client Name>',
+    database: await MatrixSdkDatabase.init(
+        '<Database Name>',
+        database: await openDatabase('/path/to/database.sqlite'),
     ),
 );
 ```

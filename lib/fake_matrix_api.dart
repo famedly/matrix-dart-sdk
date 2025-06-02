@@ -225,7 +225,7 @@ class FakeMatrixApi extends BaseClient {
           accountData: [sdk.BasicEvent(content: decodeJson(data), type: type)],
         );
         if (_client?.database != null) {
-          await _client?.database?.transaction(() async {
+          await _client?.database.transaction(() async {
             await _client?.handleSync(syncUpdate);
           });
         } else {
@@ -255,7 +255,7 @@ class FakeMatrixApi extends BaseClient {
           ),
         );
         if (_client?.database != null) {
-          await _client?.database?.transaction(() async {
+          await _client?.database.transaction(() async {
             await _client?.handleSync(syncUpdate);
           });
         } else {

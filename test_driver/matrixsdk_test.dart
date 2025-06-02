@@ -47,7 +47,7 @@ void main() => group(
             Logs().i('++++ Using homeserver $homeserverUri ++++');
 
             Logs().i('++++ Login Alice at ++++');
-            testClientA = Client('TestClientA', databaseBuilder: getDatabase);
+            testClientA = Client('TestClientA', database: await getDatabase());
             await testClientA.checkHomeserver(homeserverUri);
             await testClientA.login(
               LoginType.mLoginPassword,
@@ -57,7 +57,7 @@ void main() => group(
             expect(testClientA.encryptionEnabled, true);
 
             Logs().i('++++ Login Bob ++++');
-            testClientB = Client('TestClientB', databaseBuilder: getDatabase);
+            testClientB = Client('TestClientB', database: await getDatabase());
             await testClientB.checkHomeserver(homeserverUri);
             await testClientB.login(
               LoginType.mLoginPassword,
@@ -341,7 +341,7 @@ void main() => group(
 
             Logs().i('++++ Login Bob in another client ++++');
             final testClientC =
-                Client('TestClientC', databaseBuilder: getDatabase);
+                Client('TestClientC', database: await getDatabase());
             await testClientC.checkHomeserver(homeserverUri);
             // We can't sign in using the displayname, since that breaks e2ee on dendrite: https://github.com/matrix-org/dendrite/issues/2914
             await testClientC.login(
@@ -493,7 +493,7 @@ void main() => group(
             Logs().i('++++ Using homeserver $homeserverUri ++++');
 
             Logs().i('++++ Login Alice at ++++');
-            testClientA = Client('TestClientA', databaseBuilder: getDatabase);
+            testClientA = Client('TestClientA', database: await getDatabase());
             await testClientA.checkHomeserver(homeserverUri);
             await testClientA.login(
               LoginType.mLoginPassword,
@@ -503,7 +503,7 @@ void main() => group(
             expect(testClientA.encryptionEnabled, true);
 
             Logs().i('++++ Login Bob ++++');
-            testClientB = Client('TestClientB', databaseBuilder: getDatabase);
+            testClientB = Client('TestClientB', database: await getDatabase());
             await testClientB.checkHomeserver(homeserverUri);
             await testClientB.login(
               LoginType.mLoginPassword,

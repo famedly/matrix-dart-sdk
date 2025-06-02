@@ -426,7 +426,7 @@ class CrossSigningKey extends SignableKey {
     }
     await super.setVerified(newVerified, sign);
     await client.database
-        ?.setVerifiedUserCrossSigningKey(newVerified, userId, publicKey!);
+        .setVerifiedUserCrossSigningKey(newVerified, userId, publicKey!);
   }
 
   @override
@@ -436,7 +436,7 @@ class CrossSigningKey extends SignableKey {
     }
     _blocked = newBlocked;
     await client.database
-        ?.setBlockedUserCrossSigningKey(newBlocked, userId, publicKey!);
+        .setBlockedUserCrossSigningKey(newBlocked, userId, publicKey!);
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(
@@ -513,7 +513,7 @@ class DeviceKeys extends SignableKey {
     }
     await super.setVerified(newVerified, sign);
     await client.database
-        ?.setVerifiedUserDeviceKey(newVerified, userId, deviceId!);
+        .setVerifiedUserDeviceKey(newVerified, userId, deviceId!);
   }
 
   @override
@@ -524,7 +524,7 @@ class DeviceKeys extends SignableKey {
     }
     _blocked = newBlocked;
     await client.database
-        ?.setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
+        .setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
   }
 
   DeviceKeys.fromMatrixDeviceKeys(

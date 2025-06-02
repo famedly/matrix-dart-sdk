@@ -17,7 +17,7 @@ class MockClient extends Client {
     this.serverEvents = const [],
     this.dbEvents = const [],
     this.throwError = false,
-  });
+  }) : super(database: MockDatabase(dbEvents));
 
   @override
   Future<GetRoomEventsResponse> getRoomEvents(
@@ -47,7 +47,7 @@ class MockClient extends Client {
   }
 
   @override
-  DatabaseApi? get database => MockDatabase(dbEvents);
+  DatabaseApi get database => MockDatabase(dbEvents);
 }
 
 // MockDatabase: Simulates database access for the `TimelineExportExtension.export`
