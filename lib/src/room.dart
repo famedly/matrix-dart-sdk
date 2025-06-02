@@ -771,6 +771,7 @@ class Room {
         },
       ),
     );
+    await _handleFakeSync(syncUpdate);
 
     MatrixFile uploadFile = file; // ignore: omit_local_variable_types
     // computing the thumbnail in case we can
@@ -779,7 +780,6 @@ class Room {
       syncUpdate.rooms!.join!.values.first.timeline!.events!.first
               .unsigned![fileSendingStatusKey] =
           FileSendingStatus.generatingThumbnail.name;
-      await _handleFakeSync(syncUpdate);
       thumbnail ??= await file.generateThumbnail(
         nativeImplementations: client.nativeImplementations,
         customImageResizer: client.customImageResizer,
