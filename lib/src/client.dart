@@ -90,6 +90,19 @@ class Client extends MatrixApi {
 
   ShareKeysWith shareKeysWith;
 
+  /// Implement your https://spec.matrix.org/v1.9/client-server-api/#soft-logout
+  /// logic here.
+  /// Set this to [Client.refreshAccessToken] for the easiest way to handle the
+  /// most common reason for soft logouts.
+  ///
+  /// Please ensure to also provide a [MatrixRefreshTokenClient] as
+  /// [httpClient] in order to handle soft logout on non-sync calls.
+  ///
+  /// You may want to wrap the default
+  /// [Client.refreshAccessToken] implementation with retry logic in case
+  /// you run into situations where the token refresh may fail due to bad
+  /// network connectivity.
+  /// You can also perform a new login here by passing the existing deviceId.
   Future<void> Function(Client client)? onSoftLogout;
 
   DateTime? get accessTokenExpiresAt => _accessTokenExpiresAt;
@@ -148,13 +161,19 @@ class Client extends MatrixApi {
   )? customImageResizer;
 
   /// Create a client
-  /// [clientName] = unique identifier of this client
+  ///
+  /// [clientName]: unique identifier of this client
+  ///
   /// [databaseBuilder]: A function that creates the database instance, that will be used.
+  ///
   /// [legacyDatabaseBuilder]: Use this for your old database implementation to perform an automatic migration
+  ///
   /// [databaseDestroyer]: A function that can be used to destroy a database instance, for example by deleting files from disk.
+  ///
   /// [verificationMethods]: A set of all the verification methods this client can handle. Includes:
   ///    KeyVerificationMethod.numbers: Compare numbers. Most basic, should be supported
   ///    KeyVerificationMethod.emoji: Compare emojis
+  ///
   /// [importantStateEvents]: A set of all the important state events to load when the client connects.
   ///    To speed up performance only a set of state events is loaded on startup, those that are
   ///    needed to display a room list. All the remaining state events are automatically post-loaded
@@ -168,24 +187,43 @@ class Client extends MatrixApi {
   ///     - m.room.canonical_alias
   ///     - m.room.tombstone
   ///     - *some* m.room.member events, where needed
+  ///
+  /// [httpClient]: The inner [Client] used to dispatch any HTTP requests
+  ///     performed by the SDK. The [Client] you pass here will by default be
+  ///     wrapped with a [FixedTimeoutHttpClient] with the specified
+  ///     [defaultNetworkRequestTimeout]. In case you do not wish this wrapper,
+  ///     you can later override the [httpClient] by using the
+  ///     [Client.httpClient] setter.
+  ///
+  /// In case your homeserver supports refresh tokens, please ensure you
+  /// provide a [MatrixRefreshTokenClient].
+  ///
   /// [roomPreviewLastEvents]: The event types that should be used to calculate the last event
   ///     in a room for the room list.
+  ///
   /// Set [requestHistoryOnLimitedTimeline] to controll the automatic behaviour if the client
   /// receives a limited timeline flag for a room.
+  ///
   /// If [mxidLocalPartFallback] is true, then the local part of the mxid will be shown
   /// if there is no other displayname available. If not then this will return "Unknown user".
+  ///
   /// If [formatLocalpart] is true, then the localpart of an mxid will
   /// be formatted in the way, that all "_" characters are becomming white spaces and
   /// the first character of each word becomes uppercase.
+  ///
   /// If your client supports more login types like login with token or SSO, then add this to
   /// [supportedLoginTypes]. Set a custom [syncFilter] if you like. By default the app
   /// will use lazy_load_members.
+  ///
   /// Set [nativeImplementations] to [NativeImplementationsIsolate] in order to
   /// enable the SDK to compute some code in background.
+  ///
   /// Set [timelineEventTimeout] to the preferred time the Client should retry
   /// sending events on connection problems or to `Duration.zero` to disable it.
+  ///
   /// Set [customImageResizer] to your own implementation for a more advanced
   /// and faster image resizing experience.
+  ///
   /// Set [enableDehydratedDevices] to enable experimental support for enabling MSC3814 dehydrated devices.
   Client(
     this.clientName, {
@@ -219,12 +257,6 @@ class Client extends MatrixApi {
     this.shareKeysWith = ShareKeysWith.crossVerifiedIfEnabled,
     this.enableDehydratedDevices = false,
     this.receiptsPublicByDefault = true,
-
-    /// Implement your https://spec.matrix.org/v1.9/client-server-api/#soft-logout
-    /// logic here.
-    /// Set this to `refreshAccessToken()` for the easiest way to handle the
-    /// most common reason for soft logouts.
-    /// You can also perform a new login here by passing the existing deviceId.
     this.onSoftLogout,
 
     /// Experimental feature which allows to send a custom refresh token
@@ -2425,6 +2457,7 @@ class Client extends MatrixApi {
         ),
       );
       if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
+        // due to race conditions via QUIC, still handle soft_logout here
         if (e.raw.tryGet<bool>('soft_logout') == true) {
           Logs().w(
             'The user has been soft logged out! Calling client.onSoftLogout() if present.',
