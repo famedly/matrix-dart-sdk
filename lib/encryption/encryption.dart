@@ -246,7 +246,7 @@ class Encryption {
         // it un-awaited here, nothing happens, which is exactly the result we want
         client.database
             // ignore: discarded_futures
-            .updateInboundGroupSessionIndexes(
+            ?.updateInboundGroupSessionIndexes(
               json.encode(inboundGroupSession.indexes),
               event.room.id,
               sessionId,
@@ -319,7 +319,8 @@ class Encryption {
       }
       final content = event.parsedRoomEncryptedContent;
       final sessionId = content.sessionId;
-      if (sessionId != null &&
+      if (client.database != null &&
+          sessionId != null &&
           !(keyManager
                   .getInboundGroupSession(
                     event.room.id,
@@ -346,7 +347,7 @@ class Encryption {
         if (updateType != EventUpdateType.history) {
           event.room.setState(event);
         }
-        await client.database.storeEventUpdate(
+        await client.database?.storeEventUpdate(
           event.room.id,
           event,
           updateType,
@@ -428,7 +429,8 @@ class Encryption {
     // check if we can set our own master key as verified, if it isn't yet
     final userId = client.userID;
     final masterKey = client.userDeviceKeys[userId]?.masterKey;
-    if (masterKey != null &&
+    if (client.database != null &&
+        masterKey != null &&
         userId != null &&
         !masterKey.directVerified &&
         masterKey.hasValidSignatureChain(onlyValidateUserIds: {userId})) {

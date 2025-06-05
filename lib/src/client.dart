@@ -67,9 +67,11 @@ class Client extends MatrixApi {
 
   int? get id => _id;
 
+  final FutureOr<DatabaseApi> Function(Client)? databaseBuilder;
   final FutureOr<DatabaseApi> Function(Client)? legacyDatabaseBuilder;
+  DatabaseApi? _database;
 
-  final DatabaseApi database;
+  DatabaseApi? get database => _database;
 
   Encryption? get encryption => _encryption;
   Encryption? _encryption;
@@ -139,6 +141,7 @@ class Client extends MatrixApi {
   set homeserver(Uri? homeserver) {
     if (this.homeserver != null && homeserver?.host != this.homeserver?.host) {
       _wellKnown = null;
+      unawaited(database?.storeWellKnown(null));
     }
     super.homeserver = homeserver;
   }
@@ -189,7 +192,7 @@ class Client extends MatrixApi {
   /// Set [enableDehydratedDevices] to enable experimental support for enabling MSC3814 dehydrated devices.
   Client(
     this.clientName, {
-    required this.database,
+    this.databaseBuilder,
     this.legacyDatabaseBuilder,
     Set<KeyVerificationMethod>? verificationMethods,
     http.Client? httpClient,
@@ -292,7 +295,7 @@ class Client extends MatrixApi {
   /// Throws an Exception if there is no refresh token available or the
   /// client is not logged in.
   Future<void> refreshAccessToken() async {
-    final storedClient = await database.getClient(clientName);
+    final storedClient = await database?.getClient(clientName);
     final refreshToken = storedClient?.tryGet<String>('refresh_token');
     if (refreshToken == null) {
       throw Exception('No refresh token available');
@@ -315,7 +318,7 @@ class Client extends MatrixApi {
         ? null
         : DateTime.now().add(Duration(milliseconds: expiresInMs));
     _accessTokenExpiresAt = tokenExpiresAt;
-    await database.updateClient(
+    await database?.updateClient(
       homeserverUrl,
       tokenResponse.accessToken,
       tokenExpiresAt,
@@ -596,7 +599,7 @@ class Client extends MatrixApi {
     // do not reset the well known here, so super call
     super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
     _wellKnown = wellKnown;
-    await database.storeWellKnown(wellKnown);
+    await database?.storeWellKnown(wellKnown);
     return wellKnown;
   }
 
@@ -1060,7 +1063,7 @@ class Client extends MatrixApi {
     Duration timeout = const Duration(seconds: 30),
     Duration maxCacheAge = const Duration(days: 1),
   }) async {
-    final cachedProfile = await database.getUserProfile(userId);
+    final cachedProfile = await database?.getUserProfile(userId);
     if (cachedProfile != null &&
         !cachedProfile.outdated &&
         DateTime.now().difference(cachedProfile.updated) < maxCacheAge) {
@@ -1085,7 +1088,7 @@ class Client extends MatrixApi {
       updated: DateTime.now(),
     );
 
-    await database.storeUserProfile(userId, newCachedProfile);
+    await database?.storeUserProfile(userId, newCachedProfile);
 
     return newCachedProfile;
   }
@@ -1540,7 +1543,7 @@ class Client extends MatrixApi {
         .uploadContent(file, filename: filename, contentType: contentType);
 
     final database = this.database;
-    if (file.length <= database.maxFileSize) {
+    if (database != null && file.length <= database.maxFileSize) {
       await database.storeFile(
         mxc,
         file,
@@ -1572,13 +1575,16 @@ class Client extends MatrixApi {
   ///
   /// This can be useful to migrate a session from one device to a future one.
   Future<String?> exportDump() async {
-    await abortSync();
-    await dispose(closeDatabase: false);
+    if (database != null) {
+      await abortSync();
+      await dispose(closeDatabase: false);
 
-    final export = await database.exportDump();
+      final export = await database!.exportDump();
 
-    await clear();
-    return export;
+      await clear();
+      return export;
+    }
+    return null;
   }
 
   /// imports a dumped session
@@ -1592,7 +1598,9 @@ class Client extends MatrixApi {
       // Client was probably not initialized yet.
     }
 
-    final success = await database.importDump(export);
+    _database ??= await databaseBuilder!.call(this);
+
+    final success = await database!.importDump(export);
 
     if (success) {
       // closing including DB
@@ -1785,7 +1793,13 @@ class Client extends MatrixApi {
     bool returnNullIfSeen = true,
   }) async {
     // Get access token if necessary:
+    final database = _database ??= await databaseBuilder?.call(this);
     if (!isLogged()) {
+      if (database == null) {
+        throw Exception(
+          'Can not execute getEventByPushNotification() without a database',
+        );
+      }
       final clientInfoMap = await database.getClient(clientName);
       final token = clientInfoMap?.tryGet<String>('token');
       if (token == null) {
@@ -1803,7 +1817,7 @@ class Client extends MatrixApi {
 
     // Create the room object:
     final room = getRoomById(roomId) ??
-        await database.getSingleRoom(this, roomId) ??
+        await database?.getSingleRoom(this, roomId) ??
         Room(
           id: roomId,
           client: this,
@@ -1853,7 +1867,7 @@ class Client extends MatrixApi {
       );
     }
     matrixEvent ??= await database
-        .getEventById(eventId, room)
+        ?.getEventById(eventId, room)
         .timeout(timeoutForServerRequests);
 
     try {
@@ -1882,7 +1896,7 @@ class Client extends MatrixApi {
         return null;
       }
       final readMarkerEvent = await database
-          .getEventById(room.fullyRead, room)
+          ?.getEventById(room.fullyRead, room)
           .timeout(timeoutForServerRequests);
       if (readMarkerEvent != null &&
           readMarkerEvent.originServerTs.isAfter(
@@ -1929,7 +1943,7 @@ class Client extends MatrixApi {
     }
 
     if (storeInDatabase) {
-      await database.transaction(() async {
+      await database?.transaction(() async {
         await database.storeEventUpdate(
           roomId,
           event,
@@ -2009,6 +2023,14 @@ class Client extends MatrixApi {
         );
       }
 
+      final databaseBuilder = this.databaseBuilder;
+      if (databaseBuilder != null) {
+        _database ??= await runBenchmarked<DatabaseApi>(
+          'Build database',
+          () async => await databaseBuilder(this),
+        );
+      }
+
       _groupCallSessionId = randomAlpha(12);
 
       /// while I would like to move these to a onLoginStateChanged stream listener
@@ -2017,7 +2039,7 @@ class Client extends MatrixApi {
       _serverConfigCache.invalidate();
       _versionsCache.invalidate();
 
-      final account = await database.getClient(clientName);
+      final account = await this.database?.getClient(clientName);
       newRefreshToken ??= account?.tryGet<String>('refresh_token');
       // can have discovery_information so make sure it also has the proper
       // account creds
@@ -2062,7 +2084,7 @@ class Client extends MatrixApi {
       if (onLoginStateChanged.value == LoginState.softLoggedOut) {
         if (newRefreshToken != null && accessToken != null && userID != null) {
           // Store the new tokens:
-          await database.updateClient(
+          await _database?.updateClient(
             homeserver.toString(),
             accessToken,
             accessTokenExpiresAt,
@@ -2114,56 +2136,58 @@ class Client extends MatrixApi {
       onInitStateChanged?.call(InitState.settingUpEncryption);
       await encryption?.init(olmAccount);
 
-      if (id != null) {
-        await database.updateClient(
-          homeserver.toString(),
-          accessToken,
-          accessTokenExpiresAt,
-          newRefreshToken,
-          userID,
-          _deviceID,
-          _deviceName,
-          prevBatch,
-          encryption?.pickledOlmAccount,
-        );
-      } else {
-        _id = await database.insertClient(
-          clientName,
-          homeserver.toString(),
-          accessToken,
-          accessTokenExpiresAt,
-          newRefreshToken,
-          userID,
-          _deviceID,
-          _deviceName,
-          prevBatch,
-          encryption?.pickledOlmAccount,
-        );
+      final database = this.database;
+      if (database != null) {
+        if (id != null) {
+          await database.updateClient(
+            homeserver.toString(),
+            accessToken,
+            accessTokenExpiresAt,
+            newRefreshToken,
+            userID,
+            _deviceID,
+            _deviceName,
+            prevBatch,
+            encryption?.pickledOlmAccount,
+          );
+        } else {
+          _id = await database.insertClient(
+            clientName,
+            homeserver.toString(),
+            accessToken,
+            accessTokenExpiresAt,
+            newRefreshToken,
+            userID,
+            _deviceID,
+            _deviceName,
+            prevBatch,
+            encryption?.pickledOlmAccount,
+          );
+        }
+        userDeviceKeysLoading = database
+            .getUserDeviceKeys(this)
+            .then((keys) => _userDeviceKeys = keys);
+        roomsLoading = database.getRoomList(this).then((rooms) {
+          _rooms = rooms;
+          _sortRooms();
+        });
+        _accountDataLoading = database.getAccountData().then((data) {
+          _accountData = data;
+          _updatePushrules();
+        });
+        _discoveryDataLoading = database.getWellKnown().then((data) {
+          _wellKnown = data;
+        });
+        // ignore: deprecated_member_use_from_same_package
+        presences.clear();
+        if (waitUntilLoadCompletedLoaded) {
+          onInitStateChanged?.call(InitState.loadingData);
+          await userDeviceKeysLoading;
+          await roomsLoading;
+          await _accountDataLoading;
+          await _discoveryDataLoading;
+        }
       }
-      userDeviceKeysLoading = database
-          .getUserDeviceKeys(this)
-          .then((keys) => _userDeviceKeys = keys);
-      roomsLoading = database.getRoomList(this).then((rooms) {
-        _rooms = rooms;
-        _sortRooms();
-      });
-      _accountDataLoading = database.getAccountData().then((data) {
-        _accountData = data;
-        _updatePushrules();
-      });
-      _discoveryDataLoading = database.getWellKnown().then((data) {
-        _wellKnown = data;
-      });
-      // ignore: deprecated_member_use_from_same_package
-      presences.clear();
-      if (waitUntilLoadCompletedLoaded) {
-        onInitStateChanged?.call(InitState.loadingData);
-        await userDeviceKeysLoading;
-        await roomsLoading;
-        await _accountDataLoading;
-        await _discoveryDataLoading;
-      }
-
       _initLock = false;
       onLoginStateChanged.add(LoginState.loggedIn);
       Logs().i(
@@ -2217,15 +2241,15 @@ class Client extends MatrixApi {
     }
     try {
       await abortSync();
-      await database.clear();
+      await database?.clear();
       await legacyDatabase?.clear();
       _backgroundSync = true;
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
     } finally {
-      await database.delete();
+      await database?.delete();
       await legacyDatabase?.delete();
-      await dispose();
+      _database = null;
     }
 
     _id = accessToken = _syncFilterId =
@@ -2282,7 +2306,7 @@ class Client extends MatrixApi {
     if (syncFilterId == null && userID != null) {
       final syncFilterId =
           _syncFilterId = await defineFilter(userID, syncFilter);
-      await database.storeSyncFilterId(syncFilterId);
+      await database?.storeSyncFilterId(syncFilterId);
     }
     return;
   }
@@ -2384,25 +2408,29 @@ class Client extends MatrixApi {
       }
 
       final database = this.database;
-      await userDeviceKeysLoading;
-      await roomsLoading;
-      await _accountDataLoading;
-      _currentTransaction = database.transaction(() async {
+      if (database != null) {
+        await userDeviceKeysLoading;
+        await roomsLoading;
+        await _accountDataLoading;
+        _currentTransaction = database.transaction(() async {
+          await _handleSync(syncResp, direction: Direction.f);
+          if (prevBatch != syncResp.nextBatch) {
+            await database.storePrevBatch(syncResp.nextBatch);
+          }
+        });
+        await runBenchmarked(
+          'Process sync',
+          () async => await _currentTransaction,
+          syncResp.itemCount,
+        );
+      } else {
         await _handleSync(syncResp, direction: Direction.f);
-        if (prevBatch != syncResp.nextBatch) {
-          await database.storePrevBatch(syncResp.nextBatch);
-        }
-      });
-      await runBenchmarked(
-        'Process sync',
-        () async => await _currentTransaction,
-        syncResp.itemCount,
-      );
+      }
       if (_disposed || _aborted) return;
       _prevBatch = syncResp.nextBatch;
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       // ignore: unawaited_futures
-      database.deleteOldFiles(
+      database?.deleteOldFiles(
         DateTime.now().subtract(Duration(days: 30)).millisecondsSinceEpoch,
       );
       await updateUserDeviceKeys();
@@ -2498,10 +2526,10 @@ class Client extends MatrixApi {
       // ignore: deprecated_member_use_from_same_package
       onPresence.add(newPresence);
       onPresenceChanged.add(cachedPresence);
-      await database.storePresence(newPresence.senderId, cachedPresence);
+      await database?.storePresence(newPresence.senderId, cachedPresence);
     }
     for (final newAccountData in sync.accountData ?? <BasicEvent>[]) {
-      await database.storeAccountData(
+      await database?.storeAccountData(
         newAccountData.type,
         newAccountData.content,
       );
@@ -2534,7 +2562,7 @@ class Client extends MatrixApi {
         final userKeys = _userDeviceKeys[userId];
         if (userKeys != null) {
           userKeys.outdated = true;
-          await database.storeUserDeviceKeysInfo(userId, true);
+          await database?.storeUserDeviceKeysInfo(userId, true);
         }
       }
       for (final userId in deviceLists.left ?? []) {
@@ -2638,7 +2666,7 @@ class Client extends MatrixApi {
       // removed from the database!
       if (syncRoomUpdate is JoinedRoomUpdate &&
           syncRoomUpdate.timeline?.limited == true) {
-        await database.deleteTimelineForRoom(id);
+        await database?.deleteTimelineForRoom(id);
       }
       final room = await _updateRoomsByRoomUpdate(id, syncRoomUpdate);
 
@@ -2697,7 +2725,7 @@ class Client extends MatrixApi {
         final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
           for (final event in accountData) {
-            await database.storeRoomAccountData(room.id, event);
+            await database?.storeRoomAccountData(room.id, event);
             room.roomAccountData[event.type] = event;
           }
         }
@@ -2740,7 +2768,7 @@ class Client extends MatrixApi {
         Logs().d('Skip store LeftRoomUpdate for unknown room', id);
         continue;
       }
-      await database.storeRoomUpdate(id, syncRoomUpdate, room.lastEvent, this);
+      await database?.storeRoomUpdate(id, syncRoomUpdate, room.lastEvent, this);
     }
   }
 
@@ -2769,7 +2797,7 @@ class Client extends MatrixApi {
         type: LatestReceiptState.eventType,
         content: receiptStateContent.toJson(),
       );
-      await database.storeRoomAccountData(room.id, event);
+      await database?.storeRoomAccountData(room.id, event);
       room.roomAccountData[event.type] = event;
     }
   }
@@ -2823,24 +2851,25 @@ class Client extends MatrixApi {
           // We do not re-request the profile here as this would lead to
           // an unknown amount of network requests as we never know how many
           // member change events can come down in a single sync update.
-          await database.markUserProfileAsOutdated(userId);
+          await database?.markUserProfileAsOutdated(userId);
           onUserProfileUpdate.add(userId);
         }
       }
 
       if (event.type == EventTypes.Message &&
           !room.isDirectChat &&
+          database != null &&
           event is MatrixEvent &&
           room.getState(EventTypes.RoomMember, event.senderId) == null) {
         // In order to correctly render room list previews we need to fetch the member from the database
-        final user = await database.getUser(event.senderId, room);
+        final user = await database?.getUser(event.senderId, room);
         if (user != null) {
           room.setState(user);
         }
       }
       await _updateRoomsByEventUpdate(room, event, type);
       if (store) {
-        await database.storeEventUpdate(room.id, event, type, this);
+        await database?.storeEventUpdate(room.id, event, type, this);
       }
       if (event is MatrixEvent && encryptionEnabled) {
         await encryption?.handleEventUpdate(
@@ -3058,7 +3087,7 @@ class Client extends MatrixApi {
                 (event.redacts ?? event.content.tryGet<String>('redacts')) &&
             event.type == EventTypes.Redaction &&
             room.lastEvent?.relationshipType == RelationshipTypes.edit) {
-          final originalEvent = await database.getEventById(
+          final originalEvent = await database?.getEventById(
                 relationshipEventId,
                 room,
               ) ??
@@ -3194,7 +3223,7 @@ class Client extends MatrixApi {
   Future<void> updateUserDeviceKeys({Set<String>? additionalUsers}) async {
     try {
       final database = this.database;
-      if (!isLogged()) return;
+      if (!isLogged() || database == null) return;
       final dbActions = <Future<dynamic> Function()>[];
       final trackedUserIds = await _getUserIdsInEncryptedRooms();
       if (!isLogged()) return;
@@ -3442,7 +3471,7 @@ class Client extends MatrixApi {
   /// proccessed all the way.
   Future<void> processToDeviceQueue() async {
     final database = this.database;
-    if (!_toDeviceQueueNeedsProcessing) {
+    if (database == null || !_toDeviceQueueNeedsProcessing) {
       return;
     }
     final entries = await database.getToDeviceEventQueue();
@@ -3496,12 +3525,14 @@ class Client extends MatrixApi {
         s,
       );
       final database = this.database;
-      _toDeviceQueueNeedsProcessing = true;
-      await database.insertIntoToDeviceQueue(
-        eventType,
-        txnId,
-        json.encode(messages),
-      );
+      if (database != null) {
+        _toDeviceQueueNeedsProcessing = true;
+        await database.insertIntoToDeviceQueue(
+          eventType,
+          txnId,
+          json.encode(messages),
+        );
+      }
       rethrow;
     }
   }
@@ -3738,7 +3769,7 @@ class Client extends MatrixApi {
     await abortSync();
     _prevBatch = null;
     rooms.clear();
-    await database.clearCache();
+    await database?.clearCache();
     encryption?.keyManager.clearOutboundGroupSessions();
     _eventsPendingDecryption.clear();
     onCacheCleared.add(true);
@@ -3800,7 +3831,7 @@ class Client extends MatrixApi {
       return cachedPresence;
     }
 
-    final dbPresence = await database.getPresence(userId);
+    final dbPresence = await database?.getPresence(userId);
     // ignore: deprecated_member_use_from_same_package
     if (dbPresence != null) return presences[userId] = dbPresence;
 
@@ -3809,12 +3840,12 @@ class Client extends MatrixApi {
     try {
       final result = await getPresence(userId);
       final presence = CachedPresence.fromPresenceResponse(result, userId);
-      await database.storePresence(userId, presence);
+      await database?.storePresence(userId, presence);
       // ignore: deprecated_member_use_from_same_package
       return presences[userId] = presence;
     } catch (e) {
       final presence = CachedPresence.neverSeen(userId);
-      await database.storePresence(userId, presence);
+      await database?.storePresence(userId, presence);
       // ignore: deprecated_member_use_from_same_package
       return presences[userId] = presence;
     }
@@ -3849,8 +3880,10 @@ class Client extends MatrixApi {
     _encryption = null;
     try {
       if (closeDatabase) {
+        final database = _database;
+        _database = null;
         await database
-            .close()
+            ?.close()
             .catchError((e, s) => Logs().w('Failed to close database: ', e, s));
       }
     } catch (error, stacktrace) {
@@ -3868,7 +3901,7 @@ class Client extends MatrixApi {
     final migrateClient = await legacyDatabase?.getClient(clientName);
     final database = this.database;
 
-    if (migrateClient == null || legacyDatabase == null) {
+    if (migrateClient == null || legacyDatabase == null || database == null) {
       await legacyDatabase?.close();
       _initLock = false;
       return;

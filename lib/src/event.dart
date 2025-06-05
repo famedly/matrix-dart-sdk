@@ -121,7 +121,7 @@ class Event extends MatrixEvent {
     // Mark event as failed to send if status is `sending` and event is older
     // than the timeout. This should not happen with the deprecated Moor
     // database!
-    if (status.isSending) {
+    if (status.isSending && room.client.database != null) {
       // Age of this event in milliseconds
       final age = DateTime.now().millisecondsSinceEpoch -
           originServerTs.millisecondsSinceEpoch;
@@ -402,7 +402,7 @@ class Event extends MatrixEvent {
       throw Exception('Can only delete events which are not sent yet!');
     }
 
-    await room.client.database.removeEvent(eventId, room.id);
+    await room.client.database?.removeEvent(eventId, room.id);
 
     if (room.lastEvent != null && room.lastEvent!.eventId == eventId) {
       final redactedBecause = Event.fromMatrixEvent(
@@ -726,6 +726,9 @@ class Event extends MatrixEvent {
     // Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
     final database = room.client.database;
+    if (database == null) {
+      return false;
+    }
 
     final storeable = thisInfoMap['size'] is int &&
         thisInfoMap['size'] <= database.maxFileSize;
@@ -769,12 +772,13 @@ class Event extends MatrixEvent {
 
     // Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
-    var storeable = thisInfoMap['size'] is int &&
+    var storeable = database != null &&
+        thisInfoMap['size'] is int &&
         thisInfoMap['size'] <= database.maxFileSize;
 
     Uint8List? uint8list;
     if (storeable) {
-      uint8list = await room.client.database.getFile(mxcUrl);
+      uint8list = await room.client.database?.getFile(mxcUrl);
     }
 
     // Download the file
@@ -788,7 +792,9 @@ class Event extends MatrixEvent {
               .bodyBytes;
       uint8list =
           await downloadCallback(await mxcUrl.getDownloadUri(room.client));
-      storeable = storeable && uint8list.lengthInBytes < database.maxFileSize;
+      storeable = database != null &&
+          storeable &&
+          uint8list.lengthInBytes < database.maxFileSize;
       if (storeable) {
         await database.storeFile(
           mxcUrl,

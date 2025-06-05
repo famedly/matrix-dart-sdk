@@ -35,7 +35,8 @@ Future<Client> getClient({
     logLevel: Level.verbose,
     'testclient',
     httpClient: FakeMatrixApi(),
-    database: await getDatabase(databasePath: databasePath),
+    databaseBuilder: (client) =>
+        getDatabase(client, databasePath: databasePath),
     onSoftLogout: (client) => client.refreshAccessToken(),
     sendTimelineEventTimeout: sendTimelineEventTimeout,
   );
@@ -62,7 +63,7 @@ Future<Client> getOtherClient() async {
   final client = Client(
     'othertestclient',
     httpClient: FakeMatrixApi(),
-    database: await getDatabase(),
+    databaseBuilder: getDatabase,
   );
   FakeMatrixApi.client = client;
   await client.checkHomeserver(

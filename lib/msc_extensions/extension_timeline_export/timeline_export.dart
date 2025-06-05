@@ -110,8 +110,9 @@ extension TimelineExportExtension on Timeline {
       }
 
       // From the database
-      final eventsFromStore =
-          await room.client.database.getEventList(room, start: events.length);
+      final eventsFromStore = await room.client.database
+              ?.getEventList(room, start: events.length) ??
+          [];
       if (eventsFromStore.isNotEmpty) {
         if (until == null ||
             eventsFromStore.last.originServerTs.isBefore(until)) {

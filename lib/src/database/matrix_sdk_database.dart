@@ -176,38 +176,23 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   /// like delete. Set it if you want to use sqlite FFI.
   final DatabaseFactory? sqfliteFactory;
 
-  static Future<MatrixSdkDatabase> init(
-    String name, {
-    Database? database,
-    dynamic idbFactory,
-    DatabaseFactory? sqfliteFactory,
-    int maxFileSize = 0,
-    Uri? fileStorageLocation,
-    Duration? deleteFilesAfterDuration,
-  }) async {
-    final matrixSdkDatabase = MatrixSdkDatabase._(
-      name,
-      database: database,
-      idbFactory: idbFactory,
-      sqfliteFactory: sqfliteFactory,
-      maxFileSize: maxFileSize,
-      fileStorageLocation: fileStorageLocation,
-      deleteFilesAfterDuration: deleteFilesAfterDuration,
-    );
-    await matrixSdkDatabase.open();
-    return matrixSdkDatabase;
-  }
-
-  MatrixSdkDatabase._(
+  MatrixSdkDatabase(
     this.name, {
     this.database,
     this.idbFactory,
     this.sqfliteFactory,
     this.maxFileSize = 0,
+    // TODO : remove deprecated member migration on next major release
+    @Deprecated(
+      'Breaks support for web standalone. Use [fileStorageLocation] instead.',
+    )
+    dynamic fileStoragePath,
     Uri? fileStorageLocation,
     Duration? deleteFilesAfterDuration,
   }) {
-    this.fileStorageLocation = fileStorageLocation;
+    final legacyPath = fileStoragePath?.path;
+    this.fileStorageLocation = fileStorageLocation ??
+        (legacyPath is String ? Uri.tryParse(legacyPath) : null);
     this.deleteFilesAfterDuration = deleteFilesAfterDuration;
   }
 

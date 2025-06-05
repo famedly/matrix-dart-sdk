@@ -20,18 +20,23 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:matrix/matrix.dart';
 
-Future<DatabaseApi> getDatabase({String? databasePath}) =>
-    getMatrixSdkDatabase(path: databasePath);
+Future<DatabaseApi> getDatabase(Client? c, {String? databasePath}) =>
+    getMatrixSdkDatabase(c, path: databasePath);
 
 // ignore: deprecated_member_use_from_same_package
-Future<MatrixSdkDatabase> getMatrixSdkDatabase({
+Future<MatrixSdkDatabase> getMatrixSdkDatabase(
+  Client? c, {
   String? path,
-}) async =>
-    MatrixSdkDatabase.init(
-      'unit_test.${DateTime.now().millisecondsSinceEpoch}',
-      database: await databaseFactoryFfi.openDatabase(
-        path ?? ':memory:',
-        options: OpenDatabaseOptions(singleInstance: false),
-      ),
-      sqfliteFactory: databaseFactoryFfi,
-    );
+}) async {
+  final database = await databaseFactoryFfi.openDatabase(
+    path ?? ':memory:',
+    options: OpenDatabaseOptions(singleInstance: false),
+  );
+  final db = MatrixSdkDatabase(
+    'unit_test.${c?.hashCode}',
+    database: database,
+    sqfliteFactory: databaseFactoryFfi,
+  );
+  await db.open();
+  return db;
+}
