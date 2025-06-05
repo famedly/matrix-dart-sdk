@@ -1,3 +1,14 @@
+## [0.40.2] 5th June 2025
+- fix: fallback on homeserver is userID null (The one with the braid)
+
+## [0.40.1] 2nd June 2025
+- feat: Add logout command (Christian Kußowski)
+- feat: Switch to github flavor markdown to render checkboxes (krille-chan)
+- fix: Add missing copy json in updateInboundGroupdSessionAllowedAtIndex method (Christian Kußowski)
+- fix: Correct filename when downloading thumbnail (Christian Kußowski)
+- fix: no user feedback if client.getConfig() takes some time (Christian Kußowski)
+- refactor: Do not store room update for leave rooms not cached anyway (Christian Kußowski)
+
 ## [0.40.0] 9th May 2025
 - feat: Add localization for voice message type (Krille)
 - feat: Support fallback for threads in Event.getReplyEvent() (Krille)
