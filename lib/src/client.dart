@@ -26,8 +26,8 @@ import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
-import 'package:olm/olm.dart' as olm;
 import 'package:random_string/random_string.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
@@ -36,7 +36,6 @@ import 'package:matrix/msc_extensions/msc_unpublished_custom_refresh_token_lifet
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
-import 'package:matrix/src/utils/compute_callback.dart';
 import 'package:matrix/src/utils/multilock.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
@@ -106,20 +105,6 @@ class Client extends MatrixApi {
   String? get syncFilterId => _syncFilterId;
 
   final bool convertLinebreaksInFormatting;
-
-  final ComputeCallback? compute;
-
-  @Deprecated('Use [nativeImplementations] instead')
-  Future<T> runInBackground<T, U>(
-    FutureOr<T> Function(U arg) function,
-    U arg,
-  ) async {
-    final compute = this.compute;
-    if (compute != null) {
-      return await compute(function, arg);
-    }
-    return await function(arg);
-  }
 
   final Duration sendTimelineEventTimeout;
 
@@ -209,8 +194,7 @@ class Client extends MatrixApi {
     Set<String>? supportedLoginTypes,
     this.mxidLocalPartFallback = true,
     this.formatLocalpart = true,
-    @Deprecated('Use [nativeImplementations] instead') this.compute,
-    NativeImplementations nativeImplementations = NativeImplementations.dummy,
+    this.nativeImplementations = NativeImplementations.dummy,
     Level? logLevel,
     Filter? syncFilter,
     Duration defaultNetworkRequestTimeout = const Duration(seconds: 35),
@@ -248,9 +232,6 @@ class Client extends MatrixApi {
         supportedLoginTypes =
             supportedLoginTypes ?? {AuthenticationTypes.password},
         verificationMethods = verificationMethods ?? <KeyVerificationMethod>{},
-        nativeImplementations = compute != null
-            ? NativeImplementationsIsolate(compute)
-            : nativeImplementations,
         super(
           httpClient: FixedTimeoutHttpClient(
             httpClient ?? http.Client(),
@@ -2101,15 +2082,14 @@ class Client extends MatrixApi {
       }
 
       await encryption?.dispose();
-      try {
-        // make sure to throw an exception if libolm doesn't exist
-        await olm.init();
-        olm.get_library_version();
-        _encryption = Encryption(client: this);
-      } catch (e) {
-        Logs().e('Error initializing encryption $e');
-        await encryption?.dispose();
-        _encryption = null;
+      if (vod.isInitialized()) {
+        try {
+          _encryption = Encryption(client: this);
+        } catch (e) {
+          Logs().e('Error initializing encryption $e');
+          await encryption?.dispose();
+          _encryption = null;
+        }
       }
       onInitStateChanged?.call(InitState.settingUpEncryption);
       await encryption?.init(olmAccount);
@@ -3431,7 +3411,7 @@ class Client extends MatrixApi {
         });
       }
     } catch (e, s) {
-      Logs().e('[LibOlm] Unable to update user device keys', e, s);
+      Logs().e('[Vodozemac] Unable to update user device keys', e, s);
     }
   }
 

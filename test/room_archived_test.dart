@@ -138,7 +138,7 @@ void main() async {
         final inboundSession =
             client.encryption!.keyManager.getInboundGroupSession(
           roomid,
-          outboundSession!.outboundGroupSession!.session_id(),
+          outboundSession!.outboundGroupSession!.sessionId,
         )!;
 
         // ensure encryption is "enabled"

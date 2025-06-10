@@ -23,9 +23,9 @@ import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
-import 'package:olm/olm.dart' as olm;
 import 'package:path/path.dart' show join;
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
@@ -35,7 +35,7 @@ import 'fake_database.dart';
 void main() {
   // key @test:fakeServer.notExisting
   const pickledOlmAccount =
-      'N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtuyg3RxViwdNxs3718fyAqQ/VSwbXsY0Nl+qQbF+nlVGHenGqk5SuNl1P6e1PzZxcR0IfXA94Xij1Ob5gDv5YH4UCn9wRMG0abZsQP0YzpDM0FLaHSCyo9i5JD/vMlhH+nZWrgAzPPCTNGYewNV8/h3c+VyJh8ZTx/fVi6Yq46Fv+27Ga2ETRZ3Qn+Oyx6dLBjnBZ9iUvIhqpe2XqaGA1PopOz8iDnaZitw';
+      'huxcPifHlyiQsX7cZeMMITbka3hLeUT3ss6DLL6dV7knaD4wgAYK6gcWknkixnX8C5KMIyxzytxiNqAOhDFRE5NsET8hr2dQ8OvXX7M95eQ7/3dPi7FkPUIbvneTSGgJYNDxJdHsDJ8OBHZ3BoqUJFDbTzFfVJjEzN4G9XQwPDafZ2p5WyerOK8Twj/rvk5N+ERmkt1XgVLQl66we/BO1ugTeM3YpDHm5lTzFUitJGTIuuONsKG9mmzdAmVUJ9YIrSxwmOBdegbGA+LAl5acg5VOol3KxRgZUMJQRQ58zpBAs72oauHizv1QVoQ7uIUiCUeb9lym+TEjmApvhru/1CPHU90K5jHNZ57wb/4V9VsqBWuoNibzDWG35YTFLcx0o+1lrCIjm1QjuC0777G+L1HNw5wnppV3z/k0YujjuPS3wvOA30TjHg';
   const identityKey = '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk';
   const fingerprintKey = 'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo';
 
@@ -67,10 +67,7 @@ void main() {
   group('client mem', tags: 'olm', () {
     late Client matrix;
 
-    Logs().level = Level.error;
-
     /// Check if all Elements get created
-
     setUp(() async {
       matrix = await getClient();
     });
@@ -1072,9 +1069,8 @@ void main() {
 
       final deviceKeys = <DeviceKeys>[];
       for (var i = 0; i < 30; i++) {
-        final account = olm.Account();
-        account.create();
-        final keys = json.decode(account.identity_keys());
+        final account = vod.Account();
+        final keys = account.identityKeys;
         final userId = '@testuser:example.org';
         final deviceId = 'DEVICE$i';
         final keyObj = {
@@ -1085,18 +1081,17 @@ void main() {
             'm.megolm.v1.aes-sha2',
           ],
           'keys': {
-            'curve25519:$deviceId': keys['curve25519'],
-            'ed25519:$deviceId': keys['ed25519'],
+            'curve25519:$deviceId': keys.curve25519.toBase64(),
+            'ed25519:$deviceId': keys.ed25519.toBase64(),
           },
         };
         final signature =
             account.sign(String.fromCharCodes(canonicalJson.encode(keyObj)));
         keyObj['signatures'] = {
           userId: {
-            'ed25519:$deviceId': signature,
+            'ed25519:$deviceId': signature.toBase64(),
           },
         };
-        account.free();
         deviceKeys.add(DeviceKeys.fromJson(keyObj, matrix));
       }
       FakeMatrixApi.calledEndpoints.clear();
@@ -1754,7 +1749,10 @@ void main() {
           expect(error.homeserver, Uri.parse('https://test.server'));
           expect(error.olmAccount, 'abcd');
           expect(error.userId, '@user:server');
-          expect(error.toString(), 'Exception: BAD_ACCOUNT_KEY');
+          expect(
+            error.originalException.runtimeType.toString(),
+            'AnyhowException',
+          );
         }
         await customClient.dispose(closeDatabase: true);
       },

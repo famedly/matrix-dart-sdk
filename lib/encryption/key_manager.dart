@@ -20,11 +20,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:olm/olm.dart' as olm;
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/encryption/utils/outbound_group_session.dart';
+import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/encryption/utils/session_key.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
@@ -45,19 +46,18 @@ class KeyManager {
 
   KeyManager(this.encryption) {
     encryption.ssss.setValidator(megolmKey, (String secret) async {
-      final keyObj = olm.PkDecryption();
       try {
+        final keyObj = vod.PkDecryption.fromSecretKey(
+          vod.Curve25519PublicKey.fromBase64(secret),
+        );
         final info = await getRoomKeysBackupInfo(false);
         if (info.algorithm !=
             BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2) {
           return false;
         }
-        return keyObj.init_with_private_key(base64decodeUnpadded(secret)) ==
-            info.authData['public_key'];
+        return keyObj.publicKey == info.authData['public_key'];
       } catch (_) {
         return false;
-      } finally {
-        keyObj.free();
       }
     });
     encryption.ssss.setCacheCallback(megolmKey, (String secret) {
@@ -118,17 +118,16 @@ class KeyManager {
     if (content['algorithm'] != AlgorithmTypes.megolmV1AesSha2) {
       return;
     }
-    late olm.InboundGroupSession inboundGroupSession;
+    late vod.InboundGroupSession inboundGroupSession;
     try {
-      inboundGroupSession = olm.InboundGroupSession();
       if (forwarded) {
-        inboundGroupSession.import_session(content['session_key']);
+        inboundGroupSession =
+            vod.InboundGroupSession.import(content['session_key']);
       } else {
-        inboundGroupSession.create(content['session_key']);
+        inboundGroupSession = vod.InboundGroupSession(content['session_key']);
       }
     } catch (e, s) {
-      inboundGroupSession.free();
-      Logs().e('[LibOlm] Could not create new InboundGroupSession', e, s);
+      Logs().e('[Vodozemac] Could not create new InboundGroupSession', e, s);
       return Future.value();
     }
     final newSession = SessionKey(
@@ -142,19 +141,16 @@ class KeyManager {
       senderClaimedKeys: senderClaimedKeys_,
       allowedAtIndex: allowedAtIndex_,
     );
-    final oldFirstIndex =
-        oldSession?.inboundGroupSession?.first_known_index() ?? 0;
-    final newFirstIndex = newSession.inboundGroupSession!.first_known_index();
+    final oldFirstIndex = oldSession?.inboundGroupSession?.firstKnownIndex ?? 0;
+    final newFirstIndex = newSession.inboundGroupSession!.firstKnownIndex;
     if (oldSession == null ||
         newFirstIndex < oldFirstIndex ||
         (oldFirstIndex == newFirstIndex &&
             newSession.forwardingCurve25519KeyChain.length <
                 oldSession.forwardingCurve25519KeyChain.length)) {
       // use new session
-      oldSession?.dispose();
     } else {
       // we are gonna keep our old session
-      newSession.dispose();
       return;
     }
 
@@ -169,7 +165,7 @@ class KeyManager {
         .storeInboundGroupSession(
       roomId,
       sessionId,
-      inboundGroupSession.pickle(userId),
+      inboundGroupSession.toPickleEncrypted(userId.toPickleKey()),
       json.encode(content),
       json.encode({}),
       json.encode(allowedAtIndex_),
@@ -344,7 +340,7 @@ class KeyManager {
 
     final inboundSess = await loadInboundGroupSession(
       room.id,
-      sess.outboundGroupSession!.session_id(),
+      sess.outboundGroupSession!.sessionId,
     );
     if (inboundSess == null) {
       Logs().w('No inbound megolm session found for outbound session!');
@@ -436,8 +432,8 @@ class KeyManager {
         final rawSession = <String, dynamic>{
           'algorithm': AlgorithmTypes.megolmV1AesSha2,
           'room_id': room.id,
-          'session_id': sess.outboundGroupSession!.session_id(),
-          'session_key': sess.outboundGroupSession!.session_key(),
+          'session_id': sess.outboundGroupSession!.sessionId,
+          'session_key': sess.outboundGroupSession!.sessionKey,
         };
         try {
           devicesToReceive.removeWhere((k) => !k.encryptToDevice);
@@ -449,16 +445,16 @@ class KeyManager {
                       .containsKey(device.curve25519Key) ||
                   inboundSess.allowedAtIndex[device.userId]![
                           device.curve25519Key]! >
-                      sess.outboundGroupSession!.message_index()) {
+                      sess.outboundGroupSession!.messageIndex) {
                 inboundSess
                         .allowedAtIndex[device.userId]![device.curve25519Key!] =
-                    sess.outboundGroupSession!.message_index();
+                    sess.outboundGroupSession!.messageIndex;
               }
             }
             await client.database.updateInboundGroupSessionAllowedAtIndex(
               json.encode(inboundSess!.allowedAtIndex),
               room.id,
-              sess.outboundGroupSession!.session_id(),
+              sess.outboundGroupSession!.sessionId,
             );
             // send out the key
             await client.sendToDeviceEncryptedChunked(
@@ -469,7 +465,7 @@ class KeyManager {
           }
         } catch (e, s) {
           Logs().e(
-            '[LibOlm] Unable to re-send the session key at later index to new devices',
+            '[Vodozemac] Unable to re-send the session key at later index to new devices',
             e,
             s,
           );
@@ -477,7 +473,6 @@ class KeyManager {
         return false;
       }
     }
-    sess.dispose();
     _outboundGroupSessions.remove(roomId);
     await client.database.removeOutboundGroupSession(roomId);
     return true;
@@ -492,7 +487,7 @@ class KeyManager {
     if (userID == null) return;
     await client.database.storeOutboundGroupSession(
       roomId,
-      sess.outboundGroupSession!.pickle(userID),
+      sess.outboundGroupSession!.toPickleEncrypted(userID.toPickleKey()),
       json.encode(sess.devices),
       sess.creationTime.millisecondsSinceEpoch,
     );
@@ -553,19 +548,13 @@ class KeyManager {
     final deviceKeys = await room.getUserDeviceKeys();
     final deviceKeyIds = _getDeviceKeyIdMap(deviceKeys);
     deviceKeys.removeWhere((k) => !k.encryptToDevice);
-    final outboundGroupSession = olm.OutboundGroupSession();
-    try {
-      outboundGroupSession.create();
-    } catch (e, s) {
-      outboundGroupSession.free();
-      Logs().e('[LibOlm] Unable to create new outboundGroupSession', e, s);
-      rethrow;
-    }
+    final outboundGroupSession = vod.GroupSession();
+
     final rawSession = <String, dynamic>{
       'algorithm': AlgorithmTypes.megolmV1AesSha2,
       'room_id': room.id,
-      'session_id': outboundGroupSession.session_id(),
-      'session_key': outboundGroupSession.session_key(),
+      'session_id': outboundGroupSession.sessionId,
+      'session_key': outboundGroupSession.sessionKey,
     };
     final allowedAtIndex = <String, Map<String, int>>{};
     for (final device in deviceKeys) {
@@ -575,7 +564,7 @@ class KeyManager {
       }
       allowedAtIndex[device.userId] ??= <String, int>{};
       allowedAtIndex[device.userId]![device.curve25519Key!] =
-          outboundGroupSession.message_index();
+          outboundGroupSession.messageIndex;
     }
     await setInboundGroupSession(
       roomId,
@@ -600,11 +589,10 @@ class KeyManager {
       _outboundGroupSessions[roomId] = sess;
     } catch (e, s) {
       Logs().e(
-        '[LibOlm] Unable to send the session key to the participating devices',
+        '[Vodozemac] Unable to send the session key to the participating devices',
         e,
         s,
       );
-      sess.dispose();
       rethrow;
     }
     return sess;
@@ -669,54 +657,55 @@ class KeyManager {
     }
     final privateKey =
         base64decodeUnpadded((await encryption.ssss.getCached(megolmKey))!);
-    final decryption = olm.PkDecryption();
     final info = await getRoomKeysBackupInfo();
     String backupPubKey;
-    try {
-      backupPubKey = decryption.init_with_private_key(privateKey);
 
-      if (info.algorithm != BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
-          info.authData['public_key'] != backupPubKey) {
-        return;
-      }
-      for (final roomEntry in keys.rooms.entries) {
-        final roomId = roomEntry.key;
-        for (final sessionEntry in roomEntry.value.sessions.entries) {
-          final sessionId = sessionEntry.key;
-          final session = sessionEntry.value;
-          final sessionData = session.sessionData;
-          Map<String, Object?>? decrypted;
-          try {
-            decrypted = json.decode(
-              decryption.decrypt(
-                sessionData['ephemeral'] as String,
-                sessionData['mac'] as String,
-                sessionData['ciphertext'] as String,
+    final decryption = vod.PkDecryption.fromSecretKey(
+      vod.Curve25519PublicKey.fromBytes(privateKey),
+    );
+    backupPubKey = decryption.publicKey;
+
+    if (info.algorithm != BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
+        info.authData['public_key'] != backupPubKey) {
+      return;
+    }
+    for (final roomEntry in keys.rooms.entries) {
+      final roomId = roomEntry.key;
+      for (final sessionEntry in roomEntry.value.sessions.entries) {
+        final sessionId = sessionEntry.key;
+        final session = sessionEntry.value;
+        final sessionData = session.sessionData;
+        Map<String, Object?>? decrypted;
+        try {
+          decrypted = json.decode(
+            decryption.decrypt(
+              vod.PkMessage.fromBase64(
+                ciphertext: sessionData['ciphertext'] as String,
+                mac: sessionData['mac'] as String,
+                ephemeralKey: sessionData['ephemeral'] as String,
               ),
-            );
-          } catch (e, s) {
-            Logs().e('[LibOlm] Error decrypting room key', e, s);
-          }
-          final senderKey = decrypted?.tryGet<String>('sender_key');
-          if (decrypted != null && senderKey != null) {
-            decrypted['session_id'] = sessionId;
-            decrypted['room_id'] = roomId;
-            await setInboundGroupSession(
-              roomId,
-              sessionId,
-              senderKey,
-              decrypted,
-              forwarded: true,
-              senderClaimedKeys:
-                  decrypted.tryGetMap<String, String>('sender_claimed_keys') ??
-                      <String, String>{},
-              uploaded: true,
-            );
-          }
+            ),
+          );
+        } catch (e, s) {
+          Logs().e('[Vodozemac] Error decrypting room key', e, s);
+        }
+        final senderKey = decrypted?.tryGet<String>('sender_key');
+        if (decrypted != null && senderKey != null) {
+          decrypted['session_id'] = sessionId;
+          decrypted['room_id'] = roomId;
+          await setInboundGroupSession(
+            roomId,
+            sessionId,
+            senderKey,
+            decrypted,
+            forwarded: true,
+            senderClaimedKeys:
+                decrypted.tryGetMap<String, String>('sender_claimed_keys') ??
+                    <String, String>{},
+            uploaded: true,
+          );
         }
       }
-    } finally {
-      decryption.free();
     }
   }
 
@@ -875,57 +864,56 @@ class KeyManager {
         final privateKey =
             base64decodeUnpadded((await encryption.ssss.getCached(megolmKey))!);
         // decryption is needed to calculate the public key and thus see if the claimed information is in fact valid
-        final decryption = olm.PkDecryption();
+
         final info = await getRoomKeysBackupInfo(false);
         String backupPubKey;
-        try {
-          backupPubKey = decryption.init_with_private_key(privateKey);
 
-          if (info.algorithm !=
-                  BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
-              info.authData['public_key'] != backupPubKey) {
-            decryption.free();
-            return;
-          }
-          final args = GenerateUploadKeysArgs(
-            pubkey: backupPubKey,
-            dbSessions: <DbInboundGroupSessionBundle>[],
-            userId: userID,
+        final decryption = vod.PkDecryption.fromSecretKey(
+          vod.Curve25519PublicKey.fromBytes(privateKey),
+        );
+        backupPubKey = decryption.publicKey;
+
+        if (info.algorithm !=
+                BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
+            info.authData['public_key'] != backupPubKey) {
+          return;
+        }
+        final args = GenerateUploadKeysArgs(
+          pubkey: backupPubKey,
+          dbSessions: <DbInboundGroupSessionBundle>[],
+          userId: userID,
+        );
+        // we need to calculate verified beforehand, as else we pass a closure to an isolate
+        // with 500 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
+        // so that the event loop can progress
+        var i = 0;
+        for (final dbSession in dbSessions) {
+          final device =
+              client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
+          args.dbSessions.add(
+            DbInboundGroupSessionBundle(
+              dbSession: dbSession,
+              verified: device?.verified ?? false,
+            ),
           );
-          // we need to calculate verified beforehand, as else we pass a closure to an isolate
-          // with 500 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
-          // so that the event loop can progress
-          var i = 0;
-          for (final dbSession in dbSessions) {
-            final device =
-                client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
-            args.dbSessions.add(
-              DbInboundGroupSessionBundle(
-                dbSession: dbSession,
-                verified: device?.verified ?? false,
-              ),
-            );
-            i++;
-            if (i > 10) {
-              await Future.delayed(Duration(milliseconds: 1));
-              i = 0;
-            }
+          i++;
+          if (i > 10) {
+            await Future.delayed(Duration(milliseconds: 1));
+            i = 0;
           }
-          final roomKeys =
-              await client.nativeImplementations.generateUploadKeys(args);
-          Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
-          // upload the payload...
-          await client.putRoomKeys(info.version, roomKeys);
-          // and now finally mark all the keys as uploaded
-          // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
-          for (final dbSession in dbSessions) {
-            await database.markInboundGroupSessionAsUploaded(
-              dbSession.roomId,
-              dbSession.sessionId,
-            );
-          }
-        } finally {
-          decryption.free();
+        }
+        final roomKeys =
+            await client.nativeImplementations.generateUploadKeys(args);
+        Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
+        // upload the payload...
+        await client.putRoomKeys(info.version, roomKeys);
+        // and now finally mark all the keys as uploaded
+        // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
+        for (final dbSession in dbSessions) {
+          await database.markInboundGroupSessionAsUploaded(
+            dbSession.roomId,
+            dbSession.sessionId,
+          );
         }
       } catch (e, s) {
         Logs().e('[Key Manager] Error uploading room keys', e, s);
@@ -1161,14 +1149,6 @@ class KeyManager {
   void dispose() {
     // ignore: discarded_futures
     _uploadKeysOnSync?.cancel();
-    for (final sess in _outboundGroupSessions.values) {
-      sess.dispose();
-    }
-    for (final entries in _inboundGroupSessions.values) {
-      for (final sess in entries.values) {
-        sess.dispose();
-      }
-    }
   }
 }
 
@@ -1231,8 +1211,8 @@ class RoomKeyRequest extends ToDeviceEvent {
             (session.forwardingCurve25519KeyChain.isEmpty
                 ? keyManager.encryption.fingerprintKey
                 : null);
-    message['session_key'] = session.inboundGroupSession!.export_session(
-      index ?? session.inboundGroupSession!.first_known_index(),
+    message['session_key'] = session.inboundGroupSession!.exportAt(
+      index ?? session.inboundGroupSession!.firstKnownIndex,
     );
     // send the actual reply of the key back to the requester
     await keyManager.client.sendToDeviceEncrypted(
@@ -1247,9 +1227,10 @@ class RoomKeyRequest extends ToDeviceEvent {
 /// you would likely want to use [NativeImplementations] and
 /// [Client.nativeImplementations] instead
 RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
-  final enc = olm.PkEncryption();
   try {
-    enc.set_recipient_key(args.pubkey);
+    final enc = vod.PkEncryption.fromPublicKey(
+      vod.Curve25519PublicKey.fromBase64(args.pubkey),
+    );
     // first we generate the payload to upload all the session keys in this chunk
     final roomKeys = RoomKeys(rooms: {});
     for (final dbSession in args.dbSessions) {
@@ -1266,30 +1247,28 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
         'forwarding_curve25519_key_chain': sess.forwardingCurve25519KeyChain,
         'sender_key': sess.senderKey,
         'sender_claimed_keys': sess.senderClaimedKeys,
-        'session_key': sess.inboundGroupSession!
-            .export_session(sess.inboundGroupSession!.first_known_index()),
+        'session_key': sess.inboundGroupSession!.exportAtFirstKnownIndex(),
       };
       // encrypt the content
       final encrypted = enc.encrypt(json.encode(payload));
       // fetch the device, if available...
       //final device = args.client.getUserDeviceKeysByCurve25519Key(sess.senderKey);
       // aaaand finally add the session key to our payload
+      final (ciphertext, mac, ephemeral) = encrypted.toBase64();
       roomKeyBackup.sessions[sess.sessionId] = KeyBackupData(
-        firstMessageIndex: sess.inboundGroupSession!.first_known_index(),
+        firstMessageIndex: sess.inboundGroupSession!.firstKnownIndex,
         forwardedCount: sess.forwardingCurve25519KeyChain.length,
         isVerified: dbSession.verified, //device?.verified ?? false,
         sessionData: {
-          'ephemeral': encrypted.ephemeral,
-          'ciphertext': encrypted.ciphertext,
-          'mac': encrypted.mac,
+          'ephemeral': ephemeral,
+          'ciphertext': ciphertext,
+          'mac': mac,
         },
       );
     }
-    enc.free();
     return roomKeys;
   } catch (e, s) {
     Logs().e('[Key Manager] Error generating payload', e, s);
-    enc.free();
     rethrow;
   }
 }

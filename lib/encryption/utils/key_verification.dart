@@ -21,8 +21,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
-import 'package:olm/olm.dart' as olm;
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:typed_data/typed_data.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
@@ -1258,12 +1259,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   String? commitment;
   late String theirPublicKey;
   Map<String, dynamic>? macPayload;
-  olm.SAS? sas;
-
-  @override
-  void dispose() {
-    sas?.free();
-  }
+  vod.Sas? sas;
+  vod.EstablishedSas? establishedSas;
 
   List<String> get knownAuthentificationTypes {
     final types = <String>[];
@@ -1322,7 +1319,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
             await _sendKey();
           } else {
             // we already sent our key, time to verify the commitment being valid
-            if (!_validateCommitment()) {
+            if (await _validateCommitment() == false) {
               await request.cancel('m.mismatched_commitment');
               return;
             }
@@ -1415,8 +1412,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   Future<void> _sendAccept() async {
-    final sas = this.sas = olm.SAS();
-    commitment = _makeCommitment(sas.get_pubkey(), startCanonicalJson);
+    final sas = this.sas = vod.Sas();
+    commitment = await _makeCommitment(sas.publicKey, startCanonicalJson);
     await request.send(EventTypes.KeyVerificationAccept, {
       'method': type,
       'key_agreement_protocol': keyAgreementProtocol,
@@ -1451,31 +1448,35 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     }
     authenticationTypes = possibleAuthenticationTypes;
     commitment = payload['commitment'];
-    sas = olm.SAS();
+    sas = vod.Sas();
     return true;
   }
 
   Future<void> _sendKey() async {
     await request.send('m.key.verification.key', {
-      'key': sas!.get_pubkey(),
+      'key': sas!.publicKey,
     });
   }
 
   void _handleKey(Map<String, dynamic> payload) {
     theirPublicKey = payload['key'];
-    sas!.set_their_key(payload['key']);
+    final sas = this.sas;
+    if (sas == null || sas.disposed) {
+      throw Exception('SAS object is disposed');
+    }
+    establishedSas = sas.establishSasSecret(payload['key']);
   }
 
-  bool _validateCommitment() {
-    final checkCommitment = _makeCommitment(theirPublicKey, startCanonicalJson);
+  Future<bool> _validateCommitment() async {
+    final checkCommitment =
+        await _makeCommitment(theirPublicKey, startCanonicalJson);
     return commitment == checkCommitment;
   }
 
   Uint8List makeSas(int bytes) {
     var sasInfo = '';
     if (keyAgreementProtocol == 'curve25519-hkdf-sha256') {
-      final ourInfo =
-          '${client.userID}|${client.deviceID}|${sas!.get_pubkey()}|';
+      final ourInfo = '${client.userID}|${client.deviceID}|${sas!.publicKey}|';
       final theirInfo =
           '${request.userId}|${request.deviceId}|$theirPublicKey|';
       sasInfo =
@@ -1488,7 +1489,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     } else {
       throw Exception('Unknown key agreement protocol');
     }
-    return sas!.generate_bytes(sasInfo, bytes);
+    return establishedSas!.generateBytes(sasInfo, bytes);
   }
 
   Future<void> _sendMac() async {
@@ -1554,21 +1555,20 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     });
   }
 
-  String _makeCommitment(String pubKey, String canonicalJson) {
+  Future<String> _makeCommitment(String pubKey, String canonicalJson) async {
     if (hash == 'sha256') {
-      final olmutil = olm.Utility();
-      final ret = olmutil.sha256(pubKey + canonicalJson);
-      olmutil.free();
-      return ret;
+      final bytes = utf8.encoder.convert(pubKey + canonicalJson);
+      final digest = crypto.sha256.convert(bytes);
+      return encodeBase64Unpadded(digest.bytes);
     }
     throw Exception('Unknown hash method');
   }
 
   String _calculateMac(String input, String info) {
     if (messageAuthenticationCode == 'hkdf-hmac-sha256.v2') {
-      return sas!.calculate_mac_fixed_base64(input, info);
+      return establishedSas!.calculateMac(input, info);
     } else if (messageAuthenticationCode == 'hkdf-hmac-sha256') {
-      return sas!.calculate_mac(input, info);
+      return establishedSas!.calculateMacDeprecated(input, info);
     } else {
       throw Exception('Unknown message authentification code');
     }

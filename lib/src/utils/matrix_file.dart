@@ -27,7 +27,6 @@ import 'package:image/image.dart';
 import 'package:mime/mime.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/compute_callback.dart';
 
 class MatrixFile {
   final Uint8List bytes;
@@ -112,13 +111,8 @@ class MatrixImageFile extends MatrixFile {
     required Uint8List bytes,
     required String name,
     String? mimeType,
-    @Deprecated('Use [nativeImplementations] instead') ComputeRunner? compute,
     NativeImplementations nativeImplementations = NativeImplementations.dummy,
   }) async {
-    if (compute != null) {
-      nativeImplementations =
-          NativeImplementationsIsolate.fromRunInBackground(compute);
-    }
     final metaData = await nativeImplementations.calcImageMetadata(bytes);
 
     return MatrixImageFile(
@@ -142,13 +136,8 @@ class MatrixImageFile extends MatrixFile {
     Future<MatrixImageFileResizedResponse?> Function(
       MatrixImageFileResizeArguments,
     )? customImageResizer,
-    @Deprecated('Use [nativeImplementations] instead') ComputeRunner? compute,
     NativeImplementations nativeImplementations = NativeImplementations.dummy,
   }) async {
-    if (compute != null) {
-      nativeImplementations =
-          NativeImplementationsIsolate.fromRunInBackground(compute);
-    }
     final image = MatrixImageFile(name: name, mimeType: mimeType, bytes: bytes);
 
     return await image.generateThumbnail(
@@ -196,13 +185,8 @@ class MatrixImageFile extends MatrixFile {
     Future<MatrixImageFileResizedResponse?> Function(
       MatrixImageFileResizeArguments,
     )? customImageResizer,
-    @Deprecated('Use [nativeImplementations] instead') ComputeRunner? compute,
     NativeImplementations nativeImplementations = NativeImplementations.dummy,
   }) async {
-    if (compute != null) {
-      nativeImplementations =
-          NativeImplementationsIsolate.fromRunInBackground(compute);
-    }
     final arguments = MatrixImageFileResizeArguments(
       bytes: bytes,
       maxDimension: dimension,

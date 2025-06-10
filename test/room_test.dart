@@ -671,12 +671,16 @@ void main() {
       expect(fetchedParticipants.length, newParticipants.length);
     });
 
-    test('calcEncryptionHealthState', () async {
-      expect(
-        await room.calcEncryptionHealthState(),
-        EncryptionHealthState.unverifiedDevices,
-      );
-    });
+    test(
+      'calcEncryptionHealthState',
+      () async {
+        expect(
+          await room.calcEncryptionHealthState(),
+          EncryptionHealthState.unverifiedDevices,
+        );
+      },
+      tags: 'olm',
+    );
 
     test('getEventByID', () async {
       final event = await room.getEventById('1234');
