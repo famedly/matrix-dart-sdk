@@ -59,6 +59,7 @@ void main() {
     test('logout', () async {
       expect(await File(dbPath).exists(), true);
       await clientOnPath.logout();
+      await clientOnPath.database.delete();
       expect(await File(dbPath).exists(), false);
     });
   });
@@ -1262,6 +1263,27 @@ void main() {
       expect(json.decode(bunnycall)['messages'], bunnyContent);
 
       await client.dispose(closeDatabase: true);
+    });
+    test('Logout and login with same client', () async {
+      final client = await getClient();
+      await client.logout();
+      expect(client.homeserver, null);
+      expect(client.userID, null);
+      await client.checkHomeserver(
+        Uri.parse('https://fakeServer.notExisting'),
+        checkWellKnown: false,
+      );
+      await client.init(
+        newToken: 'abcd',
+        newRefreshToken: 'refresh_abcd',
+        newUserID: '@test:fakeServer.notExisting',
+        newHomeserver: client.homeserver,
+        newDeviceName: 'Text Matrix Client',
+        newDeviceID: 'GHTYAJCE',
+        newOlmAccount: pickledOlmAccount,
+        waitForFirstSync: false,
+      );
+      expect(client.userID, '@test:fakeServer.notExisting');
     });
     test('startDirectChat', () async {
       await matrix.startDirectChat('@alice:example.com', waitForSync: false);

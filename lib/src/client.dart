@@ -2202,10 +2202,8 @@ class Client extends MatrixApi {
       _backgroundSync = true;
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
-    } finally {
       await database.delete();
       await legacyDatabase?.delete();
-      await dispose();
     }
 
     _id = accessToken = _syncFilterId =
