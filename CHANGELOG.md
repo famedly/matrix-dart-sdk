@@ -1,3 +1,79 @@
+## [1.0.0] 10th June 2025
+
+- feat: Migrate to vodozemac (Christian Kußowski)
+- refactor: Make database non nullable (Christian Kußowski)
+- refactor: (BREAKING) Make database required (Christian Kußowski)
+- refactor: disable benchmarks by global boolean (#2104) (Krille-chan)
+- refactor: Remove olm dependency (Christian Kußowski)
+
+### Breaking changes:
+
+#### DatabaseBuilder deprecated
+
+From now on the `Client` constructor expects an open database. `Client.database` is no longer nullable.
+
+**Before**:
+
+```dart
+final client = Client(
+  'Client Name',
+  databaseBuilder: (_) async {
+      final database = MatrixSdkDatabase(
+        '<Database Name>',
+        database: await databaseFactoryFfi.openDatabase(':memory:'),
+        sqfliteFactory: databaseFactoryFfi,
+      );
+      await database.open();
+      return database;
+    },
+);
+```
+
+**Now**:
+
+```dart
+final client = Client(
+    '<Client Name>',
+    database: await MatrixSdkDatabase.init(
+        '<Database Name>',
+        database: await databaseFactoryFfi.openDatabase(':memory:'),
+        sqfliteFactory: databaseFactoryFfi,
+    ),
+);
+```
+
+#### LibOlm deprecated in favor of Vodozemac
+
+LibOlm is no longer used. From now on you should use **Vodozemac**.
+For Flutter you can use [flutter_vodozemac](https://pub.dev/packages/flutter_vodozemac). This
+just needs to be initialized **once**:
+
+```dart
+import 'package:flutter_vodozemac/flutter_vodozemac' as vod;
+
+// ...
+
+await vod.init();
+
+final client = Client(/*...*/);
+```
+
+This should work on Android, iOS, macOS, Linux and Windows.
+
+For web you need to compile vodozemac to wasm. [Please refer to the Vodozemac bindings documentation](https://pub.dev/packages/vodozemac#build-for-web).
+
+
+## [0.40.2] 5th June 2025
+- fix: fallback on homeserver is userID null (The one with the braid)
+
+## [0.40.1] 2nd June 2025
+- feat: Add logout command (Christian Kußowski)
+- feat: Switch to github flavor markdown to render checkboxes (krille-chan)
+- fix: Add missing copy json in updateInboundGroupdSessionAllowedAtIndex method (Christian Kußowski)
+- fix: Correct filename when downloading thumbnail (Christian Kußowski)
+- fix: no user feedback if client.getConfig() takes some time (Christian Kußowski)
+- refactor: Do not store room update for leave rooms not cached anyway (Christian Kußowski)
+
 ## [0.40.0] 9th May 2025
 - feat: Add localization for voice message type (Krille)
 - feat: Support fallback for threads in Event.getReplyEvent() (Krille)
