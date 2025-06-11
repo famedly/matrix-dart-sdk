@@ -63,6 +63,19 @@ void main() {
     });
   });
 
+  group('Export and Import', () {
+    test('exportDump and importDump', () async {
+      final client = await getClient();
+      final userId = client.userID;
+      final export = await client.exportDump();
+      expect(export != null, true);
+      expect(client.userID, null);
+      final importClient = Client('Import', database: await getDatabase());
+      await importClient.importDump(export!);
+      expect(importClient.userID, userId);
+    });
+  });
+
   /// All Tests related to the Login
   group('client mem', tags: 'olm', () {
     late Client matrix;

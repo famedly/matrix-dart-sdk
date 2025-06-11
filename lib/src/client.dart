@@ -1576,9 +1576,6 @@ class Client extends MatrixApi {
     final success = await database.importDump(export);
 
     if (success) {
-      // closing including DB
-      await dispose();
-
       try {
         bearerToken = null;
 
