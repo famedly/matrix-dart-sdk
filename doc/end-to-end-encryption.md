@@ -27,3 +27,20 @@ final client = Client(/*...*/);
 This should work on Android, iOS, macOS, Linux and Windows.
 
 For web you need to compile vodozemac to wasm. [Please refer to the Vodozemac bindings documentation](https://pub.dev/packages/vodozemac#build-for-web).
+
+### Using Vodozemac with NativeImplementations
+
+When using NativeImplementations you have to initialize Vodozemac there as well.
+Just pass the same init function to it:
+
+```dart
+final client = Client('Matrix Client',
+    // ...
+    // ...
+    nativeImplementations: NativeImplementationsIsolate(
+        compute,
+        vodozemacInit: () => vod.init(),
+    ),
+    // ...
+);
+```

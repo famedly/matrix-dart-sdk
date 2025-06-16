@@ -49,13 +49,22 @@ For Flutter you can use [flutter_vodozemac](https://pub.dev/packages/flutter_vod
 just needs to be initialized **once**:
 
 ```dart
-import 'package:flutter_vodozemac/flutter_vodozemac' as vod;
+import 'package:flutter_vodozemac/flutter_vodozemac.dart' as vod;
 
 // ...
 
 await vod.init();
 
-final client = Client(/*...*/);
+final client = Client('Matrix Client',
+    // ...
+    // ...
+    nativeImplementations: NativeImplementationsIsolate(
+        compute,
+        // Also init in NativeImplemenetations if you use it there:
+        vodozemacInit: () => vod.init(),
+    ),
+    // ...
+);
 ```
 
 This should work on Android, iOS, macOS, Linux and Windows.
