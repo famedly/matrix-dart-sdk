@@ -180,7 +180,11 @@ class User extends StrippedStateEvent {
 
   /// Whether the client is able to kick this user.
   bool get canKick =>
-      [Membership.join, Membership.invite].contains(membership) &&
+      {
+        Membership.join,
+        Membership.invite,
+        Membership.knock,
+      }.contains(membership) &&
       room.canKick &&
       powerLevel < room.ownPowerLevel;
 
