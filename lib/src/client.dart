@@ -22,6 +22,7 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:async/async.dart' as async;
 import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
@@ -2147,6 +2148,8 @@ class Client extends MatrixApi {
         'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
       );
 
+      await ensureNotSoftLoggedOut();
+
       /// Timeout of 0, so that we don't see a spinner for 30 seconds.
       firstSyncReceived = _sync(timeout: Duration.zero);
       if (waitForFirstSync) {
@@ -2275,30 +2278,68 @@ class Client extends MatrixApi {
 
     _handleSoftLogoutFuture ??= () async {
       onLoginStateChanged.add(LoginState.softLoggedOut);
-      try {
-        await onSoftLogout(this);
-        onLoginStateChanged.add(LoginState.loggedIn);
-      } catch (e, s) {
-        Logs().w('Unable to refresh session after soft logout', e, s);
-        await logout();
-        rethrow;
+
+      async.Result? softLogoutResult;
+
+      while (softLogoutResult?.isValue != true) {
+        softLogoutResult = await async.Result.capture(onSoftLogout(this));
+        final error = softLogoutResult.asError?.error;
+
+        if (error is MatrixException) {
+          final retryAfterMs = error.retryAfterMs;
+          if (retryAfterMs != null) {
+            Logs().w(
+              'Rate limit while attempting to refresh access token. Waiting seconds...',
+              retryAfterMs / 1000,
+            );
+            await Future.delayed(Duration(milliseconds: retryAfterMs));
+          } else {
+            Logs().wtf(
+              'Unable to login after soft logout! Logging out.',
+              error,
+              softLogoutResult.asError?.stackTrace,
+            );
+            await logout();
+            return;
+          }
+        } else if (error != null) {
+          Logs().w(
+            'Unable to login after soft logout! Try again...',
+            error,
+            softLogoutResult.asError?.stackTrace,
+          );
+          await Future.delayed(const Duration(seconds: 1));
+        }
       }
     }();
     await _handleSoftLogoutFuture;
     _handleSoftLogoutFuture = null;
   }
 
+  Timer? _softLogoutTimer;
+  Timer? get softLogoutTimer => _softLogoutTimer;
+
   /// Checks if the token expires in under [expiresIn] time and calls the
   /// given `onSoftLogout()` if so. You have to provide `onSoftLogout` in the
   /// Client constructor. Otherwise this will do nothing.
   Future<void> ensureNotSoftLoggedOut([
     Duration expiresIn = const Duration(minutes: 1),
+    bool setTimerForNextSoftLogout = true,
   ]) async {
-    final tokenExpiresAt = accessTokenExpiresAt;
-    if (onSoftLogout != null &&
-        tokenExpiresAt != null &&
-        tokenExpiresAt.difference(DateTime.now()) <= expiresIn) {
-      await _handleSoftLogout();
+    var tokenExpiresAt = accessTokenExpiresAt;
+    if (isLogged() && onSoftLogout != null && tokenExpiresAt != null) {
+      _softLogoutTimer?.cancel();
+      if (tokenExpiresAt.difference(DateTime.now()) <= expiresIn) {
+        Logs().d('Handle soft logout...');
+        await _handleSoftLogout();
+      }
+      tokenExpiresAt = accessTokenExpiresAt;
+      if (setTimerForNextSoftLogout && tokenExpiresAt != null) {
+        final doNextSoftLogoutIn = tokenExpiresAt.difference(DateTime.now()) -
+            const Duration(minutes: 1);
+        Logs().v('Next token refresh will be triggered in $doNextSoftLogoutIn');
+        _softLogoutTimer = Timer(doNextSoftLogoutIn, ensureNotSoftLoggedOut);
+      }
     }
   }
 
@@ -2319,10 +2360,6 @@ class Client extends MatrixApi {
       // server that we want to receive an empty sync response after this
       // amount of time if nothing happens.
       if (prevBatch != null) timeout ??= const Duration(seconds: 30);
-
-      await ensureNotSoftLoggedOut(
-        timeout == null ? const Duration(minutes: 1) : (timeout * 2),
-      );
 
       await _checkSyncFilter();
 
