@@ -1,3 +1,8 @@
+## [1.0.1] 16th June 2025
+- chore: Add hint to init vodozemac also in native implementations (Christian Kußowski)
+- fix: exportDump and importDump and add unit tests (Christian Kußowski)
+- fix: user.canKick should be true for knocking users as well (Christian Kußowski)
+
 ## [1.0.0] 10th June 2025
 
 - feat: Migrate to vodozemac (Christian Kußowski)
