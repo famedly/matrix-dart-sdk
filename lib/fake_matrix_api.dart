@@ -84,6 +84,7 @@ class FakeMatrixApi extends BaseClient {
     StreamSubscription<String>? sub;
     sub = currentApi!._apiCallStream.stream.listen((action) {
       if (test(action)) {
+        // ignore: discarded_futures
         sub?.cancel();
         completer.complete(action);
       }

@@ -2245,7 +2245,7 @@ class Client extends MatrixApi {
         _currentSync ??= _innerSync(timeout: timeout).whenComplete(() {
       _currentSync = null;
       if (_backgroundSync && isLogged() && !_disposed) {
-        _sync();
+        unawaited(_sync());
       }
     });
     return currentSync;
