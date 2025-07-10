@@ -59,6 +59,7 @@ void main() {
     test('logout', () async {
       expect(await File(dbPath).exists(), true);
       await clientOnPath.logout();
+      await clientOnPath.database.delete();
       expect(await File(dbPath).exists(), false);
     });
   });
@@ -116,6 +117,22 @@ void main() {
       expect(client.isLogged(), true);
 
       await client.logout();
+
+      expect(client.isLogged(), false);
+
+      await client.login(
+        LoginType.mLoginPassword,
+        token: 'abcd',
+        identifier:
+            AuthenticationUserIdentifier(user: '@test:fakeServer.notExisting'),
+        deviceId: 'GHTYAJCE',
+        onInitStateChanged: initStates.add,
+      );
+      expect(client.isLogged(), true);
+
+      await client.logout();
+
+      expect(client.isLogged(), false);
     });
 
     test('Login', () async {

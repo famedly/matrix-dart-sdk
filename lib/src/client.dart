@@ -68,7 +68,16 @@ class Client extends MatrixApi {
 
   final FutureOr<DatabaseApi> Function(Client)? legacyDatabaseBuilder;
 
-  final DatabaseApi database;
+  DatabaseApi _database;
+
+  DatabaseApi get database => _database;
+
+  set database(DatabaseApi db) {
+    if (isLogged()) {
+      throw Exception('You can not switch the database while being logged in!');
+    }
+    _database = db;
+  }
 
   Encryption? get encryption => _encryption;
   Encryption? _encryption;
@@ -174,7 +183,7 @@ class Client extends MatrixApi {
   /// Set [enableDehydratedDevices] to enable experimental support for enabling MSC3814 dehydrated devices.
   Client(
     this.clientName, {
-    required this.database,
+    required DatabaseApi database,
     this.legacyDatabaseBuilder,
     Set<KeyVerificationMethod>? verificationMethods,
     http.Client? httpClient,
@@ -221,7 +230,8 @@ class Client extends MatrixApi {
     /// <br/> tags:
     this.convertLinebreaksInFormatting = true,
     this.dehydratedDeviceDisplayName = 'Dehydrated Device',
-  })  : syncFilter = syncFilter ??
+  })  : _database = database,
+        syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
                 state: StateFilter(lazyLoadMembers: true),
@@ -2199,9 +2209,9 @@ class Client extends MatrixApi {
       _backgroundSync = true;
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
-    } finally {
       await database.delete();
       await legacyDatabase?.delete();
+      legacyDatabase = null;
       await dispose();
     }
 
