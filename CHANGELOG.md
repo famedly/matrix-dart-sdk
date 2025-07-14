@@ -1,3 +1,16 @@
+## [1.1.0] 14th July 2025
+- fix: (BREAKING) Can not logout and login again with same Client object (Christian Kußowski)
+- refactor: Clean up new dart version lints (Christian Kußowski)
+
+Now if you logout and login again you will reuse the same database. In case you use
+database encryption and want to use a new key, please consider recreating the database
+like this:
+
+```dart
+await client.database.delete();
+client.database = await MatrixSdkDatabase.init(/*...*/);
+```
+
 ## [1.0.1] 16th June 2025
 - chore: Add hint to init vodozemac also in native implementations (Christian Kußowski)
 - fix: exportDump and importDump and add unit tests (Christian Kußowski)
