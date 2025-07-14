@@ -37,7 +37,7 @@ jobs:
 
   coverage_without_olm:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     env:
       NO_OLM: 1
     steps:
