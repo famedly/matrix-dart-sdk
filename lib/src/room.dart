@@ -1930,13 +1930,32 @@ class Room {
     }
   }
 
+  /// Returns the room version if specified in the `m.room.create` state event.
+  String? get roomVersion =>
+      getState(EventTypes.RoomCreate)?.content.tryGet<String>('room_version');
+
+  /// Returns the creator's user ID of the room by fetching the sender of the
+  /// `m.room.create` event.
+  String? get creatorUserId => getState(EventTypes.RoomCreate)?.senderId;
+
   /// Returns the power level of the given user ID.
   /// If a user_id is in the users list, then that user_id has the associated
   /// power level. Otherwise they have the default level users_default.
   /// If users_default is not supplied, it is assumed to be 0. If the room
   /// contains no m.room.power_levels event, the room’s creator has a power
   /// level of 100, and all other users have a power level of 0.
+  /// For room version 12 and above the room creator always has maximum
+  /// power level.
   int getPowerLevelByUserId(String userId) {
+    // Room creator has maximum power level:
+    if (userId == creatorUserId &&
+        !((int.tryParse(roomVersion ?? '') ?? 0) < 12)) {
+      // 2^53 - 1 from https://spec.matrix.org/v1.15/appendices/#canonical-json
+      const maxInteger = 9007199254740991;
+
+      return maxInteger;
+    }
+
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
 
     final userSpecificPowerLevel =
