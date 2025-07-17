@@ -1989,6 +1989,7 @@ class Room {
   /// with possible overrides in `events`, if not present compares `ownPowerLevel`
   /// with state_default
   bool canChangeStateEvent(String action) {
+    if (membership != Membership.join) return false;
     return powerForChangingStateEvent(action) <= ownPowerLevel;
   }
 
@@ -2060,10 +2061,14 @@ class Room {
   }
 
   /// The level required to invite a user.
-  bool get canInvite =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('invite') ??
-          0) <=
-      ownPowerLevel;
+  bool get canInvite {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)
+                ?.content
+                .tryGet<int>('invite') ??
+            0) <=
+        ownPowerLevel;
+  }
 
   /// The level required to kick a user.
   bool get canKick =>
@@ -2094,6 +2099,7 @@ class Room {
   /// The level required to send a certain event. Defaults to 0 if there is no
   /// events_default set or there is no power level state in the room.
   bool canSendEvent(String eventType) {
+    if (membership != Membership.join) return false;
     final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
 
     final pl = powerLevelsMap
