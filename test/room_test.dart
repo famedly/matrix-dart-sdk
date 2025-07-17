@@ -95,6 +95,18 @@ void main() {
 
       room.setState(
         Event(
+          content: {'room_version': '11'},
+          eventId: '\$143273582443PhrSn:example.org',
+          originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
+          senderId: '@example:example.org',
+          type: 'm.room.create',
+          unsigned: {'age': 1234},
+          stateKey: '',
+          room: room,
+        ),
+      );
+      room.setState(
+        Event(
           room: room,
           eventId: '143273582443PhrSn:example.org',
           originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
@@ -809,6 +821,17 @@ void main() {
       expect(room.canSendEvent('m.room.message'), true);
       final resp = await room.setPower('@test:fakeServer.notExisting', 0);
       expect(resp, '42');
+
+      // Creator has max power level from room version 12 on:
+      expect(room.creatorUserIds.contains('@example:example.org'), true);
+      expect(room.getPowerLevelByUserId('@example:example.org'), 0);
+      expect(room.roomVersion, '11');
+      room.states[EventTypes.RoomCreate]!['']!.content['room_version'] = '12';
+      expect(room.roomVersion, '12');
+      expect(
+        room.getPowerLevelByUserId('@example:example.org'),
+        9007199254740991,
+      );
     });
 
     test('invite', () async {
