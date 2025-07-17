@@ -1980,10 +1980,12 @@ class Room {
   }
 
   /// The level required to ban a user.
-  bool get canBan =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('ban') ??
-          50) <=
-      ownPowerLevel;
+  bool get canBan {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('ban') ??
+            50) <=
+        ownPowerLevel;
+  }
 
   /// returns if user can change a particular state event by comparing `ownPowerLevel`
   /// with possible overrides in `events`, if not present compares `ownPowerLevel`
@@ -2071,16 +2073,22 @@ class Room {
   }
 
   /// The level required to kick a user.
-  bool get canKick =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('kick') ??
-          50) <=
-      ownPowerLevel;
+  bool get canKick {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('kick') ??
+            50) <=
+        ownPowerLevel;
+  }
 
   /// The level required to redact an event.
-  bool get canRedact =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('redact') ??
-          50) <=
-      ownPowerLevel;
+  bool get canRedact {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)
+                ?.content
+                .tryGet<int>('redact') ??
+            50) <=
+        ownPowerLevel;
+  }
 
   ///  	The default level required to send state events. Can be overridden by the events key.
   bool get canSendDefaultStates {
