@@ -80,6 +80,9 @@ class Timeline {
   bool _fetchedAllDatabaseEvents = false;
 
   bool get canRequestHistory {
+    if (!{Membership.join, Membership.leave}.contains(room.membership)) {
+      return false;
+    }
     if (events.isEmpty) return true;
     return !_fetchedAllDatabaseEvents ||
         (room.prev_batch != null && events.last.type != EventTypes.RoomCreate);
