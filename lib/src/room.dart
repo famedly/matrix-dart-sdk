@@ -1980,15 +1980,18 @@ class Room {
   }
 
   /// The level required to ban a user.
-  bool get canBan =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('ban') ??
-          50) <=
-      ownPowerLevel;
+  bool get canBan {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('ban') ??
+            50) <=
+        ownPowerLevel;
+  }
 
   /// returns if user can change a particular state event by comparing `ownPowerLevel`
   /// with possible overrides in `events`, if not present compares `ownPowerLevel`
   /// with state_default
   bool canChangeStateEvent(String action) {
+    if (membership != Membership.join) return false;
     return powerForChangingStateEvent(action) <= ownPowerLevel;
   }
 
@@ -2060,22 +2063,32 @@ class Room {
   }
 
   /// The level required to invite a user.
-  bool get canInvite =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('invite') ??
-          0) <=
-      ownPowerLevel;
+  bool get canInvite {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)
+                ?.content
+                .tryGet<int>('invite') ??
+            0) <=
+        ownPowerLevel;
+  }
 
   /// The level required to kick a user.
-  bool get canKick =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('kick') ??
-          50) <=
-      ownPowerLevel;
+  bool get canKick {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('kick') ??
+            50) <=
+        ownPowerLevel;
+  }
 
   /// The level required to redact an event.
-  bool get canRedact =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('redact') ??
-          50) <=
-      ownPowerLevel;
+  bool get canRedact {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)
+                ?.content
+                .tryGet<int>('redact') ??
+            50) <=
+        ownPowerLevel;
+  }
 
   ///  	The default level required to send state events. Can be overridden by the events key.
   bool get canSendDefaultStates {
@@ -2094,6 +2107,7 @@ class Room {
   /// The level required to send a certain event. Defaults to 0 if there is no
   /// events_default set or there is no power level state in the room.
   bool canSendEvent(String eventType) {
+    if (membership != Membership.join) return false;
     final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
 
     final pl = powerLevelsMap
