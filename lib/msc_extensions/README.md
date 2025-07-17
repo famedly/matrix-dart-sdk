@@ -20,5 +20,13 @@ Please try to cover the following conventions:
 - MSC 1236 - Widget API V2
 - MSC 2835 - UIA login
 - MSC 3814 - Dehydrated Devices
+- MSC 3861 - Next-generation auth for Matrix, based on OAuth 2.0/OIDC
+  - MSC 1597 - Better spec for matrix identifiers
+  - MSC 2964 - Usage of OAuth 2.0 authorization code grant and refresh token grant
+  - MSC 2965 - OAuth 2.0 Authorization Server Metadata discovery
+  - MSC 2966 - Usage of OAuth 2.0 Dynamic Client Registration in Matrix
+  - MSC 2967 - API scopes
+  - MSC 3824 - OIDC aware clients
+  - MSC 4191 - Account management deep-linking
 - MSC 3935 - Cute Events
 - `io.element.recent_emoji` - recent emoji sync in account data
