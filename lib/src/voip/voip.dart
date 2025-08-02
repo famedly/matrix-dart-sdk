@@ -904,9 +904,9 @@ class VoIP {
     bool emitHandleNewGroupCall = true,
   }) async {
     if (membership.isExpired) {
-      Logs().d(
-        'Ignoring expired membership in passive groupCall creator. ${membership.toJson()}',
-      );
+      // Logs().d(
+      //   'Ignoring expired membership in passive groupCall creator. ${membership.toJson()}',
+      // );
       return;
     }
 

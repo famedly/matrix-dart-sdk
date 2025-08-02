@@ -216,14 +216,14 @@ class GroupCallSession {
           element.roomId == room.id; // sanity checks
     }).toList();
 
-    final ignoredMems =
-        mems.where((element) => !memsForCurrentGroupCall.contains(element));
+    // final ignoredMems =
+    //     mems.where((element) => !memsForCurrentGroupCall.contains(element));
 
-    for (final mem in ignoredMems) {
-      Logs().v(
-        '[VOIP] Ignored ${mem.userId}\'s mem event ${mem.toJson()} while updating _participants list for callId: $groupCallId, expiry status: ${mem.isExpired}',
-      );
-    }
+    // for (final mem in ignoredMems) {
+    //   Logs().v(
+    //     '[VOIP] Ignored ${mem.userId}\'s mem event ${mem.toJson()} while updating _participants list for callId: $groupCallId, expiry status: ${mem.isExpired}',
+    //   );
+    // }
 
     final Set<CallParticipant> newP = {};
 
@@ -239,9 +239,9 @@ class GroupCallSession {
       if (rp.isLocal) continue;
 
       if (state != GroupCallState.entered) {
-        Logs().w(
-          '[VOIP] onMemberStateChanged groupCall state is currently $state, skipping member update',
-        );
+        // Logs().w(
+        //   '[VOIP] onMemberStateChanged groupCall state is currently $state, skipping member update',
+        // );
         continue;
       }
 
