@@ -2079,6 +2079,7 @@ class Client extends MatrixApi {
         _syncFilterId = account['sync_filter_id'];
         _prevBatch = account['prev_batch'];
         olmAccount = account['olm_account'];
+        oidcDynamicClientId = account['oidc_dynamic_client_id'];
         // the device ID is stored differently for easier use of MSC 1597
         _deviceID = await database.getDeviceId();
       }
@@ -2203,10 +2204,6 @@ class Client extends MatrixApi {
       });
       _oidcAuthMetadataLoading = database.getOidcAuthMetadata().then((data) {
         _oidcAuthMetadata = data;
-      });
-      _oidcDynamicClientIdLoading =
-          database.getOidcDynamicClientId().then((data) {
-        oidcDynamicClientId = data;
       });
       // ignore: deprecated_member_use_from_same_package
       presences.clear();
@@ -3188,7 +3185,6 @@ class Client extends MatrixApi {
   Future? _accountDataLoading;
   Future? _discoveryDataLoading;
   Future? _oidcAuthMetadataLoading;
-  Future? _oidcDynamicClientIdLoading;
   Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
@@ -3196,8 +3192,6 @@ class Client extends MatrixApi {
   Future? get wellKnownLoading => _discoveryDataLoading;
 
   Future? get oidcAuthMetadataLoading => _oidcAuthMetadataLoading;
-
-  Future? get oidcDynamicClientIdLoading => _oidcDynamicClientIdLoading;
 
   /// A map of known device keys per user.
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
