@@ -365,8 +365,6 @@ abstract class DatabaseApi {
 
   Future<void> storeOidcDynamicClientId(String? oidcClientId);
 
-  Future<String?> getOidcDynamicClientId();
-
   /// Deletes the whole database. The database needs to be created again after
   /// this.
   Future<void> delete();

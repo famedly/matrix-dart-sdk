@@ -50,7 +50,7 @@ extension OidcProviderMetadataExtension on Client {
 
     Logs().v('[OIDC] Found auth metadata document.');
 
-    await database?.storeOidcAuthMetadata(oidcMetadata);
+    await database.storeOidcAuthMetadata(oidcMetadata);
     return oidcMetadata;
   }
 

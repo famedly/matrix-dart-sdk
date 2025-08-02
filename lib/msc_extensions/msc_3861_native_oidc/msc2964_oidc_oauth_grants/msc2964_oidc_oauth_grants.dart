@@ -8,7 +8,20 @@ import 'package:http/http.dart' hide Client;
 import 'package:matrix/matrix.dart';
 
 extension OidcOauthGrantFlowExtension on Client {
-  Future<void> oidcAuthorizationGrantFlow({
+  /// Performs a full OIDC Authorization Grant Flow.
+  ///
+  /// This is a high-level method for completing OIDC login of a [Client].
+  ///
+  /// Parameters:
+  /// - [nativeCompleter]: a [Completer] returning the full [OidcCallbackResponse] contained in the Uri of the OAuth2.0 callback
+  /// - [oidcClientId]: the either registered or pre-shared OAuth2.0 client ID of the application. This can usually be generated using [Client.oidcRegisterOAuth2Client]
+  /// - [redirectUri]: the OAuth2.0 redirect Uri base the IDP is supposed to call
+  /// - [responseMode]: the OAuth2.0 response mode. This should usually be `fragment` or `query`
+  /// - [launchOAuth2Uri]: a callback for launching the computed OAuth2.0 Uri for authorization in the IDP. This should usually be from `package:url_launcher` or in some cases a handler launching a custom web view.
+  /// - [initialDeviceDisplayName]: the initial deice display name
+  /// - [enforceNewDeviceId]: whether to enforce generating a new device ID even in case the client already knows another device ID
+  /// - [prompt]: the OAuth2.0 authorization prompt. This must be a valid prompt from the [getOidcDiscoveryInformation] as by https://openid.net/specs/openid-connect-prompt-create-1_0.html
+  Future<void> oidcLoginAuthorizationGrantFlow({
     required Completer<OidcCallbackResponse> nativeCompleter,
     required String oidcClientId,
     required Uri redirectUri,
