@@ -37,8 +37,6 @@ extension OidcOauthGrantFlowExtension on Client {
 
     final deviceId = await oidcEnsureDeviceId(enforceNewDeviceId);
 
-    await oidcAuthMetadataLoading;
-
     Uri authEndpoint;
     Uri tokenEndpoint;
 
