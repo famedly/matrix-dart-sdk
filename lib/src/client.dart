@@ -2048,6 +2048,7 @@ class Client extends MatrixApi {
       _versionsCache.invalidate();
 
       final account = await database.getClient(clientName);
+      _oidcAuthMetadata = await database.getOidcAuthMetadata();
 
       // the device ID is stored separately for easier use of MSC 1597
       _deviceID = await database.getDeviceId();
@@ -2201,9 +2202,6 @@ class Client extends MatrixApi {
       });
       _discoveryDataLoading = database.getWellKnown().then((data) {
         _wellKnown = data;
-      });
-      _oidcAuthMetadataLoading = database.getOidcAuthMetadata().then((data) {
-        _oidcAuthMetadata = data;
       });
       // ignore: deprecated_member_use_from_same_package
       presences.clear();
@@ -3184,14 +3182,11 @@ class Client extends MatrixApi {
   Future? roomsLoading;
   Future? _accountDataLoading;
   Future? _discoveryDataLoading;
-  Future? _oidcAuthMetadataLoading;
   Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
 
   Future? get wellKnownLoading => _discoveryDataLoading;
-
-  Future? get oidcAuthMetadataLoading => _oidcAuthMetadataLoading;
 
   /// A map of known device keys per user.
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
