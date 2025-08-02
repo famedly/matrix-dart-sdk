@@ -1819,11 +1819,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<String?> getOidcDynamicClientId() {
-    return _clientBox.get('oidc_dynamic_client_id');
-  }
-
-  @override
   Future<void> delete() async {
     // database?.path is null on web
     await _collection.deleteDatabase(
