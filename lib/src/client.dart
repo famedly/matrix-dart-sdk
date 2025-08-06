@@ -681,7 +681,7 @@ class Client extends MatrixApi {
       identifier: identifier,
       password: password,
       token: token,
-      deviceId: deviceId,
+      deviceId: deviceId ?? deviceID,
       initialDeviceDisplayName: initialDeviceDisplayName,
       // ignore: deprecated_member_use
       user: user,
