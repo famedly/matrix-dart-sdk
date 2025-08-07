@@ -1,3 +1,10 @@
+## [1.1.1] 7th Aug 2025
+- fix: reuse a deviceId if available (td)
+- refactor: Allow room ids to not have a domain (Christian Kußowski)
+- refactor: Restrict canChangeStateEvent, canInvite and canSendEvent to joined users (Christian Kußowski)
+- refactor: Restrict canKick canBan and canRedact to joined users (Christian Kußowski)
+- refactor: Restrict canRequestHistory to joined or archived rooms (Christian Kußowski)
+
 ## [1.1.0] 14th July 2025
 - fix: (BREAKING) Can not logout and login again with same Client object (Christian Kußowski)
 - refactor: Clean up new dart version lints (Christian Kußowski)
