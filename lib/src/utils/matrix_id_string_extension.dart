@@ -33,11 +33,12 @@ extension MatrixIdExtension on String {
   bool get isValidMatrixId {
     if (isEmpty) return false;
     if (length > maxLength) return false;
-    if (!validSigils.contains(substring(0, 1))) {
+    final sigil = substring(0, 1);
+    if (!validSigils.contains(sigil)) {
       return false;
     }
-    // event IDs do not have to have a domain
-    if (substring(0, 1) == '\$') {
+    // event IDs and room IDs do not have to have a domain
+    if ({'\$', '!'}.contains(sigil)) {
       return true;
     }
     // all other matrix IDs have to have a domain
