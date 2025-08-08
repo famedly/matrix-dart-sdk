@@ -140,7 +140,7 @@ class HtmlToText {
         .join('\n');
   }
 
-  static const _listBulletPoints = <String>['●', '○', '■', '‣'];
+  static const _listBulletPoints = <String>['•', '◦', '▪', '‣'];
 
   static List<String> _listChildNodes(
     _ConvertOpts opts,
