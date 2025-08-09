@@ -44,8 +44,16 @@ class LiveKitBackend extends CallBackend {
   /// used to send the key again incase someone `onCallEncryptionKeyRequest` but don't just send
   /// the last one because you also cycle back in your window which means you
   /// could potentially end up sharing a past key
+  /// we don't really care about what if setting or sending fails right now
   int get latestLocalKeyIndex => _latestLocalKeyIndex;
   int _latestLocalKeyIndex = 0;
+
+  /// while latestLocalKeyIndex makes sure that you actually bump the index,
+  /// you cannot expect the same from ratchet because they use the same indices,
+  /// therefore save the latestLocalRatchet as soon as ratched
+  /// we don't really care about what if setting or sending fails right now
+  Uint8List get latestLocalRatchet => _latestLocalRatchet;
+  Uint8List _latestLocalRatchet = Uint8List.fromList([]);
 
   /// the key currently being used by the local cryptor, can possibly not be the latest
   /// key, check `latestLocalKeyIndex` for latest key
@@ -122,8 +130,10 @@ class LiveKitBackend extends CallBackend {
       );
     }
 
+    _latestLocalRatchet = ratchetedKey;
+
     Logs().i(
-      '[VOIP E2EE] Ratched latest key to $ratchetedKey at idx $latestLocalKeyIndex',
+      '[VOIP E2EE] Ratched latest key to $_latestLocalRatchet at idx $latestLocalKeyIndex',
     );
 
     await _setEncryptionKey(
@@ -133,6 +143,7 @@ class LiveKitBackend extends CallBackend {
       ratchetedKey,
       delayBeforeUsingKeyOurself: false,
       send: true,
+      setKey: false,
       sendTo: sendTo,
     );
   }
@@ -159,6 +170,9 @@ class LiveKitBackend extends CallBackend {
     Uint8List encryptionKeyBin, {
     bool delayBeforeUsingKeyOurself = false,
     bool send = false,
+
+    /// ratchet seems to set on call, so no need to set manually
+    bool setKey = true,
     List<CallParticipant>? sendTo,
   }) async {
     final encryptionKeys =
@@ -178,12 +192,22 @@ class LiveKitBackend extends CallBackend {
       );
     }
 
+    if (!setKey) {
+      Logs().i(
+        '[VOIP E2EE] sent ratchetd key $encryptionKeyBin but not setting',
+      );
+      return;
+    }
+
     if (delayBeforeUsingKeyOurself) {
+      Logs().i(
+        '[VOIP E2EE] starting delayed set for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin, current idx $currentLocalKeyIndex key ${encryptionKeys[currentLocalKeyIndex]}',
+      );
       // now wait for the key to propogate and then set it, hopefully users can
       // stil decrypt everything
       final useKeyTimeout = Future.delayed(useKeyDelay, () async {
         Logs().i(
-          '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
+          '[VOIP E2EE] delayed setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
         );
         await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
           participant,
