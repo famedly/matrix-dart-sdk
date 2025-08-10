@@ -173,17 +173,20 @@ class GroupCallSession {
       _resendMemberStateEventTimer!.cancel();
     }
     _resendMemberStateEventTimer = Timer.periodic(
-        CallTimeouts.updateExpireTsTimerDuration, ((timer) async {
-      Logs().d('sendMemberStateEvent updating member event with timer');
-      if (state != GroupCallState.ended ||
-          state != GroupCallState.localCallFeedUninitialized) {
-        await sendMemberStateEvent();
-      } else {
-        Logs().d(
-            '[VOIP] deteceted groupCall in state $state, removing state event');
-        await removeMemberStateEvent();
-      }
-    }));
+      CallTimeouts.updateExpireTsTimerDuration,
+      ((timer) async {
+        Logs().d('sendMemberStateEvent updating member event with timer');
+        if (state != GroupCallState.ended ||
+            state != GroupCallState.localCallFeedUninitialized) {
+          await sendMemberStateEvent();
+        } else {
+          Logs().d(
+            '[VOIP] deteceted groupCall in state $state, removing state event',
+          );
+          await removeMemberStateEvent();
+        }
+      }),
+    );
   }
 
   Future<void> removeMemberStateEvent() {
@@ -218,7 +221,8 @@ class GroupCallSession {
 
     for (final mem in ignoredMems) {
       Logs().v(
-          '[VOIP] Ignored ${mem.userId}\'s mem event ${mem.toJson()} while updating _participants list for callId: $groupCallId, expiry status: ${mem.isExpired}');
+        '[VOIP] Ignored ${mem.userId}\'s mem event ${mem.toJson()} while updating _participants list for callId: $groupCallId, expiry status: ${mem.isExpired}',
+      );
     }
 
     final Set<CallParticipant> newP = {};
@@ -236,7 +240,8 @@ class GroupCallSession {
 
       if (state != GroupCallState.entered) {
         Logs().w(
-            '[VOIP] onMemberStateChanged groupCall state is currently $state, skipping member update');
+          '[VOIP] onMemberStateChanged groupCall state is currently $state, skipping member update',
+        );
         continue;
       }
 
@@ -253,7 +258,8 @@ class GroupCallSession {
           ..remove(localParticipant);
         if (nonLocalAnyJoined.isNotEmpty && state == GroupCallState.entered) {
           Logs().v(
-              'nonLocalAnyJoined: ${nonLocalAnyJoined.map((e) => e.id).toString()} roomId: ${room.id} groupCallId: $groupCallId');
+            'nonLocalAnyJoined: ${nonLocalAnyJoined.map((e) => e.id).toString()} roomId: ${room.id} groupCallId: $groupCallId',
+          );
           await backend.onNewParticipant(this, nonLocalAnyJoined.toList());
         }
         _participants.addAll(anyJoined);
@@ -265,7 +271,8 @@ class GroupCallSession {
           ..remove(localParticipant);
         if (nonLocalAnyLeft.isNotEmpty && state == GroupCallState.entered) {
           Logs().v(
-              'nonLocalAnyLeft: ${nonLocalAnyLeft.map((e) => e.id).toString()} roomId: ${room.id} groupCallId: $groupCallId');
+            'nonLocalAnyLeft: ${nonLocalAnyLeft.map((e) => e.id).toString()} roomId: ${room.id} groupCallId: $groupCallId',
+          );
           await backend.onLeftParticipant(this, nonLocalAnyLeft.toList());
         }
         _participants.removeAll(anyLeft);
@@ -275,7 +282,8 @@ class GroupCallSession {
 
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
       Logs().d(
-          '[VOIP] onMemberStateChanged current list: ${_participants.map((e) => e.id).toString()}');
+        '[VOIP] onMemberStateChanged current list: ${_participants.map((e) => e.id).toString()}',
+      );
     }
   }
 }

@@ -54,10 +54,11 @@ void main() {
       await client.encryption!.keyManager
           .request(client.getRoomById(roomId)!, sessionId, senderKey);
       expect(
-          client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId)
-              ?.sessionId,
-          sessionId);
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.sessionId,
+        sessionId,
+      );
     });
 
     test('Load all Room Keys', () async {
@@ -104,13 +105,18 @@ void main() {
       };
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.keyManager.setInboundGroupSession(
-          roomId, sessionId, senderKey, sessionPayload,
-          forwarded: true);
+        roomId,
+        sessionId,
+        senderKey,
+        sessionPayload,
+        forwarded: true,
+      );
       var dbSessions = await client.database!.getInboundGroupSessionsToUpload();
       expect(dbSessions.isNotEmpty, true);
       await client.encryption!.keyManager.uploadInboundGroupSessions();
       await FakeMatrixApi.firstWhereValue(
-          '/client/v3/room_keys/keys?version=5');
+        '/client/v3/room_keys/keys?version=5',
+      );
       final payload = FakeMatrixApi
           .calledEndpoints['/client/v3/room_keys/keys?version=5']!.first;
       dbSessions = await client.database!.getInboundGroupSessionsToUpload();

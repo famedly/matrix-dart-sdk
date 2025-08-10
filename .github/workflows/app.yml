@@ -6,6 +6,7 @@ on:
 jobs:
   e2ee_test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         homeserver: [synapse, dendrite, conduit]
@@ -22,7 +23,7 @@ jobs:
           export HOMESERVER_IMPLEMENTATION=${{matrix.homeserver}}
           export HOMESERVER="localhost:80"
           scripts/integration-server-${{matrix.homeserver}}.sh 2>&1 > /dev/null &
-          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y libolm3 libssl3 
+          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y libolm3 libssl3 sqlite3 libsqlite3-dev
           source scripts/integration-create-environment-variables.sh
           scripts/integration-prepare-homeserver.sh
           scripts/prepare.sh
@@ -30,6 +31,7 @@ jobs:
 
   coverage_without_olm:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     env:
       NO_OLM: 1
     steps:
@@ -50,14 +52,16 @@ jobs:
           retention-days: 1
 
   coverage:
-    runs-on: arm-ubuntu-latest-16core
+    #runs-on: arm-ubuntu-latest-16core
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
           sdk: ${{ env.dart_version }}
-          architecture: "arm64"
+          #architecture: "arm64"
       - name: Run tests
         run: |
           sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev libolm3 libssl3
@@ -69,9 +73,10 @@ jobs:
           path: coverage_dir/
           retention-days: 1
 
-  merge_converage:
+  merge_coverage:
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [coverage, coverage_without_olm]
     steps:
       - uses: actions/checkout@v4
@@ -82,6 +87,11 @@ jobs:
           lcov -a coverage/lcov.info -a coverage_without_olm/lcov.info -o merged.info
           genhtml merged.info -o merged
           echo $(lcov --summary merged.info | grep 'lines......:') >> $GITHUB_STEP_SUMMARY
+      - name: Codecov - Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          files: ./merged.info, ./coverage/lcov.info, ./coverage_without_olm/lcov.info
       - uses: actions/upload-artifact@v4
         with:
           name: merged
@@ -90,7 +100,7 @@ jobs:
 
   review_app_coverage:
     if: github.event_name == 'pull_request'
-    needs: [merge_converage]
+    needs: [merge_coverage]
     secrets: inherit
     uses: famedly/frontend-ci-templates/.github/workflows/review-app.yml@main
     with:
@@ -101,6 +111,7 @@ jobs:
 
   dart_web_compatible:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
@@ -116,6 +127,7 @@ jobs:
 
   database_web_tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       NO_OLM: 1
     steps:

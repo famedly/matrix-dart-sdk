@@ -6,6 +6,88 @@ part of 'model.dart';
 // EnhancedEnumGenerator
 // **************************************************************************
 
+extension RoleFromStringExtension on Iterable<Role> {
+  Role? fromString(String val) {
+    final override = {
+      'm.role.admin': Role.mRoleAdmin,
+      'm.role.security': Role.mRoleSecurity,
+    }[val];
+// ignore: unnecessary_this
+    return this.contains(override) ? override : null;
+  }
+}
+
+extension RoleEnhancedEnum on Role {
+  @override
+// ignore: override_on_non_overriding_member
+  String get name => {
+        Role.mRoleAdmin: 'm.role.admin',
+        Role.mRoleSecurity: 'm.role.security',
+      }[this]!;
+  bool get isMRoleAdmin => this == Role.mRoleAdmin;
+  bool get isMRoleSecurity => this == Role.mRoleSecurity;
+  T when<T>({
+    required T Function() mRoleAdmin,
+    required T Function() mRoleSecurity,
+  }) =>
+      {
+        Role.mRoleAdmin: mRoleAdmin,
+        Role.mRoleSecurity: mRoleSecurity,
+      }[this]!();
+  T maybeWhen<T>({
+    T? Function()? mRoleAdmin,
+    T? Function()? mRoleSecurity,
+    required T Function() orElse,
+  }) =>
+      {
+        Role.mRoleAdmin: mRoleAdmin,
+        Role.mRoleSecurity: mRoleSecurity,
+      }[this]
+          ?.call() ??
+      orElse();
+}
+
+extension MethodFromStringExtension on Iterable<Method> {
+  Method? fromString(String val) {
+    final override = {
+      'crop': Method.crop,
+      'scale': Method.scale,
+    }[val];
+// ignore: unnecessary_this
+    return this.contains(override) ? override : null;
+  }
+}
+
+extension MethodEnhancedEnum on Method {
+  @override
+// ignore: override_on_non_overriding_member
+  String get name => {
+        Method.crop: 'crop',
+        Method.scale: 'scale',
+      }[this]!;
+  bool get isCrop => this == Method.crop;
+  bool get isScale => this == Method.scale;
+  T when<T>({
+    required T Function() crop,
+    required T Function() scale,
+  }) =>
+      {
+        Method.crop: crop,
+        Method.scale: scale,
+      }[this]!();
+  T maybeWhen<T>({
+    T? Function()? crop,
+    T? Function()? scale,
+    required T Function() orElse,
+  }) =>
+      {
+        Method.crop: crop,
+        Method.scale: scale,
+      }[this]
+          ?.call() ??
+      orElse();
+}
+
 extension DirectionFromStringExtension on Iterable<Direction> {
   Direction? fromString(String val) {
     final override = {
@@ -298,54 +380,6 @@ extension VisibilityEnhancedEnum on Visibility {
       {
         Visibility.private: private,
         Visibility.public: public,
-      }[this]
-          ?.call() ??
-      orElse();
-}
-
-extension LoginTypeFromStringExtension on Iterable<LoginType> {
-  LoginType? fromString(String val) {
-    final override = {
-      'm.login.password': LoginType.mLoginPassword,
-      'm.login.token': LoginType.mLoginToken,
-      'org.matrix.login.jwt': LoginType.mLoginJWT,
-    }[val];
-// ignore: unnecessary_this
-    return this.contains(override) ? override : null;
-  }
-}
-
-extension LoginTypeEnhancedEnum on LoginType {
-  @override
-// ignore: override_on_non_overriding_member
-  String get name => {
-        LoginType.mLoginPassword: 'm.login.password',
-        LoginType.mLoginToken: 'm.login.token',
-        LoginType.mLoginJWT: 'org.matrix.login.jwt',
-      }[this]!;
-  bool get isMLoginPassword => this == LoginType.mLoginPassword;
-  bool get isMLoginToken => this == LoginType.mLoginToken;
-  bool get isMLoginJWT => this == LoginType.mLoginJWT;
-  T when<T>({
-    required T Function() mLoginPassword,
-    required T Function() mLoginToken,
-    required T Function() mLoginJWT,
-  }) =>
-      {
-        LoginType.mLoginPassword: mLoginPassword,
-        LoginType.mLoginToken: mLoginToken,
-        LoginType.mLoginJWT: mLoginJWT,
-      }[this]!();
-  T maybeWhen<T>({
-    T? Function()? mLoginPassword,
-    T? Function()? mLoginToken,
-    T? Function()? mLoginJWT,
-    required T Function() orElse,
-  }) =>
-      {
-        LoginType.mLoginPassword: mLoginPassword,
-        LoginType.mLoginToken: mLoginToken,
-        LoginType.mLoginJWT: mLoginJWT,
       }[this]
           ?.call() ??
       orElse();
@@ -817,47 +851,6 @@ extension EventFormatEnhancedEnum on EventFormat {
       {
         EventFormat.client: client,
         EventFormat.federation: federation,
-      }[this]
-          ?.call() ??
-      orElse();
-}
-
-extension MethodFromStringExtension on Iterable<Method> {
-  Method? fromString(String val) {
-    final override = {
-      'crop': Method.crop,
-      'scale': Method.scale,
-    }[val];
-// ignore: unnecessary_this
-    return this.contains(override) ? override : null;
-  }
-}
-
-extension MethodEnhancedEnum on Method {
-  @override
-// ignore: override_on_non_overriding_member
-  String get name => {
-        Method.crop: 'crop',
-        Method.scale: 'scale',
-      }[this]!;
-  bool get isCrop => this == Method.crop;
-  bool get isScale => this == Method.scale;
-  T when<T>({
-    required T Function() crop,
-    required T Function() scale,
-  }) =>
-      {
-        Method.crop: crop,
-        Method.scale: scale,
-      }[this]!();
-  T maybeWhen<T>({
-    T? Function()? crop,
-    T? Function()? scale,
-    required T Function() orElse,
-  }) =>
-      {
-        Method.crop: crop,
-        Method.scale: scale,
       }[this]
           ?.call() ??
       orElse();

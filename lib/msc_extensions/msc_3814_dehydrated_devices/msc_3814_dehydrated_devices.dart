@@ -1,4 +1,6 @@
-library msc_3814_dehydrated_devices;
+/// Extensions for the experimental dehydrated devices MSC, which allows
+/// receiving encrypted messages while you have no devices signed in.
+library;
 
 import 'dart:convert';
 import 'dart:math';
@@ -52,7 +54,9 @@ extension DehydratedDeviceHandler on Client {
       // Only handle devices we understand
       // In the future we might want to migrate to a newer format here
       if (device.deviceData?.tryGet<String>('algorithm') !=
-          _dehydratedDeviceAlgorithm) return;
+          _dehydratedDeviceAlgorithm) {
+        return;
+      }
 
       // Verify that the device is cross-signed
       final dehydratedDeviceIdentity =
@@ -60,7 +64,8 @@ extension DehydratedDeviceHandler on Client {
       if (dehydratedDeviceIdentity == null ||
           !dehydratedDeviceIdentity.hasValidSignatureChain()) {
         Logs().w(
-            'Dehydrated device ${device.deviceId} is unknown or unverified, replacing it');
+          'Dehydrated device ${device.deviceId} is unknown or unverified, replacing it',
+        );
         await _uploadNewDevice(secureStorage);
         return;
       }
@@ -99,8 +104,10 @@ extension DehydratedDeviceHandler on Client {
         DehydratedDeviceEvents? events;
 
         do {
-          events = await getDehydratedDeviceEvents(device.deviceId,
-              nextBatch: events?.nextBatch);
+          events = await getDehydratedDeviceEvents(
+            device.deviceId,
+            nextBatch: events?.nextBatch,
+          );
 
           for (final e in events.events ?? []) {
             // We are only interested in roomkeys, which ALWAYS need to be encrypted.
@@ -142,15 +149,21 @@ extension DehydratedDeviceHandler on Client {
         Logs().i('Dehydrated device key not found, creating new one.');
         pickleDeviceKey = base64.encode(uc.secureRandomBytes(128));
         await secureStorage.store(
-            _ssssSecretNameForDehydratedDevice, pickleDeviceKey);
+          _ssssSecretNameForDehydratedDevice,
+          pickleDeviceKey,
+        );
       }
 
       const chars =
           'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
       final rnd = Random();
 
-      final deviceIdSuffix = String.fromCharCodes(Iterable.generate(
-          10, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+      final deviceIdSuffix = String.fromCharCodes(
+        Iterable.generate(
+          10,
+          (_) => chars.codeUnitAt(rnd.nextInt(chars.length)),
+        ),
+      );
       final String device = 'FAM$deviceIdSuffix';
 
       // Generate a new olm account for the dehydrated device.

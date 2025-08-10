@@ -20,7 +20,11 @@ class MeshBackend extends CallBackend {
   /// participant:volume
   final Map<CallParticipant, double> _audioLevelsMap = {};
 
-  StreamSubscription<CallSession>? _callSubscription;
+  /// The stream is used to prepare for incoming peer calls like registering listeners
+  StreamSubscription<CallSession>? _callSetupSubscription;
+
+  /// The stream is used to signal the start of an incoming peer call
+  StreamSubscription<CallSession>? _callStartSubscription;
 
   Timer? _activeSpeakerLoopTimeout;
 
@@ -61,7 +65,9 @@ class MeshBackend extends CallBackend {
   }
 
   Future<MediaStream> _getUserMedia(
-      GroupCallSession groupCall, CallType type) async {
+    GroupCallSession groupCall,
+    CallType type,
+  ) async {
     final mediaConstraints = {
       'audio': UserMediaConstraints.micMediaConstraints,
       'video': type == CallType.kVideo
@@ -92,33 +98,58 @@ class MeshBackend extends CallBackend {
   }
 
   CallSession? _getCallForParticipant(
-      GroupCallSession groupCall, CallParticipant participant) {
-    return _callSessions.singleWhereOrNull((call) =>
-        call.groupCallId == groupCall.groupCallId &&
-        CallParticipant(
-              groupCall.voip,
-              userId: call.remoteUserId!,
-              deviceId: call.remoteDeviceId,
-            ) ==
-            participant);
+    GroupCallSession groupCall,
+    CallParticipant participant,
+  ) {
+    return _callSessions.singleWhereOrNull(
+      (call) =>
+          call.groupCallId == groupCall.groupCallId &&
+          CallParticipant(
+                groupCall.voip,
+                userId: call.remoteUserId!,
+                deviceId: call.remoteDeviceId,
+              ) ==
+              participant,
+    );
+  }
+
+  /// Register listeners for a peer call to use for the group calls, that is
+  /// needed before even call is added to `_callSessions`.
+  /// We do this here for onStreamAdd and onStreamRemoved to make sure we don't
+  /// miss any events that happen before the call is completely started.
+  void _registerListenersBeforeCallAdd(CallSession call) {
+    call.onStreamAdd.stream.listen((stream) {
+      if (!stream.isLocal()) {
+        onStreamAdd.add(stream);
+      }
+    });
+
+    call.onStreamRemoved.stream.listen((stream) {
+      if (!stream.isLocal()) {
+        onStreamRemoved.add(stream);
+      }
+    });
   }
 
   Future<void> _addCall(GroupCallSession groupCall, CallSession call) async {
     _callSessions.add(call);
-    await _initCall(groupCall, call);
+    _initCall(groupCall, call);
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
   }
 
   /// init a peer call from group calls.
-  Future<void> _initCall(GroupCallSession groupCall, CallSession call) async {
+  void _initCall(GroupCallSession groupCall, CallSession call) {
     if (call.remoteUserId == null) {
       throw MatrixSDKVoipException(
-          'Cannot init call without proper invitee user and device Id');
+        'Cannot init call without proper invitee user and device Id',
+      );
     }
 
-    call.onCallStateChanged.stream.listen(((event) async {
-      await _onCallStateChanged(call, event);
-    }));
+    call.onCallStateChanged.stream.listen(
+      ((event) async {
+        await _onCallStateChanged(call, event);
+      }),
+    );
 
     call.onCallReplaced.stream.listen((CallSession newCall) async {
       await _replaceCall(groupCall, call, newCall);
@@ -131,18 +162,6 @@ class MeshBackend extends CallBackend {
 
     call.onCallHangupNotifierForGroupCalls.stream.listen((event) async {
       await _onCallHangup(groupCall, call);
-    });
-
-    call.onStreamAdd.stream.listen((stream) {
-      if (!stream.isLocal()) {
-        onStreamAdd.add(stream);
-      }
-    });
-
-    call.onStreamRemoved.stream.listen((stream) {
-      if (!stream.isLocal()) {
-        onStreamRemoved.add(stream);
-      }
     });
   }
 
@@ -162,14 +181,18 @@ class MeshBackend extends CallBackend {
     _callSessions.add(replacementCall);
 
     await _disposeCall(groupCall, existingCall, CallErrorCode.replaced);
-    await _initCall(groupCall, replacementCall);
+    _registerListenersBeforeCallAdd(replacementCall);
+    _initCall(groupCall, replacementCall);
 
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
   }
 
   /// Removes a peer call from group calls.
-  Future<void> _removeCall(GroupCallSession groupCall, CallSession call,
-      CallErrorCode hangupReason) async {
+  Future<void> _removeCall(
+    GroupCallSession groupCall,
+    CallSession call,
+    CallErrorCode hangupReason,
+  ) async {
     await _disposeCall(groupCall, call, hangupReason);
 
     _callSessions.removeWhere((element) => call.callId == element.callId);
@@ -177,11 +200,15 @@ class MeshBackend extends CallBackend {
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
   }
 
-  Future<void> _disposeCall(GroupCallSession groupCall, CallSession call,
-      CallErrorCode hangupReason) async {
+  Future<void> _disposeCall(
+    GroupCallSession groupCall,
+    CallSession call,
+    CallErrorCode hangupReason,
+  ) async {
     if (call.remoteUserId == null) {
       throw MatrixSDKVoipException(
-          'Cannot init call without proper invitee user and device Id');
+        'Cannot init call without proper invitee user and device Id',
+      );
     }
 
     if (call.hangupReason == CallErrorCode.replaced) {
@@ -220,10 +247,13 @@ class MeshBackend extends CallBackend {
   }
 
   Future<void> _onStreamsChanged(
-      GroupCallSession groupCall, CallSession call) async {
+    GroupCallSession groupCall,
+    CallSession call,
+  ) async {
     if (call.remoteUserId == null) {
       throw MatrixSDKVoipException(
-          'Cannot init call without proper invitee user and device Id');
+        'Cannot init call without proper invitee user and device Id',
+      );
     }
 
     final currentUserMediaStream = _getUserMediaStreamByParticipantId(
@@ -243,19 +273,23 @@ class MeshBackend extends CallBackend {
       } else if (currentUserMediaStream != null &&
           remoteUsermediaStream != null) {
         await _replaceUserMediaStream(
-            groupCall, currentUserMediaStream, remoteUsermediaStream);
+          groupCall,
+          currentUserMediaStream,
+          remoteUsermediaStream,
+        );
       } else if (currentUserMediaStream != null &&
           remoteUsermediaStream == null) {
         await _removeUserMediaStream(groupCall, currentUserMediaStream);
       }
     }
 
-    final currentScreenshareStream =
-        _getScreenshareStreamByParticipantId(CallParticipant(
-      groupCall.voip,
-      userId: call.remoteUserId!,
-      deviceId: call.remoteDeviceId,
-    ).id);
+    final currentScreenshareStream = _getScreenshareStreamByParticipantId(
+      CallParticipant(
+        groupCall.voip,
+        userId: call.remoteUserId!,
+        deviceId: call.remoteDeviceId,
+      ).id,
+    );
     final remoteScreensharingStream = call.remoteScreenSharingStream;
     final remoteScreenshareStreamChanged =
         remoteScreensharingStream != currentScreenshareStream;
@@ -267,7 +301,10 @@ class MeshBackend extends CallBackend {
       } else if (currentScreenshareStream != null &&
           remoteScreensharingStream != null) {
         await _replaceScreenshareStream(
-            groupCall, currentScreenshareStream, remoteScreensharingStream);
+          groupCall,
+          currentScreenshareStream,
+          remoteScreensharingStream,
+        );
       } else if (currentScreenshareStream != null &&
           remoteScreensharingStream == null) {
         await _removeScreenshareStream(groupCall, currentScreenshareStream);
@@ -302,9 +339,11 @@ class MeshBackend extends CallBackend {
 
       // https://www.w3.org/TR/webrtc-stats/#summary
       final otherPartyAudioLevel = statsReport
-          .singleWhereOrNull((element) =>
-              element.type == 'inbound-rtp' &&
-              element.values['kind'] == 'audio')
+          .singleWhereOrNull(
+            (element) =>
+                element.type == 'inbound-rtp' &&
+                element.values['kind'] == 'audio',
+          )
           ?.values['audioLevel'];
       if (otherPartyAudioLevel != null) {
         _audioLevelsMap[stream.participant] = otherPartyAudioLevel;
@@ -313,9 +352,11 @@ class MeshBackend extends CallBackend {
       // https://www.w3.org/TR/webrtc-stats/#dom-rtcstatstype-media-source
       // firefox does not seem to have this though. Works on chrome and android
       final ownAudioLevel = statsReport
-          .singleWhereOrNull((element) =>
-              element.type == 'media-source' &&
-              element.values['kind'] == 'audio')
+          .singleWhereOrNull(
+            (element) =>
+                element.type == 'media-source' &&
+                element.values['kind'] == 'audio',
+          )
           ?.values['audioLevel'];
       if (groupCall.localParticipant != null &&
           ownAudioLevel != null &&
@@ -345,7 +386,8 @@ class MeshBackend extends CallBackend {
   }
 
   WrappedMediaStream? _getScreenshareStreamByParticipantId(
-      String participantId) {
+    String participantId,
+  ) {
     final stream = _screenshareStreams
         .where((stream) => stream.participant.id == participantId);
     if (stream.isNotEmpty) {
@@ -355,7 +397,9 @@ class MeshBackend extends CallBackend {
   }
 
   void _addScreenshareStream(
-      GroupCallSession groupCall, WrappedMediaStream stream) {
+    GroupCallSession groupCall,
+    WrappedMediaStream stream,
+  ) {
     _screenshareStreams.add(stream);
     onStreamAdd.add(stream);
     groupCall.onGroupCallEvent
@@ -368,11 +412,13 @@ class MeshBackend extends CallBackend {
     WrappedMediaStream replacementStream,
   ) async {
     final streamIndex = _screenshareStreams.indexWhere(
-        (stream) => stream.participant.id == existingStream.participant.id);
+      (stream) => stream.participant.id == existingStream.participant.id,
+    );
 
     if (streamIndex == -1) {
       throw MatrixSDKVoipException(
-          'Couldn\'t find screenshare stream to replace');
+        'Couldn\'t find screenshare stream to replace',
+      );
     }
 
     _screenshareStreams.replaceRange(streamIndex, 1, [replacementStream]);
@@ -391,11 +437,13 @@ class MeshBackend extends CallBackend {
 
     if (streamIndex == -1) {
       throw MatrixSDKVoipException(
-          'Couldn\'t find screenshare stream to remove');
+        'Couldn\'t find screenshare stream to remove',
+      );
     }
 
     _screenshareStreams.removeWhere(
-        (element) => element.participant.id == stream.participant.id);
+      (element) => element.participant.id == stream.participant.id,
+    );
 
     onStreamRemoved.add(stream);
 
@@ -449,11 +497,13 @@ class MeshBackend extends CallBackend {
     WrappedMediaStream replacementStream,
   ) async {
     final streamIndex = _userMediaStreams.indexWhere(
-        (stream) => stream.participant.id == existingStream.participant.id);
+      (stream) => stream.participant.id == existingStream.participant.id,
+    );
 
     if (streamIndex == -1) {
       throw MatrixSDKVoipException(
-          'Couldn\'t find user media stream to replace');
+        'Couldn\'t find user media stream to replace',
+      );
     }
 
     _userMediaStreams.replaceRange(streamIndex, 1, [replacementStream]);
@@ -468,15 +518,18 @@ class MeshBackend extends CallBackend {
     WrappedMediaStream stream,
   ) async {
     final streamIndex = _userMediaStreams.indexWhere(
-        (element) => element.participant.id == stream.participant.id);
+      (element) => element.participant.id == stream.participant.id,
+    );
 
     if (streamIndex == -1) {
       throw MatrixSDKVoipException(
-          'Couldn\'t find user media stream to remove');
+        'Couldn\'t find user media stream to remove',
+      );
     }
 
     _userMediaStreams.removeWhere(
-        (element) => element.participant.id == stream.participant.id);
+      (element) => element.participant.id == stream.participant.id,
+    );
     _audioLevelsMap.remove(stream.participant);
     onStreamRemoved.add(stream);
 
@@ -527,11 +580,14 @@ class MeshBackend extends CallBackend {
   /// This allows you to configure the camera before joining the call without
   ///  having to reopen the stream and possibly losing settings.
   @override
-  Future<WrappedMediaStream?> initLocalStream(GroupCallSession groupCall,
-      {WrappedMediaStream? stream}) async {
+  Future<WrappedMediaStream?> initLocalStream(
+    GroupCallSession groupCall, {
+    WrappedMediaStream? stream,
+  }) async {
     if (groupCall.state != GroupCallState.localCallFeedUninitialized) {
       throw MatrixSDKVoipException(
-          'Cannot initialize local call feed in the ${groupCall.state} state.');
+        'Cannot initialize local call feed in the ${groupCall.state} state.',
+      );
     }
 
     groupCall.setState(GroupCallState.initializingLocalCallFeed);
@@ -575,7 +631,10 @@ class MeshBackend extends CallBackend {
 
   @override
   Future<void> setDeviceMuted(
-      GroupCallSession groupCall, bool muted, MediaInputKind kind) async {
+    GroupCallSession groupCall,
+    bool muted,
+    MediaInputKind kind,
+  ) async {
     if (!await hasMediaDevice(groupCall.voip.delegate, kind)) {
       return;
     }
@@ -585,7 +644,9 @@ class MeshBackend extends CallBackend {
         case MediaInputKind.audioinput:
           localUserMediaStream!.setAudioMuted(muted);
           setTracksEnabled(
-              localUserMediaStream!.stream!.getAudioTracks(), !muted);
+            localUserMediaStream!.stream!.getAudioTracks(),
+            !muted,
+          );
           for (final call in _callSessions) {
             await call.setMicrophoneMuted(muted);
           }
@@ -593,12 +654,13 @@ class MeshBackend extends CallBackend {
         case MediaInputKind.videoinput:
           localUserMediaStream!.setVideoMuted(muted);
           setTracksEnabled(
-              localUserMediaStream!.stream!.getVideoTracks(), !muted);
+            localUserMediaStream!.stream!.getVideoTracks(),
+            !muted,
+          );
           for (final call in _callSessions) {
             await call.setLocalVideoMuted(muted);
           }
           break;
-        default:
       }
     }
 
@@ -606,22 +668,69 @@ class MeshBackend extends CallBackend {
     return;
   }
 
-  Future<void> _onIncomingCall(
-      GroupCallSession groupCall, CallSession newCall) async {
+  void _onIncomingCallInMeshSetup(
+    GroupCallSession groupCall,
+    CallSession newCall,
+  ) {
     // The incoming calls may be for another room, which we will ignore.
-    if (newCall.room.id != groupCall.room.id) {
-      return;
-    }
+    if (newCall.room.id != groupCall.room.id) return;
 
     if (newCall.state != CallState.kRinging) {
-      Logs().w('Incoming call no longer in ringing state. Ignoring.');
+      Logs().v(
+        '[_onIncomingCallInMeshSetup] Incoming call no longer in ringing state. Ignoring.',
+      );
       return;
     }
 
     if (newCall.groupCallId == null ||
         newCall.groupCallId != groupCall.groupCallId) {
       Logs().v(
-          'Incoming call with groupCallId ${newCall.groupCallId} ignored because it doesn\'t match the current group call');
+        '[_onIncomingCallInMeshSetup] Incoming call with groupCallId ${newCall.groupCallId} ignored because it doesn\'t match the current group call',
+      );
+      return;
+    }
+
+    final existingCall = _getCallForParticipant(
+      groupCall,
+      CallParticipant(
+        groupCall.voip,
+        userId: newCall.remoteUserId!,
+        deviceId: newCall.remoteDeviceId,
+      ),
+    );
+
+    // if it's an existing call, `_registerListenersForCall` will be called in
+    // `_replaceCall` that is used in `_onIncomingCallStart`.
+    if (existingCall != null) return;
+
+    Logs().v(
+      '[_onIncomingCallInMeshSetup] GroupCallSession: incoming call from: ${newCall.remoteUserId}${newCall.remoteDeviceId}${newCall.remotePartyId}',
+    );
+
+    _registerListenersBeforeCallAdd(newCall);
+  }
+
+  Future<void> _onIncomingCallInMeshStart(
+    GroupCallSession groupCall,
+    CallSession newCall,
+  ) async {
+    // The incoming calls may be for another room, which we will ignore.
+    if (newCall.room.id != groupCall.room.id) {
+      return;
+    }
+
+    if (newCall.state != CallState.kRinging) {
+      Logs().v(
+        '[_onIncomingCallInMeshStart] Incoming call no longer in ringing state. Ignoring.',
+      );
+      return;
+    }
+
+    if (newCall.groupCallId == null ||
+        newCall.groupCallId != groupCall.groupCallId) {
+      Logs().v(
+        '[_onIncomingCallInMeshStart] Incoming call with groupCallId ${newCall.groupCallId} ignored because it doesn\'t match the current group call',
+      );
       await newCall.reject();
       return;
     }
@@ -640,7 +749,8 @@ class MeshBackend extends CallBackend {
     }
 
     Logs().v(
-        'GroupCallSession: incoming call from: ${newCall.remoteUserId}${newCall.remoteDeviceId}${newCall.remotePartyId}');
+      '[_onIncomingCallInMeshStart] GroupCallSession: incoming call from: ${newCall.remoteUserId}${newCall.remoteDeviceId}${newCall.remotePartyId}',
+    );
 
     // Check if the user calling has an existing call and use this call instead.
     if (existingCall != null) {
@@ -674,7 +784,8 @@ class MeshBackend extends CallBackend {
           };
         }
         Logs().v(
-            'Screensharing permissions granted. Setting screensharing enabled on all calls');
+          'Screensharing permissions granted. Setting screensharing enabled on all calls',
+        );
         _localScreenshareStream = WrappedMediaStream(
           stream: stream,
           participant: groupCall.localParticipant!,
@@ -693,8 +804,9 @@ class MeshBackend extends CallBackend {
             .add(GroupCallStateChange.localScreenshareStateChanged);
         for (final call in _callSessions) {
           await call.addLocalStream(
-              await localScreenshareStream!.stream!.clone(),
-              localScreenshareStream!.purpose);
+            await localScreenshareStream!.stream!.clone(),
+            localScreenshareStream!.purpose,
+          );
         }
 
         await groupCall.sendMemberStateEvent();
@@ -743,7 +855,8 @@ class MeshBackend extends CallBackend {
 
     _activeSpeaker = null;
     _activeSpeakerLoopTimeout?.cancel();
-    await _callSubscription?.cancel();
+    await _callSetupSubscription?.cancel();
+    await _callStartSubscription?.cancel();
   }
 
   @override
@@ -766,13 +879,19 @@ class MeshBackend extends CallBackend {
 
   @override
   Future<void> setupP2PCallsWithExistingMembers(
-      GroupCallSession groupCall) async {
+    GroupCallSession groupCall,
+  ) async {
     for (final call in _callSessions) {
-      await _onIncomingCall(groupCall, call);
+      _onIncomingCallInMeshSetup(groupCall, call);
+      await _onIncomingCallInMeshStart(groupCall, call);
     }
 
-    _callSubscription = groupCall.voip.onIncomingCall.stream.listen(
-      (newCall) => _onIncomingCall(groupCall, newCall),
+    _callSetupSubscription = groupCall.voip.onIncomingCallSetup.stream.listen(
+      (newCall) => _onIncomingCallInMeshSetup(groupCall, newCall),
+    );
+
+    _callStartSubscription = groupCall.voip.onIncomingCallStart.stream.listen(
+      (newCall) => _onIncomingCallInMeshStart(groupCall, newCall),
     );
 
     _onActiveSpeakerLoop(groupCall);
@@ -790,7 +909,8 @@ class MeshBackend extends CallBackend {
         await existingCall.hangup(reason: CallErrorCode.unknownError);
       } else {
         Logs().e(
-            '[VOIP] onMemberStateChanged Not updating _participants list, already have a ongoing call with ${rp.id}');
+          '[VOIP] onMemberStateChanged Not updating _participants list, already have a ongoing call with ${rp.id}',
+        );
         return;
       }
     }
@@ -824,10 +944,16 @@ class MeshBackend extends CallBackend {
     // party id set to when answered
     newCall.remoteSessionId = mem.membershipId;
 
-    await newCall.placeCallWithStreams(_getLocalStreams(),
-        requestScreenSharing: mem.feeds?.any((element) =>
-                element['purpose'] == SDPStreamMetadataPurpose.Screenshare) ??
-            false);
+    _registerListenersBeforeCallAdd(newCall);
+
+    await newCall.placeCallWithStreams(
+      _getLocalStreams(),
+      requestScreenSharing: mem.feeds?.any(
+            (element) =>
+                element['purpose'] == SDPStreamMetadataPurpose.Screenshare,
+          ) ??
+          false,
+    );
 
     await _addCall(groupCall, newCall);
   }
@@ -835,46 +961,62 @@ class MeshBackend extends CallBackend {
   @override
   List<Map<String, String>>? getCurrentFeeds() {
     return _getLocalStreams()
-        .map((feed) => ({
-              'purpose': feed.purpose,
-            }))
+        .map(
+          (feed) => ({
+            'purpose': feed.purpose,
+          }),
+        )
         .toList();
   }
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is MeshBackend && type == other.type;
+      identical(this, other) || (other is MeshBackend && type == other.type);
   @override
   int get hashCode => type.hashCode;
 
   /// get everything is livekit specific mesh calls shouldn't be affected by these
   @override
-  Future<void> onCallEncryption(GroupCallSession groupCall, String userId,
-      String deviceId, Map<String, dynamic> content) async {
+  Future<void> onCallEncryption(
+    GroupCallSession groupCall,
+    String userId,
+    String deviceId,
+    Map<String, dynamic> content,
+  ) async {
     return;
   }
 
   @override
-  Future<void> onCallEncryptionKeyRequest(GroupCallSession groupCall,
-      String userId, String deviceId, Map<String, dynamic> content) async {
+  Future<void> onCallEncryptionKeyRequest(
+    GroupCallSession groupCall,
+    String userId,
+    String deviceId,
+    Map<String, dynamic> content,
+  ) async {
     return;
   }
 
   @override
   Future<void> onLeftParticipant(
-      GroupCallSession groupCall, List<CallParticipant> anyLeft) async {
+    GroupCallSession groupCall,
+    List<CallParticipant> anyLeft,
+  ) async {
     return;
   }
 
   @override
   Future<void> onNewParticipant(
-      GroupCallSession groupCall, List<CallParticipant> anyJoined) async {
+    GroupCallSession groupCall,
+    List<CallParticipant> anyJoined,
+  ) async {
     return;
   }
 
   @override
-  Future<void> requestEncrytionKey(GroupCallSession groupCall,
-      List<CallParticipant> remoteParticipants) async {
+  Future<void> requestEncrytionKey(
+    GroupCallSession groupCall,
+    List<CallParticipant> remoteParticipants,
+  ) async {
     return;
   }
 

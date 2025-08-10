@@ -38,7 +38,6 @@ String createLargeString(String character, int desiredSize) {
 void main() {
   final databaseBuilders = {
     'Matrix SDK Database': getMatrixSdkDatabase,
-    'Hive Database': getHiveDatabase,
     'Hive Collections Database': getHiveCollectionsDatabase,
   };
 
@@ -78,11 +77,21 @@ void main() {
         final toDeviceQueue = await database.getToDeviceEventQueue();
         expect(toDeviceQueue.isEmpty, true);
       });
-      test('storeFile', () async {
+      test('storeFile and deleteFile', () async {
         await database.storeFile(
-            Uri.parse('mxc://test'), Uint8List.fromList([0]), 0);
+          Uri.parse('mxc://test'),
+          Uint8List.fromList([0]),
+          0,
+        );
         final file = await database.getFile(Uri.parse('mxc://test'));
         expect(file != null, database.supportsFileStoring);
+
+        final result = await database.deleteFile(Uri.parse('mxc://test'));
+        expect(result, database.supportsFileStoring);
+        if (result) {
+          final file = await database.getFile(Uri.parse('mxc://test'));
+          expect(file, null);
+        }
       });
       test('getFile', () async {
         await database.getFile(Uri.parse('mxc://test'));
@@ -182,21 +191,23 @@ void main() {
         await database.getAccountData();
       });
       test('storeAccountData', () async {
-        await database.storeAccountData('m.test', '{"foo":"bar"}');
+        await database.storeAccountData('m.test', {'foo': 'bar'});
         final events = await database.getAccountData();
         expect(events.values.single.type, 'm.test');
 
-        await database.storeAccountData('m.abc+de', '{"foo":"bar"}');
+        await database.storeAccountData('m.abc+de', {'foo': 'bar'});
         final events2 = await database.getAccountData();
         expect(
-            events2.values.any((element) => element.type == 'm.abc+de'), true);
+          events2.values.any((element) => element.type == 'm.abc+de'),
+          true,
+        );
       });
       test('Database can write and read 5MB data', () async {
-        final hugeDataObject = {'foo': createLargeString('A', 5 * 1024 * 1024)};
+        final hugeDataObject = {'foo': createLargeString('A', 5 * 1000 * 1000)};
 
         await database.storeAccountData(
           'm.huge_data_test',
-          jsonEncode(hugeDataObject),
+          hugeDataObject,
         );
 
         final events = await database.getAccountData();
@@ -208,28 +219,30 @@ void main() {
       });
       test('storeEventUpdate', () async {
         await database.storeEventUpdate(
-            EventUpdate(
-              roomID: '!testroom:example.com',
-              type: EventUpdateType.timeline,
-              content: {
-                'type': EventTypes.Message,
-                'content': {
-                  'body': '* edit 3',
+          '!testroom:example.com',
+          MatrixEvent.fromJson(
+            {
+              'type': EventTypes.Message,
+              'content': {
+                'body': '* edit 3',
+                'msgtype': 'm.text',
+                'm.new_content': {
+                  'body': 'edit 3',
                   'msgtype': 'm.text',
-                  'm.new_content': {
-                    'body': 'edit 3',
-                    'msgtype': 'm.text',
-                  },
-                  'm.relates_to': {
-                    'event_id': '\$source',
-                    'rel_type': RelationshipTypes.edit,
-                  },
                 },
-                'event_id': '\$event:example.com',
-                'sender': '@bob:example.org',
+                'm.relates_to': {
+                  'event_id': '\$source',
+                  'rel_type': RelationshipTypes.edit,
+                },
               },
-            ),
-            Client('testclient'));
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+              'event_id': '\$event:example.com',
+              'sender': '@bob:example.org',
+            },
+          ),
+          EventUpdateType.timeline,
+          Client('testclient'),
+        );
       });
       test('storeEventUpdate (state)', () async {
         final roomid = '!testrooma:example.com';
@@ -242,11 +255,18 @@ void main() {
           client,
         );
 
+        await database.storeRoomAccountData(
+          roomid,
+          BasicEvent(
+            content: {'foo': 'bar'},
+            type: 'm.test',
+          ),
+        );
+
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.timeline,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'start',
@@ -254,8 +274,10 @@ void main() {
               'event_id': '\$eventstart:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.timeline,
           client,
         );
 
@@ -265,11 +287,12 @@ void main() {
 
         expect(room?.name, 'start');
 
+        expect(room?.roomAccountData['m.test']?.content, {'foo': 'bar'});
+
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.timeline,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update',
@@ -277,8 +300,10 @@ void main() {
               'event_id': '\$eventupdate:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.timeline,
           client,
         );
 
@@ -287,10 +312,9 @@ void main() {
         expect(room?.name, 'update');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.state,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update2',
@@ -298,8 +322,10 @@ void main() {
               'event_id': '\$eventupdate2:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.state,
           client,
         );
 
@@ -308,10 +334,9 @@ void main() {
         expect(room?.name, 'update2');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.inviteState,
-            content: {
+          roomid,
+          StrippedStateEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update3',
@@ -321,6 +346,7 @@ void main() {
               'state_key': '',
             },
           ),
+          EventUpdateType.inviteState,
           client,
         );
 
@@ -329,10 +355,9 @@ void main() {
         expect(room?.name, 'update3');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.history,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'notupdate',
@@ -340,8 +365,10 @@ void main() {
               'event_id': '\$eventnotupdate:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.history,
           client,
         );
 
@@ -350,8 +377,10 @@ void main() {
         expect(room?.name, 'update3');
       });
       test('getEventById', () async {
-        final event = await database.getEventById('\$event:example.com',
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+        final event = await database.getEventById(
+          '\$event:example.com',
+          Room(id: '!testroom:example.com', client: Client('testclient')),
+        );
         expect(event?.type, EventTypes.Message);
       });
       test('getEventList', () async {
@@ -361,20 +390,27 @@ void main() {
         expect(events.single.type, EventTypes.Message);
       });
       test('getUser', () async {
-        final user = await database.getUser('@bob:example.org',
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+        final user = await database.getUser(
+          '@bob:example.org',
+          Room(id: '!testroom:example.com', client: Client('testclient')),
+        );
         expect(user, null);
       });
       test('getUsers', () async {
         final users = await database.getUsers(
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+          Room(id: '!testroom:example.com', client: Client('testclient')),
+        );
         expect(users.isEmpty, true);
       });
       test('removeEvent', () async {
         await database.removeEvent(
-            '\$event:example.com', '!testroom:example.com');
-        final event = await database.getEventById('\$event:example.com',
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+          '\$event:example.com',
+          '!testroom:example.com',
+        );
+        final event = await database.getEventById(
+          '\$event:example.com',
+          Room(id: '!testroom:example.com', client: Client('testclient')),
+        );
         expect(event, null);
       });
       test('getAllInboundGroupSessions', () async {
@@ -383,7 +419,9 @@ void main() {
       });
       test('getInboundGroupSession', () async {
         await database.getInboundGroupSession(
-            '!testroom:example.com', 'sessionId');
+          '!testroom:example.com',
+          'sessionId',
+        );
       });
       test('getInboundGroupSessionsToUpload', () async {
         await database.getInboundGroupSessionsToUpload();
@@ -407,7 +445,9 @@ void main() {
       });
       test('markInboundGroupSessionAsUploaded', () async {
         await database.markInboundGroupSessionAsUploaded(
-            '!testroom:example.com', 'sessionId');
+          '!testroom:example.com',
+          'sessionId',
+        );
       });
       test('markInboundGroupSessionsAsNeedingUpload', () async {
         await database.markInboundGroupSessionsAsNeedingUpload();
@@ -469,15 +509,15 @@ void main() {
                 'identity_key': 'identityKey',
                 'pickle': 'pickle',
                 'session_id': 'sessionId',
-                'last_received': 0
+                'last_received': 0,
               },
               'sessionId2': {
                 'identity_key': 'identityKey',
                 'pickle': 'pickle',
                 'session_id': 'sessionId2',
-                'last_received': 0
-              }
-            }
+                'last_received': 0,
+              },
+            },
           },
         );
       });
@@ -626,15 +666,15 @@ void main() {
             '@alice:example.com',
             CachedProfileInformation.fromProfile(
               ProfileInformation(
-                  avatarUrl: Uri.parse('mxc://test'), displayname: 'Alice M'),
+                avatarUrl: Uri.parse('mxc://test'),
+                displayname: 'Alice M',
+              ),
               outdated: false,
               updated: DateTime.now(),
             ),
           );
           // ignore: deprecated_member_use_from_same_package
-          if (database is! HiveCollectionsDatabase &&
-              // ignore: deprecated_member_use_from_same_package
-              database is! FamedlySdkHiveDatabase) {
+          if (database is! HiveCollectionsDatabase) {
             final profile2 =
                 await database.getUserProfile('@alice:example.com');
             expect(profile2?.displayname, 'Alice M');
@@ -666,7 +706,7 @@ void main() {
         final database = await getMatrixSdkDatabase(null);
         await database.storeAccountData(
           'm.test.data',
-          jsonEncode({'foo': 'bar'}),
+          {'foo': 'bar'},
         );
         await database.delete();
 

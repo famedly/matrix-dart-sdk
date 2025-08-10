@@ -26,7 +26,7 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 
 abstract class DatabaseApi {
-  int get maxFileSize => 1 * 1024 * 1024;
+  int get maxFileSize => 1 * 1000 * 1000;
 
   bool get supportsFileStoring => false;
 
@@ -59,8 +59,11 @@ abstract class DatabaseApi {
 
   Future<List<Room>> getRoomList(Client client);
 
-  Future<Room?> getSingleRoom(Client client, String roomId,
-      {bool loadImportantStates = true});
+  Future<Room?> getSingleRoom(
+    Client client,
+    String roomId, {
+    bool loadImportantStates = true,
+  });
 
   Future<Map<String, BasicEvent>> getAccountData();
 
@@ -77,7 +80,12 @@ abstract class DatabaseApi {
 
   /// Stores an EventUpdate object in the database. Must be called inside of
   /// [transaction].
-  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client);
+  Future<void> storeEventUpdate(
+    String roomId,
+    StrippedStateEvent event,
+    EventUpdateType type,
+    Client client,
+  );
 
   Future<Event?> getEventById(String eventId, Room room);
 
@@ -86,7 +94,9 @@ abstract class DatabaseApi {
   Future<CachedProfileInformation?> getUserProfile(String userId);
 
   Future<void> storeUserProfile(
-      String userId, CachedProfileInformation profile);
+    String userId,
+    CachedProfileInformation profile,
+  );
 
   Future<void> markUserProfileAsOutdated(String userId);
 
@@ -116,11 +126,15 @@ abstract class DatabaseApi {
 
   Future storeFile(Uri mxcUri, Uint8List bytes, int time);
 
+  Future<bool> deleteFile(Uri mxcUri);
+
   Future storeSyncFilterId(
     String syncFilterId,
   );
 
-  Future storeAccountData(String type, String content);
+  Future storeAccountData(String type, Map<String, Object?> content);
+
+  Future storeRoomAccountData(String roomId, BasicEvent event);
 
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client);
 
@@ -316,7 +330,10 @@ abstract class DatabaseApi {
   Future<List<StoredInboundGroupSession>> getInboundGroupSessionsToUpload();
 
   Future<void> addSeenDeviceId(
-      String userId, String deviceId, String publicKeys);
+    String userId,
+    String deviceId,
+    String publicKeys,
+  );
 
   Future<void> addSeenPublicKey(String publicKey, String deviceId);
 

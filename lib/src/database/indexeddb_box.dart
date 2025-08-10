@@ -22,15 +22,18 @@ class BoxCollection with ZoneTransactionMixin {
     int version = 1,
   }) async {
     idbFactory ??= window.indexedDB!;
-    final db = await idbFactory.open(name, version: version,
-        onUpgradeNeeded: (VersionChangeEvent event) {
-      final db = event.target.result;
-      for (final name in boxNames) {
-        if (db.objectStoreNames.contains(name)) continue;
+    final db = await idbFactory.open(
+      name,
+      version: version,
+      onUpgradeNeeded: (VersionChangeEvent event) {
+        final db = event.target.result;
+        for (final name in boxNames) {
+          if (db.objectStoreNames.contains(name)) continue;
 
-        db.createObjectStore(name, autoIncrement: true);
-      }
-    });
+          db.createObjectStore(name, autoIncrement: true);
+        }
+      },
+    );
     return BoxCollection(db, boxNames, name);
   }
 
@@ -80,7 +83,8 @@ class BoxCollection with ZoneTransactionMixin {
 
   Future<void> close() async {
     assert(_txnCache == null, 'Database closed while in transaction!');
-    return _db.close();
+    // Note, zoneTransaction and txnCache are different kinds of transactions.
+    return zoneTransaction(() async => _db.close());
   }
 
   @Deprecated('use collection.deleteDatabase now')
@@ -96,27 +100,25 @@ class BoxCollection with ZoneTransactionMixin {
 class Box<V> {
   final String name;
   final BoxCollection boxCollection;
-  final Map<String, V?> _cache = {};
+  final Map<String, V?> _quickAccessCache = {};
 
-  /// _cachedKeys is only used to make sure that if you fetch all keys from a
+  /// _quickAccessCachedKeys is only used to make sure that if you fetch all keys from a
   /// box, you do not need to have an expensive read operation twice. There is
   /// no other usage for this at the moment. So the cache is never partial.
   /// Once the keys are cached, they need to be updated when changed in put and
   /// delete* so that the cache does not become outdated.
-  Set<String>? _cachedKeys;
-
-  bool get _keysCached => _cachedKeys != null;
+  Set<String>? _quickAccessCachedKeys;
 
   Box(this.name, this.boxCollection);
 
   Future<List<String>> getAllKeys([Transaction? txn]) async {
-    if (_keysCached) return _cachedKeys!.toList();
+    if (_quickAccessCachedKeys != null) return _quickAccessCachedKeys!.toList();
     txn ??= boxCollection._db.transaction(name, 'readonly');
     final store = txn.objectStore(name);
     final request = store.getAllKeys(null);
     await request.onSuccess.first;
     final keys = request.result.cast<String>();
-    _cachedKeys = keys.toSet();
+    _quickAccessCachedKeys = keys.toSet();
     return keys;
   }
 
@@ -132,23 +134,24 @@ class Box<V> {
   }
 
   Future<V?> get(String key, [Transaction? txn]) async {
-    if (_cache.containsKey(key)) return _cache[key];
+    if (_quickAccessCache.containsKey(key)) return _quickAccessCache[key];
     txn ??= boxCollection._db.transaction(name, 'readonly');
     final store = txn.objectStore(name);
-    _cache[key] = await store.getObject(key).then(_fromValue);
-    return _cache[key];
+    _quickAccessCache[key] = await store.getObject(key).then(_fromValue);
+    return _quickAccessCache[key];
   }
 
   Future<List<V?>> getAll(List<String> keys, [Transaction? txn]) async {
-    if (keys.every((key) => _cache.containsKey(key))) {
-      return keys.map((key) => _cache[key]).toList();
+    if (keys.every((key) => _quickAccessCache.containsKey(key))) {
+      return keys.map((key) => _quickAccessCache[key]).toList();
     }
     txn ??= boxCollection._db.transaction(name, 'readonly');
     final store = txn.objectStore(name);
     final list = await Future.wait(
-        keys.map((key) => store.getObject(key).then(_fromValue)));
+      keys.map((key) => store.getObject(key).then(_fromValue)),
+    );
     for (var i = 0; i < keys.length; i++) {
-      _cache[keys[i]] = list[i];
+      _quickAccessCache[keys[i]] = list[i];
     }
     return list;
   }
@@ -156,24 +159,24 @@ class Box<V> {
   Future<void> put(String key, V val, [Transaction? txn]) async {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => put(key, val, txn));
-      _cache[key] = val;
-      _cachedKeys?.add(key);
+      _quickAccessCache[key] = val;
+      _quickAccessCachedKeys?.add(key);
       return;
     }
 
     txn ??= boxCollection._db.transaction(name, 'readwrite');
     final store = txn.objectStore(name);
     await store.put(val as Object, key);
-    _cache[key] = val;
-    _cachedKeys?.add(key);
+    _quickAccessCache[key] = val;
+    _quickAccessCachedKeys?.add(key);
     return;
   }
 
   Future<void> delete(String key, [Transaction? txn]) async {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => delete(key, txn));
-      _cache[key] = null;
-      _cachedKeys?.remove(key);
+      _quickAccessCache[key] = null;
+      _quickAccessCachedKeys?.remove(key);
       return;
     }
 
@@ -183,8 +186,8 @@ class Box<V> {
 
     // Set to null instead remove() so that inside of transactions null is
     // returned.
-    _cache[key] = null;
-    _cachedKeys?.remove(key);
+    _quickAccessCache[key] = null;
+    _quickAccessCachedKeys?.remove(key);
     return;
   }
 
@@ -192,9 +195,9 @@ class Box<V> {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => deleteAll(keys, txn));
       for (final key in keys) {
-        _cache[key] = null;
+        _quickAccessCache[key] = null;
       }
-      _cachedKeys?.removeAll(keys);
+      _quickAccessCachedKeys?.removeAll(keys);
       return;
     }
 
@@ -202,26 +205,27 @@ class Box<V> {
     final store = txn.objectStore(name);
     for (final key in keys) {
       await store.delete(key);
-      _cache[key] = null;
-      _cachedKeys?.remove(key);
+      _quickAccessCache[key] = null;
+      _quickAccessCachedKeys?.remove(key);
     }
     return;
+  }
+
+  void clearQuickAccessCache() {
+    _quickAccessCache.clear();
+    _quickAccessCachedKeys = null;
   }
 
   Future<void> clear([Transaction? txn]) async {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => clear(txn));
-      _cache.clear();
-      _cachedKeys = null;
-      return;
+    } else {
+      txn ??= boxCollection._db.transaction(name, 'readwrite');
+      final store = txn.objectStore(name);
+      await store.clear();
     }
 
-    txn ??= boxCollection._db.transaction(name, 'readwrite');
-    final store = txn.objectStore(name);
-    await store.clear();
-    _cache.clear();
-    _cachedKeys = null;
-    return;
+    clearQuickAccessCache();
   }
 
   V? _fromValue(Object? value) {

@@ -1,3 +1,187 @@
+## 0.38.0
+
+### Migration notes
+
+Now you can pass a `StringBuffer` object to the command handler to pass some arbitrary data back to the caller.
+
+**Before:**
+```
+addCommand('newCommand', (CommandArgs args){});
+```
+
+**After:**
+```
+addCommand('newCommand', (CommandArgs args, StringBuffer? stdout){});
+```
+
+In order to use the stdout, you should create a `StringBuffer` stdout object and 
+pass it to the `parseAndRunCommand` method or `sendTextEvent` (that uses `parseAndRunCommand` internally).
+
+Like this:
+```
+final stdout = StringBuffer();
+
+await client.parseAndRunCommand(
+  null, // Room can be null now, if the command isn't room specific
+  "/newCommand options",
+  ...
+  stdout: stdout,
+);
+
+// OR
+
+await room.sendTextEvent(
+  "/newCommand options"
+  ...
+  commandStdout: stdout,
+);
+
+final output = DefaultCommandOutput.fromStdout(stdout);
+if(output != null) {
+  print(output.toString());
+}
+```
+
+### All changes:
+- feat: (BREAKING) Make share keys with logic configurable (Krille)
+- feat: BREAKING improve command_extension (The one with the braid)
+- fix: Megolm sessions become invalid after restarting client (Krille)
+- fix: priorize direct chat users over empty hero user list (The one with the braid)
+- fix: PushNotification fromJson - toJson fails (Krille)
+- refactor: Make converting linebreaks in markdowntohtml optional (Krille)
+- refactor: Use .toSet() instead of Set.from() (Krille)
+
+## 0.37.0
+
+Bigger release with a lot of refactorings under the hood. Those do not necessarily make the SDK more performant but more robust and type safe.
+
+There are multiple breaking changes:
+
+- The SDK now uses spec v1.13
+- Rename timeCreated to latestEventReceivedTime in Room
+- Push Notification helper class make all fields optional and migrate `dynamics` to `Object?`
+- Remove deprecated Hive Database
+
+Also `Client.onEvent` has been deprecated in favor of:
+
+```dart
+Client.onTimelineEvent // For timeline events (after decryption)
+Client.onHistoryEvent // Same for timeline events when fetching history
+Client.onNotification // Events which would trigger a notification like messages or room invites (after decryption)
+```
+
+If you are using `Client.onEvent` to filter for state events, please from now on use `Client.onSync` and filter the state events out of it (as they are unencrypted anyway). Same with "Account Data" or ephemeral events.
+For notifications the usage should now be much easier as `Client.onNotification` already filters out events which should not
+trigger a notification.
+
+#### All changes:
+
+- feat: support push rule conditions event_property_is & event_property_contains (Karthikeyan S)
+- build: Add timeouts to all ci jobs (Krille)
+- build: Update dev dependencies and remove unused dependencies (Krille)
+- chore: (BREAKING CHANGE) spec v1.13 autogen (td)
+- chore: Add tests for converting event types (Krille)
+- chore: add transactionId getter to Event class (Karthikeyan S)
+- chore: BREAKING rename timeCreated to latestEventReceivedTime in Room (Karthikeyan S)
+- chore: Dispose all clients in test (Krille)
+- chore: Follow up store unable to decrypt information correctly (Krille)
+- fix: Add missing redacts parameter when transforming to Event type (Krille)
+- fix: Also load room account data in getSingleRoom() (Krille)
+- fix: clear cache when clearing DB in MatrixSdkDatabase (Karthikeyan S)
+- fix: Coverage CI job is timing out (Krille)
+- fix: No roomId in BasicRoomEvent stores roomaccountdata silently wrong (Krille)
+- fix: Use MB and KB instead of MiB and KiB for file sizes (Krille)
+- refactor: (BREAKING) Push Notification helper class make all fields optional and migrate dynamics to Object? (Krille)
+- refactor: (BREAKING) Remove deprecated Hive Database (Krille)
+- refactor: Do not handle ephemerals as EventUpdates (Krille)
+- refactor: Do not unnecessarily serialize and deserialize json for every account data object (Krille)
+- refactor: Do not use eventupdate type for verification requests (Krille)
+- refactor: Handle Room Account Data outside of Room Event Updates (Krille)
+- refactor: Remove BasicRoomEvent type (Krille)
+- refactor: Replace enhanced enum with native dart enum (Krille)
+- refactor: Update rooms by event not event update (Krille)
+- refactor: Use Event instead of EventUpdate for pending decryption event queue and for decrypt events in general (Krille)
+- refactor: Use Event instead of EventUpdate for storing in db (Krille)
+
+## [0.36.0] 17th December 2024
+
+#### How to migrate from onMigration to onInitStateChanged
+
+**Before:**
+```dart
+Client('Name', onMigration: () {
+  print('Migrating now....');
+});
+```
+
+**After:**
+
+```dart
+Client('Name', onInitStateChanged: (state) {
+  if (state == InitState.migratingDatabase) {
+    print('Migrating now....');
+  }
+});
+```
+
+- chore: Make parse version error less sound (Krille)
+- feat: (BREAKING) Replace onMigration with advanced callback onInitStateChanged (Krille)
+- feat: Add deleteFile() endpoint to database (Krille)
+- feat: support filtering events when requesting events history or future (Johannes Nevels)
+- fix: BREAKING! missed initial updates for stream listener callbacks in P2P & mesh calls (Karthikeyan S)
+- fix: clear legacy db on logout properly (Karthikeyan S)
+- fix: don't reset wellknown cache on initialization (Konrad Pozniak)
+- fix: rejecting a call doesn't send m.call.reject event (Karthikeyan S)
+- fix: throw error on failed reaction send (Mohammad Reza Moradi)
+- refactor: BREAKING Store room states as triple keys (Krille)
+- refactor: Clarify Room.join() behavior and make sure DM link is purged if room not found (Krille)
+- refactor: Do not set default timeout for initialSync (Krille)
+- refactor: Do not set the deprecated dont_notify action in push rules (Krille)
+- refactor: Fix new lints from flutter 3.27 (Krille)
+- refactor: Remove unnecessary roomId parameter from decryptRoomEvent method (Krille)
+ 
+## [0.35.0] 11th November 2024
+Fixes a minor performance leak where the app re-requests the member list of all encrypted rooms.
+For this the parameter `cache` in `Room.requestParticipants()` is now also
+responsible to store the member data in the database. Also it is not `true` by default anymore for
+unencrypted rooms.
+
+- feat: Add additional properties for LoginFlow type (Krille)
+- feat: Optional authentication for profile requests (Krille)
+- fix: BREAKING! Cache members for encrypted rooms in database (Krille)
+- chore: add require trailing comma lint (Mohammad Reza Moradi)
+
+## [0.34.0] 21st Oct 2024
+- feat: add equality and hashCode overrides for autogenerated models (BREAKING CHANGE) (td)
+- feat: v1.12 spec endpoints support (BREAKING CHANGE) (td)
+- fix: (BREAKING) Change power level without changing memory (Krille)
+- fix: AsyncCache is not invalidating on error (Krille)
+- fix: by default don't uplaod new keys in our tests (Nicolas Werner)
+- fix: Deduplicate key OTK uploads (Nicolas Werner)
+- fix: Don't wait for 5 milliseconds on every sync in our tests (Nicolas Werner)
+- fix: edge cases when calculating (un)localized body (Nicolas Werner)
+- fix: enable some event tests without libolm (Nicolas Werner)
+- fix: prevent body (and plaintextBody) from return html by accident (Nicolas Werner)
+- fix: properly remove reply fallback from (un)localized body (Nicolas Werner)
+- fix: Race conditions in tests now that they are running faster (Nicolas Werner)
+- refactor: Migrate to m.marked_unread from Matrix v1.12 (Krille)
+- refactor: Use Object.hash instead of hashCode ^ (Krille)
+- chore: Add more (un)localized body tests (Nicolas Werner)
+- chore: bump dart version to fix tests not exiting sometimes (Nicolas Werner)
+- chore: Lower loglevel for call event with unexpected sender (Krille)
+- chore: Make more clear that Client.uploadContent() does not end to end encrypt the file (Krille)
+- chore: Switch to cheaper github runner (Nicolas Werner)
+- chore: tear down clients in event tests properly (Nicolas Werner)
+- chore: update Emote-only expressions (The one with the braid)
+- chore: Upgrade dependencies (Nicolas Werner)
+
+## [0.33.0] 19th Sept 2024
+
+- feat: BREAKING CHANGE v1.11 matrix-spec endpoints (td)
+- fix: also lazy load members for archive (Nicolas Werner)
+- fix: don't convert archived rooms to joined rooms by accident (Nicolas Werner)
+- fix: wait for pending transactions before db close (Nicolas Werner)
+
 ## [0.32.4] 28th Aug 2024
 
 - fix: actually make sure clientBox has a account (td)

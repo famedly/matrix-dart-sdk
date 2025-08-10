@@ -17,7 +17,7 @@
  */
 
 /// Matrix SDK written in pure Dart.
-library matrix;
+library;
 
 export 'matrix_api_lite.dart';
 
@@ -25,7 +25,6 @@ export 'fake_matrix_api.dart' show FakeMatrixApi;
 
 export 'src/client.dart';
 export 'src/database/database_api.dart';
-export 'src/database/hive_database.dart';
 export 'src/database/matrix_sdk_database.dart';
 export 'src/database/hive_collections_database.dart';
 export 'src/database/sqflite_encryption_helper.dart';
@@ -58,6 +57,7 @@ export 'src/utils/crypto/encrypted_file.dart';
 export 'src/utils/device_keys_list.dart';
 export 'src/utils/event_update.dart';
 export 'src/utils/http_timeout.dart';
+export 'src/utils/event_localizations.dart';
 export 'src/utils/image_pack_extension.dart';
 export 'src/utils/matrix_default_localizations.dart';
 export 'src/utils/matrix_file.dart';
@@ -73,6 +73,7 @@ export 'src/utils/sync_update_extension.dart';
 export 'src/utils/to_device_event.dart';
 export 'src/utils/uia_request.dart';
 export 'src/utils/uri_extension.dart';
+export 'src/models/login_type.dart';
 
 export 'msc_extensions/extension_recent_emoji/recent_emoji.dart';
 export 'msc_extensions/msc_3935_cute_events/msc_3935_cute_events.dart';

@@ -95,7 +95,10 @@ class DeviceKeysList {
     } else {
       // start verification with verified devices
       final request = KeyVerification(
-          encryption: encryption, userId: userId, deviceId: '*');
+        encryption: encryption,
+        userId: userId,
+        deviceId: '*',
+      );
       await request.start();
       encryption.keyVerificationManager.addRequest(request);
       return request;
@@ -103,11 +106,11 @@ class DeviceKeysList {
   }
 
   DeviceKeysList.fromDbJson(
-      Map<String, dynamic> dbEntry,
-      List<Map<String, dynamic>> childEntries,
-      List<Map<String, dynamic>> crossSigningEntries,
-      this.client)
-      : userId = dbEntry['user_id'] ?? '' {
+    Map<String, dynamic> dbEntry,
+    List<Map<String, dynamic>> childEntries,
+    List<Map<String, dynamic>> crossSigningEntries,
+    this.client,
+  ) : userId = dbEntry['user_id'] ?? '' {
     outdated = dbEntry['outdated'];
     deviceKeys = {};
     for (final childEntry in childEntries) {
@@ -160,7 +163,17 @@ abstract class SignableKey extends MatrixSignableKey {
 
     if (identifier == null || ed25519Key == null) return false;
 
-    return client.shareKeysWithUnverifiedDevices || verified;
+    switch (client.shareKeysWith) {
+      case ShareKeysWith.all:
+        return true;
+      case ShareKeysWith.crossVerifiedIfEnabled:
+        if (client.userDeviceKeys[userId]?.masterKey == null) return true;
+        return hasValidSignatureChain(verifiedByTheirMasterKey: true);
+      case ShareKeysWith.crossVerified:
+        return hasValidSignatureChain(verifiedByTheirMasterKey: true);
+      case ShareKeysWith.directlyVerifiedOnly:
+        return directVerified;
+    }
   }
 
   void setDirectVerified(bool isVerified) {
@@ -195,8 +208,11 @@ abstract class SignableKey extends MatrixSignableKey {
     return String.fromCharCodes(canonicalJson.encode(data));
   }
 
-  bool _verifySignature(String pubKey, String signature,
-      {bool isSignatureWithoutLibolmValid = false}) {
+  bool _verifySignature(
+    String pubKey,
+    String signature, {
+    bool isSignatureWithoutLibolmValid = false,
+  }) {
     olm.Utility olmutil;
     try {
       olmutil = olm.Utility();
@@ -313,10 +329,11 @@ abstract class SignableKey extends MatrixSignableKey {
         }
         // or else we just recurse into that key and check if it works out
         final haveChain = key.hasValidSignatureChain(
-            verifiedOnly: verifiedOnly,
-            visited: visited_,
-            onlyValidateUserIds: onlyValidateUserIds,
-            verifiedByTheirMasterKey: verifiedByTheirMasterKey);
+          verifiedOnly: verifiedOnly,
+          visited: visited_,
+          onlyValidateUserIds: onlyValidateUserIds,
+          verifiedByTheirMasterKey: verifiedByTheirMasterKey,
+        );
         if (haveChain) {
           return true;
         }
@@ -396,8 +413,9 @@ class CrossSigningKey extends SignableKey {
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(
-      MatrixCrossSigningKey key, Client client)
-      : super.fromJson(key.toJson().copy(), client) {
+    MatrixCrossSigningKey key,
+    Client client,
+  ) : super.fromJson(key.toJson().copy(), client) {
     final json = toJson();
     identifier = key.publicKey;
     usage = json['usage'].cast<String>();
@@ -445,8 +463,10 @@ class DeviceKeys extends SignableKey {
           // without libolm we still want to be able to add devices. In that case we ofc just can't
           // verify the signature
           _verifySignature(
-              ed25519Key!, signatures![userId]!['ed25519:$deviceId']!,
-              isSignatureWithoutLibolmValid: true));
+            ed25519Key!,
+            signatures![userId]!['ed25519:$deviceId']!,
+            isSignatureWithoutLibolmValid: true,
+          ));
 
   @override
   bool get blocked => super.blocked || !selfSigned;
@@ -480,9 +500,11 @@ class DeviceKeys extends SignableKey {
         ?.setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
   }
 
-  DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys keys, Client client,
-      [DateTime? lastActiveTs])
-      : super.fromJson(keys.toJson().copy(), client) {
+  DeviceKeys.fromMatrixDeviceKeys(
+    MatrixDeviceKeys keys,
+    Client client, [
+    DateTime? lastActiveTs,
+  ]) : super.fromJson(keys.toJson().copy(), client) {
     final json = toJson();
     identifier = keys.deviceId;
     algorithms = json['algorithms'].cast<String>();
@@ -518,7 +540,10 @@ class DeviceKeys extends SignableKey {
     }
 
     final request = KeyVerification(
-        encryption: encryption, userId: userId, deviceId: deviceId!);
+      encryption: encryption,
+      userId: userId,
+      deviceId: deviceId!,
+    );
 
     await request.start();
     encryption.keyVerificationManager.addRequest(request);

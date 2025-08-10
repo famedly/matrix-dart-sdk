@@ -5,6 +5,9 @@ class TimelineChunk {
   String nextBatch;
 
   List<Event> events;
-  TimelineChunk(
-      {required this.events, this.prevBatch = '', this.nextBatch = ''});
+  TimelineChunk({
+    required this.events,
+    this.prevBatch = '',
+    this.nextBatch = '',
+  });
 }

@@ -1,6 +1,6 @@
 /*
  *   Famedly Matrix SDK
- *   Copyright (C) 2020, 2021 Famedly GmbH
+ *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU Affero General Public License as
@@ -16,11 +16,17 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/// Matrix SDK encryption specific extension
-library;
+import 'package:async/async.dart';
 
-export 'encryption/encryption.dart';
-export 'encryption/key_manager.dart';
-export 'encryption/ssss.dart';
-export 'encryption/utils/key_verification.dart';
-export 'encryption/utils/bootstrap.dart';
+extension AsyncCacheTryFetch<T> on AsyncCache<T> {
+  /// Makes sure that in case of an error the error is not stored forever and
+  /// blocking the cache but invalidates it.
+  Future<T> tryFetch(Future<T> Function() callback) async {
+    try {
+      return await fetch(callback);
+    } catch (_) {
+      invalidate();
+      rethrow;
+    }
+  }
+}
