@@ -24,6 +24,7 @@ dependencies:
   js: ^0.6.3
   markdown: ^7.1.1
   mime: ">=1.0.0 <3.0.0"
+  path: ^1.9.1
   random_string: ^2.3.1
   sdp_transform: ^0.3.2
   slugify: ^2.0.0
@@ -39,6 +40,5 @@ dev_dependencies:
   file: ">=6.1.1 <8.0.0"
   import_sorter: ^4.6.0
   lints: ^5.0.0
-  path: ^1.9.1
   sqflite_common_ffi: ^2.3.4+4 # sqflite_common_ffi aggressively requires newer dart versions
   test: ^1.25.13
