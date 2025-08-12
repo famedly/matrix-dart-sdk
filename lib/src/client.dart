@@ -142,9 +142,9 @@ class Client extends MatrixApi {
     if (this.homeserver != null && homeserver?.host != this.homeserver?.host) {
       _wellKnown = null;
       _oidcAuthMetadata = null;
-      unawaited(database.storeWellKnown(null));
-      unawaited(database.storeOidcAuthMetadata(null));
-      unawaited(database.storeOidcDynamicClientId(null));
+      unawaited(database.putClientData(ClientData.wellKnown, null));
+      unawaited(database.putClientData(ClientData.oidcAuthMetadata, null));
+      unawaited(database.putClientData(ClientData.oidcDynamicClientId, null));
     }
     super.homeserver = homeserver;
   }
@@ -347,6 +347,7 @@ class Client extends MatrixApi {
       tokenExpiresAt,
       newRefreshToken,
       userId,
+      deviceId,
       deviceName,
       prevBatch,
       encryption?.pickledOlmAccount,
@@ -629,7 +630,10 @@ class Client extends MatrixApi {
     // do not reset the well known here, so super call
     super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
     _wellKnown = wellKnown;
-    await database.storeWellKnown(wellKnown);
+    await database.putClientData(
+      ClientData.wellKnown,
+      jsonEncode(wellKnown.toJson()),
+    );
     return wellKnown;
   }
 
@@ -2048,41 +2052,34 @@ class Client extends MatrixApi {
       _versionsCache.invalidate();
 
       final account = await database.getClient(clientName);
-      _oidcAuthMetadata = await database.getOidcAuthMetadata();
 
-      // the device ID is stored separately for easier use of MSC 1597
-      _deviceID = await database.getDeviceId();
-      // migrate the device ID if still in account data
-      if (_deviceID == null &&
-          account != null &&
-          account.containsKey('device_id')) {
-        final deviceId = _deviceID = account['device_id'];
-        await database.storeDeviceId(deviceId);
-      }
-
-      newRefreshToken ??= account?.tryGet<String>('refresh_token');
+      newRefreshToken ??= account?.tryGet<String>(ClientData.refreshToken.key);
       // can have discovery_information so make sure it also has the proper
       // account creds
       if (account != null &&
-          account['homeserver_url'] != null &&
-          account['user_id'] != null &&
-          account['token'] != null) {
-        _id = account['client_id'];
-        homeserver = Uri.parse(account['homeserver_url']);
-        accessToken = this.accessToken = account['token'];
-        final tokenExpiresAtMs =
-            int.tryParse(account.tryGet<String>('token_expires_at') ?? '');
+          account[ClientData.homeserverUrl.key] != null &&
+          account[ClientData.userId.key] != null &&
+          account[ClientData.token.key] != null) {
+        _id = account[ClientData.clientId.key];
+        homeserver = Uri.parse(account[ClientData.homeserverUrl.key]);
+        accessToken = this.accessToken = account[ClientData.token.key];
+        final tokenExpiresAtMs = int.tryParse(
+          account.tryGet<String>(ClientData.tokenExpiresAt.key) ?? '',
+        );
         _accessTokenExpiresAt = tokenExpiresAtMs == null
             ? null
             : DateTime.fromMillisecondsSinceEpoch(tokenExpiresAtMs);
-        userID = _userID = account['user_id'];
-        _deviceName = account['device_name'];
-        _syncFilterId = account['sync_filter_id'];
-        _prevBatch = account['prev_batch'];
-        olmAccount = account['olm_account'];
-        oidcDynamicClientId = account['oidc_dynamic_client_id'];
-        // the device ID is stored differently for easier use of MSC 1597
-        _deviceID = await database.getDeviceId();
+        userID = _userID = account[ClientData.userId.key];
+        _deviceID = account[ClientData.deviceId.key];
+        _deviceName = account[ClientData.deviceName.key];
+        _syncFilterId = account[ClientData.syncFilterId.key];
+        _prevBatch = account[ClientData.prevBatch.key];
+        olmAccount = account[ClientData.olmAccount.key];
+        oidcDynamicClientId = account[ClientData.oidcDynamicClientId.key];
+        if (account.containsKey(ClientData.oidcAuthMetadata.key)) {
+          _oidcAuthMetadata =
+              jsonDecode(account[ClientData.oidcAuthMetadata.key]);
+        }
       }
       if (newToken != null) {
         accessToken = this.accessToken = newToken;
@@ -2102,10 +2099,6 @@ class Client extends MatrixApi {
         olmAccount = newOlmAccount ?? olmAccount;
       }
 
-      if (newDeviceID != null) {
-        await database.storeDeviceId(newDeviceID);
-      }
-
       // If we are refreshing the session, we are done here:
       if (onLoginStateChanged.value == LoginState.softLoggedOut) {
         if (newRefreshToken != null && accessToken != null && userID != null) {
@@ -2116,6 +2109,7 @@ class Client extends MatrixApi {
             accessTokenExpiresAt,
             newRefreshToken,
             userID,
+            deviceID,
             _deviceName,
             prevBatch,
             encryption?.pickledOlmAccount,
@@ -2167,6 +2161,7 @@ class Client extends MatrixApi {
           accessTokenExpiresAt,
           newRefreshToken,
           userID,
+          deviceID,
           _deviceName,
           prevBatch,
           encryption?.pickledOlmAccount,
@@ -2179,16 +2174,13 @@ class Client extends MatrixApi {
           accessTokenExpiresAt,
           newRefreshToken,
           userID,
+          deviceID,
           _deviceName,
           prevBatch,
           encryption?.pickledOlmAccount,
         );
       }
 
-      final deviceId = _deviceID;
-      if (deviceId != null) {
-        await database.storeDeviceId(deviceId);
-      }
       userDeviceKeysLoading = database
           .getUserDeviceKeys(this)
           .then((keys) => _userDeviceKeys = keys);
@@ -2200,8 +2192,11 @@ class Client extends MatrixApi {
         _accountData = data;
         _updatePushrules();
       });
-      _discoveryDataLoading = database.getWellKnown().then((data) {
-        _wellKnown = data;
+      _discoveryDataLoading =
+          database.getClientData(ClientData.wellKnown).then((json) {
+        if (json is String) {
+          _wellKnown = DiscoveryInformation.fromJson(jsonDecode(json));
+        }
       });
       // ignore: deprecated_member_use_from_same_package
       presences.clear();
@@ -2331,7 +2326,7 @@ class Client extends MatrixApi {
     if (syncFilterId == null && userID != null) {
       final syncFilterId =
           _syncFilterId = await defineFilter(userID, syncFilter);
-      await database.storeSyncFilterId(syncFilterId);
+      await database.putClientData(ClientData.syncFilterId, syncFilterId);
     }
     return;
   }
@@ -3925,23 +3920,24 @@ class Client extends MatrixApi {
     Logs().i('Found data in the legacy database!');
     onInitStateChanged?.call(InitState.migratingDatabase);
     onMigration?.call();
-    _id = migrateClient['client_id'];
-    final tokenExpiresAtMs =
-        int.tryParse(migrateClient.tryGet<String>('token_expires_at') ?? '');
+    _id = migrateClient[ClientData.clientId.key];
+    final tokenExpiresAtMs = int.tryParse(
+      migrateClient.tryGet<String>(ClientData.tokenExpiresAt.key) ?? '',
+    );
     await database.insertClient(
       clientName,
-      migrateClient['homeserver_url'],
-      migrateClient['token'],
+      migrateClient[ClientData.homeserverUrl.key],
+      migrateClient[ClientData.token.key],
       tokenExpiresAtMs == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(tokenExpiresAtMs),
-      migrateClient['refresh_token'],
-      migrateClient['user_id'],
-      migrateClient['device_name'],
+      migrateClient[ClientData.refreshToken.key],
+      migrateClient[ClientData.userId.key],
+      migrateClient[ClientData.deviceId.key],
+      migrateClient[ClientData.deviceName.key],
       null,
-      migrateClient['olm_account'],
+      migrateClient[ClientData.olmAccount.key],
     );
-    await database.storeDeviceId(migrateClient['device_id']);
     Logs().d('Migrate SSSSCache...');
     for (final type in cacheTypes) {
       final ssssCache = await legacyDatabase.getSSSSCache(type);

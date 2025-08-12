@@ -460,6 +460,18 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       });
 
   @override
+  Future<Object?> getClientData(ClientData key) => _clientBox.get(key.key);
+
+  @override
+  Future<void> putClientData(ClientData key, String? value) async {
+    if (value == null) {
+      await _clientBox.delete(key.key);
+    } else {
+      await _clientBox.put(key.key, value);
+    }
+  }
+
+  @override
   Future<Map<String, dynamic>?> getClient(String name) =>
       runBenchmarked('Get Client from store', () async {
         final map = <String, dynamic>{};
@@ -843,42 +855,47 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
+    String? deviceId,
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
   ) async {
     await transaction(() async {
-      await _clientBox.put('homeserver_url', homeserverUrl);
-      await _clientBox.put('token', token);
+      await _clientBox.put(ClientData.homeserverUrl.key, homeserverUrl);
+      await _clientBox.put(ClientData.token.key, token);
       if (tokenExpiresAt == null) {
-        await _clientBox.delete('token_expires_at');
+        await _clientBox.delete(ClientData.tokenExpiresAt.key);
       } else {
         await _clientBox.put(
-          'token_expires_at',
+          ClientData.tokenExpiresAt.key,
           tokenExpiresAt.millisecondsSinceEpoch.toString(),
         );
       }
       if (refreshToken == null) {
-        await _clientBox.delete('refresh_token');
+        await _clientBox.delete(ClientData.refreshToken.key);
       } else {
-        await _clientBox.put('refresh_token', refreshToken);
+        await _clientBox.put(ClientData.refreshToken.key, refreshToken);
       }
-      await _clientBox.put('user_id', userId);
-      await _clientBox.delete('device_id');
-      if (deviceName == null) {
-        await _clientBox.delete('device_name');
+      await _clientBox.put(ClientData.userId.key, userId);
+      if (deviceId == null) {
+        await _clientBox.delete(ClientData.deviceId.key);
       } else {
-        await _clientBox.put('device_name', deviceName);
+        await _clientBox.put(ClientData.deviceId.key, deviceId);
+      }
+      if (deviceName == null) {
+        await _clientBox.delete(ClientData.deviceName.key);
+      } else {
+        await _clientBox.put(ClientData.deviceName.key, deviceName);
       }
       if (prevBatch == null) {
-        await _clientBox.delete('prev_batch');
+        await _clientBox.delete(ClientData.prevBatch.key);
       } else {
-        await _clientBox.put('prev_batch', prevBatch);
+        await _clientBox.put(ClientData.prevBatch.key, prevBatch);
       }
       if (olmAccount == null) {
-        await _clientBox.delete('olm_account');
+        await _clientBox.delete(ClientData.olmAccount.key);
       } else {
-        await _clientBox.put('olm_account', olmAccount);
+        await _clientBox.put(ClientData.olmAccount.key, olmAccount);
       }
       await _clientBox.delete('sync_filter_id');
     });
@@ -1389,13 +1406,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeSyncFilterId(
-    String syncFilterId,
-  ) async {
-    await _clientBox.put('sync_filter_id', syncFilterId);
-  }
-
-  @override
   Future<void> storeUserCrossSigningKey(
     String userId,
     String publicKey,
@@ -1453,41 +1463,47 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
+    String? deviceId,
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
   ) async {
     await transaction(() async {
-      await _clientBox.put('homeserver_url', homeserverUrl);
-      await _clientBox.put('token', token);
+      await _clientBox.put(ClientData.homeserverUrl.key, homeserverUrl);
+      await _clientBox.put(ClientData.token.key, token);
       if (tokenExpiresAt == null) {
-        await _clientBox.delete('token_expires_at');
+        await _clientBox.delete(ClientData.tokenExpiresAt.key);
       } else {
         await _clientBox.put(
-          'token_expires_at',
+          ClientData.tokenExpiresAt.key,
           tokenExpiresAt.millisecondsSinceEpoch.toString(),
         );
       }
       if (refreshToken == null) {
-        await _clientBox.delete('refresh_token');
+        await _clientBox.delete(ClientData.refreshToken.key);
       } else {
-        await _clientBox.put('refresh_token', refreshToken);
+        await _clientBox.put(ClientData.refreshToken.key, refreshToken);
       }
-      await _clientBox.put('user_id', userId);
-      if (deviceName == null) {
-        await _clientBox.delete('device_name');
+      await _clientBox.put(ClientData.userId.key, userId);
+      if (deviceId == null) {
+        await _clientBox.delete(ClientData.deviceId.key);
       } else {
-        await _clientBox.put('device_name', deviceName);
+        await _clientBox.put(ClientData.deviceId.key, deviceId);
+      }
+      if (deviceName == null) {
+        await _clientBox.delete(ClientData.deviceName.key);
+      } else {
+        await _clientBox.put(ClientData.deviceName.key, deviceName);
       }
       if (prevBatch == null) {
-        await _clientBox.delete('prev_batch');
+        await _clientBox.delete(ClientData.prevBatch.key);
       } else {
-        await _clientBox.put('prev_batch', prevBatch);
+        await _clientBox.put(ClientData.prevBatch.key, prevBatch);
       }
       if (olmAccount == null) {
-        await _clientBox.delete('olm_account');
+        await _clientBox.delete(ClientData.olmAccount.key);
       } else {
-        await _clientBox.put('olm_account', olmAccount);
+        await _clientBox.put(ClientData.olmAccount.key, olmAccount);
       }
     });
     return;
@@ -1758,64 +1774,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     if (rawPresence == null) return null;
 
     return CachedPresence.fromJson(copyMap(rawPresence));
-  }
-
-  @override
-  Future<void> storeWellKnown(DiscoveryInformation? discoveryInformation) {
-    if (discoveryInformation == null) {
-      return _clientBox.delete('discovery_information');
-    }
-    return _clientBox.put(
-      'discovery_information',
-      jsonEncode(discoveryInformation.toJson()),
-    );
-  }
-
-  @override
-  Future<DiscoveryInformation?> getWellKnown() async {
-    final rawDiscoveryInformation =
-        await _clientBox.get('discovery_information');
-    if (rawDiscoveryInformation == null) return null;
-    return DiscoveryInformation.fromJson(jsonDecode(rawDiscoveryInformation));
-  }
-
-  @override
-  Future<void> storeOidcAuthMetadata(Map<String, Object?>? authMetadata) {
-    if (authMetadata == null) {
-      return _clientBox.delete('auth_metadata');
-    }
-    return _clientBox.put(
-      'auth_metadata',
-      jsonEncode(authMetadata),
-    );
-  }
-
-  @override
-  Future<Map<String, Object?>?> getOidcAuthMetadata() async {
-    final rawAuthMetadata = await _clientBox.get('auth_metadata');
-    if (rawAuthMetadata == null) return null;
-    return jsonDecode(rawAuthMetadata);
-  }
-
-  @override
-  Future<void> storeDeviceId(String? deviceId) {
-    if (deviceId == null) {
-      return _clientBox.delete('device_id');
-    }
-    return _clientBox.put('device_id', deviceId);
-  }
-
-  @override
-  Future<String?> getDeviceId() {
-    return _clientBox.get('device_id');
-  }
-
-  @override
-  Future<void> storeOidcDynamicClientId(String? oidcClientId) {
-    if (oidcClientId == null) {
-      return _clientBox.delete('oidc_dynamic_client_id');
-    }
-    return _clientBox.put('oidc_dynamic_client_id', oidcClientId);
   }
 
   @override

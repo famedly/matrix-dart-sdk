@@ -34,7 +34,7 @@ extension OidcDynamicClientRegistrationExtension on Client {
       registrationEndpoint: Uri.parse(endpoint),
       registrationData: registrationData,
     );
-    await database.storeOidcDynamicClientId(oidcClientId);
+    await database.putClientData(ClientData.oidcDynamicClientId, oidcClientId);
     Logs().d('[OIDC] Registered Dynamic Client ID $oidcClientId.');
     return oidcDynamicClientId = oidcClientId;
   }

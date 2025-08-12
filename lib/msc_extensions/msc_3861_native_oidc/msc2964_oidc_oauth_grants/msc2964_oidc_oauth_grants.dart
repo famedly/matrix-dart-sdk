@@ -14,7 +14,7 @@ extension OidcOauthGrantFlowExtension on Client {
   ///
   /// Parameters:
   /// - [nativeCompleter]: a [Completer] returning the full [OidcCallbackResponse] contained in the Uri of the OAuth2.0 callback
-  /// - [oidcClientId]: the either registered or pre-shared OAuth2.0 client ID of the application. This can usually be generated using [Client.oidcRegisterOAuth2Client]
+  /// - [clientId]: the either registered or pre-shared OAuth2.0 client ID of the application. This can usually be generated using [Client.oidcRegisterOAuth2Client]
   /// - [redirectUri]: the OAuth2.0 redirect Uri base the IDP is supposed to call
   /// - [responseMode]: the OAuth2.0 response mode. This should usually be `fragment` or `query`
   /// - [launchOAuth2Uri]: a callback for launching the computed OAuth2.0 Uri for authorization in the IDP. This should usually be from `package:url_launcher` or in some cases a handler launching a custom web view.
@@ -23,7 +23,7 @@ extension OidcOauthGrantFlowExtension on Client {
   /// - [prompt]: the OAuth2.0 authorization prompt. This must be a valid prompt from the [getOidcDiscoveryInformation] as by https://openid.net/specs/openid-connect-prompt-create-1_0.html
   Future<void> oidcLoginAuthorizationGrantFlow({
     required Completer<OidcCallbackResponse> nativeCompleter,
-    required String oidcClientId,
+    required String clientId,
     required Uri redirectUri,
     required String responseMode,
     required void Function(Uri oauth2uri) launchOAuth2Uri,
@@ -62,7 +62,7 @@ extension OidcOauthGrantFlowExtension on Client {
     // generate the OAuth2 uri to authenticate at the IDP
     final uri = await oidcMakeOAuth2Uri(
       authorizationEndpoint: authEndpoint,
-      oidcClientId: oidcClientId,
+      oidcClientId: clientId,
       redirectUri: redirectUri,
       scope: [
         'openid',
@@ -94,7 +94,7 @@ extension OidcOauthGrantFlowExtension on Client {
     // exchange the OAuth2 code into a token
     final oidcToken = await oidcRequestToken(
       tokenEndpoint: tokenEndpoint,
-      oidcClientId: oidcClientId,
+      oidcClientId: clientId,
       oAuth2Code: oAuth2Code,
       redirectUri: redirectUri,
       codeVerifier: verifier,

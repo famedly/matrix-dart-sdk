@@ -163,6 +163,7 @@ void main() {
           now,
           'refresh_token',
           'userId',
+          'deviceId',
           'deviceName',
           'prevBatch',
           'olmAccount',
@@ -182,6 +183,7 @@ void main() {
           DateTime.now(),
           'refresh_token',
           'userId',
+          'deviceId',
           'deviceName',
           'prevBatch',
           'olmAccount',
@@ -197,7 +199,8 @@ void main() {
         expect(client?['olm_account'], 'olmAccount2');
       });
       test('storeSyncFilterId', () async {
-        await database.storeSyncFilterId(
+        await database.putClientData(
+          ClientData.syncFilterId,
           '1234',
         );
         final client = await database.getClient('name');
