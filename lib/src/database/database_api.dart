@@ -25,14 +25,40 @@ import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 
+enum ClientData {
+  clientId('client_id'),
+  name('name'),
+  homeserverUrl('homeserver_url'),
+  token('token'),
+  tokenExpiresAt('token_expires_at'),
+  refreshToken('refresh_token'),
+  userId('user_id'),
+  deviceName('device_name'),
+  deviceId('device_id'),
+  prevBatch('prev_batch'),
+  olmAccount('olm_account'),
+  oidcDynamicClientId('oidc_dynamic_client_id'),
+  oidcAuthMetadata('oidc_auth_metadata'),
+  wellKnown('discovery_information'),
+  syncFilterId('sync_filter_id');
+
+  final String key;
+
+  const ClientData(this.key);
+}
+
 abstract class DatabaseApi {
   int get maxFileSize => 1 * 1000 * 1000;
 
   bool get supportsFileStoring => false;
 
+  Future<Object?> getClientData(ClientData key);
+
+  Future<void> putClientData(ClientData key, String? value);
+
   Future<Map<String, dynamic>?> getClient(String name);
 
-  Future updateClient(
+  Future<void> updateClient(
     String homeserverUrl,
     String token,
     DateTime? tokenExpiresAt,
@@ -44,7 +70,7 @@ abstract class DatabaseApi {
     String? olmAccount,
   );
 
-  Future insertClient(
+  Future<int?> insertClient(
     String name,
     String homeserverUrl,
     String token,
@@ -127,10 +153,6 @@ abstract class DatabaseApi {
   Future storeFile(Uri mxcUri, Uint8List bytes, int time);
 
   Future<bool> deleteFile(Uri mxcUri);
-
-  Future storeSyncFilterId(
-    String syncFilterId,
-  );
 
   Future storeAccountData(String type, Map<String, Object?> content);
 
@@ -352,10 +374,6 @@ abstract class DatabaseApi {
   Future<void> storePresence(String userId, CachedPresence presence);
 
   Future<CachedPresence?> getPresence(String userId);
-
-  Future<void> storeWellKnown(DiscoveryInformation? discoveryInformation);
-
-  Future<DiscoveryInformation?> getWellKnown();
 
   /// Deletes the whole database. The database needs to be created again after
   /// this.
