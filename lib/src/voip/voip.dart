@@ -101,7 +101,7 @@ class VoIP {
         if (event.room.membership != Membership.join) return;
         if (event.type != EventTypes.GroupCallMember) return;
 
-        Logs().v('[VOIP] onRoomState: type ${event.toJson()}');
+        // Logs().v('[VOIP] onRoomState: type ${event.toJson()}');
         final mems = event.room.getCallMembershipsFromEvent(event);
         for (final mem in mems) {
           unawaited(createGroupCallFromRoomStateEvent(mem));
