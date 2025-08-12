@@ -11,7 +11,8 @@ extension GenerateDeviceIdExtension on Client {
   /// - [MSC 2967](https://github.com/matrix-org/matrix-spec-proposals/pull/2967) requires a device ID to be present for requesting OAuth2.0 scopes
   Future<String> oidcEnsureDeviceId([bool enforceNewDevice = false]) async {
     if (!enforceNewDevice) {
-      final storedDeviceId = deviceID ?? await database.getDeviceId();
+      final storedDeviceId =
+          deviceID ?? await database.getClientData(ClientData.deviceId);
       if (storedDeviceId is String) {
         Logs().d('[OIDC] Restoring device ID $storedDeviceId.');
         return storedDeviceId;
@@ -29,7 +30,7 @@ extension GenerateDeviceIdExtension on Client {
       ),
     );
 
-    await database.storeDeviceId(deviceId);
+    await database.putClientData(ClientData.deviceId, deviceId);
     Logs().d('[OIDC] Generated device ID $deviceId.');
     return deviceId;
   }
