@@ -104,6 +104,9 @@ class LiveKitBackend extends CallBackend {
   Future<void> _ratchetLocalParticipantKey(
     GroupCallSession groupCall,
     List<CallParticipant> sendTo,
+
+    /// only used for makeSenderKey fallback
+    bool delayBeforeUsingKeyOurself,
   ) async {
     final keyProvider = groupCall.voip.delegate.keyProvider;
 
@@ -122,12 +125,27 @@ class LiveKitBackend extends CallBackend {
 
     Uint8List? ratchetedKey;
 
-    while (ratchetedKey == null || ratchetedKey.isEmpty) {
-      Logs().i('[VOIP E2EE] Ignoring empty ratcheted key');
+    int ratchetTryCounter = 0;
+
+    while (ratchetTryCounter <= 8 &&
+        (ratchetedKey == null || ratchetedKey.isEmpty)) {
+      Logs().i(
+        '[VOIP E2EE] Ignoring empty ratcheted key, ratchetTryCounter: $ratchetTryCounter',
+      );
+
       ratchetedKey = await keyProvider.onRatchetKey(
         groupCall.localParticipant!,
         latestLocalKeyIndex,
       );
+      ratchetTryCounter++;
+    }
+
+    if (ratchetedKey == null || ratchetedKey.isEmpty) {
+      Logs().i(
+        '[VOIP E2EE] ratcheting failed, falling back to creating a new key',
+      );
+      await _makeNewSenderKey(groupCall, delayBeforeUsingKeyOurself);
+      return;
     }
 
     _latestLocalRatchet = ratchetedKey;
@@ -155,7 +173,8 @@ class LiveKitBackend extends CallBackend {
   ) async {
     if (!e2eeEnabled) return;
     if (groupCall.voip.enableSFUE2EEKeyRatcheting) {
-      await _ratchetLocalParticipantKey(groupCall, anyJoined);
+      await _ratchetLocalParticipantKey(
+          groupCall, anyJoined, delayBeforeUsingKeyOurself);
     } else {
       await _makeNewSenderKey(groupCall, delayBeforeUsingKeyOurself);
     }
