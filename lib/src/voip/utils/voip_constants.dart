@@ -18,10 +18,10 @@ class CallTimeouts {
   static const delayBeforeOffer = Duration(milliseconds: 100);
 
   /// How often to update the expiresTs
-  static const updateExpireTsTimerDuration = Duration(seconds: 30);
+  static const updateExpireTsTimerDuration = Duration(seconds: 120);
 
   /// the expiresTs bump
-  static const expireTsBumpDuration = Duration(seconds: 35);
+  static const expireTsBumpDuration = Duration(seconds: 245);
 
   /// Update the active speaker value
   static const activeSpeakerInterval = Duration(seconds: 5);
