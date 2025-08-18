@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:matrix/matrix.dart';
 import 'package:path/path.dart';
 
@@ -13,17 +14,13 @@ mixin DatabaseFileStorage {
 
   /// Map an MXC URI to a local File path
   File _getFileFromMxc(Uri mxcUri) {
-    // Encode MXC to a filesystem-safe file name
-    final fileName = base64Url.encode(
-      utf8.encode(
-        mxcUri.toString(),
-      ),
-    );
-    // Resolve storage directory from configured URI
+    final bytes = utf8.encode(mxcUri.toString());
+    final digest = sha256.convert(bytes);
+    // Use SHA256 hash of the uri as file name
+    final fileName = digest.toString();
     final dirPath = Directory.fromUri(fileStorageLocation!).path;
     // Join directory and file name to form full path
     final filePath = join(dirPath, fileName);
-    // Return File handle pointing to the computed path
     return File(filePath);
   }
 
