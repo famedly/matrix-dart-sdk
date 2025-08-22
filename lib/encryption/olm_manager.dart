@@ -102,28 +102,17 @@ class OlmManager {
 
   /// Adds a signature to this json from this olm account and returns the signed
   /// json.
-  Map<String, dynamic> signJson(Map<String, dynamic> payload) {
+  Map<String, Object?> signJson(Map<String, Object?> payload) {
     if (!enabled) throw ('Encryption is disabled');
-    final Map<String, dynamic>? unsigned = payload['unsigned'];
-    final Map<String, dynamic>? signatures = payload['signatures'];
-    payload.remove('unsigned');
-    payload.remove('signatures');
-    final canonical = canonicalJson.encode(payload);
+    final signableJson = SignableJsonMap(payload);
+
+    final canonical = canonicalJson.encode(signableJson.jsonMap);
     final signature = _olmAccount!.sign(String.fromCharCodes(canonical));
-    if (signatures != null) {
-      payload['signatures'] = signatures;
-    } else {
-      payload['signatures'] = <String, dynamic>{};
-    }
-    if (!payload['signatures'].containsKey(client.userID)) {
-      payload['signatures'][client.userID] = <String, dynamic>{};
-    }
-    payload['signatures'][client.userID]['ed25519:$ourDeviceId'] =
-        signature.toBase64();
-    if (unsigned != null) {
-      payload['unsigned'] = unsigned;
-    }
-    return payload;
+
+    final userSignatures = signableJson.signatures[client.userID!] ??= {};
+    userSignatures['ed25519:$ourDeviceId'] = signature.toBase64();
+
+    return signableJson.toJson();
   }
 
   String signString(String s) {
@@ -810,4 +799,25 @@ class NoOlmSessionFoundException implements Exception {
   @override
   String toString() =>
       'No olm session found for ${device.userId}:${device.deviceId}';
+}
+
+class SignableJsonMap {
+  final Map<String, Object?> jsonMap;
+  final Map<String, Map<String, String>> signatures;
+  final Map<String, Object?>? unsigned;
+
+  SignableJsonMap(Map<String, Object?> json)
+      : jsonMap = json,
+        signatures =
+            json.tryGetMap<String, Map<String, String>>('signatures') ?? {},
+        unsigned = json.tryGetMap<String, Object?>('unsigned') {
+    jsonMap.remove('signatures');
+    jsonMap.remove('unsigned');
+  }
+
+  Map<String, Object?> toJson() => {
+        ...jsonMap,
+        'signatures': signatures,
+        if (unsigned != null) 'unsigned': unsigned,
+      };
 }
