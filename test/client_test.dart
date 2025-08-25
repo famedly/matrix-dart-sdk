@@ -42,7 +42,7 @@ void main() {
   group('client path', () {
     late Client clientOnPath;
 
-    final dbPath = join(Directory.current.path, 'test.sqlite');
+    final dbPath = join(Directory.current.path, 'client_path_test.sqlite');
 
     setUp(() async {
       expect(

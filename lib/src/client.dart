@@ -1790,12 +1790,19 @@ class Client extends MatrixApi {
     if (eventId == null || roomId == null) return null;
 
     // Create the room object:
-    final room = getRoomById(roomId) ??
-        await database.getSingleRoom(this, roomId) ??
-        Room(
-          id: roomId,
-          client: this,
-        );
+    var room =
+        getRoomById(roomId) ?? await database.getSingleRoom(this, roomId);
+    if (room == null) {
+      await oneShotSync()
+          .timeout(timeoutForServerRequests)
+          .catchError((_) => null);
+      room = getRoomById(roomId) ??
+          Room(
+            id: roomId,
+            client: this,
+          );
+    }
+
     final roomName = notification.roomName;
     final roomAlias = notification.roomAlias;
     if (roomName != null) {
@@ -1840,9 +1847,7 @@ class Client extends MatrixApi {
         roomId: roomId,
       );
     }
-    matrixEvent ??= await database
-        .getEventById(eventId, room)
-        .timeout(timeoutForServerRequests);
+    matrixEvent ??= await database.getEventById(eventId, room);
 
     try {
       matrixEvent ??= await getOneRoomEvent(roomId, eventId)
@@ -1869,9 +1874,8 @@ class Client extends MatrixApi {
       if (room.fullyRead == matrixEvent.eventId) {
         return null;
       }
-      final readMarkerEvent = await database
-          .getEventById(room.fullyRead, room)
-          .timeout(timeoutForServerRequests);
+      final readMarkerEvent = await database.getEventById(room.fullyRead, room);
+
       if (readMarkerEvent != null &&
           readMarkerEvent.originServerTs.isAfter(
             matrixEvent.originServerTs
@@ -1910,7 +1914,10 @@ class Client extends MatrixApi {
       var decrypted = await encryption.decryptRoomEvent(event);
       if (decrypted.messageType == MessageTypes.BadEncrypted &&
           prevBatch != null) {
-        await oneShotSync();
+        await oneShotSync()
+            .timeout(timeoutForServerRequests)
+            .catchError((_) => null);
+
         decrypted = await encryption.decryptRoomEvent(event);
       }
       event = decrypted;
