@@ -71,10 +71,33 @@ class VoIP {
   /// the current instance of voip, changing this will drop any ongoing mesh calls
   /// with that sessionId
   late String currentSessionId;
+
+  /// the following parameters are only used in livekit calls, but cannot be
+  /// in the LivekitBackend class because that could be created from a pre-existing state event
+
+  /// controls how many key indices can you have before looping back to index 0
+  /// only used in livekit calls
+  final int keyRingSize;
+
+  /// A delay after a member leaves before we create and publish a new key, because people
+  /// tend to leave calls at the same time
+  /// only used in livekit calls
+  final Duration makeKeyDelay;
+
+  /// The delay between creating and sending a new key and starting to encrypt with it. This gives others
+  /// a chance to receive the new key to minimise the chance they don't get media they can't decrypt.
+  /// The total time between a member leaving and the call switching to new keys is therefore
+  /// makeKeyDelay + useKeyDelay
+  /// only used in livekit calls
+  final Duration useKeyDelay;
+
   VoIP(
     this.client,
     this.delegate, {
     this.enableSFUE2EEKeyRatcheting = false,
+    this.keyRingSize = 16,
+    this.useKeyDelay = CallTimeouts.useKeyDelay,
+    this.makeKeyDelay = CallTimeouts.makeKeyDelay,
   }) : super() {
     currentSessionId = base64Encode(secureRandomBytes(16));
     Logs().v('set currentSessionId to $currentSessionId');
@@ -101,7 +124,7 @@ class VoIP {
         if (event.room.membership != Membership.join) return;
         if (event.type != EventTypes.GroupCallMember) return;
 
-        Logs().v('[VOIP] onRoomState: type ${event.toJson()}');
+        // Logs().v('[VOIP] onRoomState: type ${event.toJson()}');
         final mems = event.room.getCallMembershipsFromEvent(event);
         for (final mem in mems) {
           unawaited(createGroupCallFromRoomStateEvent(mem));
@@ -903,12 +926,7 @@ class VoIP {
     CallMembership membership, {
     bool emitHandleNewGroupCall = true,
   }) async {
-    if (membership.isExpired) {
-      Logs().d(
-        'Ignoring expired membership in passive groupCall creator. ${membership.toJson()}',
-      );
-      return;
-    }
+    if (membership.isExpired) return;
 
     final room = client.getRoomById(membership.roomId);
 
