@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:matrix/matrix.dart';
+import 'package:path/path.dart';
 
 mixin DatabaseFileStorage {
   bool get supportsFileStoring => fileStorageLocation != null;
@@ -9,9 +12,17 @@ mixin DatabaseFileStorage {
   late final Uri? fileStorageLocation;
   late final Duration? deleteFilesAfterDuration;
 
-  File _getFileFromMxc(Uri mxcUri) => File(
-        '${Directory.fromUri(fileStorageLocation!).path}/${mxcUri.toString().split('/').last}',
-      );
+  /// Map an MXC URI to a local File path
+  File _getFileFromMxc(Uri mxcUri) {
+    final bytes = utf8.encode(mxcUri.toString());
+    final digest = sha256.convert(bytes);
+    // Use SHA256 hash of the uri as file name
+    final fileName = digest.toString();
+    final dirPath = Directory.fromUri(fileStorageLocation!).path;
+    // Join directory and file name to form full path
+    final filePath = join(dirPath, fileName);
+    return File(filePath);
+  }
 
   Future<void> storeFile(Uri mxcUri, Uint8List bytes, int time) async {
     final fileStorageLocation = this.fileStorageLocation;
