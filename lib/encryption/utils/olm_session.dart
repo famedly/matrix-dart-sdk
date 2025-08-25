@@ -41,24 +41,25 @@ class OlmSession {
     required this.lastReceived,
   });
 
-  OlmSession.fromJson(Map<String, dynamic> dbEntry, this.key)
-      : identityKey = dbEntry['identity_key'] ?? '' {
+  OlmSession.fromJson(Map<String, Object?> dbEntry, this.key)
+      : identityKey = dbEntry.tryGet<String>('identity_key') ?? '' {
     try {
       try {
         session = vod.Session.fromPickleEncrypted(
           pickleKey: key.toPickleKey(),
-          pickle: dbEntry['pickle'],
+          pickle: dbEntry['pickle'] as String,
         );
       } catch (_) {
         Logs().d('Unable to unpickle Olm session. Try LibOlm format.');
         session = vod.Session.fromOlmPickleEncrypted(
           pickleKey: utf8.encode(key),
-          pickle: dbEntry['pickle'],
+          pickle: dbEntry['pickle'] as String,
         );
       }
-      sessionId = dbEntry['session_id'];
-      lastReceived =
-          DateTime.fromMillisecondsSinceEpoch(dbEntry['last_received'] ?? 0);
+      sessionId = dbEntry['session_id'] as String;
+      lastReceived = DateTime.fromMillisecondsSinceEpoch(
+        dbEntry.tryGet<int>('last_received') ?? 0,
+      );
       assert(sessionId == session!.sessionId);
     } catch (e, s) {
       Logs().e('[Vodozemac] Could not unpickle olm session', e, s);
