@@ -690,7 +690,6 @@ class MockRTCDataChannel implements RTCDataChannel {
     Logs().i('Mock: Closing RTCDataChannel');
   }
 
-  @override
   Future<int> getBufferedAmount() async {
     return 0;
   }

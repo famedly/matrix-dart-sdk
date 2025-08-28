@@ -9,7 +9,6 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
-import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
@@ -71,16 +70,30 @@ class VoIP {
   /// the current instance of voip, changing this will drop any ongoing mesh calls
   /// with that sessionId
   late String currentSessionId;
+
+  /// the following parameters are only used in livekit calls, but cannot be
+  /// in the LivekitBackend class because that could be created from a pre-existing state event
+
+  /// controls how many key indices can you have before looping back to index 0
+  /// only used in livekit calls
+  final int keyRingSize;
+
+  // default values set in super constructor
+  CallTimeouts? timeouts;
+
   VoIP(
     this.client,
     this.delegate, {
     this.enableSFUE2EEKeyRatcheting = false,
+    this.keyRingSize = 16,
+    this.timeouts,
   }) : super() {
+    timeouts ??= CallTimeouts();
     currentSessionId = base64Encode(secureRandomBytes(16));
     Logs().v('set currentSessionId to $currentSessionId');
     // to populate groupCalls with already present calls
     for (final room in client.rooms) {
-      final memsList = room.getCallMembershipsFromRoom();
+      final memsList = room.getCallMembershipsFromRoom(this);
       for (final mems in memsList.values) {
         for (final mem in mems) {
           unawaited(createGroupCallFromRoomStateEvent(mem));
@@ -101,8 +114,7 @@ class VoIP {
         if (event.room.membership != Membership.join) return;
         if (event.type != EventTypes.GroupCallMember) return;
 
-        Logs().v('[VOIP] onRoomState: type ${event.toJson()}');
-        final mems = event.room.getCallMembershipsFromEvent(event);
+        final mems = event.room.getCallMembershipsFromEvent(event, this);
         for (final mem in mems) {
           unawaited(createGroupCallFromRoomStateEvent(mem));
         }
@@ -151,7 +163,7 @@ class VoIP {
           if (callEvent.type == EventTypes.CallInvite &&
               age >
                   (callEvent.content.tryGet<int>('lifetime') ??
-                      CallTimeouts.callInviteLifetime.inMilliseconds)) {
+                      timeouts!.callInviteLifetime.inMilliseconds)) {
             Logs().w(
               '[VOIP] Ommiting invite event ${callEvent.eventId} as age was older than lifetime',
             );
@@ -903,12 +915,7 @@ class VoIP {
     CallMembership membership, {
     bool emitHandleNewGroupCall = true,
   }) async {
-    if (membership.isExpired) {
-      Logs().d(
-        'Ignoring expired membership in passive groupCall creator. ${membership.toJson()}',
-      );
-      return;
-    }
+    if (membership.isExpired) return;
 
     final room = client.getRoomById(membership.roomId);
 
@@ -947,5 +954,5 @@ class VoIP {
   }
 
   @Deprecated('Call `hasActiveGroupCall` on the room directly instead')
-  bool hasActiveCall(Room room) => room.hasActiveGroupCall;
+  bool hasActiveCall(Room room) => room.hasActiveGroupCall(this);
 }
