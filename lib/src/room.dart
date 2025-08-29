@@ -1991,8 +1991,8 @@ class Room {
     return (powerLevelState is Map<String, int>) ? powerLevelState : null;
   }
 
-  /// Uploads a new user avatar for this room. Returns the event ID of the new
-  /// m.room.avatar event. Leave empty to remove the current avatar.
+  /// Uploads a new avatar for this room. Returns the event ID of the new
+  /// m.room.avatar event. Insert null to remove the current avatar.
   Future<String> setAvatar(MatrixFile? file) async {
     final uploadResp = file == null
         ? null
