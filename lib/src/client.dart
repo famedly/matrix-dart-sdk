@@ -32,6 +32,7 @@ import 'package:vodozemac/vodozemac.dart' as vod;
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/matrix_api_lite/generated/fixed_model.dart';
+import 'package:matrix/msc_extensions/msc_3911_linking_media/msc_3911_linking_media.dart';
 import 'package:matrix/msc_extensions/msc_unpublished_custom_refresh_token_lifetime/msc_unpublished_custom_refresh_token_lifetime.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
@@ -1269,12 +1270,16 @@ class Client extends MatrixApi {
       _versionsCache.tryFetch(() => getVersions());
 
   Future<bool> authenticatedMediaSupported() async {
-    return (await versionsResponse).versions.any(
-              (v) => isVersionGreaterThanOrEqualTo(v, 'v1.11'),
-            ) ||
-        (await versionsResponse)
-                .unstableFeatures?['org.matrix.msc3916.stable'] ==
-            true;
+    final versionsResponse = await this.versionsResponse;
+    return versionsResponse.versions.any(
+          (v) => isVersionGreaterThanOrEqualTo(v, 'v1.11'),
+        ) ||
+        versionsResponse.unstableFeatures?['org.matrix.msc3916.stable'] == true;
+  }
+
+  Future<bool> restrictedMediaSupported() async {
+    final versionsResponse = await this.versionsResponse;
+    return versionsResponse.unstableFeatures?['org.matrix.msc3911'] == true;
   }
 
   final _serverConfigCache = AsyncCache<MediaConfig>(const Duration(hours: 1));
@@ -1531,8 +1536,17 @@ class Client extends MatrixApi {
     }
 
     contentType ??= lookupMimeType(filename ?? '', headerBytes: file);
-    final mxc = await super
-        .uploadContent(file, filename: filename, contentType: contentType);
+
+    final useRestrictedMedia = await restrictedMediaSupported();
+
+    final mxc = useRestrictedMedia
+        ? await Msc3911(this).uploadRestrictedContent(
+            file,
+            filename: filename,
+            contentType: contentType,
+          )
+        : await super
+            .uploadContent(file, filename: filename, contentType: contentType);
 
     final database = this.database;
     if (file.length <= database.maxFileSize) {

@@ -472,6 +472,7 @@ class Event extends MatrixEvent {
     return await room.sendEvent(
       content,
       txid: txid ?? transactionId ?? eventId,
+      attachedMediaIds: unsigned?.tryGetList<String>('attached_media_ids'),
     );
   }
 
