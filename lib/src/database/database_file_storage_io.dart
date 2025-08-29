@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:path/path.dart' as path;
+
 import 'package:matrix/matrix.dart';
 
 mixin DatabaseFileStorage {
@@ -9,9 +11,14 @@ mixin DatabaseFileStorage {
   late final Uri? fileStorageLocation;
   late final Duration? deleteFilesAfterDuration;
 
-  File _getFileFromMxc(Uri mxcUri) => File(
-        '${Directory.fromUri(fileStorageLocation!).path}/${mxcUri.toString().split('/').last}',
-      );
+  File _getFileFromMxc(Uri mxcUri) {
+    final fileName =
+        '${mxcUri.host.replaceAll('.', '_')}_${mxcUri.pathSegments.join('_')}_${mxcUri.queryParameters.entries.map((entry) => '${entry.key}_${entry.value}').join('_')}';
+
+    return File(
+      path.join(Directory.fromUri(fileStorageLocation!).path, fileName),
+    );
+  }
 
   Future<void> storeFile(Uri mxcUri, Uint8List bytes, int time) async {
     final fileStorageLocation = this.fileStorageLocation;
