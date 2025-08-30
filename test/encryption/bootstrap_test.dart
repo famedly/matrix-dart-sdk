@@ -19,8 +19,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
@@ -35,8 +35,11 @@ void main() {
     late String origKeyId;
 
     setUpAll(() async {
-      await olm.init();
-      olm.get_library_version();
+      await vod.init(
+        wasmPath: './pkg/',
+        libraryPath: './rust/target/debug/',
+      );
+
       client = await getClient();
     });
 
@@ -75,20 +78,16 @@ void main() {
 
         // test all the x-signing keys match up
         for (final keyType in {'master', 'user_signing', 'self_signing'}) {
-          final privateKey = base64
-              .decode(await defaultKey.getStored('m.cross_signing.$keyType'));
-          final keyObj = olm.PkSigning();
-          try {
-            final pubKey = keyObj.init_with_seed(privateKey);
-            expect(
-              pubKey,
-              client.userDeviceKeys[client.userID]
-                  ?.getCrossSigningKey(keyType)
-                  ?.publicKey,
-            );
-          } finally {
-            keyObj.free();
-          }
+          final privateKey =
+              await defaultKey.getStored('m.cross_signing.$keyType');
+          final keyObj = vod.PkSigning.fromSecretKey(privateKey);
+          final pubKey = keyObj.publicKey.toBase64();
+          expect(
+            pubKey,
+            client.userDeviceKeys[client.userID]
+                ?.getCrossSigningKey(keyType)
+                ?.publicKey,
+          );
         }
 
         await defaultKey.store('foxes', 'floof');
@@ -133,20 +132,16 @@ void main() {
 
         // test all the x-signing keys match up
         for (final keyType in {'master', 'user_signing', 'self_signing'}) {
-          final privateKey = base64
-              .decode(await defaultKey.getStored('m.cross_signing.$keyType'));
-          final keyObj = olm.PkSigning();
-          try {
-            final pubKey = keyObj.init_with_seed(privateKey);
-            expect(
-              pubKey,
-              client.userDeviceKeys[client.userID]
-                  ?.getCrossSigningKey(keyType)
-                  ?.publicKey,
-            );
-          } finally {
-            keyObj.free();
-          }
+          final privateKey =
+              await defaultKey.getStored('m.cross_signing.$keyType');
+          final keyObj = vod.PkSigning.fromSecretKey(privateKey);
+          final pubKey = keyObj.publicKey.toBase64();
+          expect(
+            pubKey,
+            client.userDeviceKeys[client.userID]
+                ?.getCrossSigningKey(keyType)
+                ?.publicKey,
+          );
         }
 
         expect(await defaultKey.getStored('foxes'), 'floof');
@@ -192,20 +187,16 @@ void main() {
 
         // test all the x-signing keys match up
         for (final keyType in {'master', 'user_signing', 'self_signing'}) {
-          final privateKey = base64
-              .decode(await defaultKey.getStored('m.cross_signing.$keyType'));
-          final keyObj = olm.PkSigning();
-          try {
-            final pubKey = keyObj.init_with_seed(privateKey);
-            expect(
-              pubKey,
-              client.userDeviceKeys[client.userID]
-                  ?.getCrossSigningKey(keyType)
-                  ?.publicKey,
-            );
-          } finally {
-            keyObj.free();
-          }
+          final privateKey =
+              await defaultKey.getStored('m.cross_signing.$keyType');
+          final keyObj = vod.PkSigning.fromSecretKey(privateKey);
+          final pubKey = keyObj.publicKey.toBase64();
+          expect(
+            pubKey,
+            client.userDeviceKeys[client.userID]
+                ?.getCrossSigningKey(keyType)
+                ?.publicKey,
+          );
         }
 
         expect(await defaultKey.getStored('foxes'), 'floof');

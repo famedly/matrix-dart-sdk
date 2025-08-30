@@ -24,12 +24,12 @@ class ConnectionTester {
 
     pc1!.onIceCandidate = (candidate) {
       if (candidate.candidate!.contains('relay')) {
-        pc2!.addCandidate(candidate);
+        unawaited(pc2!.addCandidate(candidate));
       }
     };
     pc2!.onIceCandidate = (candidate) {
       if (candidate.candidate!.contains('relay')) {
-        pc1!.addCandidate(candidate);
+        unawaited(pc1!.addCandidate(candidate));
       }
     };
 

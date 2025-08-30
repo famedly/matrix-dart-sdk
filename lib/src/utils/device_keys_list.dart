@@ -20,7 +20,7 @@ import 'dart:convert';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart' show IterableExtension;
-import 'package:olm/olm.dart' as olm;
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
@@ -77,15 +77,42 @@ class DeviceKeysList {
     }
     if (userId != client.userID) {
       // in-room verification with someone else
-      final roomId = await client.startDirectChat(
-        userId,
-        enableEncryption: newDirectChatEnableEncryption,
-        initialState: newDirectChatInitialState,
-        waitForSync: false,
-      );
+      Room? room;
+      // we check if there's already a direct chat with the user
+      for (final directChatRoomId in client.directChats[userId] ?? []) {
+        final tempRoom = client.getRoomById(directChatRoomId);
+        if (tempRoom != null &&
+            // check if the room is a direct chat and has less than 2 members
+            // (including the invited users)
+            (tempRoom.summary.mInvitedMemberCount ?? 0) +
+                    (tempRoom.summary.mJoinedMemberCount ?? 1) <=
+                2) {
+          // Now we check if the users in the room are none other than the current
+          // user and the user we want to verify
+          final members = tempRoom.getParticipants([
+            Membership.invite,
+            Membership.join,
+          ]);
+          if (members.every((m) => {userId, client.userID}.contains(m.id))) {
+            // if so, we use that room
+            room = tempRoom;
+            break;
+          }
+        }
+      }
+      // if there's no direct chat that satisfies the conditions, we create a new one
+      if (room == null) {
+        final newRoomId = await client.startDirectChat(
+          userId,
+          enableEncryption: newDirectChatEnableEncryption,
+          initialState: newDirectChatInitialState,
+          waitForSync: false,
+          skipExistingChat: true, // to create a new room directly
+        );
+        room = client.getRoomById(newRoomId) ??
+            Room(id: newRoomId, client: client);
+      }
 
-      final room =
-          client.getRoomById(roomId) ?? Room(id: roomId, client: client);
       final request =
           KeyVerification(encryption: encryption, room: room, userId: userId);
       await request.start();
@@ -213,24 +240,17 @@ abstract class SignableKey extends MatrixSignableKey {
     String signature, {
     bool isSignatureWithoutLibolmValid = false,
   }) {
-    olm.Utility olmutil;
-    try {
-      olmutil = olm.Utility();
-    } catch (e) {
-      // if no libolm is present we land in this catch block, and return the default
-      // set if no libolm is there. Some signatures should be assumed-valid while others
-      // should be assumed-invalid
-      return isSignatureWithoutLibolmValid;
-    }
     var valid = false;
     try {
-      olmutil.ed25519_verify(pubKey, signingContent, signature);
+      vod.Ed25519PublicKey.fromBase64(pubKey).verify(
+        message: signingContent,
+        signature: vod.Ed25519Signature.fromBase64(signature),
+      );
       valid = true;
-    } catch (_) {
+    } catch (e) {
+      Logs().d('Invalid Ed25519 signature', e);
       // bad signature
       valid = false;
-    } finally {
-      olmutil.free();
     }
     return valid;
   }
@@ -399,7 +419,7 @@ class CrossSigningKey extends SignableKey {
     }
     await super.setVerified(newVerified, sign);
     await client.database
-        ?.setVerifiedUserCrossSigningKey(newVerified, userId, publicKey!);
+        .setVerifiedUserCrossSigningKey(newVerified, userId, publicKey!);
   }
 
   @override
@@ -409,7 +429,7 @@ class CrossSigningKey extends SignableKey {
     }
     _blocked = newBlocked;
     await client.database
-        ?.setBlockedUserCrossSigningKey(newBlocked, userId, publicKey!);
+        .setBlockedUserCrossSigningKey(newBlocked, userId, publicKey!);
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(
@@ -486,7 +506,7 @@ class DeviceKeys extends SignableKey {
     }
     await super.setVerified(newVerified, sign);
     await client.database
-        ?.setVerifiedUserDeviceKey(newVerified, userId, deviceId!);
+        .setVerifiedUserDeviceKey(newVerified, userId, deviceId!);
   }
 
   @override
@@ -497,7 +517,7 @@ class DeviceKeys extends SignableKey {
     }
     _blocked = newBlocked;
     await client.database
-        ?.setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
+        .setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
   }
 
   DeviceKeys.fromMatrixDeviceKeys(

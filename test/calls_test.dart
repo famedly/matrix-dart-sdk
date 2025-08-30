@@ -932,5 +932,57 @@ void main() {
       expect(room.groupCallParticipantCount('participants_count'), 2);
       expect(room.hasActiveGroupCall, true);
     });
+
+    test('call persists after sending invite', () async {
+      CallSession? incomingCall;
+
+      // incoming call should not be created yet
+      incomingCall = voip.calls[voip.currentCID];
+      expect(incomingCall, isNull);
+      expect(incomingCall?.pc, isNull);
+
+      // send invite for the call
+      final outgoingCall = await voip.inviteToCall(
+        room,
+        CallType.kVoice,
+        userId: '@alice:testing.com',
+      );
+
+      // acknowledge the invite
+      await matrix.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      type: 'm.call.invite',
+                      content: {
+                        'lifetime': 60000,
+                        'call_id': outgoingCall.callId,
+                        'party_id': outgoingCall.localPartyId,
+                        'version': '1',
+                        'offer': {'type': 'offer', 'sdp': 'sdp'},
+                      },
+                      senderId: '@alice:testing.com',
+                      eventId: 'outgoingCallInviteEvent',
+                      originServerTs: DateTime.now(),
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      // incoming call pc should be created
+      // if this fails, the call was not properly created
+      incomingCall = voip.calls[voip.currentCID];
+      expect(incomingCall, isNotNull);
+      expect(incomingCall?.pc, isNotNull);
+    });
   });
 }

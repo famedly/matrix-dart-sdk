@@ -23,9 +23,9 @@ import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
-import 'package:olm/olm.dart' as olm;
 import 'package:path/path.dart' show join;
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
@@ -35,7 +35,7 @@ import 'fake_database.dart';
 void main() {
   // key @test:fakeServer.notExisting
   const pickledOlmAccount =
-      'N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtuyg3RxViwdNxs3718fyAqQ/VSwbXsY0Nl+qQbF+nlVGHenGqk5SuNl1P6e1PzZxcR0IfXA94Xij1Ob5gDv5YH4UCn9wRMG0abZsQP0YzpDM0FLaHSCyo9i5JD/vMlhH+nZWrgAzPPCTNGYewNV8/h3c+VyJh8ZTx/fVi6Yq46Fv+27Ga2ETRZ3Qn+Oyx6dLBjnBZ9iUvIhqpe2XqaGA1PopOz8iDnaZitw';
+      'huxcPifHlyiQsX7cZeMMITbka3hLeUT3ss6DLL6dV7knaD4wgAYK6gcWknkixnX8C5KMIyxzytxiNqAOhDFRE5NsET8hr2dQ8OvXX7M95eQ7/3dPi7FkPUIbvneTSGgJYNDxJdHsDJ8OBHZ3BoqUJFDbTzFfVJjEzN4G9XQwPDafZ2p5WyerOK8Twj/rvk5N+ERmkt1XgVLQl66we/BO1ugTeM3YpDHm5lTzFUitJGTIuuONsKG9mmzdAmVUJ9YIrSxwmOBdegbGA+LAl5acg5VOol3KxRgZUMJQRQ58zpBAs72oauHizv1QVoQ7uIUiCUeb9lym+TEjmApvhru/1CPHU90K5jHNZ57wb/4V9VsqBWuoNibzDWG35YTFLcx0o+1lrCIjm1QjuC0777G+L1HNw5wnppV3z/k0YujjuPS3wvOA30TjHg';
   const identityKey = '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk';
   const fingerprintKey = 'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo';
 
@@ -59,7 +59,21 @@ void main() {
     test('logout', () async {
       expect(await File(dbPath).exists(), true);
       await clientOnPath.logout();
+      await clientOnPath.database.delete();
       expect(await File(dbPath).exists(), false);
+    });
+  });
+
+  group('Export and Import', () {
+    test('exportDump and importDump', () async {
+      final client = await getClient();
+      final userId = client.userID;
+      final export = await client.exportDump();
+      expect(export != null, true);
+      expect(client.userID, null);
+      final importClient = Client('Import', database: await getDatabase());
+      await importClient.importDump(export!);
+      expect(importClient.userID, userId);
     });
   });
 
@@ -67,10 +81,7 @@ void main() {
   group('client mem', tags: 'olm', () {
     late Client matrix;
 
-    Logs().level = Level.error;
-
     /// Check if all Elements get created
-
     setUp(() async {
       matrix = await getClient();
     });
@@ -79,7 +90,7 @@ void main() {
       final client = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       );
       expect(client.isLogged(), false);
       final Set<InitState> initStates = {};
@@ -106,13 +117,29 @@ void main() {
       expect(client.isLogged(), true);
 
       await client.logout();
+
+      expect(client.isLogged(), false);
+
+      await client.login(
+        LoginType.mLoginPassword,
+        token: 'abcd',
+        identifier:
+            AuthenticationUserIdentifier(user: '@test:fakeServer.notExisting'),
+        deviceId: 'GHTYAJCE',
+        onInitStateChanged: initStates.add,
+      );
+      expect(client.isLogged(), true);
+
+      await client.logout();
+
+      expect(client.isLogged(), false);
     });
 
     test('Login', () async {
       matrix = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       );
       final eventUpdateListFuture = matrix.onTimelineEvent.stream.toList();
       final toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
@@ -282,16 +309,13 @@ void main() {
 
       final eventUpdateList = await eventUpdateListFuture;
 
-      expect(eventUpdateList.length, 3);
+      expect(eventUpdateList.length, 2);
 
-      expect(eventUpdateList[0].type, 'm.room.member');
+      expect(eventUpdateList[0].type, 'm.room.message');
       expect(eventUpdateList[0].roomId, '!726s6s6q:example.com');
 
       expect(eventUpdateList[1].type, 'm.room.message');
-      expect(eventUpdateList[1].roomId, '!726s6s6q:example.com');
-
-      expect(eventUpdateList[2].type, 'm.room.message');
-      expect(eventUpdateList[2].roomId, '!726s6s6f:example.com');
+      expect(eventUpdateList[1].roomId, '!726s6s6f:example.com');
 
       expect(
         matrix
@@ -369,10 +393,10 @@ void main() {
 
       final key = 'abc def!/_-';
       await matrix.setAccountData(matrix.userID!, key, content);
-      final dbContent = await matrix.database?.getAccountData();
+      final dbContent = await matrix.database.getAccountData();
 
       expect(matrix.accountData[key]?.content, content);
-      expect(dbContent?[key]?.content, content);
+      expect(dbContent[key]?.content, content);
     });
 
     test('roomAccountData', () async {
@@ -383,15 +407,15 @@ void main() {
       final key = 'abc def!/_-';
       final roomId = '!726s6s6q:example.com';
       await matrix.setAccountDataPerRoom(matrix.userID!, roomId, key, content);
-      final roomFromList = (await matrix.database?.getRoomList(matrix))
-          ?.firstWhere((room) => room.id == roomId);
-      final roomFromDb = await matrix.database?.getSingleRoom(matrix, roomId);
+      final roomFromList = (await matrix.database.getRoomList(matrix))
+          .firstWhere((room) => room.id == roomId);
+      final roomFromDb = await matrix.database.getSingleRoom(matrix, roomId);
 
       expect(
         matrix.getRoomById(roomId)?.roomAccountData[key]?.content,
         content,
       );
-      expect(roomFromList?.roomAccountData[key]?.content, content);
+      expect(roomFromList.roomAccountData[key]?.content, content);
       expect(
         roomFromDb?.roomAccountData[key]?.content,
         content,
@@ -418,7 +442,7 @@ void main() {
       matrix = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       );
 
       expect(matrix.homeserver, null);
@@ -504,7 +528,7 @@ void main() {
       matrix = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       );
 
       await matrix.checkHomeserver(
@@ -761,6 +785,118 @@ void main() {
       expect(room.lastEvent!.content['body'], '* foxies');
     });
 
+    test('set prev_batch when invite then join', () async {
+      await matrix.handleSync(
+        SyncUpdate.fromJson({
+          'next_batch': '1',
+          'rooms': {
+            'invite': {
+              'new_room_id': {
+                'invite_state': {
+                  'events': [
+                    MatrixEvent(
+                      eventId: '0',
+                      type: EventTypes.RoomCreate,
+                      content: {'body': '0'},
+                      senderId: '@alice:example.com',
+                      stateKey: '@alice:example.com',
+                      originServerTs: DateTime.now(),
+                    ).toJson(),
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      );
+      expect(
+        matrix.rooms.singleWhereOrNull(
+          (element) => element.id == 'new_room_id',
+        ),
+        isNotNull,
+      );
+
+      final newRoom = matrix.getRoomById('new_room_id')!;
+
+      expect(newRoom.prev_batch, null);
+
+      await matrix.handleSync(
+        SyncUpdate.fromJson({
+          'next_batch': '3',
+          'rooms': {
+            'join': {
+              'new_room_id': {
+                'timeline': {
+                  'events': [
+                    MatrixEvent(
+                      eventId: '2',
+                      type: EventTypes.RoomCreate,
+                      content: {'body': '2'},
+                      senderId: '@alice:example.com',
+                      stateKey: '@alice:example.com',
+                      originServerTs: DateTime.now(),
+                    ).toJson(),
+                  ],
+                  'prev_batch': '1',
+                },
+              },
+            },
+          },
+        }),
+      );
+
+      final timeline = await newRoom.getTimeline();
+      expect(newRoom.prev_batch, '1');
+      expect(timeline.events.length, 1);
+      expect(timeline.events.first.eventId, '2');
+
+      await matrix.handleSync(
+        SyncUpdate.fromJson({
+          'next_batch': '4',
+          'rooms': {
+            'join': {
+              'new_room_id': {
+                'timeline': {
+                  'events': [
+                    MatrixEvent(
+                      eventId: '3',
+                      type: EventTypes.Message,
+                      content: {'body': '3'},
+                      senderId: '@alice2:example.com',
+                      stateKey: '@alice2:example.com',
+                      originServerTs: DateTime.now(),
+                    ).toJson(),
+                  ],
+                  'prev_batch': '2',
+                },
+              },
+            },
+          },
+        }),
+      );
+
+      expect(newRoom.prev_batch, '1');
+      expect(timeline.events.length, 2);
+      expect(timeline.events.last.eventId, '2');
+      expect(timeline.events.first.eventId, '3');
+
+      if (timeline.canRequestHistory) {
+        await timeline.requestHistory();
+      }
+      expect(newRoom.prev_batch, 'emptyHistoryResponse');
+      expect(timeline.events.length, 3);
+      expect(timeline.events.last.eventId, '0');
+      expect(timeline.events.first.eventId, '3');
+
+      while (timeline.canRequestHistory) {
+        await timeline.requestHistory();
+      }
+      expect(newRoom.prev_batch, null);
+      expect(timeline.events.length, 3);
+      expect(timeline.events.last.eventId, '0');
+      expect(timeline.events.first.eventId, '3');
+    });
+
     test('getProfileFromUserId', () async {
       final cachedProfile = await matrix.getUserProfile('@getme:example.com');
       expect(cachedProfile.outdated, false);
@@ -800,14 +936,14 @@ void main() {
       );
       expect(matrix.onUserProfileUpdate.value, '@alice:example.com');
       final cachedProfileFromDb =
-          await matrix.database?.getUserProfile('@alice:example.com');
+          await matrix.database.getUserProfile('@alice:example.com');
       expect(cachedProfileFromDb?.outdated, true);
     });
     test('joinAfterInviteMembership', () async {
       final client = await getClient();
       await client.abortSync();
       client.rooms.clear();
-      await client.database?.clearCache();
+      await client.database.clearCache();
 
       await client.handleSync(
         SyncUpdate.fromJson(
@@ -826,7 +962,7 @@ void main() {
       await client.handleSync(
         SyncUpdate.fromJson(
           jsonDecode(
-            '{"next_batch":"s198512_227245_8_1404_23588_11_51066_267416_0_2639","rooms":{"join":{"!bWEUQDujMKwjxkCXYr:tim-alpha.staging.famedly.de":{"summary":{"m.heroes":["@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de"],"m.joined_member_count":2,"m.invited_member_count":0},"state":{"events":[{"type":"m.room.create","content":{"type":"de.gematik.tim.roomtype.default.v1","room_version":"10","creator":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$qSgXGXjly6p5Kwbdb_PMBC_EF7nzHDbM23mvJFVeoiE","origin_server_ts":1709565579735,"unsigned":{"age":2255}}]},"timeline":{"events":[{"type":"m.room.member","content":{"membership":"join","displayname":"Tóboggen, Veronika Freifrau"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","event_id":"\$rQzxxTrSd9Y0koxIGlkalPAV_lwu94jLOA-8PSunY24","origin_server_ts":1709565579871,"unsigned":{"age":2119,"com.famedly.famedlysdk.message_sending_status":2}},{"type":"m.room.power_levels","content":{"users":{"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de":100,"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de":100},"users_default":0,"events":{"m.room.name":50,"m.room.power_levels":100,"m.room.history_visibility":100,"m.room.canonical_alias":50,"m.room.avatar":50,"m.room.tombstone":100,"m.room.server_acl":100,"m.room.encryption":100},"events_default":0,"state_default":50,"ban":50,"kick":50,"redact":50,"invite":0,"historical":100},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$d6sgGs8PmkAbC3Iw3CkPT1QSub2zFTTvytegOxkPYPs","origin_server_ts":1709565579966,"unsigned":{"age":2024,"com.famedly.famedlysdk.message_sending_status":2}},{"type":"m.room.join_rules","content":{"join_rule":"invite"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$EnA2Podch5181X4G1ZX34zaFGS_V4ZCZzLkBEfS_qyg","origin_server_ts":1709565579979,"unsigned":{"age":2011,"com.famedly.famedlysdk.message_sending_status":2}},{"type":"m.room.history_visibility","content":{"history_visibility":"shared"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$6tNNo6ZkpZZrHrn8ZjXhMqI0CNv-VNNBw4R0h3_O-Tc","origin_server_ts":1709565579979,"unsigned":{"age":2011,"com.famedly.famedlysdk.message_sending_status":2}},{"type":"m.room.guest_access","content":{"guest_access":"can_join"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$ViuL_LpN1sY9oYcGwycNjtp6FcGj__smUg8mzj3oa2o","origin_server_ts":1709565579980,"unsigned":{"age":2010,"com.famedly.famedlysdk.message_sending_status":2}},{"type":"m.room.encryption","content":{"algorithm":"m.megolm.v1.aes-sha2"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$_e0az7OP7D78QU7DItiRAtlHlZmA07B5wenR93x5V1E","origin_server_ts":1709565579981,"unsigned":{"age":2009,"com.famedly.famedlysdk.message_sending_status":2}},{"type":"m.room.member","content":{"is_direct":true,"membership":"invite","displayname":"Düsterbehn-Hardenbergshausen, Michael von"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","event_id":"\$4sZ3CF67SUh0n5WG0ZKS47Epj9B_d842RJjnrQmUKQo","origin_server_ts":1709565580185,"unsigned":{"age":1805,"com.famedly.famedlysdk.message_sending_status":2}},{"type":"m.room.notsoencrypted","content":{"algorithm":"m.megolm.v1.aes-sha2","ciphertext":"AwgAEpACEZw8Ymg99Yfl7VsXRIdczlQ3+YSJ6te3o6ka/XXP0h4ZsgR2bu1Q8puQ77fOpwX5dPnrrCi5SQg9Zv5/u+0QbFV4FKE/k03Vxao/tiswb6wST14x9kYkwViOrZe7fzg7VF9tCi8U88TqxGsPDDOVjO+WNxG8I9ldP1zvPsxYzVSyGPhaB5E+q6llwlXcQ56wvpf7Ke7gX4Ly2Dlxa8Bmy7aUSCBoWAt/xFRdzCOsE9qI8oxzuvk4RF0H/7bY+4DkGTsP1rIYgA7Q0JueIFb47Yu6pK26BCKo1yPAR8qvpe8vGBICm4slMbKaJN4RqBHtR0zc12E5DXud91o3mArqTksv1NEbI1F4XgDREl76WBw8a7MafDSuun09JuWpGxzPHvLVOUVny6tTJPRutsZLkmnTeMTiXnsPexUiY7UTYlzOMeeoUSTDuJXJz6CM+gSc52CiKoHK/gE","device_id":"TNLOYXJFXM","sender_key":"e9W0gpUcSEKOQ8P/xIdroHUpP7yG4EjQfueiAngESRk","session_id":"hhZ8TBs9Xp0dmuvC6XpDBYsAKnTqb8WiBhZMzHcbBXI"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","event_id":"\$KKIZX8cuB3S3uzS7CDtRlTkcaJRW73e2HW2NuW6OTEg","origin_server_ts":1709565580991,"unsigned":{"age":999,"com.famedly.famedlysdk.message_sending_status":2}},{"type":"m.room.member","content":{"membership":"join","displayname":"Düsterbehn-Hardenbergshausen, Michael von"},"sender":"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","state_key":"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","event_id":"\$UNSLEyhC_93oQlt0tWoai4CCd3LH2GJJexM0WN2wxCA","origin_server_ts":1709565581813,"unsigned":{"replaces_state":"\$4sZ3CF67SUh0n5WG0ZKS47Epj9B_d842RJjnrQmUKQo","prev_content":{"is_direct":true,"membership":"invite","displayname":"Düsterbehn-Hardenbergshausen, Michael von"},"prev_sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","age":177,"com.famedly.famedlysdk.message_sending_status":2}},{"type":"m.room.member","content":{"membership":"join","displayname":"Düsterbehn-Hardenbergshausen, Michael von"},"sender":"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","state_key":"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","event_id":"\$UNSLEyhC_93oQlt0tWoai4CCd3LH2GJJexM0WN2wxCA","origin_server_ts":1709565581813,"unsigned":{"replaces_state":"\$4sZ3CF67SUh0n5WG0ZKS47Epj9B_d842RJjnrQmUKQo","prev_content":{"is_direct":true,"membership":"invite","displayname":"Düsterbehn-Hardenbergshausen, Michael von"},"prev_sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","age":177,"com.famedly.famedlysdk.message_sending_status":2}}],"limited":true,"prev_batch":"s198503_227245_8_1404_23588_11_51066_267416_0_2639"},"ephemeral":{"events":[]},"account_data":{"events":[]},"unread_notifications":{"highlight_count":0,"notification_count":0}}}},"presence":{"events":[{"type":"m.presence","content":{"presence":"online","last_active_ago":843,"currently_active":true},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de"}]},"device_lists":{"changed":["@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de"],"left":[]},"device_one_time_keys_count":{"signed_curve25519":65},"device_unused_fallback_key_types":["signed_curve25519"],"org.matrix.msc2732.device_unused_fallback_key_types":["signed_curve25519"]}',
+            '{"next_batch":"s198512_227245_8_1404_23588_11_51066_267416_0_2639","rooms":{"join":{"!bWEUQDujMKwjxkCXYr:tim-alpha.staging.famedly.de":{"summary":{"m.heroes":["@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de"],"m.joined_member_count":2,"m.invited_member_count":0},"state":{"events":[{"type":"m.room.create","content":{"type":"de.gematik.tim.roomtype.default.v1","room_version":"10","creator":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$qSgXGXjly6p5Kwbdb_PMBC_EF7nzHDbM23mvJFVeoiE","origin_server_ts":1709565579735,"unsigned":{"age":2255}}]},"timeline":{"events":[{"type":"m.room.member","content":{"membership":"join","displayname":"Tóboggen, Veronika Freifrau"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","event_id":"\$rQzxxTrSd9Y0koxIGlkalPAV_lwu94jLOA-8PSunY24","origin_server_ts":1709565579871,"unsigned":{"age":2119}},{"type":"m.room.power_levels","content":{"users":{"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de":100,"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de":100},"users_default":0,"events":{"m.room.name":50,"m.room.power_levels":100,"m.room.history_visibility":100,"m.room.canonical_alias":50,"m.room.avatar":50,"m.room.tombstone":100,"m.room.server_acl":100,"m.room.encryption":100},"events_default":0,"state_default":50,"ban":50,"kick":50,"redact":50,"invite":0,"historical":100},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$d6sgGs8PmkAbC3Iw3CkPT1QSub2zFTTvytegOxkPYPs","origin_server_ts":1709565579966,"unsigned":{"age":2024}},{"type":"m.room.join_rules","content":{"join_rule":"invite"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$EnA2Podch5181X4G1ZX34zaFGS_V4ZCZzLkBEfS_qyg","origin_server_ts":1709565579979,"unsigned":{"age":2011}},{"type":"m.room.history_visibility","content":{"history_visibility":"shared"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$6tNNo6ZkpZZrHrn8ZjXhMqI0CNv-VNNBw4R0h3_O-Tc","origin_server_ts":1709565579979,"unsigned":{"age":2011}},{"type":"m.room.guest_access","content":{"guest_access":"can_join"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$ViuL_LpN1sY9oYcGwycNjtp6FcGj__smUg8mzj3oa2o","origin_server_ts":1709565579980,"unsigned":{"age":2010}},{"type":"m.room.encryption","content":{"algorithm":"m.megolm.v1.aes-sha2"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"","event_id":"\$_e0az7OP7D78QU7DItiRAtlHlZmA07B5wenR93x5V1E","origin_server_ts":1709565579981,"unsigned":{"age":2009}},{"type":"m.room.member","content":{"is_direct":true,"membership":"invite","displayname":"Düsterbehn-Hardenbergshausen, Michael von"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","state_key":"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","event_id":"\$4sZ3CF67SUh0n5WG0ZKS47Epj9B_d842RJjnrQmUKQo","origin_server_ts":1709565580185,"unsigned":{"age":1805}},{"type":"m.room.notsoencrypted","content":{"algorithm":"m.megolm.v1.aes-sha2","ciphertext":"AwgAEpACEZw8Ymg99Yfl7VsXRIdczlQ3+YSJ6te3o6ka/XXP0h4ZsgR2bu1Q8puQ77fOpwX5dPnrrCi5SQg9Zv5/u+0QbFV4FKE/k03Vxao/tiswb6wST14x9kYkwViOrZe7fzg7VF9tCi8U88TqxGsPDDOVjO+WNxG8I9ldP1zvPsxYzVSyGPhaB5E+q6llwlXcQ56wvpf7Ke7gX4Ly2Dlxa8Bmy7aUSCBoWAt/xFRdzCOsE9qI8oxzuvk4RF0H/7bY+4DkGTsP1rIYgA7Q0JueIFb47Yu6pK26BCKo1yPAR8qvpe8vGBICm4slMbKaJN4RqBHtR0zc12E5DXud91o3mArqTksv1NEbI1F4XgDREl76WBw8a7MafDSuun09JuWpGxzPHvLVOUVny6tTJPRutsZLkmnTeMTiXnsPexUiY7UTYlzOMeeoUSTDuJXJz6CM+gSc52CiKoHK/gE","device_id":"TNLOYXJFXM","sender_key":"e9W0gpUcSEKOQ8P/xIdroHUpP7yG4EjQfueiAngESRk","session_id":"hhZ8TBs9Xp0dmuvC6XpDBYsAKnTqb8WiBhZMzHcbBXI"},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","event_id":"\$KKIZX8cuB3S3uzS7CDtRlTkcaJRW73e2HW2NuW6OTEg","origin_server_ts":1709565580991,"unsigned":{"age":999}},{"type":"m.room.member","content":{"membership":"join","displayname":"Düsterbehn-Hardenbergshausen, Michael von"},"sender":"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","state_key":"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","event_id":"\$UNSLEyhC_93oQlt0tWoai4CCd3LH2GJJexM0WN2wxCA","origin_server_ts":1709565581813,"unsigned":{"replaces_state":"\$4sZ3CF67SUh0n5WG0ZKS47Epj9B_d842RJjnrQmUKQo","prev_content":{"is_direct":true,"membership":"invite","displayname":"Düsterbehn-Hardenbergshausen, Michael von"},"prev_sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","age":177}},{"type":"m.room.member","content":{"membership":"join","displayname":"Düsterbehn-Hardenbergshausen, Michael von"},"sender":"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","state_key":"@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","event_id":"\$UNSLEyhC_93oQlt0tWoai4CCd3LH2GJJexM0WN2wxCA","origin_server_ts":1709565581813,"unsigned":{"replaces_state":"\$4sZ3CF67SUh0n5WG0ZKS47Epj9B_d842RJjnrQmUKQo","prev_content":{"is_direct":true,"membership":"invite","displayname":"Düsterbehn-Hardenbergshausen, Michael von"},"prev_sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de","age":177}}],"limited":true,"prev_batch":"s198503_227245_8_1404_23588_11_51066_267416_0_2639"},"ephemeral":{"events":[]},"account_data":{"events":[]},"unread_notifications":{"highlight_count":0,"notification_count":0}}}},"presence":{"events":[{"type":"m.presence","content":{"presence":"online","last_active_ago":843,"currently_active":true},"sender":"@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de"}]},"device_lists":{"changed":["@duesterbehn-hardenbergshausen_michael_von:tim-alpha.staging.famedly.de","@toboggen_veronika_freifrau:tim-alpha.staging.famedly.de"],"left":[]},"device_one_time_keys_count":{"signed_curve25519":65},"device_unused_fallback_key_types":["signed_curve25519"],"org.matrix.msc2732.device_unused_fallback_key_types":["signed_curve25519"]}',
           ),
         ),
       );
@@ -843,7 +979,7 @@ void main() {
 
       await client.abortSync();
       client.rooms.clear();
-      await client.database?.clearCache();
+      await client.database.clearCache();
       await client.dispose(closeDatabase: true);
     });
     test('leaveThenInvite should be invited', () async {
@@ -855,7 +991,7 @@ void main() {
       final client = await getClient();
       await client.abortSync();
       client.rooms.clear();
-      await client.database?.clearCache();
+      await client.database.clearCache();
 
       final roomId = '!inviteLeaveRoom:example.com';
       await client.handleSync(
@@ -903,14 +1039,14 @@ void main() {
 
       await client.abortSync();
       client.rooms.clear();
-      await client.database?.clearCache();
+      await client.database.clearCache();
       await client.dispose(closeDatabase: true);
     });
     test('ownProfile', () async {
       final client = await getClient();
       await client.abortSync();
       client.rooms.clear();
-      await client.database?.clearCache();
+      await client.database.clearCache();
       await client.handleSync(
         SyncUpdate.fromJson(
           jsonDecode(
@@ -963,9 +1099,8 @@ void main() {
 
       final deviceKeys = <DeviceKeys>[];
       for (var i = 0; i < 30; i++) {
-        final account = olm.Account();
-        account.create();
-        final keys = json.decode(account.identity_keys());
+        final account = vod.Account();
+        final keys = account.identityKeys;
         final userId = '@testuser:example.org';
         final deviceId = 'DEVICE$i';
         final keyObj = {
@@ -976,18 +1111,17 @@ void main() {
             'm.megolm.v1.aes-sha2',
           ],
           'keys': {
-            'curve25519:$deviceId': keys['curve25519'],
-            'ed25519:$deviceId': keys['ed25519'],
+            'curve25519:$deviceId': keys.curve25519.toBase64(),
+            'ed25519:$deviceId': keys.ed25519.toBase64(),
           },
         };
         final signature =
             account.sign(String.fromCharCodes(canonicalJson.encode(keyObj)));
         keyObj['signatures'] = {
           userId: {
-            'ed25519:$deviceId': signature,
+            'ed25519:$deviceId': signature.toBase64(),
           },
         };
-        account.free();
         deviceKeys.add(DeviceKeys.fromJson(keyObj, matrix));
       }
       FakeMatrixApi.calledEndpoints.clear();
@@ -1161,6 +1295,23 @@ void main() {
     });
     test('startDirectChat', () async {
       await matrix.startDirectChat('@alice:example.com', waitForSync: false);
+
+      expect(
+        json.decode(
+          FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last,
+        ),
+        {
+          'initial_state': [
+            {
+              'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
+              'type': 'm.room.encryption',
+            }
+          ],
+          'invite': ['@alice:example.com'],
+          'is_direct': true,
+          'preset': 'trusted_private_chat',
+        },
+      );
     });
 
     test('createGroupChat', () async {
@@ -1265,11 +1416,11 @@ void main() {
       );
     });
     test('Test the fake store api', () async {
-      final database = await getDatabase(null);
+      final database = await getDatabase();
       final client1 = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: (_) => database,
+        database: database,
       );
 
       await client1.init(
@@ -1289,7 +1440,7 @@ void main() {
       final client2 = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: (_) => database,
+        database: database,
       );
 
       await client2.init();
@@ -1341,8 +1492,8 @@ void main() {
           await client.uploadContent(Uint8List(0), filename: 'file.jpeg');
       expect(response.toString(), 'mxc://example.com/AQwafuaFswefuhsfAFAgsw');
       expect(
-        await client.database?.getFile(response) != null,
-        client.database?.supportsFileStoring,
+        await client.database.getFile(response) != null,
+        client.database.supportsFileStoring,
       );
       await client.dispose(closeDatabase: true);
     });
@@ -1380,7 +1531,7 @@ void main() {
       FakeMatrixApi.expectedAccessToken = null;
       expect(client.accessToken, 'a_new_token');
       expect(softLoggedOut, 1);
-      final storedClient = await client.database?.getClient(client.clientName);
+      final storedClient = await client.database.getClient(client.clientName);
       expect(storedClient?.tryGet<String>('token'), 'a_new_token');
       expect(
         storedClient?.tryGet<String>('refresh_token'),
@@ -1451,11 +1602,11 @@ void main() {
     });
 
     test('Database Migration', () async {
-      final firstDatabase = await getDatabase(null);
+      final firstDatabase = await getDatabase();
       final firstClient = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: (_) => firstDatabase,
+        database: firstDatabase,
       );
       FakeMatrixApi.client = firstClient;
       await firstClient.checkHomeserver(
@@ -1476,7 +1627,7 @@ void main() {
       final newClient = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
         legacyDatabaseBuilder: (_) => firstDatabase,
       );
       final Set<InitState> initStates = {};
@@ -1492,7 +1643,7 @@ void main() {
       await newClient.dispose(closeDatabase: false);
 
       await firstDatabase.close();
-      final sameOldFirstDatabase = await getDatabase(null);
+      final sameOldFirstDatabase = await getDatabase();
       expect(await sameOldFirstDatabase.getClient('testclient'), null);
     });
 
@@ -1500,7 +1651,7 @@ void main() {
       final client = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
+        database: await getDatabase(),
       )
         ..accessToken = '1234'
         ..baseUri = Uri.parse('https://fakeserver.notexisting');
@@ -1535,8 +1686,8 @@ void main() {
       expect(event?.room.name, 'TestRoomName');
       expect(event?.room.canonicalAlias, '#testalias:blaaa');
       final storedEvent =
-          await client.database?.getEventById('123', event!.room);
-      expect(storedEvent?.eventId, event?.eventId);
+          await client.database.getEventById('123', event!.room);
+      expect(storedEvent?.eventId, event.eventId);
 
       event = await client.getEventByPushNotification(
         PushNotification(
@@ -1551,8 +1702,8 @@ void main() {
       expect(event?.messageType, 'm.text');
       expect(event?.type, 'm.room.message');
       final storedEvent2 = await client.database
-          ?.getEventById('143273582443PhrSn:example.org', event!.room);
-      expect(storedEvent2?.eventId, event?.eventId);
+          .getEventById('143273582443PhrSn:example.org', event!.room);
+      expect(storedEvent2?.eventId, event.eventId);
     });
 
     test('Rooms and archived rooms getter', () async {
@@ -1609,7 +1760,7 @@ void main() {
       () async {
         final customClient = Client(
           'failclient',
-          databaseBuilder: getMatrixSdkDatabase,
+          database: await getMatrixSdkDatabase(),
         );
         try {
           await customClient.init(
@@ -1628,7 +1779,10 @@ void main() {
           expect(error.homeserver, Uri.parse('https://test.server'));
           expect(error.olmAccount, 'abcd');
           expect(error.userId, '@user:server');
-          expect(error.toString(), 'Exception: BAD_ACCOUNT_KEY');
+          expect(
+            error.originalException.runtimeType.toString(),
+            'AnyhowException',
+          );
         }
         await customClient.dispose(closeDatabase: true);
       },

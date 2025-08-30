@@ -689,6 +689,11 @@ class MockRTCDataChannel implements RTCDataChannel {
     // Mock implementation for closing the data channel
     Logs().i('Mock: Closing RTCDataChannel');
   }
+
+  @override
+  Future<int> getBufferedAmount() async {
+    return 0;
+  }
 }
 
 class MockMediaStream implements MediaStream {
@@ -844,8 +849,4 @@ class MockVideoRenderer implements VideoRenderer {
     // Mock implementation for disposing VideoRenderer
     Logs().i('Mock: Disposing VideoRenderer');
   }
-
-  @override
-  // TODO: implement videoValue
-  RTCVideoValue get videoValue => RTCVideoValue.empty;
 }

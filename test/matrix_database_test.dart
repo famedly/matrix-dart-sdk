@@ -25,9 +25,16 @@ import 'fake_database.dart';
 void main() {
   group('Databse', () {
     Logs().level = Level.error;
-    final room = Room(id: '!room:blubb', client: Client('testclient'));
+    late final Room room;
     test('setupDatabase', () async {
-      final database = await getDatabase(null);
+      final database = await getDatabase();
+      room = Room(
+        id: '!room:blubb',
+        client: Client(
+          'testclient',
+          database: database,
+        ),
+      );
       await database.insertClient(
         'testclient',
         'https://example.org',
@@ -43,8 +50,8 @@ void main() {
     });
 
     test('storeEventUpdate', () async {
-      final client = Client('testclient');
-      final database = await getDatabase(client);
+      final database = await getDatabase();
+      final client = Client('testclient', database: database);
       // store a simple update
       await database.storeEventUpdate(
         room.id,

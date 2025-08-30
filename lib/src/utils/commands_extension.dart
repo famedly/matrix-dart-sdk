@@ -470,6 +470,14 @@ extension CommandsClientExtension on Client {
       stdout?.write(DefaultCommandOutput(rooms: [newRoomId]).toString());
       return null;
     });
+    addCommand('logout', (args, stdout) async {
+      await logout();
+      return null;
+    });
+    addCommand('logoutAll', (args, stdout) async {
+      await logoutAll();
+      return null;
+    });
   }
 }
 

@@ -16,8 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
@@ -33,8 +33,11 @@ void main() {
     final now = DateTime.now();
 
     setUpAll(() async {
-      await olm.init();
-      olm.get_library_version();
+      await vod.init(
+        wasmPath: './pkg/',
+        libraryPath: './rust/target/debug/',
+      );
+
       client = await getClient();
       room = client.getRoomById(roomId)!;
     });

@@ -18,6 +18,8 @@
 
 import 'package:matrix/matrix.dart';
 
+var kEnableMatrixSdkBenchmarks = false;
+
 /// Calculates some benchmarks for this function. Give it a [name] and a [func]
 /// to call and it will calculate the needed milliseconds. Give it an optional
 /// [itemCount] to let it also calculate the needed milliseconds per item.
@@ -26,7 +28,7 @@ Future<T> runBenchmarked<T>(
   Future<T> Function() func, [
   int? itemCount,
 ]) async {
-  if (Logs().level.index < Level.debug.index) {
+  if (!kEnableMatrixSdkBenchmarks) {
     return func();
   }
   final start = DateTime.now();

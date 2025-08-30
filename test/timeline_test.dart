@@ -78,8 +78,8 @@ void main() {
       room = Room(
         id: roomID,
         client: client,
-        prev_batch: '1234',
         roomAccountData: {},
+        prev_batch: 'room_preset_1234',
       );
       timeline = Timeline(
         room: room,
@@ -1097,6 +1097,365 @@ void main() {
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 1);
+    });
+
+    test('make sure aggregated events are updated on requestHistory', () async {
+      timeline.events.clear();
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              timeline.room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                      'event_id': '11',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                      'event_id': '22',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {
+                        'msgtype': 'm.text',
+                        'body': '* edit 11',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edit 11',
+                          'm.mentions': {},
+                        },
+                        'm.mentions': {},
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': '11',
+                        },
+                      },
+                      'event_id': '33',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {
+                        'msgtype': 'm.text',
+                        'body': '* edit 22',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edit 22',
+                          'm.mentions': {},
+                        },
+                        'm.mentions': {},
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': '22',
+                        },
+                      },
+                      'event_id': '44',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      final t = await room.getTimeline(limit: 1);
+
+      expect(t.events.length, 1);
+
+      expect(
+        t.events.single.getDisplayEvent(t).body,
+        '* edit 22',
+      );
+
+      await t.requestHistory();
+
+      expect(
+        t.events.reversed
+            .where(
+              (element) => element.relationshipType != RelationshipTypes.edit,
+            )
+            .last
+            .getDisplayEvent(t)
+            .body,
+        'edit 22',
+      );
+      expect(
+        t.events.reversed
+            .where(
+              (element) => element.relationshipType != RelationshipTypes.edit,
+            )
+            .first
+            .getDisplayEvent(t)
+            .body,
+        'edit 11',
+      );
+    });
+
+    test('make sure timeline with null prev_batch is not reset incorrectly',
+        () async {
+      timeline.events.clear();
+      timeline.room.prev_batch = null;
+
+      Timeline t = await room.getTimeline();
+      expect(t.events.length, 0);
+      expect(t.room.prev_batch, null);
+
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              timeline.room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  prevBatch: 'room_preset_1234',
+                  events: [
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase 3'},
+                      'event_id': '33',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase 4'},
+                      'event_id': '44',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      t = await room.getTimeline();
+      expect(t.events.length, 2);
+      expect(
+        t.room.prev_batch,
+        null,
+        reason:
+            'The prev_batch is null, which means that no earlier events are available. Having a new prev_batch is sync shouldn\'t reset it.',
+      );
+    });
+
+    test('make sure room prev_batch is set correctly when invited', () async {
+      final newRoomId1 = '!newroom:example.com';
+      final newRoomId2 = '!newroom2:example.com';
+
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            invite: {
+              newRoomId1: InvitedRoomUpdate(
+                inviteState: [
+                  StrippedStateEvent(
+                    type: EventTypes.RoomMember,
+                    senderId: '@bob:example.com',
+                    stateKey: client.userID,
+                    content: {
+                      'membership': 'invite',
+                    },
+                  ),
+                ],
+              ),
+              newRoomId2: InvitedRoomUpdate(
+                inviteState: [
+                  StrippedStateEvent(
+                    type: EventTypes.RoomMember,
+                    senderId: '@bob:example.com',
+                    stateKey: client.userID,
+                    content: {
+                      'membership': 'invite',
+                    },
+                  ),
+                ],
+              ),
+            },
+          ),
+        ),
+      );
+
+      Room? newRoom1 = client.getRoomById(newRoomId1);
+      expect(newRoom1?.membership, Membership.invite);
+      expect(newRoom1?.prev_batch, null);
+
+      Room? newRoom2 = client.getRoomById(newRoomId2);
+      expect(newRoom2?.membership, Membership.invite);
+      expect(newRoom2?.prev_batch, null);
+
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              newRoomId1: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  prevBatch:
+                      null, // this means that no earlier events are available
+                  events: [
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                      'event_id': '33',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                  ],
+                ),
+              ),
+              newRoomId2: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  prevBatch: 'actual_prev_batch',
+                  events: [
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                      'event_id': '33',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      newRoom1 = client.getRoomById(newRoomId1);
+      expect(newRoom1?.membership, Membership.join);
+      expect(newRoom1?.prev_batch, null);
+
+      newRoom2 = client.getRoomById(newRoomId2);
+      expect(newRoom2?.membership, Membership.join);
+      expect(newRoom2?.prev_batch, 'actual_prev_batch');
+    });
+
+    test('make sure a limited timeline resets the prev_batch', () async {
+      timeline.events.clear();
+      expect(timeline.room.prev_batch, 'room_preset_1234');
+
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(
+            join: {
+              timeline.room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  prevBatch: 'room_preset_5678',
+                  events: [
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                      'event_id': '11',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                      'event_id': '22',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      Timeline t = await room.getTimeline();
+
+      expect(t.events.length, 2);
+      expect(
+        t.room.prev_batch,
+        'room_preset_1234',
+        reason:
+            'The prev_batch should only be set the first time and be updated when requesting history. It shouldn\'t be updated every sync incorrectly.',
+      );
+
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'something2',
+          rooms: RoomsUpdate(
+            join: {
+              timeline.room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  prevBatch: 'room_preset_1234_after_limited',
+                  limited: true,
+                  events: [
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {
+                        'msgtype': 'm.text',
+                        'body': '* edit 11',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edit 11',
+                          'm.mentions': {},
+                        },
+                        'm.mentions': {},
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': '11',
+                        },
+                      },
+                      'event_id': '33',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                    MatrixEvent.fromJson({
+                      'type': 'm.room.message',
+                      'content': {
+                        'msgtype': 'm.text',
+                        'body': '* edit 22',
+                        'm.new_content': {
+                          'msgtype': 'm.text',
+                          'body': 'edit 22',
+                          'm.mentions': {},
+                        },
+                        'm.mentions': {},
+                        'm.relates_to': {
+                          'rel_type': 'm.replace',
+                          'event_id': '22',
+                        },
+                      },
+                      'event_id': '44',
+                      'sender': '@alice:example.com',
+                      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+                    }),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      t = await room.getTimeline();
+      expect(t.events.length, 2);
+      expect(t.room.prev_batch, 'room_preset_1234_after_limited');
+      await t.requestHistory();
+      expect(t.room.prev_batch, 't47409-4357353_219380_26003_2265');
     });
     test('logout', () async {
       await client.logout();

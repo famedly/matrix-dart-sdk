@@ -18,8 +18,8 @@
 
 import 'dart:convert';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
@@ -42,8 +42,10 @@ void main() {
     Logs().level = Level.error;
 
     setUpAll(() async {
-      await olm.init();
-      olm.get_library_version();
+      await vod.init(
+        wasmPath: './pkg/',
+        libraryPath: './rust/target/debug/',
+      );
     });
 
     final validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
@@ -309,8 +311,7 @@ void main() {
 
       final session = (await matrix.encryption!.keyManager
           .loadInboundGroupSession(requestRoom.id, validSessionId))!;
-      final sessionKey = session.inboundGroupSession!
-          .export_session(session.inboundGroupSession!.first_known_index());
+      final sessionKey = session.inboundGroupSession!.exportAtFirstKnownIndex();
       matrix.encryption!.keyManager.clearInboundGroupSessions();
       var event = ToDeviceEvent(
         sender: '@alice:example.com',

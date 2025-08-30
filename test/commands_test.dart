@@ -20,6 +20,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
@@ -47,6 +48,10 @@ void main() {
     }
 
     test('setupClient', () async {
+      await vod.init(
+        wasmPath: './pkg/',
+        libraryPath: './rust/target/debug/',
+      );
       client = await getClient();
       room = Room(id: '!1234:fakeServer.notExisting', client: client);
       room.setState(

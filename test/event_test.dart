@@ -20,13 +20,21 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'fake_client.dart';
+import 'fake_database.dart';
 
-void main() {
+void main() async {
+  final client = Client(
+    'testclient',
+    httpClient: FakeMatrixApi(),
+    database: await getDatabase(),
+  );
+
   /// All Tests related to the Event
   group('Event', () {
     Logs().level = Level.error;
@@ -51,7 +59,6 @@ void main() {
       'status': EventStatus.synced.intValue,
       'content': contentJson,
     };
-    final client = Client('testclient', httpClient: FakeMatrixApi());
     final room = Room(id: '!testroom:example.abc', client: client);
     final event = Event.fromJson(
       jsonObj,
@@ -221,7 +228,13 @@ void main() {
       ];
       for (final testType in testTypes) {
         redactJsonObj['type'] = testType;
-        final room = Room(id: '1234', client: Client('testclient'));
+        final room = Room(
+          id: '1234',
+          client: Client(
+            'testclient',
+            database: await getDatabase(),
+          ),
+        );
         final redactionEventJson = {
           'content': {'reason': 'Spamming'},
           'event_id': '143273582443PhrSn:example.org',
@@ -248,7 +261,13 @@ void main() {
     test('remove', () async {
       final event = Event.fromJson(
         jsonObj,
-        Room(id: '1234', client: Client('testclient')),
+        Room(
+          id: '1234',
+          client: Client(
+            'testclient',
+            database: await getDatabase(),
+          ),
+        ),
       );
       expect(() async => await event.cancelSend(), throwsException);
       event.status = EventStatus.sending;
@@ -258,7 +277,20 @@ void main() {
     });
 
     test('sendAgain', () async {
-      final matrix = Client('testclient', httpClient: FakeMatrixApi());
+      try {
+        vodInit ??= vod.init(
+          wasmPath: './pkg/',
+          libraryPath: './rust/target/debug/',
+        );
+        await vodInit;
+      } catch (_) {
+        Logs().d('Encryption via Vodozemac not enabled');
+      }
+      final matrix = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
       await matrix.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
@@ -283,7 +315,11 @@ void main() {
     });
 
     test('requestKey', tags: 'olm', () async {
-      final matrix = Client('testclient', httpClient: FakeMatrixApi());
+      final matrix = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
       await matrix.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
@@ -333,6 +369,7 @@ void main() {
       await matrix.dispose(closeDatabase: true);
     });
     test('requestKey', tags: 'olm', () async {
+      final client = await getClient();
       jsonObj['state_key'] = '@alice:example.com';
       final event = Event.fromJson(
         jsonObj,
@@ -355,7 +392,11 @@ void main() {
       await client.dispose();
     });
     test('getLocalizedBody, isEventKnown', () async {
-      final matrix = Client('testclient', httpClient: FakeMatrixApi());
+      final matrix = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
       final room = Room(id: '!1234:example.com', client: matrix);
       var event = Event.fromJson(
         {
@@ -1167,7 +1208,11 @@ void main() {
     });
 
     test('getLocalizedBody, parameters', () async {
-      final matrix = Client('testclient', httpClient: FakeMatrixApi());
+      final matrix = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
       final room = Room(id: '!1234:example.com', client: matrix);
       var event = Event.fromJson(
         {
@@ -1274,10 +1319,10 @@ void main() {
         {
           'content': {
             'body':
-                '# Title\nsome text and [link](https://example.com)\nokay and this is **important**',
+                '> Quote\n# Title\nsome text and [link](https://example.com)\nokay and this is **important**',
             'format': 'org.matrix.custom.html',
             'formatted_body':
-                '<h1>Title</h1>\n<p>some text and <a href="https://example.com">link</a><br>okay and this is <strong>important</strong></p>\n',
+                '<blockquote><p>Quote</p></blockquote><h1>Title</h1>\n<p>some text and <a href="https://example.com">link</a><br>okay and this is <strong>important</strong></p>\n',
             'msgtype': 'm.text',
           },
           'event_id': '\$143273582443PhrSn:example.org',
@@ -1294,7 +1339,7 @@ void main() {
           MatrixDefaultLocalizations(),
           removeMarkdown: true,
         ),
-        'Title\nsome text and link\nokay and this is important',
+        'Quote\n\nTitle\nsome text and link\nokay and this is important',
       );
       expect(
         await event.calcLocalizedBody(
@@ -1302,7 +1347,7 @@ void main() {
           removeMarkdown: true,
           plaintextBody: true,
         ),
-        'Title\nsome text and 🔗link\nokay and this is important',
+        'Quote\n\nTitle\nsome text and 🔗link\nokay and this is important',
       );
       expect(
         await event.calcLocalizedBody(
@@ -1310,7 +1355,7 @@ void main() {
           removeMarkdown: true,
           withSenderNamePrefix: true,
         ),
-        'Example: Title\nsome text and link\nokay and this is important',
+        'Example: Quote\n\nTitle\nsome text and link\nokay and this is important',
       );
       expect(
         await event.calcLocalizedBody(
@@ -1319,7 +1364,7 @@ void main() {
           plaintextBody: true,
           withSenderNamePrefix: true,
         ),
-        'Example: Title\nsome text and 🔗link\nokay and this is important',
+        'Example: Quote\n\nTitle\nsome text and 🔗link\nokay and this is important',
       );
 
       event = Event.fromJson(
@@ -2477,7 +2522,7 @@ void main() {
       );
       expect(
         await event.isAttachmentInLocalStore(),
-        event.room.client.database?.supportsFileStoring,
+        event.room.client.database.supportsFileStoring,
       );
       expect(buffer.bytes, FILE_BUFF);
       expect(serverHits, 1);
@@ -2487,7 +2532,7 @@ void main() {
       expect(buffer.bytes, FILE_BUFF);
       expect(
         serverHits,
-        event.room.client.database!.supportsFileStoring ? 1 : 2,
+        event.room.client.database.supportsFileStoring ? 1 : 2,
       );
 
       await room.client.dispose(closeDatabase: true);
@@ -2530,12 +2575,12 @@ void main() {
       );
       expect(
         await event.isAttachmentInLocalStore(),
-        event.room.client.database?.supportsFileStoring,
+        event.room.client.database.supportsFileStoring,
       );
       expect(buffer.bytes, FILE_BUFF);
       expect(serverHits, 1);
 
-      if (event.room.client.database?.supportsFileStoring == true) {
+      if (event.room.client.database.supportsFileStoring == true) {
         buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback,
           fromLocalStoreOnly: true,
@@ -2861,6 +2906,50 @@ void main() {
         event.toJson()..remove('status'),
         matrixEvent.toJson(),
       );
+    });
+
+    test('getReplyEvent fallback', () async {
+      final event = Event.fromJson(
+        {
+          'content': {
+            'msgtype': 'text',
+            'body': 'Hello world',
+            'm.relates_to': {
+              'rel_type': 'm.thread',
+              'event_id': '\$root',
+              'm.in_reply_to': {'event_id': '\$target'},
+              'is_falling_back': true,
+            },
+          },
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': room.id,
+          'sender': '@example:example.org',
+          'type': 'm.room.message',
+          'unsigned': {'age': 1234},
+          'redacts': 'abcd',
+          'prev_content': <String, Object?>{
+            'foo': 'bar',
+          },
+        },
+        room,
+      );
+      expect(event.relationshipType, RelationshipTypes.thread);
+      expect(event.relationshipEventId, '\$root');
+      final targetEvent = Event(
+        eventId: '\$target',
+        senderId: '@example:example.org',
+        type: 'm.room.message',
+        content: {
+          'msgtype': 'text',
+          'body': 'Hello world',
+        },
+        originServerTs: DateTime.now(),
+        room: room,
+      );
+      final timeline =
+          Timeline(room: room, chunk: TimelineChunk(events: [targetEvent]));
+      expect(await event.getReplyEvent(timeline), targetEvent);
     });
   });
 }

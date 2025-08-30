@@ -284,7 +284,7 @@ class LatestReceiptState {
     // set the latest receipt to the one furthest down in the timeline, or if we don't know that, the newest ts.
     if (updatedTimelines.isEmpty) return;
 
-    final eventOrder = await room.client.database?.getEventIdList(room) ?? [];
+    final eventOrder = await room.client.database.getEventIdList(room);
 
     for (final timeline in updatedTimelines) {
       if (timeline.ownPrivate?.eventId == timeline.ownPublic?.eventId) {

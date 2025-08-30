@@ -95,6 +95,18 @@ void main() {
 
       room.setState(
         Event(
+          content: {'room_version': '11'},
+          eventId: '\$143273582443PhrSn:example.org',
+          originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
+          senderId: '@example:example.org',
+          type: 'm.room.create',
+          unsigned: {'age': 1234},
+          stateKey: '',
+          room: room,
+        ),
+      );
+      room.setState(
+        Event(
           room: room,
           eventId: '143273582443PhrSn:example.org',
           originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
@@ -509,7 +521,8 @@ void main() {
           nextBatch: '',
         ),
       );
-      expect(room.lastEvent?.eventId, 'testLastEventAfterEdit');
+      // We do not delete the last edited event. Manually set the last event to original redacted event.
+      expect(room.lastEvent?.eventId, 'testLastEventBeforeEdit');
       expect(room.lastEvent?.body, 'Redacted');
     });
 
@@ -670,12 +683,16 @@ void main() {
       expect(fetchedParticipants.length, newParticipants.length);
     });
 
-    test('calcEncryptionHealthState', () async {
-      expect(
-        await room.calcEncryptionHealthState(),
-        EncryptionHealthState.unverifiedDevices,
-      );
-    });
+    test(
+      'calcEncryptionHealthState',
+      () async {
+        expect(
+          await room.calcEncryptionHealthState(),
+          EncryptionHealthState.unverifiedDevices,
+        );
+      },
+      tags: 'olm',
+    );
 
     test('getEventByID', () async {
       final event = await room.getEventById('1234');
@@ -804,6 +821,17 @@ void main() {
       expect(room.canSendEvent('m.room.message'), true);
       final resp = await room.setPower('@test:fakeServer.notExisting', 0);
       expect(resp, '42');
+
+      // Creator has max power level from room version 12 on:
+      expect(room.creatorUserIds.contains('@example:example.org'), true);
+      expect(room.getPowerLevelByUserId('@example:example.org'), 0);
+      expect(room.roomVersion, '11');
+      room.states[EventTypes.RoomCreate]!['']!.content['room_version'] = '12';
+      expect(room.roomVersion, '12');
+      expect(
+        room.getPowerLevelByUserId('@example:example.org'),
+        9007199254740991,
+      );
     });
 
     test('invite', () async {
@@ -1676,11 +1704,11 @@ void main() {
 
       // check if persisted in db
       final sentEventFromDB =
-          await matrix.database?.getEventById('older_event', room);
+          await matrix.database.getEventById('older_event', room);
       expect(sentEventFromDB?.eventId, 'older_event');
       Room? roomFromDB;
 
-      roomFromDB = await matrix.database?.getSingleRoom(matrix, room.id);
+      roomFromDB = await matrix.database.getSingleRoom(matrix, room.id);
       expect(roomFromDB?.lastEvent?.eventId, 'older_event');
 
       expect(room.lastEvent?.body, 'older_event');
@@ -1701,7 +1729,7 @@ void main() {
         expect(room.lastEvent?.eventId, 'event_too_large');
         expect(room.lastEvent?.status, EventStatus.error);
 
-        roomFromDB = await matrix.database?.getSingleRoom(matrix, room.id);
+        roomFromDB = await matrix.database.getSingleRoom(matrix, room.id);
         expect(roomFromDB?.lastEvent?.eventId, 'event_too_large');
 
         // force null because except would have caught it anyway
@@ -1717,12 +1745,12 @@ void main() {
 
       // check if persisted in db
       final lastEventFromDB =
-          await matrix.database?.getEventById('event_too_large', room);
+          await matrix.database.getEventById('event_too_large', room);
 
       // null here because cancelSend removes event.
       expect(lastEventFromDB, null);
 
-      roomFromDB = await matrix.database?.getSingleRoom(matrix, room.id);
+      roomFromDB = await matrix.database.getSingleRoom(matrix, room.id);
 
       expect(roomFromDB?.partial, true);
 
@@ -1732,7 +1760,7 @@ void main() {
         'Cancelled sending message',
       );
 
-      roomFromDB = await matrix.database?.getSingleRoom(matrix, room.id);
+      roomFromDB = await matrix.database.getSingleRoom(matrix, room.id);
 
       await roomFromDB?.postLoad();
       expect(roomFromDB?.partial, false);

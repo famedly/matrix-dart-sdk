@@ -72,7 +72,12 @@ class Room {
   /// Key-Value store for private account data only visible for this user.
   Map<String, BasicEvent> roomAccountData = {};
 
-  final _sendingQueue = <Completer>[];
+  /// Queue of sending events
+  /// NOTE: This shouldn't be modified directly, use [sendEvent] instead. This is only used for testing.
+  final sendingQueue = <Completer>[];
+
+  /// List of transaction IDs of events that are currently queued to be sent
+  final sendingQueueEventsByTxId = <String>[];
 
   Timer? _clearTypingIndicatorTimer;
 
@@ -116,15 +121,13 @@ class Room {
       return;
     }
     final allStates =
-        await client.database?.getUnimportantRoomEventStatesForRoom(
+        await client.database.getUnimportantRoomEventStatesForRoom(
       client.importantStateEvents.toList(),
       this,
     );
 
-    if (allStates != null) {
-      for (final state in allStates) {
-        setState(state);
-      }
+    for (final state in allStates) {
+      setState(state);
     }
     partial = false;
   }
@@ -768,6 +771,7 @@ class Room {
         },
       ),
     );
+    await _handleFakeSync(syncUpdate);
 
     MatrixFile uploadFile = file; // ignore: omit_local_variable_types
     // computing the thumbnail in case we can
@@ -776,7 +780,6 @@ class Room {
       syncUpdate.rooms!.join!.values.first.timeline!.events!.first
               .unsigned![fileSendingStatusKey] =
           FileSendingStatus.generatingThumbnail.name;
-      await _handleFakeSync(syncUpdate);
       thumbnail ??= await file.generateThumbnail(
         nativeImplementations: client.nativeImplementations,
         customImageResizer: client.customImageResizer,
@@ -1106,11 +1109,14 @@ class Room {
         },
       ),
     );
+    // we need to add the transaction ID to the set of events that are currently queued to be sent
+    // even before the fake sync is called, so that the event constructor can check if the event is in the sending state
+    sendingQueueEventsByTxId.add(messageID);
     await _handleFakeSync(syncUpdate);
     final completer = Completer();
-    _sendingQueue.add(completer);
-    while (_sendingQueue.first != completer) {
-      await _sendingQueue.first.future;
+    sendingQueue.add(completer);
+    while (sendingQueue.first != completer) {
+      await sendingQueue.first.future;
     }
 
     final timeoutDate = DateTime.now().add(client.sendTimelineEventTimeout);
@@ -1142,7 +1148,8 @@ class Room {
               .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
           await _handleFakeSync(syncUpdate);
           completer.complete();
-          _sendingQueue.remove(completer);
+          sendingQueue.remove(completer);
+          sendingQueueEventsByTxId.remove(messageID);
           if (e is EventTooLarge ||
               (e is MatrixException && e.error == MatrixError.M_FORBIDDEN)) {
             rethrow;
@@ -1160,8 +1167,8 @@ class Room {
     syncUpdate.rooms!.join!.values.first.timeline!.events!.first.eventId = res;
     await _handleFakeSync(syncUpdate);
     completer.complete();
-    _sendingQueue.remove(completer);
-
+    sendingQueue.remove(completer);
+    sendingQueueEventsByTxId.remove(messageID);
     return res;
   }
 
@@ -1228,7 +1235,7 @@ class Room {
 
   /// Call the Matrix API to forget this room if you already left it.
   Future<void> forget() async {
-    await client.database?.forgetRoom(id);
+    await client.database.forgetRoom(id);
     await client.forgetRoom(id);
     // Update archived rooms, otherwise an archived room may still be in the
     // list after a forget room call
@@ -1368,17 +1375,13 @@ class Room {
       );
     }
 
-    if (client.database != null) {
-      await client.database?.transaction(() async {
-        if (storeInDatabase && direction == Direction.b) {
-          this.prev_batch = resp.end;
-          await client.database?.setRoomPrevBatch(resp.end, id, client);
-        }
-        await loadFn();
-      });
-    } else {
+    await client.database.transaction(() async {
+      if (storeInDatabase && direction == Direction.b) {
+        this.prev_batch = resp.end;
+        await client.database.setRoomPrevBatch(resp.end, id, client);
+      }
       await loadFn();
-    }
+    });
 
     return resp.chunk.length;
   }
@@ -1469,7 +1472,7 @@ class Room {
     ].map((e) => Event.fromMatrixEvent(e, this)).toList();
 
     // Try again to decrypt encrypted events but don't update the database.
-    if (encrypted && client.database != null && client.encryptionEnabled) {
+    if (encrypted && client.encryptionEnabled) {
       for (var i = 0; i < events.length; i++) {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].content['can_request_session'] == true) {
@@ -1521,17 +1524,19 @@ class Room {
     void Function()? onNewEvent,
     void Function()? onUpdate,
     String? eventContextId,
+    int? limit = Room.defaultHistoryCount,
   }) async {
     await postLoad();
 
-    List<Event> events;
+    var events = <Event>[];
 
     if (!isArchived) {
-      events = await client.database?.getEventList(
-            this,
-            limit: defaultHistoryCount,
-          ) ??
-          <Event>[];
+      await client.database.transaction(() async {
+        events = await client.database.getEventList(
+          this,
+          limit: limit,
+        );
+      });
     } else {
       final archive = client.getArchiveRoomFromCache(id);
       events = archive?.timeline.events.toList() ?? [];
@@ -1569,7 +1574,7 @@ class Room {
       final userIds = events.map((event) => event.senderId).toSet();
       for (final userId in userIds) {
         if (getState(EventTypes.RoomMember, userId) != null) continue;
-        final dbUser = await client.database?.getUser(userId, this);
+        final dbUser = await client.database.getUser(userId, this);
         if (dbUser != null) setState(dbUser);
       }
     }
@@ -1585,9 +1590,9 @@ class Room {
             chunk.events[i] = await client.encryption!.decryptRoomEvent(
               chunk.events[i],
             );
-          } else if (client.database != null) {
+          } else {
             // else, we need the database
-            await client.database?.transaction(() async {
+            await client.database.transaction(() async {
               for (var i = 0; i < chunk.events.length; i++) {
                 if (chunk.events[i].content['can_request_session'] == true) {
                   chunk.events[i] = await client.encryption!.decryptRoomEvent(
@@ -1654,7 +1659,7 @@ class Room {
       // events won't get written to memory in this case and someone new could
       // have joined, while someone else left, which might lead to the same
       // count in the completeness check.
-      final users = await client.database?.getUsers(this) ?? [];
+      final users = await client.database.getUsers(this);
       for (final user in users) {
         setState(user);
       }
@@ -1685,7 +1690,7 @@ class Room {
     if (cache) {
       for (final user in users) {
         setState(user); // at *least* cache this in-memory
-        await client.database?.storeEventUpdate(
+        await client.database.storeEventUpdate(
           id,
           user,
           EventUpdateType.state,
@@ -1763,8 +1768,8 @@ class Room {
       );
 
       // Store user in database:
-      await client.database?.transaction(() async {
-        await client.database?.storeEventUpdate(
+      await client.database.transaction(() async {
+        await client.database.storeEventUpdate(
           id,
           foundUser,
           EventUpdateType.state,
@@ -1800,7 +1805,7 @@ class Room {
 
     // If the room is not postloaded, check the database
     if (partial && foundUser == null) {
-      foundUser = await client.database?.getUser(mxID, this);
+      foundUser = await client.database.getUser(mxID, this);
     }
 
     // If not in the database, try fetching the member from the server
@@ -1908,7 +1913,7 @@ class Room {
   /// found. Returns null if not found anywhere.
   Future<Event?> getEventById(String eventID) async {
     try {
-      final dbEvent = await client.database?.getEventById(eventID, this);
+      final dbEvent = await client.database.getEventById(eventID, this);
       if (dbEvent != null) return dbEvent;
       final matrixEvent = await client.getOneRoomEvent(id, eventID);
       final event = Event.fromMatrixEvent(matrixEvent, this);
@@ -1925,13 +1930,41 @@ class Room {
     }
   }
 
+  /// Returns the room version if specified in the `m.room.create` state event.
+  String? get roomVersion =>
+      getState(EventTypes.RoomCreate)?.content.tryGet<String>('room_version');
+
+  /// Returns the creator's user ID of the room by fetching the sender of the
+  /// `m.room.create` event.
+  Set<String> get creatorUserIds {
+    final creationEvent = getState(EventTypes.RoomCreate);
+    if (creationEvent == null) return {};
+    final additionalCreators =
+        creationEvent.content.tryGetList<String>('additional_creators') ?? [];
+    return {
+      creationEvent.senderId,
+      ...additionalCreators,
+    };
+  }
+
   /// Returns the power level of the given user ID.
   /// If a user_id is in the users list, then that user_id has the associated
   /// power level. Otherwise they have the default level users_default.
   /// If users_default is not supplied, it is assumed to be 0. If the room
   /// contains no m.room.power_levels event, the room’s creator has a power
   /// level of 100, and all other users have a power level of 0.
+  /// For room version 12 and above the room creator always has maximum
+  /// power level.
   int getPowerLevelByUserId(String userId) {
+    // Room creator has maximum power level:
+    if (creatorUserIds.contains(userId) &&
+        !((int.tryParse(roomVersion ?? '') ?? 0) < 12)) {
+      // 2^53 - 1 from https://spec.matrix.org/v1.15/appendices/#canonical-json
+      const maxInteger = 9007199254740991;
+
+      return maxInteger;
+    }
+
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
 
     final userSpecificPowerLevel =
@@ -1975,15 +2008,18 @@ class Room {
   }
 
   /// The level required to ban a user.
-  bool get canBan =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('ban') ??
-          50) <=
-      ownPowerLevel;
+  bool get canBan {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('ban') ??
+            50) <=
+        ownPowerLevel;
+  }
 
   /// returns if user can change a particular state event by comparing `ownPowerLevel`
   /// with possible overrides in `events`, if not present compares `ownPowerLevel`
   /// with state_default
   bool canChangeStateEvent(String action) {
+    if (membership != Membership.join) return false;
     return powerForChangingStateEvent(action) <= ownPowerLevel;
   }
 
@@ -2055,22 +2091,32 @@ class Room {
   }
 
   /// The level required to invite a user.
-  bool get canInvite =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('invite') ??
-          0) <=
-      ownPowerLevel;
+  bool get canInvite {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)
+                ?.content
+                .tryGet<int>('invite') ??
+            0) <=
+        ownPowerLevel;
+  }
 
   /// The level required to kick a user.
-  bool get canKick =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('kick') ??
-          50) <=
-      ownPowerLevel;
+  bool get canKick {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('kick') ??
+            50) <=
+        ownPowerLevel;
+  }
 
   /// The level required to redact an event.
-  bool get canRedact =>
-      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('redact') ??
-          50) <=
-      ownPowerLevel;
+  bool get canRedact {
+    if (membership != Membership.join) return false;
+    return (getState(EventTypes.RoomPowerLevels)
+                ?.content
+                .tryGet<int>('redact') ??
+            50) <=
+        ownPowerLevel;
+  }
 
   ///  	The default level required to send state events. Can be overridden by the events key.
   bool get canSendDefaultStates {
@@ -2089,6 +2135,7 @@ class Room {
   /// The level required to send a certain event. Defaults to 0 if there is no
   /// events_default set or there is no power level state in the room.
   bool canSendEvent(String eventType) {
+    if (membership != Membership.join) return false;
     final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
 
     final pl = powerLevelsMap
@@ -2381,13 +2428,9 @@ class Room {
     SyncUpdate syncUpdate, {
     Direction? direction,
   }) async {
-    if (client.database != null) {
-      await client.database?.transaction(() async {
-        await client.handleSync(syncUpdate, direction: direction);
-      });
-    } else {
+    await client.database.transaction(() async {
       await client.handleSync(syncUpdate, direction: direction);
-    }
+    });
   }
 
   /// Whether this is an extinct room which has been archived in favor of a new

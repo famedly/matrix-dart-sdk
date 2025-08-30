@@ -19,8 +19,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:olm/olm.dart' as olm;
-
 import 'package:matrix/encryption/cross_signing.dart';
 import 'package:matrix/encryption/key_manager.dart';
 import 'package:matrix/encryption/key_verification_manager.dart';
@@ -85,18 +83,6 @@ class Encryption {
     );
 
     if (!isDehydratedDevice) keyManager.startAutoUploadKeys();
-  }
-
-  bool isMinOlmVersion(int major, int minor, int patch) {
-    try {
-      final version = olm.get_library_version();
-      return version[0] > major ||
-          (version[0] == major &&
-              (version[1] > minor ||
-                  (version[1] == minor && version[2] >= patch)));
-    } catch (_) {
-      return false;
-    }
   }
 
   Bootstrap bootstrap({void Function(Bootstrap)? onUpdate}) => Bootstrap(
@@ -178,7 +164,7 @@ class Encryption {
       return await olmManager.decryptToDeviceEvent(event);
     } catch (e, s) {
       Logs().w(
-        '[LibOlm] Could not decrypt to device event from ${event.sender} with content: ${event.content}',
+        '[Vodozemac] Could not decrypt to device event from ${event.sender} with content: ${event.content}',
         e,
         s,
       );
@@ -227,7 +213,7 @@ class Encryption {
       canRequestSession = false;
 
       // we can't have the key be an int, else json-serializing will fail, thus we need it to be a string
-      final messageIndexKey = 'key-${decryptResult.message_index}';
+      final messageIndexKey = 'key-${decryptResult.messageIndex}';
       final messageIndexValue =
           '${event.eventId}|${event.originServerTs.millisecondsSinceEpoch}';
       final haveIndex =
@@ -246,7 +232,7 @@ class Encryption {
         // it un-awaited here, nothing happens, which is exactly the result we want
         client.database
             // ignore: discarded_futures
-            ?.updateInboundGroupSessionIndexes(
+            .updateInboundGroupSessionIndexes(
               json.encode(inboundGroupSession.indexes),
               event.room.id,
               sessionId,
@@ -256,12 +242,13 @@ class Encryption {
       }
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
+      Logs().d('Could not decrypt event', exception);
       // alright, if this was actually by our own outbound group session, we might as well clear it
       if (exception.toString() != DecryptException.unknownSession &&
           (keyManager
                       .getOutboundGroupSession(event.room.id)
                       ?.outboundGroupSession
-                      ?.session_id() ??
+                      ?.sessionId ??
                   '') ==
               content.sessionId) {
         runInRoot(
@@ -319,8 +306,7 @@ class Encryption {
       }
       final content = event.parsedRoomEncryptedContent;
       final sessionId = content.sessionId;
-      if (client.database != null &&
-          sessionId != null &&
+      if (sessionId != null &&
           !(keyManager
                   .getInboundGroupSession(
                     event.room.id,
@@ -347,7 +333,7 @@ class Encryption {
         if (updateType != EventUpdateType.history) {
           event.room.setState(event);
         }
-        await client.database?.storeEventUpdate(
+        await client.database.storeEventUpdate(
           event.room.id,
           event,
           updateType,
@@ -410,7 +396,7 @@ class Encryption {
       // they're deprecated. Just left here for compatibility
       'device_id': client.deviceID,
       'sender_key': identityKey,
-      'session_id': sess.outboundGroupSession!.session_id(),
+      'session_id': sess.outboundGroupSession!.sessionId,
       if (mRelatesTo != null) 'm.relates_to': mRelatesTo,
     };
     await keyManager.storeOutboundGroupSession(roomId, sess);
@@ -429,8 +415,7 @@ class Encryption {
     // check if we can set our own master key as verified, if it isn't yet
     final userId = client.userID;
     final masterKey = client.userDeviceKeys[userId]?.masterKey;
-    if (client.database != null &&
-        masterKey != null &&
+    if (masterKey != null &&
         userId != null &&
         !masterKey.directVerified &&
         masterKey.hasValidSignatureChain(onlyValidateUserIds: {userId})) {

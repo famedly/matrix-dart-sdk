@@ -80,6 +80,9 @@ class Timeline {
   bool _fetchedAllDatabaseEvents = false;
 
   bool get canRequestHistory {
+    if (!{Membership.join, Membership.leave}.contains(room.membership)) {
+      return false;
+    }
     if (events.isEmpty) return true;
     return !_fetchedAllDatabaseEvents ||
         (room.prev_batch != null && events.last.type != EventTypes.RoomCreate);
@@ -145,20 +148,23 @@ class Timeline {
       // Look up for events in the database first. With fragmented view, we should delete the database cache
       final eventsFromStore = isFragmentedTimeline
           ? null
-          : await room.client.database?.getEventList(
+          : await room.client.database.getEventList(
               room,
               start: events.length,
               limit: historyCount,
             );
 
       if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
+        for (final e in eventsFromStore) {
+          addAggregatedEvent(e);
+        }
         // Fetch all users from database we have got here.
         for (final event in events) {
           if (room.getState(EventTypes.RoomMember, event.senderId) != null) {
             continue;
           }
           final dbUser =
-              await room.client.database?.getUser(event.senderId, room);
+              await room.client.database.getUser(event.senderId, room);
           if (dbUser != null) room.setState(dbUser);
         }
 
@@ -271,8 +277,7 @@ class Timeline {
       if (allowNewEvent) {
         Logs().d('We now allow sync update into the timeline.');
         newEvents.addAll(
-          await room.client.database?.getEventList(room, onlySending: true) ??
-              [],
+          await room.client.database.getEventList(room, onlySending: true),
         );
       }
     }
@@ -416,11 +421,7 @@ class Timeline {
       }
     }
 
-    if (room.client.database != null) {
-      await room.client.database?.transaction(decryptFn);
-    } else {
-      await decryptFn();
-    }
+    await room.client.database.transaction(decryptFn);
     if (decryptAtLeastOneEvent) onUpdate?.call();
   }
 
@@ -500,12 +501,12 @@ class Timeline {
     if (relationshipType == null || relationshipEventId == null) {
       return; // nothing to do
     }
-    final events = (aggregatedEvents[relationshipEventId] ??=
+    final e = (aggregatedEvents[relationshipEventId] ??=
         <String, Set<Event>>{})[relationshipType] ??= <Event>{};
     // remove a potential old event
-    _removeEventFromSet(events, event);
+    _removeEventFromSet(e, event);
     // add the new one
-    events.add(event);
+    e.add(event);
     if (onChange != null) {
       final index = _findEvent(event_id: relationshipEventId);
       onChange?.call(index);
@@ -518,8 +519,8 @@ class Timeline {
       aggregatedEvents.remove(event.transactionId);
     }
     for (final types in aggregatedEvents.values) {
-      for (final events in types.values) {
-        _removeEventFromSet(events, event);
+      for (final e in types.values) {
+        _removeEventFromSet(e, event);
       }
     }
   }
@@ -661,12 +662,11 @@ class Timeline {
       // Search in database
       var start = events.length;
       while (true) {
-        final eventsFromStore = await room.client.database?.getEventList(
-              room,
-              start: start,
-              limit: requestHistoryCount,
-            ) ??
-            [];
+        final eventsFromStore = await room.client.database.getEventList(
+          room,
+          start: start,
+          limit: requestHistoryCount,
+        );
         if (eventsFromStore.isEmpty) break;
         start += eventsFromStore.length;
         for (final event in eventsFromStore) {

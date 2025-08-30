@@ -84,6 +84,7 @@ class FakeMatrixApi extends BaseClient {
     StreamSubscription<String>? sub;
     sub = currentApi!._apiCallStream.stream.listen((action) {
       if (test(action)) {
+        // ignore: discarded_futures
         sub?.cancel();
         completer.complete(action);
       }
@@ -225,7 +226,7 @@ class FakeMatrixApi extends BaseClient {
           accountData: [sdk.BasicEvent(content: decodeJson(data), type: type)],
         );
         if (_client?.database != null) {
-          await _client?.database?.transaction(() async {
+          await _client?.database.transaction(() async {
             await _client?.handleSync(syncUpdate);
           });
         } else {
@@ -255,7 +256,7 @@ class FakeMatrixApi extends BaseClient {
           ),
         );
         if (_client?.database != null) {
-          await _client?.database?.transaction(() async {
+          await _client?.database.transaction(() async {
             await _client?.handleSync(syncUpdate);
           });
         } else {
@@ -330,6 +331,31 @@ class FakeMatrixApi extends BaseClient {
       return {};
     };
   }
+
+  // since direction is b, the start and end are reversed
+  static const Map<String, dynamic> emptyHistoryResponse = {
+    'start': 'simpleHistoryResponse', // next_batch
+    'end': null, // prev_batch
+    'chunk': [],
+    'state': [],
+  };
+  static const Map<String, dynamic> simpleHistoryResponse = {
+    'start': '1', // next_batch
+    'end': 'emptyHistoryResponse', // prev_batch
+    'chunk': [
+      {
+        'content': {'body': '0'},
+        'type': 'm.room.message',
+        'event_id': '0',
+        'room_id': 'new_room_id',
+        'sender': '@example:example.org',
+        'origin_server_ts': 1432735824653,
+        'unsigned': {'age': 1234},
+        'state_key': '',
+      },
+    ],
+    'state': [],
+  };
 
   static const Map<String, dynamic> messagesResponsePast = {
     'start': 't47429-4392820_219380_26003_2265',
@@ -576,16 +602,6 @@ class FakeMatrixApi extends BaseClient {
           'timeline': {
             'events': [
               {
-                'sender': '@bob:example.com',
-                'type': 'm.room.member',
-                'state_key': '@bob:example.com',
-                'content': {'membership': 'join'},
-                'prev_content': {'membership': 'invite'},
-                'origin_server_ts': 1417731086795,
-                'event_id': '\$7365636s6r6432:example.com',
-                'unsigned': {'foo': 'bar'},
-              },
-              {
                 'sender': '@alice:example.com',
                 'type': 'm.room.message',
                 'content': {'body': 'I am a fish', 'msgtype': 'm.text'},
@@ -594,7 +610,7 @@ class FakeMatrixApi extends BaseClient {
               }
             ],
             'limited': true,
-            'prev_batch': 't34-23535_0_0',
+            'prev_batch': 't44-23535_0_0',
           },
           'ephemeral': {
             'events': [
@@ -711,7 +727,7 @@ class FakeMatrixApi extends BaseClient {
               },
             ],
             'limited': true,
-            'prev_batch': 't34-23535_0_0',
+            'prev_batch': 't34-23535_0_1',
           },
           'account_data': {
             'events': [
@@ -1724,11 +1740,19 @@ class FakeMatrixApi extends BaseClient {
             'origin_server_ts': 1432735824653,
             'unsigned': {'age': 1234},
           },
+      '/client/v3/rooms/new_room_id/messages?from=emptyHistoryResponse&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+          (var req) => emptyHistoryResponse,
+      '/client/v3/rooms/new_room_id/messages?from=1&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+          (var req) => simpleHistoryResponse,
       '/client/v3/rooms/!localpart%3Aserver.abc/messages?from=1234&dir=b&to=1234&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponsePast,
       '/client/v3/rooms/!localpart%3Aserver.abc/messages?from=&dir=b&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponsePast,
       '/client/v3/rooms/!1234%3Aexample.com/messages?from=1234&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+          (var req) => messagesResponsePast,
+      '/client/v3/rooms/!1234%3Aexample.com/messages?from=room_preset_1234&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+          (var req) => messagesResponsePast,
+      '/client/v3/rooms/!1234%3Aexample.com/messages?from=room_preset_1234_after_limited&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponsePast,
       '/client/v3/rooms/!localpart%3Aserver.abc/messages?from=t456&dir=f&to=1234&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponseFuture,

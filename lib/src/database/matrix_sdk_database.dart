@@ -176,23 +176,38 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   /// like delete. Set it if you want to use sqlite FFI.
   final DatabaseFactory? sqfliteFactory;
 
-  MatrixSdkDatabase(
+  static Future<MatrixSdkDatabase> init(
+    String name, {
+    Database? database,
+    dynamic idbFactory,
+    DatabaseFactory? sqfliteFactory,
+    int maxFileSize = 0,
+    Uri? fileStorageLocation,
+    Duration? deleteFilesAfterDuration,
+  }) async {
+    final matrixSdkDatabase = MatrixSdkDatabase._(
+      name,
+      database: database,
+      idbFactory: idbFactory,
+      sqfliteFactory: sqfliteFactory,
+      maxFileSize: maxFileSize,
+      fileStorageLocation: fileStorageLocation,
+      deleteFilesAfterDuration: deleteFilesAfterDuration,
+    );
+    await matrixSdkDatabase.open();
+    return matrixSdkDatabase;
+  }
+
+  MatrixSdkDatabase._(
     this.name, {
     this.database,
     this.idbFactory,
     this.sqfliteFactory,
     this.maxFileSize = 0,
-    // TODO : remove deprecated member migration on next major release
-    @Deprecated(
-      'Breaks support for web standalone. Use [fileStorageLocation] instead.',
-    )
-    dynamic fileStoragePath,
     Uri? fileStorageLocation,
     Duration? deleteFilesAfterDuration,
   }) {
-    final legacyPath = fileStoragePath?.path;
-    this.fileStorageLocation = fileStorageLocation ??
-        (legacyPath is String ? Uri.tryParse(legacyPath) : null);
+    this.fileStorageLocation = fileStorageLocation;
     this.deleteFilesAfterDuration = deleteFilesAfterDuration;
   }
 
@@ -1511,8 +1526,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       );
       return;
     }
-    raw['allowed_at_index'] = allowedAtIndex;
-    await _inboundGroupSessionsBox.put(sessionId, raw);
+    final json = copyMap(raw);
+    json['allowed_at_index'] = allowedAtIndex;
+    await _inboundGroupSessionsBox.put(sessionId, json);
     return;
   }
 
@@ -1815,4 +1831,29 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         userId,
         profile.toJson(),
       );
+}
+
+class TupleKey {
+  final List<String> parts;
+
+  TupleKey(String key1, [String? key2, String? key3])
+      : parts = [
+          key1,
+          if (key2 != null) key2,
+          if (key3 != null) key3,
+        ];
+
+  const TupleKey.byParts(this.parts);
+
+  TupleKey.fromString(String multiKeyString)
+      : parts = multiKeyString.split('|').toList();
+
+  @override
+  String toString() => parts.join('|');
+
+  @override
+  bool operator ==(other) => parts.toString() == other.toString();
+
+  @override
+  int get hashCode => Object.hashAll(parts);
 }

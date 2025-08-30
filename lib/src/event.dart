@@ -21,6 +21,7 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:html/parser.dart';
+import 'package:mime/mime.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
@@ -120,13 +121,23 @@ class Event extends MatrixEvent {
     // Mark event as failed to send if status is `sending` and event is older
     // than the timeout. This should not happen with the deprecated Moor
     // database!
-    if (status.isSending && room.client.database != null) {
+    if (status.isSending) {
       // Age of this event in milliseconds
       final age = DateTime.now().millisecondsSinceEpoch -
           originServerTs.millisecondsSinceEpoch;
 
       final room = this.room;
-      if (age > room.client.sendTimelineEventTimeout.inMilliseconds) {
+
+      if (
+          // We don't want to mark the event as failed if it's the lastEvent in the room
+          // since that would be a race condition (with the same event from timeline)
+          // The `room.lastEvent` is null at the time this constructor is called for it,
+          // there's no other way to check this.
+          room.lastEvent?.eventId != null &&
+              // If the event is in the sending queue, then we don't mess with it.
+              !room.sendingQueueEventsByTxId.contains(transactionId) &&
+              // Else, if the event is older than the timeout, then we mark it as failed.
+              age > room.client.sendTimelineEventTimeout.inMilliseconds) {
         // Update this event in database and open timelines
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};
@@ -391,7 +402,7 @@ class Event extends MatrixEvent {
       throw Exception('Can only delete events which are not sent yet!');
     }
 
-    await room.client.database?.removeEvent(eventId, room.id);
+    await room.client.database.removeEvent(eventId, room.id);
 
     if (room.lastEvent != null && room.lastEvent!.eventId == eventId) {
       final redactedBecause = Event.fromMatrixEvent(
@@ -471,13 +482,35 @@ class Event extends MatrixEvent {
   Future<String?> redactEvent({String? reason, String? txid}) async =>
       await room.redactEvent(eventId, reason: reason, txid: txid);
 
-  /// Searches for the reply event in the given timeline.
+  /// Searches for the reply event in the given timeline. Also returns the
+  /// event fallback if the relationship type is `m.thread`.
+  /// https://spec.matrix.org/v1.14/client-server-api/#fallback-for-unthreaded-clients
   Future<Event?> getReplyEvent(Timeline timeline) async {
-    if (relationshipType != RelationshipTypes.reply) return null;
-    final relationshipEventId = this.relationshipEventId;
-    return relationshipEventId == null
-        ? null
-        : await timeline.getEventById(relationshipEventId);
+    switch (relationshipType) {
+      case RelationshipTypes.reply:
+        final relationshipEventId = this.relationshipEventId;
+        return relationshipEventId == null
+            ? null
+            : await timeline.getEventById(relationshipEventId);
+
+      case RelationshipTypes.thread:
+        final relationshipContent =
+            content.tryGetMap<String, Object?>('m.relates_to');
+        if (relationshipContent == null) return null;
+        final String? relationshipEventId;
+        if (relationshipContent.tryGet<bool>('is_falling_back') == true) {
+          relationshipEventId = relationshipContent
+              .tryGetMap<String, Object?>('m.in_reply_to')
+              ?.tryGet<String>('event_id');
+        } else {
+          relationshipEventId = this.relationshipEventId;
+        }
+        return relationshipEventId == null
+            ? null
+            : await timeline.getEventById(relationshipEventId);
+      default:
+        return null;
+    }
   }
 
   /// If this event is encrypted and the decryption was not successful because
@@ -693,9 +726,6 @@ class Event extends MatrixEvent {
     // Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
     final database = room.client.database;
-    if (database == null) {
-      return false;
-    }
 
     final storeable = thisInfoMap['size'] is int &&
         thisInfoMap['size'] <= database.maxFileSize;
@@ -739,13 +769,12 @@ class Event extends MatrixEvent {
 
     // Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
-    var storeable = database != null &&
-        thisInfoMap['size'] is int &&
+    var storeable = thisInfoMap['size'] is int &&
         thisInfoMap['size'] <= database.maxFileSize;
 
     Uint8List? uint8list;
     if (storeable) {
-      uint8list = await room.client.database?.getFile(mxcUrl);
+      uint8list = await room.client.database.getFile(mxcUrl);
     }
 
     // Download the file
@@ -759,9 +788,7 @@ class Event extends MatrixEvent {
               .bodyBytes;
       uint8list =
           await downloadCallback(await mxcUrl.getDownloadUri(room.client));
-      storeable = database != null &&
-          storeable &&
-          uint8list.lengthInBytes < database.maxFileSize;
+      storeable = storeable && uint8list.lengthInBytes < database.maxFileSize;
       if (storeable) {
         await database.storeFile(
           mxcUrl,
@@ -794,9 +821,13 @@ class Event extends MatrixEvent {
     }
 
     final filename = content.tryGet<String>('filename') ?? body;
+    final mimeType = attachmentMimetype;
+
     return MatrixFile(
       bytes: uint8list,
-      name: filename,
+      name: getThumbnail
+          ? '$filename.thumbnail.${extensionFromMime(mimeType)}'
+          : filename,
       mimeType: attachmentMimetype,
     );
   }
@@ -955,10 +986,8 @@ class Event extends MatrixEvent {
     // return the html tags free body
     if (removeMarkdown == true) {
       final html = markdown(body, convertLinebreaks: false);
-      final document = parse(
-        html,
-      );
-      body = document.documentElement?.text ?? body;
+      final document = parse(html);
+      body = document.documentElement?.text.trim() ?? body;
     }
     return body;
   }

@@ -17,10 +17,12 @@
  */
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:test/test.dart';
 
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
+import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/matrix.dart';
 
 void main() {
@@ -81,6 +83,29 @@ void main() {
         shrinkedImage.blurhash,
         'L75NyU5kvvbx^7AF#kSgZxOZ%5NE',
         reason: 'Unexpected scaled image blur',
+      );
+    });
+  });
+
+  group('toPickleKey', () {
+    test('toPickleKey', () {
+      const shortKey = 'abcd';
+      var pickleKey = shortKey.toPickleKey();
+      expect(pickleKey.length, 32, reason: 'Pickle key should be 32 bytes');
+      expect(
+        shortKey,
+        String.fromCharCodes(pickleKey.take(4)),
+        reason: 'Pickle key should match the first 32 bytes of the input',
+      );
+
+      const longKey =
+          'abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890';
+      pickleKey = longKey.toPickleKey();
+      expect(pickleKey.length, 32, reason: 'Pickle key should be 32 bytes');
+      expect(
+        pickleKey,
+        Uint8List.fromList(longKey.codeUnits.take(32).toList()),
+        reason: 'Pickle key should match the first 32 bytes of the input',
       );
     });
   });

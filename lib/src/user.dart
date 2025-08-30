@@ -18,7 +18,16 @@
 
 import 'package:matrix/matrix.dart';
 
-/// Represents a Matrix User which may be a participant in a Matrix Room.
+/// Represents a user in the context of a Matrix room, not a global user profile.
+///
+/// This class extends [StrippedStateEvent] to handle room-specific user state,
+/// including membership status, display name, and avatar within that room.
+/// The user information is derived from room member state events.
+///
+/// For example, a user may have different display names or avatars in different rooms,
+/// and this class represents that room-specific view of the user rather than their
+/// global profile.
+///
 class User extends StrippedStateEvent {
   final Room room;
   final Map<String, Object?>? prevContent;
@@ -171,7 +180,11 @@ class User extends StrippedStateEvent {
 
   /// Whether the client is able to kick this user.
   bool get canKick =>
-      [Membership.join, Membership.invite].contains(membership) &&
+      {
+        Membership.join,
+        Membership.invite,
+        Membership.knock,
+      }.contains(membership) &&
       room.canKick &&
       powerLevel < room.ownPowerLevel;
 

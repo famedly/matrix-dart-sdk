@@ -1,4 +1,169 @@
-## 0.38.0
+## [1.1.1] 7th Aug 2025
+- fix: reuse a deviceId if available (td)
+- refactor: Allow room ids to not have a domain (Christian Kußowski)
+- refactor: Restrict canChangeStateEvent, canInvite and canSendEvent to joined users (Christian Kußowski)
+- refactor: Restrict canKick canBan and canRedact to joined users (Christian Kußowski)
+- refactor: Restrict canRequestHistory to joined or archived rooms (Christian Kußowski)
+
+## [1.1.0] 14th July 2025
+- fix: (BREAKING) Can not logout and login again with same Client object (Christian Kußowski)
+- refactor: Clean up new dart version lints (Christian Kußowski)
+
+Now if you logout and login again you will reuse the same database. In case you use
+database encryption and want to use a new key, please consider recreating the database
+like this:
+
+```dart
+await client.database.delete();
+client.database = await MatrixSdkDatabase.init(/*...*/);
+```
+
+## [1.0.1] 16th June 2025
+- chore: Add hint to init vodozemac also in native implementations (Christian Kußowski)
+- fix: exportDump and importDump and add unit tests (Christian Kußowski)
+- fix: user.canKick should be true for knocking users as well (Christian Kußowski)
+
+## [1.0.0] 10th June 2025
+
+- feat: Migrate to vodozemac (Christian Kußowski)
+- refactor: Make database non nullable (Christian Kußowski)
+- refactor: (BREAKING) Make database required (Christian Kußowski)
+- refactor: disable benchmarks by global boolean (#2104) (Krille-chan)
+- refactor: Remove olm dependency (Christian Kußowski)
+
+### Breaking changes:
+
+#### DatabaseBuilder deprecated
+
+From now on the `Client` constructor expects an open database. `Client.database` is no longer nullable.
+
+**Before**:
+
+```dart
+final client = Client(
+  'Client Name',
+  databaseBuilder: (_) async {
+      final database = MatrixSdkDatabase(
+        '<Database Name>',
+        database: await databaseFactoryFfi.openDatabase(':memory:'),
+        sqfliteFactory: databaseFactoryFfi,
+      );
+      await database.open();
+      return database;
+    },
+);
+```
+
+**Now**:
+
+```dart
+final client = Client(
+    '<Client Name>',
+    database: await MatrixSdkDatabase.init(
+        '<Database Name>',
+        database: await databaseFactoryFfi.openDatabase(':memory:'),
+        sqfliteFactory: databaseFactoryFfi,
+    ),
+);
+```
+
+#### LibOlm deprecated in favor of Vodozemac
+
+LibOlm is no longer used. From now on you should use **Vodozemac**.
+For Flutter you can use [flutter_vodozemac](https://pub.dev/packages/flutter_vodozemac). This
+just needs to be initialized **once**:
+
+```dart
+import 'package:flutter_vodozemac/flutter_vodozemac.dart' as vod;
+
+// ...
+
+await vod.init();
+
+final client = Client('Matrix Client',
+    // ...
+    // ...
+    nativeImplementations: NativeImplementationsIsolate(
+        compute,
+        // Also init in NativeImplemenetations if you use it there:
+        vodozemacInit: () => vod.init(),
+    ),
+    // ...
+);
+```
+
+This should work on Android, iOS, macOS, Linux and Windows.
+
+For web you need to compile vodozemac to wasm. [Please refer to the Vodozemac bindings documentation](https://pub.dev/packages/vodozemac#build-for-web).
+
+
+## [0.40.2] 5th June 2025
+- fix: fallback on homeserver is userID null (The one with the braid)
+
+## [0.40.1] 2nd June 2025
+- feat: Add logout command (Christian Kußowski)
+- feat: Switch to github flavor markdown to render checkboxes (krille-chan)
+- fix: Add missing copy json in updateInboundGroupdSessionAllowedAtIndex method (Christian Kußowski)
+- fix: Correct filename when downloading thumbnail (Christian Kußowski)
+- fix: no user feedback if client.getConfig() takes some time (Christian Kußowski)
+- refactor: Do not store room update for leave rooms not cached anyway (Christian Kußowski)
+
+## [0.40.0] 9th May 2025
+- feat: Add localization for voice message type (Krille)
+- feat: Support fallback for threads in Event.getReplyEvent() (Krille)
+- fix: Fetch well-known from domain from userId, not from homeserver domain (krille-chan)
+- fix: incorrect Event status update in constructor (Karthikeyan S)
+- refactor: (BREAKING) Remove hive database and hive dependencies (Krille)
+- refactor: Remove unused event status roomState (Krille)
+
+## [0.39.4] 6th May 2025
+
+- chore: prev_batch update after a limited timeline follow-up (Karthikeyan S)
+- fix: make sure prev_batch is updated after a limited timeline (td)
+- fix: sanity if room prev_batch null, populate it (td)
+
+## [0.39.3] 6th May 2025
+- fix: Do not load timeline while sync is processed (Krille)
+
+## [0.39.2] 30th April 2025
+- fix: add proper description for `User` class (Yash-Garg)
+- fix: handling of existing calls in `onCallInvite` (Yash-Garg)
+- fix: make sure to keep track of aggregated events after requesting history or future (td)
+
+## [0.39.1] 10th April 2025
+
+- fix: deleting last message is edited (Mohammad Reza Moradi)
+
+## [0.39.0] 2nd April 2025
+
+- feat: endpoints for spec v1.14 (BREAKING CHANGE)
+- feat: Make dehydrated device name configurable
+- feat: ensure direct chats have only 2 members before sending verification requests
+- fix: Trim plaintext after removeMarkdown
+- fix: use macv2 for correct base64 encoding
+- chore: add v1.14 to supported versions
+- chore: upgrade webrtc_interface to v1.2.2+hotfix.1
+
+## [0.38.1] 19th March 2025
+
+- chore: Export event localizations (Krille)
+- chore: Remove unnecessary template (Krille)
+- feat: Add command to upgrade room (Krille)
+- feat: Add parameter for allow condition for restricted rooms (Krille)
+- feat: allow skipping existing chat when calling startDirectChat (td)
+- feat: export timeline events (Karthikeyan S)
+- feat: upload code coverage to codecov (td)
+- fix: incorrect filename when caption is used in body of event (Karthikeyan S)
+- fix: incorrect mimeType for files when downloading (Karthikeyan S)
+- fix: Older state events overwrite newer ones on fetching history (Krille)
+- fix: room prev_batch set incorrectly (Karthikeyan S)
+- fix: WebRTC videoValue missing (Krille)
+- refactor: Add file info to placeholder before sending file event (Krille)
+- refactor: Add missing versions to supportedVersions and use warning instead of blocking (Krille)
+- refactor: Improve linebreak logic for html messages (Krille)
+- refactor: Make markUnread a noop if unread is already as intendend and throw exception if room membership is not join (Krille)
+
+## [0.38.0] 5th February 2025
 
 ### Migration notes
 
@@ -51,7 +216,7 @@ if(output != null) {
 - refactor: Make converting linebreaks in markdowntohtml optional (Krille)
 - refactor: Use .toSet() instead of Set.from() (Krille)
 
-## 0.37.0
+## [0.37.0] 27th January 2025
 
 Bigger release with a lot of refactorings under the hood. Those do not necessarily make the SDK more performant but more robust and type safe.
 
