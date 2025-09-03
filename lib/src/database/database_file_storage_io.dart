@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:path/path.dart';
+
 import 'package:matrix/matrix.dart';
 
 mixin DatabaseFileStorage {
@@ -9,9 +11,19 @@ mixin DatabaseFileStorage {
   late final Uri? fileStorageLocation;
   late final Duration? deleteFilesAfterDuration;
 
-  File _getFileFromMxc(Uri mxcUri) => File(
-        '${Directory.fromUri(fileStorageLocation!).path}/${mxcUri.toString().split('/').last}',
-      );
+  /// Map an MXC URI to a local File path
+  File _getFileFromMxc(Uri mxcUri) {
+    // Replace all special characters with underscores to avoid PathNotFoundException on Windows.
+    final host = mxcUri.host.replaceAll('.', '_');
+    final path = mxcUri.pathSegments.join('_');
+    final query = mxcUri.queryParameters.entries
+        .map((entry) => '${entry.key}${entry.value}')
+        .join('_');
+    final fileName = '${host}_${path}_$query';
+    return File(
+      join(Directory.fromUri(fileStorageLocation!).path, fileName),
+    );
+  }
 
   Future<void> storeFile(Uri mxcUri, Uint8List bytes, int time) async {
     final fileStorageLocation = this.fileStorageLocation;
