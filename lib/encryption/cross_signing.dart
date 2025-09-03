@@ -181,23 +181,24 @@ class CrossSigning {
     }
     if (signedKeys.isNotEmpty) {
       // post our new keys!
-      final payload = <String, Map<String, Map<String, dynamic>>>{};
+      final payload = <String, Map<String, Map<String, Object?>>>{};
       for (final key in signedKeys) {
-        if (key.identifier == null ||
-            key.signatures == null ||
-            key.signatures?.isEmpty != false) {
+        final signatures = key.signatures;
+        final identifier = key.identifier;
+        if (identifier == null || signatures == null || signatures.isEmpty) {
           continue;
         }
         if (!payload.containsKey(key.userId)) {
-          payload[key.userId] = <String, Map<String, dynamic>>{};
+          payload[key.userId] = <String, Map<String, Object?>>{};
         }
         if (payload[key.userId]?[key.identifier]?['signatures'] != null) {
           // we need to merge signature objects
-          payload[key.userId]![key.identifier]!['signatures']
-              .addAll(key.signatures);
+          payload[key.userId]![key.identifier]!
+              .tryGetMap<String, Map<String, String>>('signatures')!
+              .addAll(signatures);
         } else {
           // we can just add signatures
-          payload[key.userId]![key.identifier!] = key.toJson();
+          payload[key.userId]![identifier] = key.toJson();
         }
       }
 
