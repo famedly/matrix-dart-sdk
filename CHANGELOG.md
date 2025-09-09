@@ -1,3 +1,24 @@
+## [2.0.0] 9th Sept 2025
+
+There have been some breaking changes to the VoIP codebase. Specifically, you will have to pass your instance of the VoIP class to existing `getCallMemberships*` functions which are an extension on the Room class. 
+
+- feat: delayed and device owned state events support for group calls (td)
+- feat: allow setting keyring size (td)
+- feat: (BREAKING CHANGE) allow setting custom call timeout values, you will have to pass the voip class to a bunch of existing call related methods though (td)
+- feat: also debounce join key rotation (td)
+- fix: fix the issue that user avatar can not be loaded on windows (Eric Lin)
+- fix: reuse a deviceId if available (td)
+- refactor: (BREAKING CHANGE) you can now get the matrix eventId from CallMembership(s) (td)
+- refactor: Allow room ids to not have a domain (Christian Kußowski)
+- refactor: Clean up new dart version lints (Christian Kußowski)
+- refactor: Make signableJson type safe with type safe class (Christian Kußowski)
+- refactor: Remove dynamic in cross signing code (Christian Kußowski)
+- refactor: Restrict canChangeStateEvent, canInvite and canSendEvent to joined users (Christian Kußowski)
+- refactor: Restrict canKick canBan and canRedact to joined users (Christian Kußowski)
+- refactor: Restrict canRequestHistory to joined or archived rooms (Christian Kußowski)
+- refactor: Sync for unknown room in push helper and catch timeout exceptions (Christian Kußowski)
+
+
 ## [1.1.0] 14th July 2025
 - fix: (BREAKING) Can not logout and login again with same Client object (Christian Kußowski)
 - refactor: Clean up new dart version lints (Christian Kußowski)
