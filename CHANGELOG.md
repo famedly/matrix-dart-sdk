@@ -1,3 +1,6 @@
+## [2.0.1] 9th Sept 2025
+- fix: scheduled event list init (td)
+
 ## [2.0.0] 9th Sept 2025
 
 There have been some breaking changes to the VoIP codebase. Specifically, you will have to pass your instance of the VoIP class to existing `getCallMemberships*` functions which are an extension on the Room class. 
