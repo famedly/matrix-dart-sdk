@@ -2,7 +2,6 @@ import 'package:test/test.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
 import 'fake_client.dart';
@@ -630,6 +629,7 @@ void main() {
                     .millisecondsSinceEpoch,
                 roomId: room.id,
                 membershipId: voip.currentSessionId,
+                voip: voip,
               ).toJson(),
             ],
           },
@@ -653,6 +653,7 @@ void main() {
                 expiresTs: DateTime.now().millisecondsSinceEpoch,
                 roomId: room.id,
                 membershipId: voip.currentSessionId,
+                voip: voip,
               ).toJson(),
             ],
           },
@@ -676,6 +677,7 @@ void main() {
                 expiresTs: DateTime.now().millisecondsSinceEpoch,
                 roomId: room.id,
                 membershipId: voip.currentSessionId,
+                voip: voip,
               ).toJson(),
             ],
           },
@@ -701,6 +703,7 @@ void main() {
                     .millisecondsSinceEpoch,
                 roomId: room.id,
                 membershipId: voip.currentSessionId,
+                voip: voip,
               ).toJson(),
             ],
           },
@@ -713,35 +716,35 @@ void main() {
         ),
       );
       expect(
-        room.getFamedlyCallEvents().entries.elementAt(0).key,
+        room.getFamedlyCallEvents(voip).entries.elementAt(0).key,
         '@test3:example.com',
       );
       expect(
-        room.getFamedlyCallEvents().entries.elementAt(1).key,
+        room.getFamedlyCallEvents(voip).entries.elementAt(1).key,
         '@test2:example.com',
       );
       expect(
-        room.getFamedlyCallEvents().entries.elementAt(2).key,
+        room.getFamedlyCallEvents(voip).entries.elementAt(2).key,
         '@test2.0:example.com',
       );
       expect(
-        room.getFamedlyCallEvents().entries.elementAt(3).key,
+        room.getFamedlyCallEvents(voip).entries.elementAt(3).key,
         '@test1:example.com',
       );
       expect(
-        room.getCallMembershipsFromRoom().entries.elementAt(0).key,
+        room.getCallMembershipsFromRoom(voip).entries.elementAt(0).key,
         '@test3:example.com',
       );
       expect(
-        room.getCallMembershipsFromRoom().entries.elementAt(1).key,
+        room.getCallMembershipsFromRoom(voip).entries.elementAt(1).key,
         '@test2:example.com',
       );
       expect(
-        room.getCallMembershipsFromRoom().entries.elementAt(2).key,
+        room.getCallMembershipsFromRoom(voip).entries.elementAt(2).key,
         '@test2.0:example.com',
       );
       expect(
-        room.getCallMembershipsFromRoom().entries.elementAt(3).key,
+        room.getCallMembershipsFromRoom(voip).entries.elementAt(3).key,
         '@test1:example.com',
       );
     });
@@ -866,6 +869,7 @@ void main() {
                     .millisecondsSinceEpoch,
                 roomId: room.id,
                 membershipId: voip.currentSessionId,
+                voip: voip,
               ).toJson(),
             ],
           },
@@ -874,8 +878,8 @@ void main() {
         ),
       );
 
-      expect(room.groupCallParticipantCount('participants_count'), 0);
-      expect(room.hasActiveGroupCall, false);
+      expect(room.groupCallParticipantCount('participants_count', voip), 0);
+      expect(room.hasActiveGroupCall(voip), false);
 
       room.setState(
         Event(
@@ -895,6 +899,7 @@ void main() {
                     .millisecondsSinceEpoch,
                 roomId: room.id,
                 membershipId: voip.currentSessionId,
+                voip: voip,
               ).toJson(),
             ],
           },
@@ -902,8 +907,8 @@ void main() {
           stateKey: '@test2:example.com',
         ),
       );
-      expect(room.groupCallParticipantCount('participants_count'), 1);
-      expect(room.hasActiveGroupCall, true);
+      expect(room.groupCallParticipantCount('participants_count', voip), 1);
+      expect(room.hasActiveGroupCall(voip), true);
 
       room.setState(
         Event(
@@ -921,6 +926,7 @@ void main() {
                 expiresTs: DateTime.now().millisecondsSinceEpoch,
                 roomId: room.id,
                 membershipId: voip.currentSessionId,
+                voip: voip,
               ).toJson(),
             ],
           },
@@ -929,8 +935,8 @@ void main() {
         ),
       );
 
-      expect(room.groupCallParticipantCount('participants_count'), 2);
-      expect(room.hasActiveGroupCall, true);
+      expect(room.groupCallParticipantCount('participants_count', voip), 2);
+      expect(room.hasActiveGroupCall(voip), true);
     });
 
     test('call persists after sending invite', () async {

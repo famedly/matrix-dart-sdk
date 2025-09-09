@@ -4,21 +4,10 @@ import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
-import 'package:matrix/src/voip/models/call_membership.dart';
 
 class LiveKitBackend extends CallBackend {
   final String livekitServiceUrl;
   final String livekitAlias;
-
-  /// A delay after a member leaves before we create and publish a new key, because people
-  /// tend to leave calls at the same time
-  final Duration makeKeyDelay;
-
-  /// The delay between creating and sending a new key and starting to encrypt with it. This gives others
-  /// a chance to receive the new key to minimise the chance they don't get media they can't decrypt.
-  /// The total time between a member leaving and the call switching to new keys is therefore
-  /// makeKeyDelay + useKeyDelay
-  final Duration useKeyDelay;
 
   @override
   final bool e2eeEnabled;
@@ -28,8 +17,6 @@ class LiveKitBackend extends CallBackend {
     required this.livekitAlias,
     super.type = 'livekit',
     this.e2eeEnabled = true,
-    this.makeKeyDelay = CallTimeouts.makeKeyDelay,
-    this.useKeyDelay = CallTimeouts.useKeyDelay,
   });
 
   Timer? _memberLeaveEncKeyRotateDebounceTimer;
@@ -44,8 +31,13 @@ class LiveKitBackend extends CallBackend {
   /// used to send the key again incase someone `onCallEncryptionKeyRequest` but don't just send
   /// the last one because you also cycle back in your window which means you
   /// could potentially end up sharing a past key
+  /// we don't really care about what if setting or sending fails right now
   int get latestLocalKeyIndex => _latestLocalKeyIndex;
   int _latestLocalKeyIndex = 0;
+
+  /// stores when the last new key was made (makeNewSenderKey), is not used
+  /// for ratcheted keys at the moment
+  DateTime _lastNewKeyTime = DateTime(1900);
 
   /// the key currently being used by the local cryptor, can possibly not be the latest
   /// key, check `latestLocalKeyIndex` for latest key
@@ -58,8 +50,8 @@ class LiveKitBackend extends CallBackend {
 
   /// always chooses the next possible index, we cycle after 16 because
   /// no real adv with infinite list
-  int _getNewEncryptionKeyIndex() {
-    final newIndex = _indexCounter % 16;
+  int _getNewEncryptionKeyIndex(int keyRingSize) {
+    final newIndex = _indexCounter % keyRingSize;
     _indexCounter++;
     return newIndex;
   }
@@ -76,10 +68,26 @@ class LiveKitBackend extends CallBackend {
   /// also does the sending for you
   Future<void> _makeNewSenderKey(
     GroupCallSession groupCall,
-    bool delayBeforeUsingKeyOurself,
-  ) async {
+    bool delayBeforeUsingKeyOurself, {
+    bool skipJoinDebounce = false,
+  }) async {
+    if (_lastNewKeyTime
+            .add(groupCall.voip.timeouts!.makeKeyOnJoinDelay)
+            .isAfter(DateTime.now()) &&
+        !skipJoinDebounce) {
+      Logs().d(
+        '_makeNewSenderKey using previous key because last created at ${_lastNewKeyTime.toString()}',
+      );
+      // still a fairly new key, just send that
+      await _sendEncryptionKeysEvent(
+        groupCall,
+        _latestLocalKeyIndex,
+      );
+      return;
+    }
+
     final key = secureRandomBytes(32);
-    final keyIndex = _getNewEncryptionKeyIndex();
+    final keyIndex = _getNewEncryptionKeyIndex(groupCall.voip.keyRingSize);
     Logs().i('[VOIP E2EE] Generated new key $key at index $keyIndex');
 
     await _setEncryptionKey(
@@ -96,6 +104,9 @@ class LiveKitBackend extends CallBackend {
   Future<void> _ratchetLocalParticipantKey(
     GroupCallSession groupCall,
     List<CallParticipant> sendTo,
+
+    /// only used for makeSenderKey fallback
+    bool delayBeforeUsingKeyOurself,
   ) async {
     final keyProvider = groupCall.voip.delegate.keyProvider;
 
@@ -114,17 +125,28 @@ class LiveKitBackend extends CallBackend {
 
     Uint8List? ratchetedKey;
 
-    while (ratchetedKey == null || ratchetedKey.isEmpty) {
-      Logs().i('[VOIP E2EE] Ignoring empty ratcheted key');
+    int ratchetTryCounter = 0;
+
+    while (ratchetTryCounter <= 8 &&
+        (ratchetedKey == null || ratchetedKey.isEmpty)) {
+      Logs().d(
+        '[VOIP E2EE] Ignoring empty ratcheted key, ratchetTryCounter: $ratchetTryCounter',
+      );
+
       ratchetedKey = await keyProvider.onRatchetKey(
         groupCall.localParticipant!,
         latestLocalKeyIndex,
       );
+      ratchetTryCounter++;
     }
 
-    Logs().i(
-      '[VOIP E2EE] Ratched latest key to $ratchetedKey at idx $latestLocalKeyIndex',
-    );
+    if (ratchetedKey == null || ratchetedKey.isEmpty) {
+      Logs().d(
+        '[VOIP E2EE] ratcheting failed, falling back to creating a new key',
+      );
+      await _makeNewSenderKey(groupCall, delayBeforeUsingKeyOurself);
+      return;
+    }
 
     await _setEncryptionKey(
       groupCall,
@@ -133,6 +155,7 @@ class LiveKitBackend extends CallBackend {
       ratchetedKey,
       delayBeforeUsingKeyOurself: false,
       send: true,
+      setKey: false,
       sendTo: sendTo,
     );
   }
@@ -144,7 +167,11 @@ class LiveKitBackend extends CallBackend {
   ) async {
     if (!e2eeEnabled) return;
     if (groupCall.voip.enableSFUE2EEKeyRatcheting) {
-      await _ratchetLocalParticipantKey(groupCall, anyJoined);
+      await _ratchetLocalParticipantKey(
+        groupCall,
+        anyJoined,
+        delayBeforeUsingKeyOurself,
+      );
     } else {
       await _makeNewSenderKey(groupCall, delayBeforeUsingKeyOurself);
     }
@@ -159,6 +186,9 @@ class LiveKitBackend extends CallBackend {
     Uint8List encryptionKeyBin, {
     bool delayBeforeUsingKeyOurself = false,
     bool send = false,
+
+    /// ratchet seems to set on call, so no need to set manually
+    bool setKey = true,
     List<CallParticipant>? sendTo,
   }) async {
     final encryptionKeys =
@@ -168,6 +198,7 @@ class LiveKitBackend extends CallBackend {
     _encryptionKeysMap[participant] = encryptionKeys;
     if (participant.isLocal) {
       _latestLocalKeyIndex = encryptionKeyIndex;
+      _lastNewKeyTime = DateTime.now();
     }
 
     if (send) {
@@ -178,12 +209,23 @@ class LiveKitBackend extends CallBackend {
       );
     }
 
+    if (!setKey) {
+      Logs().i(
+        '[VOIP E2EE] sent ratchetd key $encryptionKeyBin but not setting',
+      );
+      return;
+    }
+
     if (delayBeforeUsingKeyOurself) {
+      Logs().d(
+        '[VOIP E2EE] starting delayed set for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin, current idx $currentLocalKeyIndex key ${encryptionKeys[currentLocalKeyIndex]}',
+      );
       // now wait for the key to propogate and then set it, hopefully users can
       // stil decrypt everything
-      final useKeyTimeout = Future.delayed(useKeyDelay, () async {
+      final useKeyTimeout =
+          Future.delayed(groupCall.voip.timeouts!.useKeyDelay, () async {
         Logs().i(
-          '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
+          '[VOIP E2EE] delayed setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
         );
         await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
           participant,
@@ -257,7 +299,7 @@ class LiveKitBackend extends CallBackend {
         EventTypes.GroupCallMemberEncryptionKeys,
       );
     } catch (e, s) {
-      Logs().e('[VOIP] Failed to send e2ee keys, retrying', e, s);
+      Logs().e('[VOIP E2EE] Failed to send e2ee keys, retrying', e, s);
       await _sendEncryptionKeysEvent(
         groupCall,
         keyIndex,
@@ -274,7 +316,7 @@ class LiveKitBackend extends CallBackend {
   ) async {
     if (remoteParticipants.isEmpty) return;
     Logs().v(
-      '[VOIP] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ',
+      '[VOIP E2EE] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ',
     );
     final txid =
         VoIP.customTxid ?? groupCall.client.generateUniqueTransactionId();
@@ -355,7 +397,7 @@ class LiveKitBackend extends CallBackend {
     Map<String, dynamic> content,
   ) async {
     if (!e2eeEnabled) {
-      Logs().w('[VOIP] got sframe key but we do not support e2ee');
+      Logs().w('[VOIP E2EE] got sframe key but we do not support e2ee');
       return;
     }
     final keyContent = EncryptionKeysEventContent.fromJson(content);
@@ -398,37 +440,65 @@ class LiveKitBackend extends CallBackend {
     Map<String, dynamic> content,
   ) async {
     if (!e2eeEnabled) {
-      Logs().w('[VOIP] got sframe key request but we do not support e2ee');
+      Logs().w('[VOIP E2EE] got sframe key request but we do not support e2ee');
       return;
     }
-    final mems = groupCall.room.getCallMembershipsForUser(userId);
-    if (mems
-        .where(
-          (mem) =>
-              mem.callId == groupCall.groupCallId &&
-              mem.userId == userId &&
-              mem.deviceId == deviceId &&
-              !mem.isExpired &&
-              // sanity checks
-              mem.backend.type == groupCall.backend.type &&
-              mem.roomId == groupCall.room.id &&
-              mem.application == groupCall.application,
-        )
-        .isNotEmpty) {
-      Logs().d(
-        '[VOIP] onCallEncryptionKeyRequest: request checks out, sending key on index: $latestLocalKeyIndex to $userId:$deviceId',
+
+    Future<bool> checkPartcipantStatusAndRequestKey() async {
+      final mems = groupCall.room.getCallMembershipsForUser(
+        userId,
+        deviceId,
+        groupCall.voip,
       );
-      await _sendEncryptionKeysEvent(
-        groupCall,
-        _latestLocalKeyIndex,
-        sendTo: [
-          CallParticipant(
-            groupCall.voip,
-            userId: userId,
-            deviceId: deviceId,
-          ),
-        ],
+
+      if (mems
+          .where(
+            (mem) =>
+                mem.callId == groupCall.groupCallId &&
+                mem.userId == userId &&
+                mem.deviceId == deviceId &&
+                !mem.isExpired &&
+                // sanity checks
+                mem.backend.type == groupCall.backend.type &&
+                mem.roomId == groupCall.room.id &&
+                mem.application == groupCall.application,
+          )
+          .isNotEmpty) {
+        Logs().d(
+          '[VOIP E2EE] onCallEncryptionKeyRequest: request checks out, sending key on index: $latestLocalKeyIndex to $userId:$deviceId',
+        );
+        await _sendEncryptionKeysEvent(
+          groupCall,
+          _latestLocalKeyIndex,
+          sendTo: [
+            CallParticipant(
+              groupCall.voip,
+              userId: userId,
+              deviceId: deviceId,
+            ),
+          ],
+        );
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    if ((!await checkPartcipantStatusAndRequestKey())) {
+      Logs().i(
+        '[VOIP E2EE] onCallEncryptionKeyRequest: checkPartcipantStatusAndRequestKey returned false, therefore retrying by getting state from server and rebuilding participant list for sanity',
       );
+      final stateKey =
+          (groupCall.room.roomVersion?.contains('msc3757') ?? false)
+              ? '${userId}_$deviceId'
+              : userId;
+      await groupCall.room.client.getRoomStateWithKey(
+        groupCall.room.id,
+        EventTypes.GroupCallMember,
+        stateKey,
+      );
+      await groupCall.onMemberStateChanged();
+      await checkPartcipantStatusAndRequestKey();
     }
   }
 
@@ -450,8 +520,15 @@ class LiveKitBackend extends CallBackend {
     if (_memberLeaveEncKeyRotateDebounceTimer != null) {
       _memberLeaveEncKeyRotateDebounceTimer!.cancel();
     }
-    _memberLeaveEncKeyRotateDebounceTimer = Timer(makeKeyDelay, () async {
-      await _makeNewSenderKey(groupCall, true);
+    _memberLeaveEncKeyRotateDebounceTimer =
+        Timer(groupCall.voip.timeouts!.makeKeyOnLeaveDelay, () async {
+      // we skipJoinDebounce here because we want to make sure a new key is generated
+      // and that the join debounce does not block us from making a new key
+      await _makeNewSenderKey(
+        groupCall,
+        true,
+        skipJoinDebounce: true,
+      );
     });
   }
 

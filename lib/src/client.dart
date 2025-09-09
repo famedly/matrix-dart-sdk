@@ -1265,12 +1265,16 @@ class Client extends MatrixApi {
   final _versionsCache =
       AsyncCache<GetVersionsResponse>(const Duration(hours: 1));
 
+  Future<GetVersionsResponse> get versionsResponse =>
+      _versionsCache.tryFetch(() => getVersions());
+
   Future<bool> authenticatedMediaSupported() async {
-    final versionsResponse = await _versionsCache.tryFetch(() => getVersions());
-    return versionsResponse.versions.any(
-          (v) => isVersionGreaterThanOrEqualTo(v, 'v1.11'),
-        ) ||
-        versionsResponse.unstableFeatures?['org.matrix.msc3916.stable'] == true;
+    return (await versionsResponse).versions.any(
+              (v) => isVersionGreaterThanOrEqualTo(v, 'v1.11'),
+            ) ||
+        (await versionsResponse)
+                .unstableFeatures?['org.matrix.msc3916.stable'] ==
+            true;
   }
 
   final _serverConfigCache = AsyncCache<MediaConfig>(const Duration(hours: 1));
