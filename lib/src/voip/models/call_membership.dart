@@ -19,6 +19,7 @@ class FamedlyCallMemberEvent {
             mem,
             event.senderId,
             event.room.id,
+            event.eventId,
             voip,
           );
           if (callMem != null) callMemberships.add(callMem);
@@ -29,6 +30,31 @@ class FamedlyCallMemberEvent {
   }
 }
 
+/// userId - The userId of the member
+///
+/// callId - The callId the member is a part of, usually an empty string
+///
+/// application, scope - something you can narrow down the calls with, might be
+/// removed soon
+///
+/// backend - The CallBackend, either mesh or livekit
+///
+/// deviceId - The deviceId of the member
+///
+/// eventId - The eventId in matrix for this call membership
+/// not always present because we do not have it when we are just sending
+/// the event
+///
+/// expiresTs - Timestamp at which this membership event will be considered expired
+///
+/// membershipId - A cachebuster for state events, usually is reset every time a client
+/// loads
+///
+/// feeds - Feeds from mesh calls, is not used for livekit calls
+///
+/// voip - The voip parent class for using timeouts probably
+///
+/// roomId - The roomId for the call
 class CallMembership {
   final String userId;
   final String callId;
@@ -36,6 +62,7 @@ class CallMembership {
   final String? scope;
   final CallBackend backend;
   final String deviceId;
+  final String? eventId;
   final int expiresTs;
   final String membershipId;
   final List? feeds;
@@ -47,6 +74,7 @@ class CallMembership {
     required this.callId,
     required this.backend,
     required this.deviceId,
+    this.eventId,
     required this.expiresTs,
     required this.roomId,
     required this.membershipId,
@@ -63,6 +91,7 @@ class CallMembership {
       'scope': scope,
       'foci_active': [backend.toJson()],
       'device_id': deviceId,
+      'event_id': eventId,
       'expires_ts': expiresTs,
       'expires': 7200000, // element compatibiltiy remove asap
       'membershipID': membershipId, // sessionId
@@ -74,6 +103,7 @@ class CallMembership {
     Map json,
     String userId,
     String roomId,
+    String? eventId,
     VoIP voip,
   ) {
     try {
@@ -87,6 +117,7 @@ class CallMembership {
             .map((e) => CallBackend.fromJson(e))
             .first,
         deviceId: json['device_id'],
+        eventId: eventId,
         expiresTs: json['expires_ts'],
         membershipId:
             json['membershipID'] ?? 'someone_forgot_to_set_the_membershipID',
@@ -111,6 +142,7 @@ class CallMembership {
           scope == other.scope &&
           backend.type == other.backend.type &&
           deviceId == other.deviceId &&
+          eventId == other.eventId &&
           membershipId == other.membershipId;
 
   @override
@@ -122,6 +154,7 @@ class CallMembership {
         scope.hashCode,
         backend.type.hashCode,
         deviceId.hashCode,
+        eventId.hashCode,
         membershipId.hashCode,
       );
 

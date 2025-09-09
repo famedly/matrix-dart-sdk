@@ -232,10 +232,10 @@ extension FamedlyCallMemberEventsExtension on Room {
     } else {
       throw MatrixSDKVoipException(
         '''
-        User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room $id, 
-        canJoinGroupCall: $canJoinGroupCall, 
-        groupCallsEnabledForEveryone: $groupCallsEnabledForEveryone, 
-        needed: ${powerForChangingStateEvent(EventTypes.GroupCallMember)}, 
+        User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room $id,
+        canJoinGroupCall: $canJoinGroupCall,
+        groupCallsEnabledForEveryone: $groupCallsEnabledForEveryone,
+        needed: ${powerForChangingStateEvent(EventTypes.GroupCallMember)},
         own: $ownPowerLevel}
         plMap: ${getState(EventTypes.RoomPowerLevels)?.content}
         ''',
@@ -253,6 +253,7 @@ extension FamedlyCallMemberEventsExtension on Room {
       event.content,
       event.senderId,
       event.roomId!,
+      event.eventId,
       voip,
     );
   }
@@ -262,12 +263,13 @@ extension FamedlyCallMemberEventsExtension on Room {
     Map<String, Object?> content,
     String senderId,
     String roomId,
+    String? eventId,
     VoIP voip,
   ) {
     final mems = content.tryGetList<Map>('memberships');
     final callMems = <CallMembership>[];
     for (final m in mems ?? []) {
-      final mem = CallMembership.fromJson(m, senderId, roomId, voip);
+      final mem = CallMembership.fromJson(m, senderId, roomId, eventId, voip);
       if (mem != null) callMems.add(mem);
     }
     return callMems;
