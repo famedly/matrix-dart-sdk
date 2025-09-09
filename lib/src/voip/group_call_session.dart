@@ -21,7 +21,6 @@ import 'dart:core';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
-import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
 
@@ -162,10 +161,11 @@ class GroupCallSession {
         backend: backend,
         deviceId: client.deviceID!,
         expiresTs: DateTime.now()
-            .add(CallTimeouts.expireTsBumpDuration)
+            .add(voip.timeouts!.expireTsBumpDuration)
             .millisecondsSinceEpoch,
         membershipId: voip.currentSessionId,
         feeds: backend.getCurrentFeeds(),
+        voip: voip,
       ),
     );
 
@@ -173,7 +173,7 @@ class GroupCallSession {
       _resendMemberStateEventTimer!.cancel();
     }
     _resendMemberStateEventTimer = Timer.periodic(
-      CallTimeouts.updateExpireTsTimerDuration,
+      voip.timeouts!.updateExpireTsTimerDuration,
       ((timer) async {
         Logs().d('sendMemberStateEvent updating member event with timer');
         if (state != GroupCallState.ended ||
@@ -198,6 +198,7 @@ class GroupCallSession {
     return room.removeFamedlyCallMemberEvent(
       groupCallId,
       client.deviceID!,
+      voip,
       application: application,
       scope: scope,
     );
@@ -206,8 +207,10 @@ class GroupCallSession {
   /// compltetely rebuilds the local _participants list
   Future<void> onMemberStateChanged() async {
     // The member events may be received for another room, which we will ignore.
-    final mems =
-        room.getCallMembershipsFromRoom().values.expand((element) => element);
+    final mems = room
+        .getCallMembershipsFromRoom(voip)
+        .values
+        .expand((element) => element);
     final memsForCurrentGroupCall = mems.where((element) {
       return element.callId == groupCallId &&
           !element.isExpired &&
@@ -215,15 +218,6 @@ class GroupCallSession {
           element.scope == scope &&
           element.roomId == room.id; // sanity checks
     }).toList();
-
-    final ignoredMems =
-        mems.where((element) => !memsForCurrentGroupCall.contains(element));
-
-    for (final mem in ignoredMems) {
-      Logs().v(
-        '[VOIP] Ignored ${mem.userId}\'s mem event ${mem.toJson()} while updating _participants list for callId: $groupCallId, expiry status: ${mem.isExpired}',
-      );
-    }
 
     final Set<CallParticipant> newP = {};
 
@@ -238,12 +232,7 @@ class GroupCallSession {
 
       if (rp.isLocal) continue;
 
-      if (state != GroupCallState.entered) {
-        Logs().w(
-          '[VOIP] onMemberStateChanged groupCall state is currently $state, skipping member update',
-        );
-        continue;
-      }
+      if (state != GroupCallState.entered) continue;
 
       await backend.setupP2PCallWithNewMember(this, rp, mem);
     }
@@ -281,9 +270,6 @@ class GroupCallSession {
       }
 
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
-      Logs().d(
-        '[VOIP] onMemberStateChanged current list: ${_participants.map((e) => e.id).toString()}',
-      );
     }
   }
 }

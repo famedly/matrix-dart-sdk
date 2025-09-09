@@ -6,36 +6,64 @@ const String voipProtoVersion = '1';
 
 class CallTimeouts {
   /// The default life time for call events, in millisecond.
-  static const defaultCallEventLifetime = Duration(seconds: 10);
+  final Duration defaultCallEventLifetime;
 
   /// The length of time a call can be ringing for.
-  static const callInviteLifetime = Duration(seconds: 60);
+  final Duration callInviteLifetime;
 
   /// The delay for ice gathering.
-  static const iceGatheringDelay = Duration(milliseconds: 200);
+  final Duration iceGatheringDelay;
 
   /// Delay before createOffer.
-  static const delayBeforeOffer = Duration(milliseconds: 100);
+  final Duration delayBeforeOffer;
 
   /// How often to update the expiresTs
-  static const updateExpireTsTimerDuration = Duration(minutes: 2);
+  final Duration updateExpireTsTimerDuration;
 
   /// the expiresTs bump
-  static const expireTsBumpDuration = Duration(minutes: 6);
+  final Duration expireTsBumpDuration;
 
   /// Update the active speaker value
-  static const activeSpeakerInterval = Duration(seconds: 5);
+  final Duration activeSpeakerInterval;
 
   // source: element call?
   /// A delay after a member leaves before we create and publish a new key, because people
   /// tend to leave calls at the same time
-  static const makeKeyDelay = Duration(seconds: 4);
+  final Duration makeKeyOnLeaveDelay;
+
+  /// A delay used for joins, only creates new keys if last new created key was before
+  /// $makeKeyDelay duration, or it was recently made and it's safe to send that
+  /// The bigger this is the easier key sharing would be, but also less secure
+  /// Not used if ratcheting is enabled
+  final Duration makeKeyOnJoinDelay;
 
   /// The delay between creating and sending a new key and starting to encrypt with it. This gives others
   /// a chance to receive the new key to minimise the chance they don't get media they can't decrypt.
   /// The total time between a member leaving and the call switching to new keys is therefore
   /// makeKeyDelay + useKeyDelay
-  static const useKeyDelay = Duration(seconds: 4);
+  final Duration useKeyDelay;
+
+  /// After how long the homeserver should send the delayed leave event which
+  /// gracefully leaves you from the call
+  final Duration delayedEventApplyLeave;
+
+  /// How often the delayed event should be restarted on the homeserver
+  final Duration delayedEventRestart;
+
+  CallTimeouts({
+    this.defaultCallEventLifetime = const Duration(seconds: 10),
+    this.callInviteLifetime = const Duration(seconds: 60),
+    this.iceGatheringDelay = const Duration(milliseconds: 200),
+    this.delayBeforeOffer = const Duration(milliseconds: 100),
+    this.updateExpireTsTimerDuration = const Duration(minutes: 2),
+    this.expireTsBumpDuration = const Duration(minutes: 6),
+    this.activeSpeakerInterval = const Duration(seconds: 5),
+    this.makeKeyOnLeaveDelay = const Duration(seconds: 4),
+    this.makeKeyOnJoinDelay = const Duration(seconds: 8),
+    this.useKeyDelay = const Duration(seconds: 4),
+    this.delayedEventApplyLeave = const Duration(seconds: 18),
+    this.delayedEventRestart = const Duration(seconds: 4),
+  });
 }
 
 class CallConstants {

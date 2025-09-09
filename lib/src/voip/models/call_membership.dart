@@ -9,14 +9,18 @@ class FamedlyCallMemberEvent {
     return {'memberships': memberships.map((e) => e.toJson()).toList()};
   }
 
-  factory FamedlyCallMemberEvent.fromJson(Event event) {
+  factory FamedlyCallMemberEvent.fromJson(Event event, VoIP voip) {
     final List<CallMembership> callMemberships = [];
     final memberships = event.content.tryGetList('memberships');
     if (memberships != null && memberships.isNotEmpty) {
       for (final mem in memberships) {
         if (isValidMemEvent(mem)) {
-          final callMem =
-              CallMembership.fromJson(mem, event.senderId, event.room.id);
+          final callMem = CallMembership.fromJson(
+            mem,
+            event.senderId,
+            event.room.id,
+            voip,
+          );
           if (callMem != null) callMemberships.add(callMem);
         }
       }
@@ -35,7 +39,7 @@ class CallMembership {
   final int expiresTs;
   final String membershipId;
   final List? feeds;
-
+  final VoIP voip;
   final String roomId;
 
   CallMembership({
@@ -46,6 +50,7 @@ class CallMembership {
     required this.expiresTs,
     required this.roomId,
     required this.membershipId,
+    required this.voip,
     this.application = 'm.call',
     this.scope = 'm.room',
     this.feeds,
@@ -65,7 +70,12 @@ class CallMembership {
     };
   }
 
-  static CallMembership? fromJson(Map json, String userId, String roomId) {
+  static CallMembership? fromJson(
+    Map json,
+    String userId,
+    String roomId,
+    VoIP voip,
+  ) {
     try {
       return CallMembership(
         userId: userId,
@@ -81,6 +91,7 @@ class CallMembership {
         membershipId:
             json['membershipID'] ?? 'someone_forgot_to_set_the_membershipID',
         feeds: json['feeds'],
+        voip: voip,
       );
     } catch (e, s) {
       Logs().e('[VOIP] call membership parsing failed. $json', e, s);
@@ -120,6 +131,6 @@ class CallMembership {
   bool get isExpired =>
       expiresTs <
       DateTime.now()
-          .subtract(CallTimeouts.expireTsBumpDuration)
+          .subtract(voip.timeouts!.expireTsBumpDuration)
           .millisecondsSinceEpoch;
 }

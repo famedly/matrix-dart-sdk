@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/models/call_membership.dart';
 
 abstract class CallBackend {
   String type;
