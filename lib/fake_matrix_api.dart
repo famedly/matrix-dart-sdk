@@ -1740,6 +1740,28 @@ class FakeMatrixApi extends BaseClient {
             'origin_server_ts': 1432735824653,
             'unsigned': {'age': 1234},
           },
+      '/client/v3/rooms/!localpart%3Aserver.abc/messages?dir=b&limit=1&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%2C%22m.sticker%22%2C%22m.call.invite%22%2C%22m.call.answer%22%2C%22m.call.reject%22%2C%22m.call.hangup%22%2C%22com.famedly.call.member%22%5D%7D':
+          (var req) => {
+                'start': 't47429-4392820_219380_26003_2265',
+                'end': 't47409-4357353_219380_26003_2265',
+                'chunk': [
+                  {
+                    'content': {
+                      'body': 'This is an example text message',
+                      'msgtype': 'm.text',
+                      'format': 'org.matrix.custom.html',
+                      'formatted_body':
+                          '<b>This is an example text message</b>',
+                    },
+                    'type': 'm.room.message',
+                    'event_id': '3143273582443PhrSn:example.org',
+                    'room_id': '!1234:example.com',
+                    'sender': '@example:example.org',
+                    'origin_server_ts': 1432735824653,
+                    'unsigned': {'age': 1234},
+                  },
+                ],
+              },
       '/client/v3/rooms/new_room_id/messages?from=emptyHistoryResponse&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => emptyHistoryResponse,
       '/client/v3/rooms/new_room_id/messages?from=1&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':

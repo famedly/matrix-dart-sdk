@@ -2632,13 +2632,15 @@ class Client extends MatrixApi {
       final id = entry.key;
       final syncRoomUpdate = entry.value;
 
+      final room = await _updateRoomsByRoomUpdate(id, syncRoomUpdate);
+
       // Is the timeline limited? Then all previous messages should be
       // removed from the database!
       if (syncRoomUpdate is JoinedRoomUpdate &&
           syncRoomUpdate.timeline?.limited == true) {
         await database.deleteTimelineForRoom(id);
+        room.lastEvent = null;
       }
-      final room = await _updateRoomsByRoomUpdate(id, syncRoomUpdate);
 
       final timelineUpdateType = direction != null
           ? (direction == Direction.b
@@ -2739,6 +2741,12 @@ class Client extends MatrixApi {
         continue;
       }
       await database.storeRoomUpdate(id, syncRoomUpdate, room.lastEvent, this);
+
+      if (syncRoomUpdate is JoinedRoomUpdate &&
+          syncRoomUpdate.timeline?.limited == true &&
+          room.lastEvent == null) {
+        runInRoot(room.refreshLastEvent);
+      }
     }
   }
 
@@ -3034,13 +3042,6 @@ class Client extends MatrixApi {
           room.setState(event);
         }
         if (type != EventUpdateType.timeline) break;
-
-        // If last event is null or not a valid room preview event anyway,
-        // just use this:
-        if (room.lastEvent == null) {
-          room.lastEvent = event;
-          break;
-        }
 
         // Is this event redacting the last event?
         if (event.type == EventTypes.Redaction &&
