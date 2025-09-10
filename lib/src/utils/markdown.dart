@@ -205,14 +205,15 @@ class MentionSyntax extends InlineSyntax {
   }
 }
 
-String markdown(
+Future<String> markdown(
   String text, {
   Map<String, Map<String, String>> Function()? getEmotePacks,
   String? Function(String)? getMention,
   bool convertLinebreaks = true,
-}) {
-  var ret = markdownToHtml(
-    text.replaceNewlines(),
+  bool restrictedMediaSupported = false,
+  Future<String> Function(String)? copyMedia,
+}) async {
+  final document = Document(
     extensionSet: ExtensionSet.gitHubFlavored,
     blockSyntaxes: [
       BlockLatexSyntax(),
@@ -226,6 +227,24 @@ String markdown(
       InlineLatexSyntax(),
     ],
   );
+  final nodes = document.parse(text.replaceNewlines());
+
+  // copy any referenced files to attach to a new event
+  if (restrictedMediaSupported && copyMedia != null) {
+    for (final node in nodes) {
+      if (node is Element) {
+        switch (node.tag) {
+          case 'a' when node.attributes['href']?.startsWith('mxc://') == true:
+            node.attributes['href'] = await copyMedia(node.attributes['href']!);
+          case 'img' when node.attributes['src']?.startsWith('mxc://') == true:
+            node.attributes['src'] = await copyMedia(node.attributes['src']!);
+          default:
+        }
+      }
+    }
+  }
+
+  var ret = '${renderToHtml(nodes, enableTagfilter: false)}\n';
 
   var stripPTags = '<p>'.allMatches(ret).length <= 1;
   if (stripPTags) {

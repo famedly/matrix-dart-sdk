@@ -636,7 +636,7 @@ class Room {
     String? threadRootEventId,
     String? threadLastEventId,
     StringBuffer? commandStdout,
-  }) {
+  }) async {
     if (parseCommands) {
       return client.parseAndRunCommand(
         this,
@@ -653,12 +653,23 @@ class Room {
       'msgtype': msgtype,
       'body': message,
     };
+
+    final attachedMediaIds = <String>[];
+
     if (parseMarkdown) {
-      final html = markdown(
+      final html = await markdown(
         event['body'],
         getEmotePacks: () => getImagePacksFlat(ImagePackUsage.emoticon),
         getMention: getMention,
         convertLinebreaks: client.convertLinebreaksInFormatting,
+        restrictedMediaSupported: await client.restrictedMediaSupported(),
+        copyMedia: (String mediaUri) async {
+          final [server, mediaId] = Uri.parse(mediaUri).pathSegments;
+          final newUri =
+              (await client.copyRestrictedContent(server, mediaId)).toString();
+          attachedMediaIds.add(newUri);
+          return newUri;
+        },
       );
       // if the decoded html is the same as the body, there is no need in sending a formatted message
       if (HtmlUnescape().convert(html.replaceAll(RegExp(r'<br />\n?'), '\n')) !=
@@ -674,6 +685,7 @@ class Room {
       editEventId: editEventId,
       threadRootEventId: threadRootEventId,
       threadLastEventId: threadLastEventId,
+      attachedMediaIds: attachedMediaIds,
     );
   }
 

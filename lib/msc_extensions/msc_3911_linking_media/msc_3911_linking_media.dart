@@ -9,23 +9,48 @@ import 'package:http/http.dart';
 
 import 'package:matrix/matrix_api_lite/generated/api.dart';
 
-/// Uploads MSC3911 restricted media, that needs to be attached on send.
-/// (Only difference to normal uploadContent is the url and the server behaviour.)
-///
-/// [filename] The name of the file being uploaded
-///
-/// [body]
-///
-/// [contentType] **Optional.** The content type of the file being uploaded.
-///
-/// Clients SHOULD always supply this header.
-///
-/// Defaults to `application/octet-stream` if it is not set.
-///
-///
-/// returns `content_uri`:
-/// The [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the uploaded content.
 extension Msc3911 on Api {
+  /// Clone a media content on the server side to allow attaching to a different event.
+  Future<Uri> copyRestrictedContent(
+    String serverName,
+    String mediaId,
+  ) async {
+    final requestUri = Uri(
+      path:
+          '_matrix/client/unstable/org.matrix.msc3911/media/copy/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
+    );
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(
+      jsonEncode({}),
+    );
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((json['content_uri'] as String).startsWith('mxc://')
+        ? Uri.parse(json['content_uri'] as String)
+        : throw Exception('Uri not an mxc URI'));
+  }
+
+  /// Uploads MSC3911 restricted media, that needs to be attached on send.
+  /// (Only difference to normal uploadContent is the url and the server behaviour.)
+  ///
+  /// [filename] The name of the file being uploaded
+  ///
+  /// [body]
+  ///
+  /// [contentType] **Optional.** The content type of the file being uploaded.
+  ///
+  /// Clients SHOULD always supply this header.
+  ///
+  /// Defaults to `application/octet-stream` if it is not set.
+  ///
+  ///
+  /// returns `content_uri`:
+  /// The [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the uploaded content.
   Future<Uri> uploadRestrictedContent(
     Uint8List body, {
     String? filename,
