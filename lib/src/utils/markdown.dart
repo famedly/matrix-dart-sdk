@@ -205,6 +205,72 @@ class MentionSyntax extends InlineSyntax {
   }
 }
 
+String markdown_sync(
+  String text, {
+  Map<String, Map<String, String>> Function()? getEmotePacks,
+  String? Function(String)? getMention,
+  bool convertLinebreaks = true,
+}) {
+  final document = Document(
+    extensionSet: ExtensionSet.gitHubFlavored,
+    blockSyntaxes: [
+      BlockLatexSyntax(),
+    ],
+    inlineSyntaxes: [
+      StrikethroughSyntax(),
+      SpoilerSyntax(),
+      EmoteSyntax(getEmotePacks),
+      PillSyntax(),
+      MentionSyntax(getMention),
+      InlineLatexSyntax(),
+    ],
+  );
+  final nodes = document.parse(text.replaceNewlines());
+
+  var ret = '${renderToHtml(nodes, enableTagfilter: false)}\n';
+
+  var stripPTags = '<p>'.allMatches(ret).length <= 1;
+  if (stripPTags) {
+    const otherBlockTags = {
+      'table',
+      'pre',
+      'ol',
+      'ul',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'blockquote',
+      'div',
+    };
+    for (final tag in otherBlockTags) {
+      // we check for the close tag as the opening one might have attributes
+      if (ret.contains('</$tag>')) {
+        stripPTags = false;
+        break;
+      }
+    }
+  }
+  ret = ret
+      .trim()
+      // Remove trailing linebreaks
+      .replaceAll(RegExp(r'(<br />)+$'), '');
+  if (convertLinebreaks) {
+    // Only convert linebreaks which are not in <pre> blocks
+    ret = ret.convertLinebreaksToBr('p');
+    // Delete other linebreaks except for pre blocks:
+    ret = ret.convertLinebreaksToBr('pre', exclude: true, replaceWith: '');
+  }
+
+  if (stripPTags) {
+    ret = ret.replaceAll('<p>', '').replaceAll('</p>', '');
+  }
+
+  return ret;
+}
+
 Future<String> markdown(
   String text, {
   Map<String, Map<String, String>> Function()? getEmotePacks,
