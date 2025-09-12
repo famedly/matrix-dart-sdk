@@ -2740,13 +2740,25 @@ class Client extends MatrixApi {
         Logs().d('Skip store LeftRoomUpdate for unknown room', id);
         continue;
       }
-      await database.storeRoomUpdate(id, syncRoomUpdate, room.lastEvent, this);
 
       if (syncRoomUpdate is JoinedRoomUpdate &&
-          syncRoomUpdate.timeline?.limited == true &&
-          room.lastEvent == null) {
+          (room.lastEvent?.type == EventTypes.refreshingLastEvent ||
+              (syncRoomUpdate.timeline?.limited == true &&
+                  room.lastEvent == null))) {
+        room.lastEvent = Event(
+          originServerTs:
+              syncRoomUpdate.timeline?.events?.firstOrNull?.originServerTs ??
+                  DateTime.now(),
+          type: EventTypes.refreshingLastEvent,
+          content: {'body': 'Refreshing last event...'},
+          room: room,
+          eventId: generateUniqueTransactionId(),
+          senderId: userID!,
+        );
         runInRoot(room.refreshLastEvent);
       }
+
+      await database.storeRoomUpdate(id, syncRoomUpdate, room.lastEvent, this);
     }
   }
 
