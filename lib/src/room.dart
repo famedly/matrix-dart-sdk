@@ -492,8 +492,16 @@ class Room {
   String get displayname => getLocalizedDisplayname();
 
   /// When was the last event received.
-  DateTime get latestEventReceivedTime =>
-      lastEvent?.originServerTs ?? DateTime.now();
+  DateTime get latestEventReceivedTime {
+    final lastEventTime = lastEvent?.originServerTs;
+    if (lastEventTime != null) return lastEventTime;
+
+    if (membership == Membership.invite) return DateTime.now();
+    final createEvent = getState(EventTypes.RoomCreate);
+    if (createEvent is MatrixEvent) return createEvent.originServerTs;
+
+    return DateTime(0);
+  }
 
   /// Call the Matrix API to change the name of this room. Returns the event ID of the
   /// new m.room.name event.

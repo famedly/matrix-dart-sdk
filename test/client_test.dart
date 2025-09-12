@@ -201,26 +201,26 @@ void main() {
         matrix.getDirectChatFromUserId('@bob:example.com'),
         '!726s6s6q:example.com',
       );
-      expect(matrix.rooms[2].directChatMatrixID, '@bob:example.com');
+      expect(matrix.rooms[1].directChatMatrixID, '@bob:example.com');
       expect(matrix.directChats, matrix.accountData['m.direct']?.content);
       // ignore: deprecated_member_use_from_same_package
       expect(matrix.presences.length, 1);
-      expect(matrix.rooms[2].ephemerals.length, 2);
-      expect(matrix.rooms[2].typingUsers.length, 1);
-      expect(matrix.rooms[2].typingUsers[0].id, '@alice:example.com');
-      expect(matrix.rooms[2].roomAccountData.length, 3);
-      expect(matrix.rooms[2].encrypted, true);
+      expect(matrix.rooms[1].ephemerals.length, 2);
+      expect(matrix.rooms[1].typingUsers.length, 1);
+      expect(matrix.rooms[1].typingUsers[0].id, '@alice:example.com');
+      expect(matrix.rooms[1].roomAccountData.length, 3);
+      expect(matrix.rooms[1].encrypted, true);
       expect(
-        matrix.rooms[2].encryptionAlgorithm,
+        matrix.rooms[1].encryptionAlgorithm,
         Client.supportedGroupEncryptionAlgorithms.first,
       );
       expect(
         matrix
-            .rooms[2].receiptState.global.otherUsers['@alice:example.com']?.ts,
+            .rooms[1].receiptState.global.otherUsers['@alice:example.com']?.ts,
         1436451550453,
       );
       expect(
-        matrix.rooms[2].receiptState.global.otherUsers['@alice:example.com']
+        matrix.rooms[1].receiptState.global.otherUsers['@alice:example.com']
             ?.eventId,
         '\$7365636s6r6432:example.com',
       );
@@ -231,7 +231,7 @@ void main() {
       expect(inviteRoom.states[EventTypes.RoomMember]?.length, 1);
       expect(matrix.rooms.length, 3);
       expect(
-        matrix.rooms[2].canonicalAlias,
+        matrix.rooms[1].canonicalAlias,
         "#famedlyContactDiscovery:${matrix.userID!.split(":")[1]}",
       );
       expect(
