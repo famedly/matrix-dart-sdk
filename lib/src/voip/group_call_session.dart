@@ -57,8 +57,18 @@ class GroupCallSession {
   final CachedStreamController<GroupCallStateChange> onGroupCallEvent =
       CachedStreamController();
 
+  /// The stream is used to signal matrixrtc events for group calls
+  /// Currently, this is done for
+  /// - participants change
+  /// - group call emoji reaction
   final CachedStreamController<MatrixRTCCallEvent> matrixRTCEventStream =
       CachedStreamController();
+
+  /// Map of group call emoji reactions by participant id
+  final Map<String, String> groupCallEmojiReactionsMap = {};
+
+  /// Map of group call emoji reactions remover timer by participant id
+  final Map<String, Timer> groupCallEmojiReactionsRemoverTimer = {};
 
   Timer? _resendMemberStateEventTimer;
 

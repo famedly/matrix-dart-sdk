@@ -240,59 +240,63 @@ class VoIP {
         '[VOIP] _handleCallEvent call event does not contain a room_id, ignoring',
       );
       return;
-    } else if (client.userID != null &&
-        client.deviceID != null &&
-        remoteUserId == client.userID &&
-        remoteDeviceId == client.deviceID) {
-      Logs().v(
-        'Ignoring call event ${event.type} for room ${room.id} from our own device',
-      );
-      return;
-    } else if (!event.type
-        .startsWith(EventTypes.GroupCallMemberEncryptionKeys)) {
-      // skip webrtc event checks on encryption_keys
-      final callId = content['call_id'] as String?;
-      final partyId = content['party_id'] as String?;
-      if (callId == null && event.type.startsWith('m.call')) {
-        Logs().w('Ignoring call event ${event.type} because call_id was null');
+    } else if (!{EventTypes.GroupCallEmojiReaction}.contains(event.type)) {
+      if (client.userID != null &&
+          client.deviceID != null &&
+          remoteUserId == client.userID &&
+          remoteDeviceId == client.deviceID) {
+        Logs().v(
+          'Ignoring call event ${event.type} for room ${room.id} from our own device',
+        );
         return;
-      }
-      if (callId != null) {
-        final call = calls[VoipId(roomId: room.id, callId: callId)];
-        if (call == null &&
-            !{EventTypes.CallInvite, EventTypes.GroupCallMemberInvite}
-                .contains(event.type)) {
-          Logs().w(
-            'Ignoring call event ${event.type} for room ${room.id} because we do not have the call',
-          );
+      } else if (!event.type
+          .startsWith(EventTypes.GroupCallMemberEncryptionKeys)) {
+        // skip webrtc event checks on encryption_keys
+        final callId = content['call_id'] as String?;
+        final partyId = content['party_id'] as String?;
+        if (callId == null && event.type.startsWith('m.call')) {
+          Logs()
+              .w('Ignoring call event ${event.type} because call_id was null');
           return;
-        } else if (call != null) {
-          // multiple checks to make sure the events sent are from the the
-          // expected party
-          if (call.room.id != room.id) {
+        }
+        if (callId != null) {
+          final call = calls[VoipId(roomId: room.id, callId: callId)];
+          if (call == null &&
+              !{EventTypes.CallInvite, EventTypes.GroupCallMemberInvite}
+                  .contains(event.type)) {
             Logs().w(
-              'Ignoring call event ${event.type} for room ${room.id} claiming to be for call in room ${call.room.id}',
+              'Ignoring call event ${event.type} for room ${room.id} because we do not have the call',
             );
             return;
-          }
-          if (call.remoteUserId != null && call.remoteUserId != remoteUserId) {
-            Logs().d(
-              'Ignoring call event ${event.type} for room ${room.id} from sender $remoteUserId, expected sender: ${call.remoteUserId}',
-            );
-            return;
-          }
-          if (call.remotePartyId != null && call.remotePartyId != partyId) {
-            Logs().w(
-              'Ignoring call event ${event.type} for room ${room.id} from sender with a different party_id $partyId, expected party_id: ${call.remotePartyId}',
-            );
-            return;
-          }
-          if ((call.remotePartyId != null &&
-              call.remotePartyId == localPartyId)) {
-            Logs().v(
-              'Ignoring call event ${event.type} for room ${room.id} from our own partyId',
-            );
-            return;
+          } else if (call != null) {
+            // multiple checks to make sure the events sent are from the the
+            // expected party
+            if (call.room.id != room.id) {
+              Logs().w(
+                'Ignoring call event ${event.type} for room ${room.id} claiming to be for call in room ${call.room.id}',
+              );
+              return;
+            }
+            if (call.remoteUserId != null &&
+                call.remoteUserId != remoteUserId) {
+              Logs().d(
+                'Ignoring call event ${event.type} for room ${room.id} from sender $remoteUserId, expected sender: ${call.remoteUserId}',
+              );
+              return;
+            }
+            if (call.remotePartyId != null && call.remotePartyId != partyId) {
+              Logs().w(
+                'Ignoring call event ${event.type} for room ${room.id} from sender with a different party_id $partyId, expected party_id: ${call.remotePartyId}',
+              );
+              return;
+            }
+            if ((call.remotePartyId != null &&
+                call.remotePartyId == localPartyId)) {
+              Logs().v(
+                'Ignoring call event ${event.type} for room ${room.id} from our own partyId',
+              );
+              return;
+            }
           }
         }
       }
@@ -358,6 +362,9 @@ class VoIP {
           remoteDeviceId!,
           content,
         );
+        break;
+      case EventTypes.GroupCallEmojiReaction:
+        await onGroupCallEmojiReactionReceived(room, event);
         break;
     }
   }
@@ -719,6 +726,165 @@ class VoIP {
         Logs().e('[VOIP] Failed to complete negotiation', e, s);
       }
     }
+  }
+
+  Future<void> onGroupCallEmojiReactionReceived(
+    Room room,
+    BasicEventWithSender event,
+  ) async {
+    final content = event.content;
+    final callId = content.tryGet<String>('call_id');
+    if (callId == null) {
+      Logs().w(
+        '[onGroupCallEmojiReactionReceived] No call ID found in reaction content',
+      );
+      return;
+    }
+    Logs().d(
+      '[onGroupCallEmojiReactionReceived] Reaction received for room ${room.id}, call ID $callId',
+    );
+
+    final groupCall = groupCalls[VoipId(roomId: room.id, callId: callId)];
+    if (groupCall == null) {
+      Logs().w(
+        '[onGroupCallEmojiReactionReceived] No respective group call found for room ${room.id}, call ID $callId',
+      );
+      return;
+    }
+
+    // Get the parent event ID and device ID from the event content
+    final eventId = content
+        .tryGetMap<String, String>('m.relates_to')
+        ?.tryGet<String>('event_id');
+    final eventDeviceId = content.tryGet<String>('device_id');
+
+    if (eventId == null || eventDeviceId == null) {
+      Logs().w(
+        '[onGroupCallEmojiReactionReceived] No event ID or device ID found in reaction content',
+      );
+      return;
+    }
+
+    // Get call memberships for the sender
+    final memberships =
+        room.getCallMembershipsForUser(event.senderId, eventDeviceId, this);
+    final membership = memberships.firstWhereOrNull(
+      (m) =>
+          m.callId == callId &&
+          m.application == 'm.call' &&
+          m.scope == 'm.room',
+    );
+
+    if (membership == null) {
+      Logs().w(
+        '[onGroupCallEmojiReactionReceived] No matching membership found for reaction from ${event.senderId}',
+      );
+      return;
+    }
+
+    if (membership.eventId != eventId) {
+      /// If the membership event id doesn't match the event id, we should check
+      /// if an old membership event with the same event id exists which is
+      /// replaced by the new one
+      final referencedEvent = await room.getEventById(eventId);
+
+      if (referencedEvent == null) {
+        Logs().w(
+          '[onGroupCallEmojiReactionReceived] No matching event for event id $eventId found for reaction from ${event.senderId}',
+        );
+        return;
+      }
+
+      final famedlyCallMemberEvent =
+          FamedlyCallMemberEvent.fromJson(referencedEvent, this);
+      final referencedMembership =
+          famedlyCallMemberEvent.memberships.firstWhereOrNull(
+        (m) =>
+            m.callId == callId &&
+            m.userId == event.senderId &&
+            m.deviceId == eventDeviceId,
+      );
+
+      if (referencedMembership == null) {
+        Logs().w(
+          '[onGroupCallEmojiReactionReceived] No matching membership found for event id $eventId for reaction from ${event.senderId}',
+        );
+        return;
+      }
+    }
+
+    // Check if there's an emoji from the event content
+    final eventEmoji = content.tryGet<String>('emoji');
+    if (eventEmoji == null) {
+      Logs().w(
+        '[onGroupCallEmojiReactionReceived] No emoji found in reaction content',
+      );
+      return;
+    }
+
+    // Create the reaction object and add it to the stream
+    final participant = CallParticipant(
+      this,
+      userId: event.senderId,
+      deviceId: eventDeviceId,
+    );
+    final reaction = GroupCallEmojiReactionAddedEvent(
+      emoji: eventEmoji,
+      participant: participant,
+    );
+
+    groupCall.groupCallEmojiReactionsMap[reaction.participant.id] = eventEmoji;
+    groupCall.matrixRTCEventStream.add(reaction);
+
+    groupCall.groupCallEmojiReactionsRemoverTimer[reaction.participant.id]
+        ?.cancel();
+    groupCall.groupCallEmojiReactionsRemoverTimer[reaction.participant.id] =
+        Timer(timeouts!.groupCallEmojiReactionLifetime, () {
+      groupCall.groupCallEmojiReactionsMap.remove(reaction.participant.id);
+      groupCall.groupCallEmojiReactionsRemoverTimer
+          .remove(reaction.participant.id);
+      groupCall.matrixRTCEventStream
+          .add(GroupCallEmojiReactionTimeoutEvent(participant: participant));
+    });
+
+    Logs().d(
+      '[onGroupCallEmojiReactionReceived] Added emoji reaction: $reaction',
+    );
+  }
+
+  Future<void> sendGroupCallEmojiReaction(
+    String groupCallId,
+    Room room,
+    String emoji,
+    String emojiName,
+  ) async {
+    Logs().i('Emoji reaction selected: $emoji');
+    final memberships =
+        room.getCallMembershipsForUser(client.userID!, client.deviceID!, this);
+    final membership =
+        memberships.firstWhereOrNull((m) => m.callId == groupCallId);
+    if (membership == null) {
+      Logs().w(
+        'No matching membership found to send emoji reaction from ${client.userID!}',
+      );
+      return;
+    }
+
+    await client.sendMessage(
+      room.id,
+      EventTypes.GroupCallEmojiReaction,
+      client.generateUniqueTransactionId(),
+      {
+        'emoji': emoji,
+        'name': emojiName,
+        'call_id': groupCallId,
+        'device_id': client.deviceID!,
+        'm.relates_to': {
+          'rel_type': 'm.reference',
+          'event_id': membership.eventId,
+        },
+      },
+    );
   }
 
   CallType getCallType(String sdp) {

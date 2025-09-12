@@ -50,6 +50,9 @@ class CallTimeouts {
   /// How often the delayed event should be restarted on the homeserver
   final Duration delayedEventRestart;
 
+  /// How long the group call emoji reaction should stay in the reaction list to be displayed
+  final Duration groupCallEmojiReactionLifetime;
+
   CallTimeouts({
     this.defaultCallEventLifetime = const Duration(seconds: 10),
     this.callInviteLifetime = const Duration(seconds: 60),
@@ -63,6 +66,7 @@ class CallTimeouts {
     this.useKeyDelay = const Duration(seconds: 4),
     this.delayedEventApplyLeave = const Duration(seconds: 18),
     this.delayedEventRestart = const Duration(seconds: 4),
+    this.groupCallEmojiReactionLifetime = const Duration(seconds: 7),
   });
 }
 

@@ -5,16 +5,42 @@ import 'package:matrix/matrix.dart';
 /// often.
 sealed class MatrixRTCCallEvent {}
 
-sealed class ParticipantsChangeEvent implements MatrixRTCCallEvent {}
-
-final class ParticipantsJoinEvent implements ParticipantsChangeEvent {
+/// Event type for participants change
+sealed class ParticipantsChangeEvent implements MatrixRTCCallEvent {
+  /// The participants who joined or left the call
   final List<CallParticipant> participants;
 
-  ParticipantsJoinEvent({required this.participants});
+  ParticipantsChangeEvent({required this.participants});
 }
 
-final class ParticipantsLeftEvent implements ParticipantsChangeEvent {
-  final List<CallParticipant> participants;
+final class ParticipantsJoinEvent extends ParticipantsChangeEvent {
+  ParticipantsJoinEvent({required super.participants});
+}
 
-  ParticipantsLeftEvent({required this.participants});
+final class ParticipantsLeftEvent extends ParticipantsChangeEvent {
+  ParticipantsLeftEvent({required super.participants});
+}
+
+/// Event type for group call emoji reaction update
+sealed class GroupCallEmojiReactionEvent implements MatrixRTCCallEvent {
+  GroupCallEmojiReactionEvent({required this.participant});
+
+  /// The participant who sent the reaction
+  final CallParticipant participant;
+}
+
+final class GroupCallEmojiReactionAddedEvent
+    extends GroupCallEmojiReactionEvent {
+  /// The emoji character
+  final String emoji;
+
+  GroupCallEmojiReactionAddedEvent({
+    required super.participant,
+    required this.emoji,
+  });
+}
+
+final class GroupCallEmojiReactionTimeoutEvent
+    extends GroupCallEmojiReactionEvent {
+  GroupCallEmojiReactionTimeoutEvent({required super.participant});
 }
