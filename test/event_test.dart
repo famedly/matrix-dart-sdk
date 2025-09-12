@@ -2951,5 +2951,28 @@ void main() async {
           Timeline(room: room, chunk: TimelineChunk(events: [targetEvent]));
       expect(await event.getReplyEvent(timeline), targetEvent);
     });
+    test('getMentions', () {
+      final event = Event.fromJson(
+        {
+          'content': {
+            'msgtype': 'text',
+            'body': 'Hello world @alice:matrix.org',
+            'm.mentions': {
+              'user_ids': ['@alice:matrix.org'],
+              'room': false,
+            }
+          },
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': room.id,
+          'sender': '@example:example.org',
+          'type': 'm.room.message',
+          'unsigned': {'age': 1234},
+        },
+        room,
+      );
+      expect(event.mentions.userIds, ['@alice:matrix.org']);
+      expect(event.mentions.room, false);
+    });
   });
 }

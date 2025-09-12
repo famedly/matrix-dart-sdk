@@ -1180,6 +1180,17 @@ class Event extends MatrixEvent {
       (fileSendingStatus) => fileSendingStatus.name == status,
     );
   }
+
+  /// Returns the mentioned userIds and wether the event includes an @room
+  /// mention. This is only determined by the `m.mention` object in the event
+  /// content.
+  ({List<String> userIds, bool room}) get mentions {
+    final mentionsMap = content.tryGetMap<String, Object?>('m.mentions');
+    return (
+      userIds: mentionsMap?.tryGetList<String>('user_ids') ?? [],
+      room: mentionsMap?.tryGet<bool>('room') ?? false,
+    );
+  }
 }
 
 enum FileSendingStatus {
