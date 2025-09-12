@@ -18,11 +18,7 @@ jobs:
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
           sdk: ${{ env.dart_version }}
-      - uses: famedly/backend-build-workflows/.github/actions/rust-prepare@main
-        with:
-          gitlab_user: ${{ secrets.GITLAB_USER }}
-          gitlab_pass: ${{ secrets.GITLAB_PASS }}
-          gitlab_ssh: ${{ secrets.CI_SSH_PRIVATE_KEY}}
+      - uses: famedly/backend-build-workflows/.github/actions/rust-prepare@v4
       - name: Run tests
         run: |
           export HOMESERVER_IMPLEMENTATION=${{matrix.homeserver}}
@@ -68,11 +64,7 @@ jobs:
         with:
           sdk: ${{ env.dart_version }}
           #architecture: "arm64"
-      - uses: famedly/backend-build-workflows/.github/actions/rust-prepare@main
-        with:
-          gitlab_user: ${{ secrets.GITLAB_USER }}
-          gitlab_pass: ${{ secrets.GITLAB_PASS }}
-          gitlab_ssh: ${{ secrets.CI_SSH_PRIVATE_KEY}}
+      - uses: famedly/backend-build-workflows/.github/actions/rust-prepare@v4
       - name: Run tests
         run: |
           sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev libssl3
