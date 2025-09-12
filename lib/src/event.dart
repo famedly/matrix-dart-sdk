@@ -846,7 +846,7 @@ class Event extends MatrixEvent {
 
     if (content case {'url': final String url}) {
       if (url.startsWith('mxc://')) {
-        final [server, mediaId] = Uri.parse(url).pathSegments;
+        final (:server, :mediaId) = Uri.parse(url).mxcParts;
         final newUri =
             (await client.copyRestrictedContent(server, mediaId)).toString();
         attachedMediaIds.add(newUri);
@@ -856,7 +856,7 @@ class Event extends MatrixEvent {
 
     if (content case {'file': {'url': final String url}}) {
       if (url.startsWith('mxc://')) {
-        final [server, mediaId] = Uri.parse(url).pathSegments;
+        final (:server, :mediaId) = Uri.parse(url).mxcParts;
         final newUri =
             (await client.copyRestrictedContent(server, mediaId)).toString();
         attachedMediaIds.add(newUri);
@@ -866,7 +866,7 @@ class Event extends MatrixEvent {
 
     if (content case {'info': {'thumbnail_url': final String url}}) {
       if (url.startsWith('mxc://')) {
-        final [server, mediaId] = Uri.parse(url).pathSegments;
+        final (:server, :mediaId) = Uri.parse(url).mxcParts;
         final newUri =
             (await client.copyRestrictedContent(server, mediaId)).toString();
         attachedMediaIds.add(newUri);
@@ -876,7 +876,7 @@ class Event extends MatrixEvent {
 
     if (content case {'info': {'file': {'thumbnail_file': final String url}}}) {
       if (url.startsWith('mxc://')) {
-        final [server, mediaId] = Uri.parse(url).pathSegments;
+        final (:server, :mediaId) = Uri.parse(url).mxcParts;
         final newUri =
             (await client.copyRestrictedContent(server, mediaId)).toString();
         attachedMediaIds.add(newUri);

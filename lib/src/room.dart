@@ -664,7 +664,7 @@ class Room {
         convertLinebreaks: client.convertLinebreaksInFormatting,
         restrictedMediaSupported: await client.restrictedMediaSupported(),
         copyMedia: (String mediaUri) async {
-          final [server, mediaId] = Uri.parse(mediaUri).pathSegments;
+          final (:server, :mediaId) = Uri.parse(mediaUri).mxcParts;
           final newUri =
               (await client.copyRestrictedContent(server, mediaId)).toString();
           attachedMediaIds.add(newUri);
