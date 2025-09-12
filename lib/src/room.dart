@@ -635,6 +635,7 @@ class Room {
     String? threadRootEventId,
     String? threadLastEventId,
     StringBuffer? commandStdout,
+    bool addMentions = true,
   }) {
     if (parseCommands) {
       return client.parseAndRunCommand(
@@ -652,6 +653,41 @@ class Room {
       'msgtype': msgtype,
       'body': message,
     };
+
+    if (addMentions) {
+      var potentialMentions = message
+          .split('@')
+          .map(
+            (text) => text.startsWith('[')
+                ? '@${text.split(']').first}]'
+                : '@${text.split(RegExp(r'\s+')).first}',
+          )
+          .toList()
+        ..removeAt(0);
+
+      final hasRoomMention = potentialMentions.remove('@room');
+
+      potentialMentions = potentialMentions
+          .map(
+            (mention) =>
+                mention.isValidMatrixId ? mention : getMention(mention),
+          )
+          .nonNulls
+          .toSet() // Deduplicate
+          .toList()
+        ..remove(client.userID); // We should never mention ourself.
+
+      // https://spec.matrix.org/v1.7/client-server-api/#mentioning-the-replied-to-user
+      if (inReplyTo != null) potentialMentions.add(inReplyTo.senderId);
+
+      if (hasRoomMention || potentialMentions.isNotEmpty) {
+        event['m.mentions'] = {
+          if (hasRoomMention) 'room': true,
+          if (potentialMentions.isNotEmpty) 'user_ids': potentialMentions,
+        };
+      }
+    }
+
     if (parseMarkdown) {
       final html = markdown(
         event['body'],
