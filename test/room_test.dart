@@ -295,6 +295,8 @@ void main() {
         ),
       );
       expect(room.hasNewMessages, true);
+      expect(room.isUnreadOrInvited, true);
+      room.notificationCount = room.highlightCount = 0;
       expect(room.isUnreadOrInvited, false);
       expect(room.lastEvent?.body, 'cd');
       await updateLastEvent(

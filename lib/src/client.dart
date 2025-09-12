@@ -2979,10 +2979,13 @@ class Client extends MatrixApi {
         rooms[roomIndex].prev_batch = chatUpdate.timeline?.prevBatch;
       }
       rooms[roomIndex].membership = membership;
-      rooms[roomIndex].notificationCount =
-          chatUpdate.unreadNotifications?.notificationCount ?? 0;
-      rooms[roomIndex].highlightCount =
-          chatUpdate.unreadNotifications?.highlightCount ?? 0;
+
+      if (chatUpdate.unreadNotifications != null) {
+        rooms[roomIndex].notificationCount =
+            chatUpdate.unreadNotifications?.notificationCount ?? 0;
+        rooms[roomIndex].highlightCount =
+            chatUpdate.unreadNotifications?.highlightCount ?? 0;
+      }
 
       final summary = chatUpdate.summary;
       if (summary != null) {
