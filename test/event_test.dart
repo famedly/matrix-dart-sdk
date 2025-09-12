@@ -2960,7 +2960,7 @@ void main() async {
             'm.mentions': {
               'user_ids': ['@alice:matrix.org'],
               'room': false,
-            }
+            },
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
