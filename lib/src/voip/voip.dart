@@ -359,6 +359,12 @@ class VoIP {
           content,
         );
         break;
+      case EventTypes.Reaction:
+        await _handleReactionEvent(room, event);
+        break;
+      case EventTypes.Redaction:
+        await _handleRedactionEvent(room, event);
+        break;
     }
   }
 
@@ -872,10 +878,10 @@ class VoIP {
     if (!room.canJoinGroupCall) {
       throw MatrixSDKVoipException(
         '''
-        User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room ${room.id}, 
-        canJoinGroupCall: ${room.canJoinGroupCall}, 
-        groupCallsEnabledForEveryone: ${room.groupCallsEnabledForEveryone}, 
-        needed: ${room.powerForChangingStateEvent(EventTypes.GroupCallMember)}, 
+        User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room ${room.id},
+        canJoinGroupCall: ${room.canJoinGroupCall},
+        groupCallsEnabledForEveryone: ${room.groupCallsEnabledForEveryone},
+        needed: ${room.powerForChangingStateEvent(EventTypes.GroupCallMember)},
         own: ${room.ownPowerLevel}}
         plMap: ${room.getState(EventTypes.RoomPowerLevels)?.content}
         ''',
@@ -950,6 +956,68 @@ class VoIP {
     onIncomingGroupCall.add(groupCall);
     if (emitHandleNewGroupCall) {
       await delegate.handleNewGroupCall(groupCall);
+    }
+  }
+
+  /// Route reaction events to appropriate GroupCallSession
+  Future<void> _handleReactionEvent(
+    Room room,
+    BasicEventWithSender event,
+  ) async {
+    final content = event.content;
+    final relatesTo = content.tryGetMap<String, dynamic>('m.relates_to');
+
+    if (relatesTo == null) {
+      Logs().v('[VOIP] _handleReactionEvent: Missing required fields');
+      return;
+    }
+
+    final reactionKey = relatesTo.tryGet<String>('key');
+    final relatedEventId = relatesTo.tryGet<String>('event_id');
+
+    if (reactionKey == null || relatedEventId == null) {
+      Logs().v(
+        '[VOIP] _handleReactionEvent: Missing reaction key or related event ID',
+      );
+      return;
+    }
+
+    // Route to all active group calls in the room
+    final activeGroupCalls = groupCalls.values.where(
+      (groupCall) =>
+          groupCall.room.id == room.id &&
+          groupCall.state == GroupCallState.entered,
+    );
+
+    for (final groupCall in activeGroupCalls) {
+      await groupCall.onReactionReceived(event, reactionKey, relatedEventId);
+    }
+  }
+
+  /// Route redaction events to appropriate GroupCallSession
+  Future<void> _handleRedactionEvent(
+    Room room,
+    BasicEventWithSender event,
+  ) async {
+    final content = event.content;
+    final redactedEventId = content.tryGet<String>('redacts');
+
+    if (redactedEventId == null) {
+      Logs().v(
+        '[VOIP] _handleRedactionEvent: Missing sender or redacted event ID',
+      );
+      return;
+    }
+
+    // Route to all active group calls in the room
+    final activeGroupCalls = groupCalls.values.where(
+      (groupCall) =>
+          groupCall.room.id == room.id &&
+          groupCall.state == GroupCallState.entered,
+    );
+
+    for (final groupCall in activeGroupCalls) {
+      await groupCall.onReactionRemoved(event, redactedEventId);
     }
   }
 

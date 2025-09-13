@@ -68,7 +68,7 @@ class CallTimeouts {
 
 class CallConstants {
   static final callEventsRegxp = RegExp(
-    r'm.call.|org.matrix.call.|org.matrix.msc3401.call.|com.famedly.call.',
+    r'm.call.|org.matrix.call.|org.matrix.msc3401.call.|com.famedly.call.|m.reaction|m.room.redaction',
   );
 
   static const callEndedEventTypes = {

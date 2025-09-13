@@ -19,6 +19,8 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:collection/collection.dart';
+
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
@@ -270,5 +272,205 @@ class GroupCallSession {
 
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
     }
+  }
+
+  /// Send a generic reaction event to a participant's membership event
+  ///
+  /// [userId] - The user ID to send the reaction to
+  /// [key] - The reaction key (e.g., '🖐️' for hand raise)
+  /// [deviceId] - Optional device ID, defaults to empty string
+  ///
+  /// Returns the event ID of the sent reaction
+  Future<String?> sendReactionEvent({
+    required String userId,
+    required String key,
+    String? deviceId,
+  }) async {
+    final memberships = room.getCallMembershipsForUser(
+      userId,
+      deviceId ?? '',
+      voip,
+    );
+
+    final membership = memberships.firstOrNull;
+    if (membership?.eventId == null) {
+      Logs().w('Cannot find membership event for user $userId');
+      return null;
+    }
+
+    final parentEventId = membership!.eventId!;
+    final content = {
+      'm.relates_to': {
+        'rel_type': RelationshipTypes.reaction,
+        'event_id': parentEventId,
+        'key': key,
+      },
+    };
+
+    final eventId = await room.sendEvent(content, type: EventTypes.Reaction);
+    Logs().d('Sent reaction event: $eventId with key: $key');
+
+    return eventId;
+  }
+
+  /// Get all reactions of a specific type for all participants in the call
+  ///
+  /// [key] - The reaction key to filter by (e.g., '🖐️')
+  ///
+  /// Returns a list of MatrixEvent objects representing the reactions
+  Future<List<MatrixEvent>> getAllReactions({String key = '🖐️'}) async {
+    final reactions = <MatrixEvent>[];
+
+    for (final participant in participants) {
+      final memberships = room.getCallMembershipsForUser(
+        participant.userId,
+        participant.deviceId ?? '',
+        voip,
+      );
+
+      for (final membership in memberships) {
+        if (membership.eventId == null) {
+          Logs().w(
+            'Cannot find membership event for ${participant.userId}',
+          );
+          continue;
+        }
+
+        final events = await client.getRelatingEventsWithRelTypeAndEventType(
+          room.id,
+          membership.eventId!,
+          RelationshipTypes.reaction,
+          EventTypes.Reaction,
+        );
+
+        events.chunk.forEachIndexed((index, reaction) {
+          final content = reaction.content;
+          final relatesTo = content['m.relates_to'] as Map<String, dynamic>?;
+          if (relatesTo?['key'] == key) {
+            Logs().d(
+              'Reaction $index: ${reaction.senderId}, relatesTo: $relatesTo, key: ${relatesTo?['key']}',
+            );
+            reactions.add(reaction);
+          }
+        });
+      }
+    }
+
+    return reactions;
+  }
+
+  /// Remove a reaction event by redacting it
+  ///
+  /// [reactionId] - The event ID of the reaction to remove
+  /// [reason] - Optional reason for the redaction
+  ///
+  /// Returns the event ID of the redaction event
+  Future<String?> removeReactionEvent({
+    required String reactionId,
+    String? reason,
+  }) async {
+    final txnId = 'reaction-remove-${DateTime.now().millisecondsSinceEpoch}';
+    final eventId =
+        await client.redactEvent(room.id, reactionId, txnId, reason: reason);
+
+    Logs().d('Removed reaction event: $eventId');
+
+    return eventId;
+  }
+
+  /// Get reactions for a specific user and key
+  ///
+  /// [userId] - The user ID to get reactions for
+  /// [key] - The reaction key to filter by
+  /// [deviceId] - Optional device ID
+  ///
+  /// Returns a list of MatrixEvent objects representing the user's reactions
+  Future<List<MatrixEvent>> getReactionsForUser({
+    required String userId,
+    String key = '🖐️',
+    String? deviceId,
+  }) async {
+    final reactions = <MatrixEvent>[];
+
+    final memberships = room.getCallMembershipsForUser(
+      userId,
+      deviceId ?? '',
+      voip,
+    );
+
+    for (final membership in memberships) {
+      if (membership.eventId == null) {
+        Logs().w('Cannot find membership event for $userId');
+        continue;
+      }
+
+      final events = await client.getRelatingEventsWithRelTypeAndEventType(
+        room.id,
+        membership.eventId!,
+        RelationshipTypes.reaction,
+        EventTypes.Reaction,
+      );
+
+      for (final reaction in events.chunk) {
+        final content = reaction.content;
+        final relatesTo = content['m.relates_to'] as Map<String, dynamic>?;
+        if (relatesTo?['key'] == key && reaction.senderId == userId) {
+          reactions.add(reaction);
+        }
+      }
+    }
+
+    return reactions;
+  }
+
+  /// Handle incoming reaction events from Matrix
+  Future<void> onReactionReceived(
+    BasicEventWithSender event,
+    String reactionKey,
+    String eventId,
+  ) async {
+    final participant = CallParticipant(
+      voip,
+      userId: event.senderId,
+      deviceId: null, // We might not have device ID from the reaction
+    );
+
+    final reactionEvent = ReactionAddedEvent(
+      participant: participant,
+      reactionKey: reactionKey,
+      eventId: (event is Event) ? event.eventId : '',
+    );
+
+    matrixRTCEventStream.add(reactionEvent);
+
+    Logs().d(
+      '[GroupCallSession] Reaction added: ${event.senderId} -> $reactionKey',
+    );
+  }
+
+  /// Handle incoming reaction removal events from Matrix
+  Future<void> onReactionRemoved(
+    BasicEventWithSender event,
+    String redactedEventId,
+  ) async {
+    final participant = CallParticipant(
+      voip,
+      userId: event.senderId,
+      deviceId: null,
+    );
+
+    // We don't know the specific reaction key from redaction events
+    // The listeners can filter based on their current state
+    final reactionEvent = ReactionRemovedEvent(
+      participant: participant,
+      reactionKey: '',
+      redactedEventId: redactedEventId,
+    );
+
+    matrixRTCEventStream.add(reactionEvent);
+
+    Logs().d(
+      '[GroupCallSession] Reaction removed: ${event.senderId}',
+    );
   }
 }
