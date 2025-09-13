@@ -25,6 +25,7 @@ import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/msc_extensions/msc_3911_linking_media/msc_3911_linking_media.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
@@ -635,7 +636,7 @@ class Room {
     String? threadRootEventId,
     String? threadLastEventId,
     StringBuffer? commandStdout,
-  }) {
+  }) async {
     if (parseCommands) {
       return client.parseAndRunCommand(
         this,
@@ -652,12 +653,23 @@ class Room {
       'msgtype': msgtype,
       'body': message,
     };
+
+    final attachedMediaIds = <String>[];
+
     if (parseMarkdown) {
-      final html = markdown(
+      final html = await markdown(
         event['body'],
         getEmotePacks: () => getImagePacksFlat(ImagePackUsage.emoticon),
         getMention: getMention,
         convertLinebreaks: client.convertLinebreaksInFormatting,
+        restrictedMediaSupported: await client.restrictedMediaSupported(),
+        copyMedia: (String mediaUri) async {
+          final (:server, :mediaId) = Uri.parse(mediaUri).mxcParts;
+          final newUri =
+              (await client.copyRestrictedContent(server, mediaId)).toString();
+          attachedMediaIds.add(newUri);
+          return newUri;
+        },
       );
       // if the decoded html is the same as the body, there is no need in sending a formatted message
       if (HtmlUnescape().convert(html.replaceAll(RegExp(r'<br />\n?'), '\n')) !=
@@ -673,6 +685,7 @@ class Room {
       editEventId: editEventId,
       threadRootEventId: threadRootEventId,
       threadLastEventId: threadLastEventId,
+      attachedMediaIds: attachedMediaIds,
     );
   }
 
@@ -924,6 +937,10 @@ class Room {
       editEventId: editEventId,
       threadRootEventId: threadRootEventId,
       threadLastEventId: threadLastEventId,
+      attachedMediaIds: [
+        uploadResp.toString(),
+        if (thumbnail != null) thumbnailUploadResp.toString(),
+      ],
     );
     sendingFilePlaceholders.remove(txid);
     sendingFileThumbnails.remove(txid);
@@ -958,6 +975,7 @@ class Room {
     String type,
     Map<String, dynamic> content, {
     String? txid,
+    List<String>? attachedMediaIds,
   }) async {
     txid ??= client.generateUniqueTransactionId();
 
@@ -968,14 +986,26 @@ class Room {
             .encryptGroupMessagePayload(id, content, type: type)
         : content;
 
-    return await client.sendMessage(
-      id,
-      sendMessageContent.containsKey('ciphertext')
-          ? EventTypes.Encrypted
-          : type,
-      txid,
-      sendMessageContent,
-    );
+    final isRestrictedMediaSupported = await client.restrictedMediaSupported();
+
+    return isRestrictedMediaSupported
+        ? await client.sendRestrictedMediaMessage(
+            id,
+            sendMessageContent.containsKey('ciphertext')
+                ? EventTypes.Encrypted
+                : type,
+            txid,
+            attachedMediaIds,
+            sendMessageContent,
+          )
+        : await client.sendMessage(
+            id,
+            sendMessageContent.containsKey('ciphertext')
+                ? EventTypes.Encrypted
+                : type,
+            txid,
+            sendMessageContent,
+          );
   }
 
   String _stripBodyFallback(String body) {
@@ -1008,6 +1038,7 @@ class Room {
     String? editEventId,
     String? threadRootEventId,
     String? threadLastEventId,
+    List<String>? attachedMediaIds,
   }) async {
     // Create new transaction id
     final String messageID;
@@ -1101,6 +1132,8 @@ class Room {
                   unsigned: {
                     messageSendingStatusKey: EventStatus.sending.intValue,
                     'transaction_id': messageID,
+                    if (attachedMediaIds != null)
+                      'attached_media_ids': attachedMediaIds,
                   },
                 ),
               ],
@@ -1129,6 +1162,7 @@ class Room {
           type,
           content,
           txid: messageID,
+          attachedMediaIds: attachedMediaIds,
         );
       } catch (e, s) {
         if (e is MatrixException &&
@@ -1997,14 +2031,27 @@ class Room {
     final uploadResp = file == null
         ? null
         : await client.uploadContent(file.bytes, filename: file.name);
-    return await client.setRoomStateWithKey(
-      id,
-      EventTypes.RoomAvatar,
-      '',
-      {
-        if (uploadResp != null) 'url': uploadResp.toString(),
-      },
-    );
+
+    final isRestrictedMediaSupported = await client.restrictedMediaSupported();
+
+    return isRestrictedMediaSupported
+        ? await client.setRestrictedMediaRoomStateWithKey(
+            id,
+            EventTypes.RoomAvatar,
+            '',
+            [if (uploadResp != null) uploadResp.toString()],
+            {
+              if (uploadResp != null) 'url': uploadResp.toString(),
+            },
+          )
+        : await client.setRoomStateWithKey(
+            id,
+            EventTypes.RoomAvatar,
+            '',
+            {
+              if (uploadResp != null) 'url': uploadResp.toString(),
+            },
+          );
   }
 
   /// The level required to ban a user.

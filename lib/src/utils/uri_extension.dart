@@ -21,6 +21,11 @@ import 'dart:core';
 import 'package:matrix/src/client.dart';
 
 extension MxcUriExtension on Uri {
+  ({String server, String mediaId}) get mxcParts => (
+        server: '$host${hasPort ? ':$port' : ''}',
+        mediaId: path.replaceFirst('/', ''),
+      );
+
   /// Transforms this `mxc://` Uri into a `http` resource, which can be used
   /// to download the content.
   ///
