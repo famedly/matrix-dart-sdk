@@ -121,12 +121,14 @@ extension FamedlyCallMemberEventsExtension on Room {
     await setFamedlyCallMemberEvent(
       newContent,
       callMembership.voip,
+      callMembership.callId,
+      application: callMembership.application,
+      scope: callMembership.scope,
     );
   }
 
   Future<void> removeFamedlyCallMemberEvent(
     String groupCallId,
-    String deviceId,
     VoIP voip, {
     String? application = 'm.call',
     String? scope = 'm.room',
@@ -140,7 +142,7 @@ extension FamedlyCallMemberEventsExtension on Room {
     ownMemberships.removeWhere(
       (mem) =>
           mem.callId == groupCallId &&
-          mem.deviceId == deviceId &&
+          mem.deviceId == client.deviceID! &&
           mem.application == application &&
           mem.scope == scope,
     );
@@ -148,7 +150,13 @@ extension FamedlyCallMemberEventsExtension on Room {
     final newContent = {
       'memberships': List.from(ownMemberships.map((e) => e.toJson())),
     };
-    await setFamedlyCallMemberEvent(newContent, voip);
+    await setFamedlyCallMemberEvent(
+      newContent,
+      voip,
+      groupCallId,
+      application: application,
+      scope: scope,
+    );
 
     _restartDelayedLeaveEventTimer?.cancel();
     if (_delayedLeaveEventId != null) {
@@ -163,7 +171,10 @@ extension FamedlyCallMemberEventsExtension on Room {
   Future<void> setFamedlyCallMemberEvent(
     Map<String, List> newContent,
     VoIP voip,
-  ) async {
+    String groupCallId, {
+    String? application = 'm.call',
+    String? scope = 'm.room',
+  }) async {
     if (canJoinGroupCall) {
       final stateKey = (roomVersion?.contains('msc3757') ?? false)
           ? '${client.userID!}_${client.deviceID!}'
@@ -175,7 +186,7 @@ extension FamedlyCallMemberEventsExtension on Room {
 
       /// can use delayed events and haven't used it yet
       if (useDelayedEvents && _delayedLeaveEventId == null) {
-        // get existing ones
+        // get existing ones and cancel them
         final List<ScheduledDelayedEvent> alreadyScheduledEvents = [];
         String? nextBatch;
         final sEvents = await client.getScheduledDelayedEvents();
@@ -200,14 +211,39 @@ extension FamedlyCallMemberEventsExtension on Room {
           );
         }
 
+        Map<String, List> newContent;
+        if (roomVersion?.contains('msc3757') ?? false) {
+          // scoped to deviceIds so clear the whole mems list
+          newContent = {
+            'memberships': [],
+          };
+        } else {
+          // only clear our own deviceId
+          final ownMemberships = getCallMembershipsForUser(
+            client.userID!,
+            client.deviceID!,
+            voip,
+          );
+
+          ownMemberships.removeWhere(
+            (mem) =>
+                mem.callId == groupCallId &&
+                mem.deviceId == client.deviceID! &&
+                mem.application == application &&
+                mem.scope == scope,
+          );
+
+          newContent = {
+            'memberships': List.from(ownMemberships.map((e) => e.toJson())),
+          };
+        }
+
         _delayedLeaveEventId = await client.setRoomStateWithKeyWithDelay(
           id,
           EventTypes.GroupCallMember,
           stateKey,
           voip.timeouts!.delayedEventApplyLeave.inMilliseconds,
-          {
-            'memberships': [],
-          },
+          newContent,
         );
 
         _restartDelayedLeaveEventTimer = Timer.periodic(
