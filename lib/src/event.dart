@@ -24,6 +24,7 @@ import 'package:html/parser.dart';
 import 'package:mime/mime.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/msc_extensions/msc_3911_linking_media/msc_3911_linking_media.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
 import 'package:matrix/src/utils/html_to_text.dart';
 import 'package:matrix/src/utils/markdown.dart';
@@ -472,6 +473,7 @@ class Event extends MatrixEvent {
     return await room.sendEvent(
       content,
       txid: txid ?? transactionId ?? eventId,
+      attachedMediaIds: unsigned?.tryGetList<String>('attached_media_ids'),
     );
   }
 
@@ -832,6 +834,61 @@ class Event extends MatrixEvent {
     );
   }
 
+  /// copies all referenced media by the event so that it can then be attached
+  /// after an edit or after forwarding the event.
+  static Future<({Map<String, Object?> content, List<String> attachedMediaIds})>
+      copyMediaInContent(Client client, Map<String, Object?> content) async {
+    final attachedMediaIds = <String>[];
+
+    if (!await client.restrictedMediaSupported()) {
+      return (content: content, attachedMediaIds: attachedMediaIds);
+    }
+
+    if (content case {'url': final String url}) {
+      if (url.startsWith('mxc://')) {
+        final (:server, :mediaId) = Uri.parse(url).mxcParts;
+        final newUri =
+            (await client.copyRestrictedContent(server, mediaId)).toString();
+        attachedMediaIds.add(newUri);
+        content['url'] = newUri;
+      }
+    }
+
+    if (content case {'file': {'url': final String url}}) {
+      if (url.startsWith('mxc://')) {
+        final (:server, :mediaId) = Uri.parse(url).mxcParts;
+        final newUri =
+            (await client.copyRestrictedContent(server, mediaId)).toString();
+        attachedMediaIds.add(newUri);
+        (content['file'] as Map)['url'] = newUri;
+      }
+    }
+
+    if (content case {'info': {'thumbnail_url': final String url}}) {
+      if (url.startsWith('mxc://')) {
+        final (:server, :mediaId) = Uri.parse(url).mxcParts;
+        final newUri =
+            (await client.copyRestrictedContent(server, mediaId)).toString();
+        attachedMediaIds.add(newUri);
+        (content['info'] as Map)['thumbnail_url'] = newUri;
+      }
+    }
+
+    if (content case {'info': {'file': {'thumbnail_file': final String url}}}) {
+      if (url.startsWith('mxc://')) {
+        final (:server, :mediaId) = Uri.parse(url).mxcParts;
+        final newUri =
+            (await client.copyRestrictedContent(server, mediaId)).toString();
+        attachedMediaIds.add(newUri);
+        (content['info'] as Map)['thumbnail_file']['url'] = newUri;
+      }
+    }
+
+    // TODO(Nico): Rewrite html links and inline images
+
+    return (content: content, attachedMediaIds: attachedMediaIds);
+  }
+
   /// Returns if this is a known event type.
   bool get isEventTypeKnown =>
       EventLocalizations.localizationsMap.containsKey(type);
@@ -985,7 +1042,7 @@ class Event extends MatrixEvent {
 
     // return the html tags free body
     if (removeMarkdown == true) {
-      final html = markdown(body, convertLinebreaks: false);
+      final html = markdown_sync(body, convertLinebreaks: false);
       final document = parse(html);
       body = document.documentElement?.text.trim() ?? body;
     }
