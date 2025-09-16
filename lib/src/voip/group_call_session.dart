@@ -197,7 +197,6 @@ class GroupCallSession {
     }
     return room.removeFamedlyCallMemberEvent(
       groupCallId,
-      client.deviceID!,
       voip,
       application: application,
       scope: scope,
