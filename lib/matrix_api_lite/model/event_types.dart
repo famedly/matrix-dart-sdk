@@ -61,6 +61,10 @@ abstract class EventTypes {
       'org.matrix.call.asserted_identity';
   static const String Unknown = 'm.unknown';
 
+  /// An internal event type indicating that the last event in the room for
+  /// a room list preview is currently being refreshed.
+  static const String refreshingLastEvent = 'com.famedly.refreshing_last_event';
+
   // To device event types
   static const String RoomKey = 'm.room_key';
   static const String ForwardedRoomKey = 'm.forwarded_room_key';

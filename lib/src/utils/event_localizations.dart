@@ -299,5 +299,6 @@ abstract class EventLocalizations {
                   ?.tryGet<String>('key') ??
               body,
         ),
+    EventTypes.refreshingLastEvent: (_, i18n, ___) => i18n.refreshingLastEvent,
   };
 }

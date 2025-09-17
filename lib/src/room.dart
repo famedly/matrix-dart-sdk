@@ -377,6 +377,73 @@ class Room {
 
   Event? lastEvent;
 
+  /// Fetches the most recent event in the timeline from the server to have
+  /// a valid preview after receiving a limited timeline from the sync. Will
+  /// be triggered by the sync loop on demand. Multiple requests will be
+  /// combined to the same request.
+  Future<Event?> refreshLastEvent({
+    timeout = const Duration(seconds: 30),
+  }) async {
+    final lastEvent = _refreshingLastEvent ??= _refreshLastEvent();
+    _refreshingLastEvent = null;
+    return lastEvent;
+  }
+
+  Future<Event?>? _refreshingLastEvent;
+
+  Future<Event?> _refreshLastEvent({
+    timeout = const Duration(seconds: 30),
+  }) async {
+    if (membership != Membership.join) return null;
+
+    final filter = StateFilter(types: client.roomPreviewLastEvents.toList());
+    final result = await client
+        .getRoomEvents(
+          id,
+          Direction.b,
+          limit: 1,
+          filter: jsonEncode(filter.toJson()),
+        )
+        .timeout(timeout);
+    final matrixEvent = result.chunk.firstOrNull;
+    if (matrixEvent == null) {
+      if (lastEvent?.type == EventTypes.refreshingLastEvent) {
+        lastEvent = null;
+      }
+      Logs().d('No last event found for room', id);
+      return null;
+    }
+    var event = Event.fromMatrixEvent(
+      matrixEvent,
+      this,
+      status: EventStatus.synced,
+    );
+    if (event.type == EventTypes.Encrypted) {
+      final encryption = client.encryption;
+      if (encryption != null) {
+        event = await encryption.decryptRoomEvent(event);
+      }
+    }
+    lastEvent = event;
+
+    Logs().d('Refreshed last event for room', id);
+
+    // Trigger sync handling so that lastEvent gets stored and room list gets
+    // updated.
+    await _handleFakeSync(
+      SyncUpdate(
+        nextBatch: '',
+        rooms: RoomsUpdate(
+          join: {
+            id: JoinedRoomUpdate(timeline: TimelineUpdate(limited: false)),
+          },
+        ),
+      ),
+    );
+
+    return event;
+  }
+
   void setEphemeral(BasicEvent ephemeral) {
     ephemerals[ephemeral.type] = ephemeral;
     if (ephemeral.type == 'm.typing') {
@@ -443,8 +510,16 @@ class Room {
   String get displayname => getLocalizedDisplayname();
 
   /// When was the last event received.
-  DateTime get latestEventReceivedTime =>
-      lastEvent?.originServerTs ?? DateTime.now();
+  DateTime get latestEventReceivedTime {
+    final lastEventTime = lastEvent?.originServerTs;
+    if (lastEventTime != null) return lastEventTime;
+
+    if (membership == Membership.invite) return DateTime.now();
+    final createEvent = getState(EventTypes.RoomCreate);
+    if (createEvent is MatrixEvent) return createEvent.originServerTs;
+
+    return DateTime(0);
+  }
 
   /// Call the Matrix API to change the name of this room. Returns the event ID of the
   /// new m.room.name event.

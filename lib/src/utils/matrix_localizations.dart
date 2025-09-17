@@ -62,6 +62,8 @@ abstract class MatrixLocalizations {
 
   String get cancelledSend;
 
+  String get refreshingLastEvent;
+
   String youInvitedBy(String senderName);
 
   String invitedBy(String senderName);

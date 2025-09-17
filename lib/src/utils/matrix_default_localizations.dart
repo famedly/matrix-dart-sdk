@@ -318,4 +318,7 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
         : '${duration.inMinutes.toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')} ';
     return '$senderName: ${durationString}Voice message';
   }
+
+  @override
+  String get refreshingLastEvent => 'Refreshing last event...';
 }

@@ -883,6 +883,29 @@ void main() {
       expect(timeline.events.length, 17);
     });
 
+    test('Refresh last event', () async {
+      expect(room.lastEvent?.eventId, '12');
+      final lastEventUpdate =
+          room.client.onSync.stream.firstWhere((u) => u.nextBatch.isEmpty);
+      await room.client.handleSync(
+        SyncUpdate(
+          nextBatch: 'abcd',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [],
+                  limited: true,
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+      await lastEventUpdate;
+      expect(room.lastEvent?.eventId, '3143273582443PhrSn:example.org');
+    });
+
     test('isFederated', () {
       expect(room.isFederated, true);
       room.setState(
