@@ -184,6 +184,17 @@ class MatrixApi extends Api {
     return;
   }
 
+  /// Variant of updateDevice operation that deletes the device displayname by
+  /// setting `display_name: null`.
+  Future<void> deleteDeviceDisplayName(String deviceId) async {
+    await request(
+      RequestType.PUT,
+      '/client/v3/devices/${Uri.encodeComponent(deviceId)}',
+      data: {'display_name': null},
+    );
+    return;
+  }
+
   /// This API provides credentials for the client to use when initiating
   /// calls.
   @override
