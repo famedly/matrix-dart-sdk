@@ -105,7 +105,7 @@ class SSSS {
     final keys = deriveKeys(key, name);
 
     final plain = Uint8List.fromList(utf8.encode(data));
-    final ciphertext = await uc.aesCtr.encrypt(plain, keys.aesKey, iv);
+    final ciphertext = await uc.aesCtr(plain, keys.aesKey, iv);
 
     final hmac = Hmac(sha256, keys.hmacKey).convert(ciphertext);
 
@@ -129,8 +129,8 @@ class SSSS {
     if (hmac != data.mac.replaceAll(RegExp(r'=+$'), '')) {
       throw Exception('Bad MAC');
     }
-    final decipher = await uc.aesCtr
-        .encrypt(cipher, keys.aesKey, base64decodeUnpadded(data.iv));
+    final decipher =
+        await uc.aesCtr(cipher, keys.aesKey, base64decodeUnpadded(data.iv));
     return String.fromCharCodes(decipher);
   }
 
@@ -187,7 +187,6 @@ class SSSS {
     return await uc.pbkdf2(
       Uint8List.fromList(utf8.encode(passphrase)),
       Uint8List.fromList(utf8.encode(info.salt!)),
-      uc.sha512,
       info.iterations!,
       info.bits ?? 256,
     );
