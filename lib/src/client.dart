@@ -37,6 +37,7 @@ import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
 import 'package:matrix/src/utils/multilock.dart';
+import 'package:matrix/src/utils/multipart_request_progress.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
@@ -1523,6 +1524,10 @@ class Client extends MatrixApi {
     Uint8List file, {
     String? filename,
     String? contentType,
+
+    /// Callback which gets triggered on progress containing the amount of
+    /// uploaded bytes.
+    void Function(int)? onProgress,
   }) async {
     final mediaConfig = await getConfig();
     final maxMediaSize = mediaConfig.mUploadSize;
@@ -1531,8 +1536,31 @@ class Client extends MatrixApi {
     }
 
     contentType ??= lookupMimeType(filename ?? '', headerBytes: file);
-    final mxc = await super
-        .uploadContent(file, filename: filename, contentType: contentType);
+
+    final requestUri = Uri(
+      path: '_matrix/media/v3/upload',
+      queryParameters: {
+        if (filename != null) 'filename': filename,
+      },
+    );
+    final request = MultipartRequest(
+      'POST',
+      baseUri!.resolveUri(requestUri),
+      onProgress: onProgress,
+    );
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    if (contentType != null) request.headers['content-type'] = contentType;
+    request.files.add(
+      http.MultipartFile.fromBytes('file', file, filename: filename),
+    );
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    final mxc = ((json['content_uri'] as String).startsWith('mxc://')
+        ? Uri.parse(json['content_uri'] as String)
+        : throw Exception('Uri not an mxc URI'));
 
     final database = this.database;
     if (file.length <= database.maxFileSize) {
@@ -1606,7 +1634,10 @@ class Client extends MatrixApi {
 
   /// Uploads a new user avatar for this user. Leave file null to remove the
   /// current avatar.
-  Future<void> setAvatar(MatrixFile? file) async {
+  Future<void> setAvatar(
+    MatrixFile? file, {
+    void Function(int)? onUploadProgress,
+  }) async {
     if (file == null) {
       // We send an empty String to remove the avatar. Sending Null **should**
       // work but it doesn't with Synapse. See:
@@ -1617,6 +1648,7 @@ class Client extends MatrixApi {
       file.bytes,
       filename: file.name,
       contentType: file.mimeType,
+      onProgress: onUploadProgress,
     );
     await setAvatarUrl(userID!, uploadResp);
     return;
