@@ -57,6 +57,10 @@ class GroupCallSession {
   final CachedStreamController<GroupCallStateChange> onGroupCallEvent =
       CachedStreamController();
 
+  /// The stream is used to signal matrixrtc events for group calls
+  /// Currently, this is done for
+  /// - participants change
+  /// - group call emoji reaction
   final CachedStreamController<MatrixRTCCallEvent> matrixRTCEventStream =
       CachedStreamController();
 
