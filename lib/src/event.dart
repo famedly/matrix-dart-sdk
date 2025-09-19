@@ -1181,7 +1181,7 @@ class Event extends MatrixEvent {
     );
   }
 
-  /// Returns the mentioned userIds and wether the event includes an @room
+  /// Returns the mentioned userIds and whether the event includes an @room
   /// mention. This is only determined by the `m.mention` object in the event
   /// content.
   ({List<String> userIds, bool room}) get mentions {
