@@ -164,24 +164,3 @@ class GroupCallError extends Error {
     return 'Group Call Error: [$code] $msg, err: ${err.toString()}';
   }
 }
-
-enum GroupCallStateChange {
-  groupCallStateChanged,
-  activeSpeakerChanged,
-  callsChanged,
-  userMediaStreamsChanged,
-  screenshareStreamsChanged,
-  localScreenshareStateChanged,
-  localMuteStateChanged,
-  participantsChanged,
-  error
-}
-
-enum GroupCallState {
-  localCallFeedUninitialized,
-  initializingLocalCallFeed,
-  localCallFeedInitialized,
-  entering,
-  entered,
-  ended
-}

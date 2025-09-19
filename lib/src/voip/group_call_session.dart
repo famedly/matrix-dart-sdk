@@ -51,12 +51,6 @@ class GroupCallSession {
 
   String groupCallId;
 
-  final CachedStreamController<GroupCallState> onGroupCallState =
-      CachedStreamController();
-
-  final CachedStreamController<GroupCallStateChange> onGroupCallEvent =
-      CachedStreamController();
-
   final CachedStreamController<MatrixRTCCallEvent> matrixRTCEventStream =
       CachedStreamController();
 
@@ -102,8 +96,7 @@ class GroupCallSession {
 
   void setState(GroupCallState newState) {
     state = newState;
-    onGroupCallState.add(newState);
-    onGroupCallEvent.add(GroupCallStateChange.groupCallStateChanged);
+    matrixRTCEventStream.add(GroupCallStateChanged(newState));
   }
 
   bool hasLocalParticipant() {
@@ -267,8 +260,6 @@ class GroupCallSession {
         matrixRTCEventStream
             .add(ParticipantsLeftEvent(participants: anyLeft.toList()));
       }
-
-      onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
     }
   }
 }
