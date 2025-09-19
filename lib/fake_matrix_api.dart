@@ -201,6 +201,11 @@ class FakeMatrixApi extends BaseClient {
             '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/',
           )) {
         res = {'event_id': '\$event${_eventCounter++}'};
+      } else if (method == 'PUT' &&
+          action.contains(
+            '/client/v3/rooms/!calls%3Aexample.com/send/com.famedly.call.reaction/',
+          )) {
+        res = {'event_id': '\$event${_eventCounter++}'};
       } else if (action.contains('/client/v3/sync')) {
         // Sync requests with timeout
         final timeout = request.url.queryParameters['timeout'];

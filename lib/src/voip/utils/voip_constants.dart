@@ -88,4 +88,5 @@ class CallConstants {
   static const updateExpireTsTimerDuration = Duration(seconds: 15);
   static const expireTsBumpDuration = Duration(seconds: 45);
   static const activeSpeakerInterval = Duration(seconds: 5);
+  static const groupCallEphemeralReactionTimeout = Duration(seconds: 2);
 }
