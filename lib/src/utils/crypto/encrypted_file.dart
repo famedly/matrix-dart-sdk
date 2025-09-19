@@ -38,7 +38,7 @@ class EncryptedFile {
 Future<EncryptedFile> encryptFile(Uint8List input) async {
   final key = secureRandomBytes(32);
   final iv = secureRandomBytes(16);
-  final data = await aesCtr.encrypt(input, key, iv);
+  final data = await aesCtr(input, key, iv);
   final hash = await sha256(data);
   return EncryptedFile(
     data: data,
@@ -58,5 +58,5 @@ Future<Uint8List?> decryptFileImplementation(EncryptedFile input) async {
 
   final key = base64decodeUnpadded(base64.normalize(input.k));
   final iv = base64decodeUnpadded(base64.normalize(input.iv));
-  return await aesCtr.encrypt(input.data, key, iv);
+  return await aesCtr(input.data, key, iv);
 }
