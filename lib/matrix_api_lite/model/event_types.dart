@@ -118,5 +118,7 @@ abstract class EventTypes {
   static const String GroupCallMemberReplaces = '$GroupCallMember.replaces';
   static const String GroupCallMemberAssertedIdentity =
       '$GroupCallMember.asserted_identity';
-  static const GroupCallMemberReaction = 'com.famedly.call.reaction';
+  static const GroupCallMemberReaction = 'com.famedly.call.member.reaction';
+  static const GroupCallMemberReactionRemoved =
+      'com.famedly.call.member.reaction_removed';
 }

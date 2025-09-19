@@ -19,6 +19,8 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:collection/collection.dart';
+
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
@@ -57,10 +59,6 @@ class GroupCallSession {
   final CachedStreamController<GroupCallStateChange> onGroupCallEvent =
       CachedStreamController();
 
-  /// The stream is used to signal matrixrtc events for group calls
-  /// Currently, this is done for
-  /// - participants change
-  /// - group call emoji reaction
   final CachedStreamController<MatrixRTCCallEvent> matrixRTCEventStream =
       CachedStreamController();
 
@@ -274,5 +272,153 @@ class GroupCallSession {
 
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
     }
+  }
+
+  Future<Map<String, dynamic>?> _buildReactionEvent({
+    required String emoji,
+    required String name,
+    bool isEphemeral = true,
+  }) async {
+    Logs().d('Group call reaction selected: $emoji');
+    final memberships =
+        room.getCallMembershipsForUser(client.userID!, client.deviceID!, voip);
+    final membership = memberships.firstWhereOrNull(
+      (m) =>
+          m.callId == groupCallId &&
+          m.application == 'm.call' &&
+          m.scope == 'm.room',
+    );
+
+    if (membership == null) {
+      Logs().w(
+        'No matching membership found to send group call emoji reaction from ${client.userID!}',
+      );
+      return null;
+    }
+
+    return {
+      'key': emoji,
+      'name': name,
+      'is_ephemeral': isEphemeral,
+      'call_id': groupCallId,
+      'device_id': client.deviceID!,
+      'm.relates_to': {
+        'rel_type': RelationshipTypes.reference,
+        'event_id': membership.eventId!,
+      },
+    };
+  }
+
+  /// Send a reaction event to the group call
+  ///
+  /// [emoji] - The reaction emoji (e.g., '🖐️' for hand raise)
+  /// [name] - The reaction name (e.g., 'hand raise')
+  /// [isEphemeral] - Whether the reaction is ephemeral (default: true)
+  ///
+  /// Returns the event ID of the sent reaction event
+  Future<String?> sendReactionEvent({
+    required String emoji,
+    required String name,
+    bool isEphemeral = true,
+  }) async {
+    final reactionEvent = await _buildReactionEvent(
+      emoji: emoji,
+      name: name,
+      isEphemeral: isEphemeral,
+    );
+
+    if (reactionEvent == null) return null;
+
+    // Send reaction as unencrypted event to avoid decryption issues
+    final txid = client.generateUniqueTransactionId();
+    return await client.sendMessage(
+      room.id,
+      EventTypes.GroupCallMemberReaction,
+      txid,
+      reactionEvent,
+    );
+  }
+
+  /// Remove a reaction event from the group call
+  ///
+  /// [emoji] - The reaction emoji (e.g., '🖐️' for hand raise)
+  /// [name] - The reaction name (e.g., 'hand raise')
+  ///
+  /// Returns the event ID of the removed reaction event
+  Future<String?> removeReactionEvent({
+    required String emoji,
+    required String name,
+  }) async {
+    final reactionEvent = await _buildReactionEvent(
+      emoji: emoji,
+      name: name,
+      isEphemeral: false,
+    );
+
+    if (reactionEvent == null) return null;
+
+    // Send reaction removal as unencrypted event to avoid decryption issues
+    final txid = client.generateUniqueTransactionId();
+    return await client.sendMessage(
+      room.id,
+      EventTypes.GroupCallMemberReactionRemoved,
+      txid,
+      reactionEvent,
+    );
+  }
+
+  /// Get all reactions of a specific type for all participants in the call
+  ///
+  /// [emoji] - The reaction emoji to filter by (e.g., '🖐️')
+  ///
+  /// Returns a list of [MatrixEvent] objects representing the reactions
+  Future<List<MatrixEvent>> getAllReactions({required String emoji}) async {
+    final reactions = <MatrixEvent>[];
+
+    for (final participant in participants) {
+      final memberships = room.getCallMembershipsForUser(
+        participant.userId,
+        participant.deviceId ?? '',
+        voip,
+      );
+
+      final membershipsForCurrentGroupCall = memberships
+          .where(
+            (m) =>
+                m.callId == groupCallId &&
+                m.application == application &&
+                m.scope == scope &&
+                m.roomId == room.id,
+          )
+          .toList();
+
+      for (final membership in membershipsForCurrentGroupCall) {
+        if (membership.eventId == null) {
+          Logs().w(
+            'Cannot find membership event for ${participant.userId}',
+          );
+          continue;
+        }
+
+        final events = await client.getRelatingEventsWithRelTypeAndEventType(
+          room.id,
+          membership.eventId!,
+          RelationshipTypes.reference,
+          EventTypes.GroupCallMemberReaction,
+        );
+
+        events.chunk.forEachIndexed((index, event) {
+          final content = event.content;
+          if (content['key'] == emoji) {
+            Logs().d(
+              'Reaction $index: ${event.senderId}, key: ${content['key']}',
+            );
+            reactions.add(event);
+          }
+        });
+      }
+    }
+
+    return reactions;
   }
 }
