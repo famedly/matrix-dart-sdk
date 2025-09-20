@@ -370,30 +370,14 @@ class GroupCallSession {
 
   /// Remove a reaction event from the group call
   ///
-  /// [emoji] - The reaction emoji (e.g., '🖐️' for hand raise)
-  /// [name] - The reaction name (e.g., 'hand raise')
+  /// [eventId] - The event ID of the reaction to remove
   ///
   /// Returns the event ID of the removed reaction event
   Future<String?> removeReactionEvent({
-    required String emoji,
-    required String name,
+    required String eventId,
   }) async {
-    final reactionEvent = await _buildReactionEvent(
-      emoji: emoji,
-      name: name,
-      isEphemeral: false,
-    );
-
-    if (reactionEvent == null) return null;
-
-    // Send reaction removal as unencrypted event to avoid decryption issues
-    final txid = client.generateUniqueTransactionId();
-    return await client.sendMessage(
-      room.id,
-      EventTypes.GroupCallMemberReactionRemoved,
-      txid,
-      reactionEvent,
-    );
+    Logs().d('Group call reaction removed: $eventId');
+    return await room.redactEvent(eventId);
   }
 
   /// Get all reactions of a specific type for all participants in the call

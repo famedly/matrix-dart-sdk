@@ -192,8 +192,7 @@ class VoIP {
     if (event is Event) {
       room = event.room;
 
-      if (event.type == EventTypes.GroupCallMemberReaction ||
-          event.type == EventTypes.GroupCallMemberReactionRemoved) {
+      if (event.type == EventTypes.GroupCallMemberReaction) {
         final isEphemeral = event.content.tryGet<bool>('is_ephemeral')!;
         if (isEphemeral &&
             event.originServerTs.isBefore(
@@ -267,10 +266,7 @@ class VoIP {
         remoteDeviceId == client.deviceID) {
       // We don't want to ignore group call reactions from our own device because
       // we want to show them on the UI
-      if (!{
-        EventTypes.GroupCallMemberReaction,
-        EventTypes.GroupCallMemberReactionRemoved,
-      }.contains(event.type)) {
+      if (!{EventTypes.GroupCallMemberReaction}.contains(event.type)) {
         Logs().v(
           'Ignoring call event ${event.type} for room ${room.id} from our own device',
         );
@@ -280,7 +276,6 @@ class VoIP {
       EventTypes.GroupCallMemberEncryptionKeys,
       EventTypes.GroupCallMemberEncryptionKeysRequest,
       EventTypes.GroupCallMemberReaction,
-      EventTypes.GroupCallMemberReactionRemoved,
     }.contains(event.type)) {
       // skip webrtc event checks on encryption_keys
       final callId = content['call_id'] as String?;
@@ -391,8 +386,10 @@ class VoIP {
         );
         break;
       case EventTypes.GroupCallMemberReaction:
-      case EventTypes.GroupCallMemberReactionRemoved:
         await _handleReactionEvent(room, event);
+        break;
+      case EventTypes.Redaction:
+        await _handleRedactionEvent(room, event);
         break;
     }
   }
@@ -760,8 +757,6 @@ class VoIP {
     Room room,
     BasicEventWithSender event,
   ) async {
-    if (event is! Event) return;
-
     final content = event.content;
 
     final callId = content.tryGet<String>('call_id');
@@ -832,26 +827,59 @@ class VoIP {
       deviceId: deviceId,
     );
 
-    final reaction = event.type == EventTypes.GroupCallMemberReaction
-        ? ReactionAddedEvent(
-            participant: participant,
-            reactionKey: reactionKey,
-            reactionName: reactionName,
-            eventId: eventId,
-            isEphemeral: isEphemeral,
-          )
-        : ReactionRemovedEvent(
-            participant: participant,
-            reactionKey: reactionKey,
-            reactionName: reactionName,
-            redactedEventId: eventId,
-          );
+    final reaction = ReactionAddedEvent(
+      participant: participant,
+      reactionKey: reactionKey,
+      reactionName: reactionName,
+      eventId: eventId,
+      isEphemeral: isEphemeral,
+    );
 
     groupCall.matrixRTCEventStream.add(reaction);
 
     Logs().d(
       '[VOIP] _handleReactionEvent: Sent reaction event: $reaction',
     );
+  }
+
+  Future<void> _handleRedactionEvent(
+    Room room,
+    BasicEventWithSender event,
+  ) async {
+    final content = event.content;
+    final redactedEventId = content.tryGet<String>('redacts');
+
+    if (redactedEventId == null) {
+      Logs().v(
+        '[VOIP] _handleRedactionEvent: Missing sender or redacted event ID',
+      );
+      return;
+    }
+
+    // Route to all active group calls in the room
+    final activeGroupCalls = groupCalls.values.where(
+      (groupCall) =>
+          groupCall.room.id == room.id &&
+          groupCall.state == GroupCallState.entered,
+    );
+
+    for (final groupCall in activeGroupCalls) {
+      final participant = CallParticipant(
+        this,
+        userId: event.senderId,
+        deviceId: null,
+      );
+
+      // We don't know the specific reaction key from redaction events
+      // The listeners can filter based on their current state
+      final reactionEvent = ReactionRemovedEvent(
+        participant: participant,
+        reactionKey: '',
+        redactedEventId: redactedEventId,
+      );
+
+      groupCall.matrixRTCEventStream.add(reactionEvent);
+    }
   }
 
   CallType getCallType(String sdp) {
