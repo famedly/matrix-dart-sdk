@@ -788,7 +788,6 @@ class VoIP {
     }
 
     final reactionKey = content.tryGet<String>('key');
-    final reactionName = content.tryGet<String>('name');
     final isEphemeral = content.tryGet<bool>('is_ephemeral') ?? false;
 
     if (reactionKey == null) {
@@ -830,7 +829,6 @@ class VoIP {
     final reaction = ReactionAddedEvent(
       participant: participant,
       reactionKey: reactionKey,
-      reactionName: reactionName,
       eventId: eventId,
       isEphemeral: isEphemeral,
     );
@@ -864,6 +862,13 @@ class VoIP {
     );
 
     for (final groupCall in activeGroupCalls) {
+      if (event.type != EventTypes.Redaction) {
+        Logs().w(
+          '[VOIP] _handleRedactionEvent: Event $redactedEventId is not a redaction event',
+        );
+        continue;
+      }
+
       final participant = CallParticipant(
         this,
         userId: event.senderId,

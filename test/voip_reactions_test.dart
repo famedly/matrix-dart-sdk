@@ -566,6 +566,7 @@ void main() {
 
       // Test removing a reaction (will also fail with fake client)
       await groupCall.removeReactionEvent(
+        type: EventTypes.GroupCallMemberReaction,
         eventId: 'fake_reaction_id',
       );
 
@@ -978,7 +979,6 @@ void main() {
       for (int i = 0; i < emojis.length; i++) {
         final event = reactionEvents[i] as ReactionAddedEvent;
         expect(event.reactionKey, emojis[i]['emoji']);
-        expect(event.reactionName, emojis[i]['name']);
         expect(event.participant.userId, '@alice:testing.com');
         expect(event.isEphemeral, true);
       }
@@ -1252,8 +1252,7 @@ void main() {
         processedReactions.any(
           (event) =>
               event.reactionKey == testEmojis[1]['emoji'] &&
-              event.isEphemeral == true &&
-              event.reactionName == 'recent ${testEmojis[1]['name']}',
+              event.isEphemeral == true,
         ),
         true,
       );
@@ -1263,19 +1262,15 @@ void main() {
         processedReactions.any(
           (event) =>
               event.reactionKey == testEmojis[3]['emoji'] &&
-              event.isEphemeral == false &&
-              event.reactionName == 'old ${testEmojis[3]['name']}',
+              event.isEphemeral == false,
         ),
         true,
       );
 
       // Should NOT have old ephemeral hand raise
       expect(
-        processedReactions.any(
-          (event) =>
-              event.reactionKey == testEmojis[0]['emoji'] &&
-              event.reactionName == 'old ${testEmojis[0]['name']}',
-        ),
+        processedReactions
+            .any((event) => event.reactionKey == testEmojis[0]['emoji']),
         false,
       );
 
@@ -1346,8 +1341,14 @@ void main() {
       }
 
       // Test removing reactions (will work with fake client)
-      await groupCall.removeReactionEvent(eventId: 'fake_reaction_id_1');
-      await groupCall.removeReactionEvent(eventId: 'fake_reaction_id_2');
+      await groupCall.removeReactionEvent(
+        type: EventTypes.GroupCallMemberReaction,
+        eventId: 'fake_reaction_id_1',
+      );
+      await groupCall.removeReactionEvent(
+        type: EventTypes.GroupCallMemberReaction,
+        eventId: 'fake_reaction_id_2',
+      );
 
       // The test passes if we reach here without crashing
       expect(true, true);

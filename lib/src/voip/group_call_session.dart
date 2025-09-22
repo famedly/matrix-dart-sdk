@@ -171,7 +171,9 @@ class GroupCallSession {
 
     // Store permanent reactions from the current member event if it exists
     List<MatrixEvent> permanentReactions = [];
-    if (currentMembership?.eventId != null) {
+    final membershipExpired = currentMembership?.isExpired ?? false;
+
+    if (currentMembership?.eventId != null && !membershipExpired) {
       permanentReactions = await _getPermanentReactionsForEvent(
         currentMembership!.eventId!,
       );
@@ -303,41 +305,6 @@ class GroupCallSession {
     }
   }
 
-  Future<Map<String, dynamic>?> _buildReactionEvent({
-    required String emoji,
-    required String name,
-    bool isEphemeral = true,
-  }) async {
-    Logs().d('Group call reaction selected: $emoji');
-    final memberships =
-        room.getCallMembershipsForUser(client.userID!, client.deviceID!, voip);
-    final membership = memberships.firstWhereOrNull(
-      (m) =>
-          m.callId == groupCallId &&
-          m.application == 'm.call' &&
-          m.scope == 'm.room',
-    );
-
-    if (membership == null) {
-      Logs().w(
-        'No matching membership found to send group call emoji reaction from ${client.userID!}',
-      );
-      return null;
-    }
-
-    return {
-      'key': emoji,
-      'name': name,
-      'is_ephemeral': isEphemeral,
-      'call_id': groupCallId,
-      'device_id': client.deviceID!,
-      'm.relates_to': {
-        'rel_type': RelationshipTypes.reference,
-        'event_id': membership.eventId!,
-      },
-    };
-  }
-
   /// Send a reaction event to the group call
   ///
   /// [emoji] - The reaction emoji (e.g., '🖐️' for hand raise)
@@ -350,13 +317,33 @@ class GroupCallSession {
     required String name,
     bool isEphemeral = true,
   }) async {
-    final reactionEvent = await _buildReactionEvent(
-      emoji: emoji,
-      name: name,
-      isEphemeral: isEphemeral,
+    Logs().d('Group call reaction selected: $emoji');
+    final memberships =
+        room.getCallMembershipsForUser(client.userID!, client.deviceID!, voip);
+    final membership = memberships.firstWhereOrNull(
+      (m) =>
+          m.callId == groupCallId &&
+          m.deviceId == client.deviceID! &&
+          m.roomId == room.id &&
+          m.application == 'm.call' &&
+          m.scope == 'm.room',
     );
 
-    if (reactionEvent == null) return null;
+    if (membership == null) {
+      Logs().w(
+        'No matching membership found to send group call emoji reaction from ${client.userID!}',
+      );
+      return null;
+    }
+
+    final payload = ReactionPayload(
+      key: emoji,
+      isEphemeral: isEphemeral,
+      callId: groupCallId,
+      deviceId: client.deviceID!,
+      relType: RelationshipTypes.reference,
+      eventId: membership.eventId!,
+    );
 
     // Send reaction as unencrypted event to avoid decryption issues
     final txid = client.generateUniqueTransactionId();
@@ -364,19 +351,27 @@ class GroupCallSession {
       room.id,
       EventTypes.GroupCallMemberReaction,
       txid,
-      reactionEvent,
+      payload.toMap(),
     );
   }
 
   /// Remove a reaction event from the group call
   ///
   /// [eventId] - The event ID of the reaction to remove
+  /// [type] - The type of the event to remove (one of [EventTypes])
   ///
   /// Returns the event ID of the removed reaction event
   Future<String?> removeReactionEvent({
     required String eventId,
+    required String type,
   }) async {
-    Logs().d('Group call reaction removed: $eventId');
+    if (type != EventTypes.GroupCallMemberReaction) {
+      Logs().w(
+        'Cannot remove reaction - Event $eventId is not a GroupCallMemberReaction event',
+      );
+      return null;
+    }
+
     return await room.redactEvent(eventId);
   }
 
@@ -387,8 +382,16 @@ class GroupCallSession {
   /// Returns a list of [MatrixEvent] objects representing the reactions
   Future<List<MatrixEvent>> getAllReactions({required String emoji}) async {
     final reactions = <MatrixEvent>[];
+    final timeline = await room.getTimeline();
 
     for (final participant in participants) {
+      if (participant.deviceId == null || participant.deviceId!.isEmpty) {
+        Logs().w(
+          'Cannot find device ID for ${participant.userId}',
+        );
+        continue;
+      }
+
       final memberships = room.getCallMembershipsForUser(
         participant.userId,
         participant.deviceId ?? '',
@@ -413,22 +416,27 @@ class GroupCallSession {
           continue;
         }
 
-        final events = await client.getRelatingEventsWithRelTypeAndEventType(
-          room.id,
-          membership.eventId!,
-          RelationshipTypes.reference,
-          EventTypes.GroupCallMemberReaction,
-        );
+        final reactionEvents = timeline.aggregatedEvents[membership.eventId]
+                    ?[RelationshipTypes.reference]
+                ?.where(
+                  (event) => event.type == EventTypes.GroupCallMemberReaction,
+                )
+                .toList() ??
+            [];
 
-        events.chunk.forEachIndexed((index, event) {
-          final content = event.content;
-          if (content['key'] == emoji) {
-            Logs().d(
-              'Reaction $index: ${event.senderId}, key: ${content['key']}',
-            );
-            reactions.add(event);
-          }
-        });
+        final eventsToProcess = reactionEvents.isNotEmpty
+            ? reactionEvents
+            : (await client.getRelatingEventsWithRelTypeAndEventType(
+                room.id,
+                membership.eventId!,
+                RelationshipTypes.reference,
+                EventTypes.GroupCallMemberReaction,
+              ))
+                .chunk;
+
+        reactions.addAll(
+          eventsToProcess.where((event) => event.content['key'] == emoji),
+        );
       }
     }
 
@@ -492,6 +500,7 @@ class GroupCallSession {
       (m) =>
           m.callId == groupCallId &&
           m.application == application &&
+          m.deviceId == client.deviceID! &&
           m.scope == scope &&
           m.roomId == room.id,
     );
@@ -508,7 +517,6 @@ class GroupCallSession {
       try {
         final content = reactionEvent.content;
         final reactionKey = content['key'] as String?;
-        final reactionName = content['name'] as String?;
 
         if (reactionKey == null) {
           Logs().w(
@@ -518,17 +526,14 @@ class GroupCallSession {
         }
 
         // Build new reaction event with updated event ID
-        final newReactionEvent = {
-          'key': reactionKey,
-          'name': reactionName,
-          'is_ephemeral': false, // Ensure it remains permanent
-          'call_id': groupCallId,
-          'device_id': client.deviceID!,
-          'm.relates_to': {
-            'rel_type': RelationshipTypes.reference,
-            'event_id': updatedMembership!.eventId!,
-          },
-        };
+        final payload = ReactionPayload(
+          key: reactionKey,
+          isEphemeral: false,
+          callId: groupCallId,
+          deviceId: client.deviceID!,
+          relType: RelationshipTypes.reference,
+          eventId: updatedMembership!.eventId!,
+        );
 
         // Send the permanent reaction with new event ID
         final txid = client.generateUniqueTransactionId();
@@ -536,7 +541,7 @@ class GroupCallSession {
           room.id,
           EventTypes.GroupCallMemberReaction,
           txid,
-          newReactionEvent,
+          payload.toMap(),
         );
 
         Logs().d(
