@@ -556,19 +556,13 @@ void main() {
 
       // Test sending a hand raise reaction
       // This will fail with the fake client but should not crash
-      final eventId = await groupCall.sendReactionEvent(
-        emoji: '🖐️',
-        name: 'hand raise',
-      );
+      final eventId = await groupCall.sendReactionEvent(emoji: '🖐️');
 
       // With fake client, this will return a valid event ID now that we added the endpoint
       expect(eventId, isNotNull); // Expected with updated fake client
 
       // Test removing a reaction (will also fail with fake client)
-      await groupCall.removeReactionEvent(
-        type: EventTypes.GroupCallMemberReaction,
-        eventId: 'fake_reaction_id',
-      );
+      await groupCall.removeReactionEvent(eventId: 'fake_reaction_id');
 
       // The test passes if we reach here without crashing
       expect(true, true);
@@ -1323,7 +1317,6 @@ void main() {
         // Test ephemeral reaction
         final ephemeralEventId = await groupCall.sendReactionEvent(
           emoji: emojiData['emoji']!,
-          name: emojiData['name']!,
           isEphemeral: true,
         );
         expect(ephemeralEventId, isNotNull);
@@ -1331,7 +1324,6 @@ void main() {
         // Test permanent reaction
         final permanentEventId = await groupCall.sendReactionEvent(
           emoji: emojiData['emoji']!,
-          name: emojiData['name']!,
           isEphemeral: false,
         );
         expect(permanentEventId, isNotNull);
@@ -1341,14 +1333,8 @@ void main() {
       }
 
       // Test removing reactions (will work with fake client)
-      await groupCall.removeReactionEvent(
-        type: EventTypes.GroupCallMemberReaction,
-        eventId: 'fake_reaction_id_1',
-      );
-      await groupCall.removeReactionEvent(
-        type: EventTypes.GroupCallMemberReaction,
-        eventId: 'fake_reaction_id_2',
-      );
+      await groupCall.removeReactionEvent(eventId: 'fake_reaction_id_1');
+      await groupCall.removeReactionEvent(eventId: 'fake_reaction_id_2');
 
       // The test passes if we reach here without crashing
       expect(true, true);

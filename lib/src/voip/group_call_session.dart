@@ -314,7 +314,6 @@ class GroupCallSession {
   /// Returns the event ID of the sent reaction event
   Future<String?> sendReactionEvent({
     required String emoji,
-    required String name,
     bool isEphemeral = true,
   }) async {
     Logs().d('Group call reaction selected: $emoji');
@@ -358,21 +357,13 @@ class GroupCallSession {
   /// Remove a reaction event from the group call
   ///
   /// [eventId] - The event ID of the reaction to remove
-  /// [type] - The type of the event to remove (one of [EventTypes])
   ///
   /// Returns the event ID of the removed reaction event
-  Future<String?> removeReactionEvent({
-    required String eventId,
-    required String type,
-  }) async {
-    if (type != EventTypes.GroupCallMemberReaction) {
-      Logs().w(
-        'Cannot remove reaction - Event $eventId is not a GroupCallMemberReaction event',
-      );
-      return null;
-    }
+  Future<String?> removeReactionEvent({required String eventId}) async {
+    final originalEvent = await room.getEventById(eventId);
+    final deviceId = originalEvent?.content.tryGet<String>('device_id');
 
-    return await room.redactEvent(eventId);
+    return await room.redactEvent(eventId, reason: deviceId);
   }
 
   /// Get all reactions of a specific type for all participants in the call

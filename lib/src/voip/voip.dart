@@ -854,6 +854,12 @@ class VoIP {
       return;
     }
 
+    final deviceId = event.content.tryGet<String>('reason');
+
+    Logs().d(
+      '[VOIP] _handleRedactionEvent: Device ID from redaction event: $deviceId',
+    );
+
     // Route to all active group calls in the room
     final activeGroupCalls = groupCalls.values.where(
       (groupCall) =>
@@ -872,7 +878,7 @@ class VoIP {
       final participant = CallParticipant(
         this,
         userId: event.senderId,
-        deviceId: null,
+        deviceId: deviceId,
       );
 
       // We don't know the specific reaction key from redaction events
