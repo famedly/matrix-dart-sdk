@@ -1611,14 +1611,23 @@ class Client extends MatrixApi {
       // We send an empty String to remove the avatar. Sending Null **should**
       // work but it doesn't with Synapse. See:
       // https://gitlab.com/famedly/company/frontend/famedlysdk/-/issues/254
-      return setAvatarUrl(userID!, Uri.parse(''));
+      await setProfileField(
+        userID!,
+        'avatar_url',
+        {'avatar_url': Uri.parse('')},
+      );
+      return;
     }
     final uploadResp = await uploadContent(
       file.bytes,
       filename: file.name,
       contentType: file.mimeType,
     );
-    await setAvatarUrl(userID!, uploadResp);
+    await setProfileField(
+      userID!,
+      'avatar_url',
+      {'avatar_url': uploadResp.toString()},
+    );
     return;
   }
 

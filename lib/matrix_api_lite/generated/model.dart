@@ -248,6 +248,157 @@ class GetWellknownSupportResponse {
 
 ///
 @_NameSource('generated')
+class GetAuthMetadataResponse {
+  GetAuthMetadataResponse({
+    required this.authorizationEndpoint,
+    required this.codeChallengeMethodsSupported,
+    required this.grantTypesSupported,
+    required this.issuer,
+    this.promptValuesSupported,
+    required this.registrationEndpoint,
+    required this.responseModesSupported,
+    required this.responseTypesSupported,
+    required this.revocationEndpoint,
+    required this.tokenEndpoint,
+  });
+
+  GetAuthMetadataResponse.fromJson(Map<String, Object?> json)
+      : authorizationEndpoint =
+            Uri.parse(json['authorization_endpoint'] as String),
+        codeChallengeMethodsSupported =
+            (json['code_challenge_methods_supported'] as List)
+                .map((v) => v as String)
+                .toList(),
+        grantTypesSupported = (json['grant_types_supported'] as List)
+            .map((v) => v as String)
+            .toList(),
+        issuer = Uri.parse(json['issuer'] as String),
+        promptValuesSupported = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['prompt_values_supported']),
+        registrationEndpoint =
+            Uri.parse(json['registration_endpoint'] as String),
+        responseModesSupported = (json['response_modes_supported'] as List)
+            .map((v) => v as String)
+            .toList(),
+        responseTypesSupported = (json['response_types_supported'] as List)
+            .map((v) => v as String)
+            .toList(),
+        revocationEndpoint = Uri.parse(json['revocation_endpoint'] as String),
+        tokenEndpoint = Uri.parse(json['token_endpoint'] as String);
+  Map<String, Object?> toJson() {
+    final promptValuesSupported = this.promptValuesSupported;
+    return {
+      'authorization_endpoint': authorizationEndpoint.toString(),
+      'code_challenge_methods_supported':
+          codeChallengeMethodsSupported.map((v) => v).toList(),
+      'grant_types_supported': grantTypesSupported.map((v) => v).toList(),
+      'issuer': issuer.toString(),
+      if (promptValuesSupported != null)
+        'prompt_values_supported': promptValuesSupported.map((v) => v).toList(),
+      'registration_endpoint': registrationEndpoint.toString(),
+      'response_modes_supported': responseModesSupported.map((v) => v).toList(),
+      'response_types_supported': responseTypesSupported.map((v) => v).toList(),
+      'revocation_endpoint': revocationEndpoint.toString(),
+      'token_endpoint': tokenEndpoint.toString(),
+    };
+  }
+
+  /// URL of the authorization endpoint, necessary to use the authorization code
+  /// grant.
+  Uri authorizationEndpoint;
+
+  /// List of OAuth 2.0 Proof Key for Code Exchange (PKCE) code challenge methods
+  /// that the server supports at the authorization endpoint.
+  ///
+  /// This array MUST contain at least the `S256` value, for improved security in
+  /// the authorization code grant.
+  List<String> codeChallengeMethodsSupported;
+
+  /// List of OAuth 2.0 grant type strings that the server supports at the token
+  /// endpoint.
+  ///
+  /// This array MUST contain at least the `authorization_code` and `refresh_token`
+  /// values, for clients to be able to use the authorization code grant and refresh
+  /// token grant, respectively.
+  List<String> grantTypesSupported;
+
+  /// The authorization server's issuer identifier, which is a URL that uses the
+  /// `https` scheme and has no query or fragment components.
+  ///
+  /// This is not used in the context of the Matrix specification, but is required
+  /// by [RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414).
+  Uri issuer;
+
+  /// List of OpenID Connect prompt values that the server supports at the
+  /// authorization endpoint.
+  ///
+  /// Only the `create` value defined in [Initiating User Registration via OpenID
+  /// Connect](https://openid.net/specs/openid-connect-prompt-create-1_0.html) is
+  /// supported, for a client to signal to the server that the user desires to
+  /// register a new account.
+  List<String>? promptValuesSupported;
+
+  /// URL of the client registration endpoint, necessary to perform dynamic
+  /// registration of a client.
+  Uri registrationEndpoint;
+
+  /// List of OAuth 2.0 response mode strings that the server supports at the
+  /// authorization endpoint.
+  ///
+  /// This array MUST contain at least the `query` and `fragment` values, for
+  /// improved security in the authorization code grant.
+  List<String> responseModesSupported;
+
+  /// List of OAuth 2.0 response type strings that the server supports at the
+  /// authorization endpoint.
+  ///
+  /// This array MUST contain at least the `code` value, for clients to be able to
+  /// use the authorization code grant.
+  List<String> responseTypesSupported;
+
+  /// URL of the revocation endpoint, necessary to log out a client by invalidating
+  /// its access and refresh tokens.
+  Uri revocationEndpoint;
+
+  /// URL of the token endpoint, necessary to use the authorization code grant and
+  /// the refresh token grant.
+  Uri tokenEndpoint;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetAuthMetadataResponse &&
+          other.runtimeType == runtimeType &&
+          other.authorizationEndpoint == authorizationEndpoint &&
+          other.codeChallengeMethodsSupported ==
+              codeChallengeMethodsSupported &&
+          other.grantTypesSupported == grantTypesSupported &&
+          other.issuer == issuer &&
+          other.promptValuesSupported == promptValuesSupported &&
+          other.registrationEndpoint == registrationEndpoint &&
+          other.responseModesSupported == responseModesSupported &&
+          other.responseTypesSupported == responseTypesSupported &&
+          other.revocationEndpoint == revocationEndpoint &&
+          other.tokenEndpoint == tokenEndpoint);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        authorizationEndpoint,
+        codeChallengeMethodsSupported,
+        grantTypesSupported,
+        issuer,
+        promptValuesSupported,
+        registrationEndpoint,
+        responseModesSupported,
+        responseTypesSupported,
+        revocationEndpoint,
+        tokenEndpoint,
+      );
+}
+
+///
+@_NameSource('generated')
 class GenerateLoginTokenResponse {
   GenerateLoginTokenResponse({
     required this.expiresInMs,
@@ -366,8 +517,8 @@ enum Method {
 
 ///
 @_NameSource('spec')
-class PublicRoomsChunk {
-  PublicRoomsChunk({
+class PublishedRoomsChunk {
+  PublishedRoomsChunk({
     this.avatarUrl,
     this.canonicalAlias,
     required this.guestCanJoin,
@@ -380,7 +531,7 @@ class PublicRoomsChunk {
     required this.worldReadable,
   });
 
-  PublicRoomsChunk.fromJson(Map<String, Object?> json)
+  PublishedRoomsChunk.fromJson(Map<String, Object?> json)
       : avatarUrl = ((v) =>
             v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
         canonicalAlias =
@@ -441,16 +592,17 @@ class PublicRoomsChunk {
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
   String? roomType;
 
-  /// The topic of the room, if any.
+  /// The plain text topic of the room. Omitted if no `text/plain` mimetype
+  /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
   String? topic;
 
-  /// Whether the room may be viewed by guest users without joining.
+  /// Whether the room may be viewed by users without joining.
   bool worldReadable;
 
   @dart.override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is PublicRoomsChunk &&
+      (other is PublishedRoomsChunk &&
           other.runtimeType == runtimeType &&
           other.avatarUrl == avatarUrl &&
           other.canonicalAlias == canonicalAlias &&
@@ -479,51 +631,71 @@ class PublicRoomsChunk {
 }
 
 ///
-@_NameSource('spec')
-class SpaceHierarchyRoomsChunk {
-  SpaceHierarchyRoomsChunk({
-    required this.childrenState,
+@_NameSource('generated')
+class GetRoomSummaryResponse$1 {
+  GetRoomSummaryResponse$1({
+    this.allowedRoomIds,
+    this.encryption,
     this.roomType,
+    this.roomVersion,
   });
 
-  SpaceHierarchyRoomsChunk.fromJson(Map<String, Object?> json)
-      : childrenState = (json['children_state'] as List)
-            .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
-            .toList(),
-        roomType = ((v) => v != null ? v as String : null)(json['room_type']);
+  GetRoomSummaryResponse$1.fromJson(Map<String, Object?> json)
+      : allowedRoomIds = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['allowed_room_ids']),
+        encryption =
+            ((v) => v != null ? v as String : null)(json['encryption']),
+        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+        roomVersion =
+            ((v) => v != null ? v as String : null)(json['room_version']);
   Map<String, Object?> toJson() {
+    final allowedRoomIds = this.allowedRoomIds;
+    final encryption = this.encryption;
     final roomType = this.roomType;
+    final roomVersion = this.roomVersion;
     return {
-      'children_state': childrenState.map((v) => v.toJson()).toList(),
+      if (allowedRoomIds != null)
+        'allowed_room_ids': allowedRoomIds.map((v) => v).toList(),
+      if (encryption != null) 'encryption': encryption,
       if (roomType != null) 'room_type': roomType,
+      if (roomVersion != null) 'room_version': roomVersion,
     };
   }
 
-  /// The [`m.space.child`](https://spec.matrix.org/unstable/client-server-api/#mspacechild) events of the space-room, represented
-  /// as [Stripped State Events](https://spec.matrix.org/unstable/client-server-api/#stripped-state) with an added `origin_server_ts` key.
-  ///
-  /// If the room is not a space-room, this should be empty.
-  List<ChildrenState> childrenState;
+  /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
+  /// are specified by the join rules. Empty or omitted otherwise.
+  List<String>? allowedRoomIds;
+
+  /// The encryption algorithm to be used to encrypt messages sent in the
+  /// room.
+  String? encryption;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
   String? roomType;
 
+  /// The version of the room.
+  String? roomVersion;
+
   @dart.override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SpaceHierarchyRoomsChunk &&
+      (other is GetRoomSummaryResponse$1 &&
           other.runtimeType == runtimeType &&
-          other.childrenState == childrenState &&
-          other.roomType == roomType);
+          other.allowedRoomIds == allowedRoomIds &&
+          other.encryption == encryption &&
+          other.roomType == roomType &&
+          other.roomVersion == roomVersion);
 
   @dart.override
-  int get hashCode => Object.hash(childrenState, roomType);
+  int get hashCode =>
+      Object.hash(allowedRoomIds, encryption, roomType, roomVersion);
 }
 
 ///
-@_NameSource('rule override generated')
-class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
-  SpaceRoomsChunk({
+@_NameSource('spec')
+class RoomSummary$1 implements PublishedRoomsChunk, GetRoomSummaryResponse$1 {
+  RoomSummary$1({
     this.avatarUrl,
     this.canonicalAlias,
     required this.guestCanJoin,
@@ -534,10 +706,12 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
     this.roomType,
     this.topic,
     required this.worldReadable,
-    required this.childrenState,
+    this.allowedRoomIds,
+    this.encryption,
+    this.roomVersion,
   });
 
-  SpaceRoomsChunk.fromJson(Map<String, Object?> json)
+  RoomSummary$1.fromJson(Map<String, Object?> json)
       : avatarUrl = ((v) =>
             v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
         canonicalAlias =
@@ -550,9 +724,13 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
         roomType = ((v) => v != null ? v as String : null)(json['room_type']),
         topic = ((v) => v != null ? v as String : null)(json['topic']),
         worldReadable = json['world_readable'] as bool,
-        childrenState = (json['children_state'] as List)
-            .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
-            .toList();
+        allowedRoomIds = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['allowed_room_ids']),
+        encryption =
+            ((v) => v != null ? v as String : null)(json['encryption']),
+        roomVersion =
+            ((v) => v != null ? v as String : null)(json['room_version']);
   @override
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
@@ -561,6 +739,9 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
     final name = this.name;
     final roomType = this.roomType;
     final topic = this.topic;
+    final allowedRoomIds = this.allowedRoomIds;
+    final encryption = this.encryption;
+    final roomVersion = this.roomVersion;
     return {
       if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
       if (canonicalAlias != null) 'canonical_alias': canonicalAlias,
@@ -572,7 +753,10 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
       if (roomType != null) 'room_type': roomType,
       if (topic != null) 'topic': topic,
       'world_readable': worldReadable,
-      'children_state': childrenState.map((v) => v.toJson()).toList(),
+      if (allowedRoomIds != null)
+        'allowed_room_ids': allowedRoomIds.map((v) => v).toList(),
+      if (encryption != null) 'encryption': encryption,
+      if (roomVersion != null) 'room_version': roomVersion,
     };
   }
 
@@ -611,25 +795,33 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
   @override
   String? roomType;
 
-  /// The topic of the room, if any.
+  /// The plain text topic of the room. Omitted if no `text/plain` mimetype
+  /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
   @override
   String? topic;
 
-  /// Whether the room may be viewed by guest users without joining.
+  /// Whether the room may be viewed by users without joining.
   @override
   bool worldReadable;
 
-  /// The [`m.space.child`](https://spec.matrix.org/unstable/client-server-api/#mspacechild) events of the space-room, represented
-  /// as [Stripped State Events](https://spec.matrix.org/unstable/client-server-api/#stripped-state) with an added `origin_server_ts` key.
-  ///
-  /// If the room is not a space-room, this should be empty.
+  /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
+  /// are specified by the join rules. Empty or omitted otherwise.
   @override
-  List<ChildrenState> childrenState;
+  List<String>? allowedRoomIds;
+
+  /// The encryption algorithm to be used to encrypt messages sent in the
+  /// room.
+  @override
+  String? encryption;
+
+  /// The version of the room.
+  @override
+  String? roomVersion;
 
   @dart.override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SpaceRoomsChunk &&
+      (other is RoomSummary$1 &&
           other.runtimeType == runtimeType &&
           other.avatarUrl == avatarUrl &&
           other.canonicalAlias == canonicalAlias &&
@@ -641,6 +833,707 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
           other.roomType == roomType &&
           other.topic == topic &&
           other.worldReadable == worldReadable &&
+          other.allowedRoomIds == allowedRoomIds &&
+          other.encryption == encryption &&
+          other.roomVersion == roomVersion);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        avatarUrl,
+        canonicalAlias,
+        guestCanJoin,
+        joinRule,
+        name,
+        numJoinedMembers,
+        roomId,
+        roomType,
+        topic,
+        worldReadable,
+        allowedRoomIds,
+        encryption,
+        roomVersion,
+      );
+}
+
+///
+@_NameSource('(generated, rule override generated)')
+enum Membership {
+  ban('ban'),
+  invite('invite'),
+  join('join'),
+  knock('knock'),
+  leave('leave');
+
+  final String name;
+  const Membership(this.name);
+}
+
+///
+@_NameSource('generated')
+class GetRoomSummaryResponse$2 {
+  GetRoomSummaryResponse$2({
+    this.membership,
+  });
+
+  GetRoomSummaryResponse$2.fromJson(Map<String, Object?> json)
+      : membership = ((v) => v != null
+            ? Membership.values.fromString(v as String)!
+            : null)(json['membership']);
+  Map<String, Object?> toJson() {
+    final membership = this.membership;
+    return {
+      if (membership != null) 'membership': membership.name,
+    };
+  }
+
+  /// The membership state of the user if the user is joined to the room. Absent
+  /// if the API was called unauthenticated.
+  Membership? membership;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRoomSummaryResponse$2 &&
+          other.runtimeType == runtimeType &&
+          other.membership == membership);
+
+  @dart.override
+  int get hashCode => membership.hashCode;
+}
+
+/// A summary of the room.
+@_NameSource('generated')
+class GetRoomSummaryResponse$3
+    implements RoomSummary$1, GetRoomSummaryResponse$2 {
+  GetRoomSummaryResponse$3({
+    this.avatarUrl,
+    this.canonicalAlias,
+    required this.guestCanJoin,
+    this.joinRule,
+    this.name,
+    required this.numJoinedMembers,
+    required this.roomId,
+    this.roomType,
+    this.topic,
+    required this.worldReadable,
+    this.allowedRoomIds,
+    this.encryption,
+    this.roomVersion,
+    this.membership,
+  });
+
+  GetRoomSummaryResponse$3.fromJson(Map<String, Object?> json)
+      : avatarUrl = ((v) =>
+            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+        canonicalAlias =
+            ((v) => v != null ? v as String : null)(json['canonical_alias']),
+        guestCanJoin = json['guest_can_join'] as bool,
+        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
+        name = ((v) => v != null ? v as String : null)(json['name']),
+        numJoinedMembers = json['num_joined_members'] as int,
+        roomId = json['room_id'] as String,
+        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+        topic = ((v) => v != null ? v as String : null)(json['topic']),
+        worldReadable = json['world_readable'] as bool,
+        allowedRoomIds = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['allowed_room_ids']),
+        encryption =
+            ((v) => v != null ? v as String : null)(json['encryption']),
+        roomVersion =
+            ((v) => v != null ? v as String : null)(json['room_version']),
+        membership = ((v) => v != null
+            ? Membership.values.fromString(v as String)!
+            : null)(json['membership']);
+  @override
+  Map<String, Object?> toJson() {
+    final avatarUrl = this.avatarUrl;
+    final canonicalAlias = this.canonicalAlias;
+    final joinRule = this.joinRule;
+    final name = this.name;
+    final roomType = this.roomType;
+    final topic = this.topic;
+    final allowedRoomIds = this.allowedRoomIds;
+    final encryption = this.encryption;
+    final roomVersion = this.roomVersion;
+    final membership = this.membership;
+    return {
+      if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
+      if (canonicalAlias != null) 'canonical_alias': canonicalAlias,
+      'guest_can_join': guestCanJoin,
+      if (joinRule != null) 'join_rule': joinRule,
+      if (name != null) 'name': name,
+      'num_joined_members': numJoinedMembers,
+      'room_id': roomId,
+      if (roomType != null) 'room_type': roomType,
+      if (topic != null) 'topic': topic,
+      'world_readable': worldReadable,
+      if (allowedRoomIds != null)
+        'allowed_room_ids': allowedRoomIds.map((v) => v).toList(),
+      if (encryption != null) 'encryption': encryption,
+      if (roomVersion != null) 'room_version': roomVersion,
+      if (membership != null) 'membership': membership.name,
+    };
+  }
+
+  /// The URL for the room's avatar, if one is set.
+  @override
+  Uri? avatarUrl;
+
+  /// The canonical alias of the room, if any.
+  @override
+  String? canonicalAlias;
+
+  /// Whether guest users may join the room and participate in it.
+  /// If they can, they will be subject to ordinary power level
+  /// rules like any other user.
+  @override
+  bool guestCanJoin;
+
+  /// The room's join rule. When not present, the room is assumed to
+  /// be `public`.
+  @override
+  String? joinRule;
+
+  /// The name of the room, if any.
+  @override
+  String? name;
+
+  /// The number of members joined to the room.
+  @override
+  int numJoinedMembers;
+
+  /// The ID of the room.
+  @override
+  String roomId;
+
+  /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
+  @override
+  String? roomType;
+
+  /// The plain text topic of the room. Omitted if no `text/plain` mimetype
+  /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
+  @override
+  String? topic;
+
+  /// Whether the room may be viewed by users without joining.
+  @override
+  bool worldReadable;
+
+  /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
+  /// are specified by the join rules. Empty or omitted otherwise.
+  @override
+  List<String>? allowedRoomIds;
+
+  /// The encryption algorithm to be used to encrypt messages sent in the
+  /// room.
+  @override
+  String? encryption;
+
+  /// The version of the room.
+  @override
+  String? roomVersion;
+
+  /// The membership state of the user if the user is joined to the room. Absent
+  /// if the API was called unauthenticated.
+  @override
+  Membership? membership;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetRoomSummaryResponse$3 &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.canonicalAlias == canonicalAlias &&
+          other.guestCanJoin == guestCanJoin &&
+          other.joinRule == joinRule &&
+          other.name == name &&
+          other.numJoinedMembers == numJoinedMembers &&
+          other.roomId == roomId &&
+          other.roomType == roomType &&
+          other.topic == topic &&
+          other.worldReadable == worldReadable &&
+          other.allowedRoomIds == allowedRoomIds &&
+          other.encryption == encryption &&
+          other.roomVersion == roomVersion &&
+          other.membership == membership);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        avatarUrl,
+        canonicalAlias,
+        guestCanJoin,
+        joinRule,
+        name,
+        numJoinedMembers,
+        roomId,
+        roomType,
+        topic,
+        worldReadable,
+        allowedRoomIds,
+        encryption,
+        roomVersion,
+        membership,
+      );
+}
+
+///
+@_NameSource('rule override generated')
+class SpaceRoomsChunk$1 {
+  SpaceRoomsChunk$1({
+    this.allowedRoomIds,
+    this.encryption,
+    this.roomType,
+    this.roomVersion,
+  });
+
+  SpaceRoomsChunk$1.fromJson(Map<String, Object?> json)
+      : allowedRoomIds = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['allowed_room_ids']),
+        encryption =
+            ((v) => v != null ? v as String : null)(json['encryption']),
+        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+        roomVersion =
+            ((v) => v != null ? v as String : null)(json['room_version']);
+  Map<String, Object?> toJson() {
+    final allowedRoomIds = this.allowedRoomIds;
+    final encryption = this.encryption;
+    final roomType = this.roomType;
+    final roomVersion = this.roomVersion;
+    return {
+      if (allowedRoomIds != null)
+        'allowed_room_ids': allowedRoomIds.map((v) => v).toList(),
+      if (encryption != null) 'encryption': encryption,
+      if (roomType != null) 'room_type': roomType,
+      if (roomVersion != null) 'room_version': roomVersion,
+    };
+  }
+
+  /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
+  /// are specified by the join rules. Empty or omitted otherwise.
+  List<String>? allowedRoomIds;
+
+  /// The encryption algorithm to be used to encrypt messages sent in the
+  /// room.
+  String? encryption;
+
+  /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
+  String? roomType;
+
+  /// The version of the room.
+  String? roomVersion;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpaceRoomsChunk$1 &&
+          other.runtimeType == runtimeType &&
+          other.allowedRoomIds == allowedRoomIds &&
+          other.encryption == encryption &&
+          other.roomType == roomType &&
+          other.roomVersion == roomVersion);
+
+  @dart.override
+  int get hashCode =>
+      Object.hash(allowedRoomIds, encryption, roomType, roomVersion);
+}
+
+///
+@_NameSource('spec')
+class RoomSummary$2 implements PublishedRoomsChunk, SpaceRoomsChunk$1 {
+  RoomSummary$2({
+    this.avatarUrl,
+    this.canonicalAlias,
+    required this.guestCanJoin,
+    this.joinRule,
+    this.name,
+    required this.numJoinedMembers,
+    required this.roomId,
+    this.roomType,
+    this.topic,
+    required this.worldReadable,
+    this.allowedRoomIds,
+    this.encryption,
+    this.roomVersion,
+  });
+
+  RoomSummary$2.fromJson(Map<String, Object?> json)
+      : avatarUrl = ((v) =>
+            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+        canonicalAlias =
+            ((v) => v != null ? v as String : null)(json['canonical_alias']),
+        guestCanJoin = json['guest_can_join'] as bool,
+        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
+        name = ((v) => v != null ? v as String : null)(json['name']),
+        numJoinedMembers = json['num_joined_members'] as int,
+        roomId = json['room_id'] as String,
+        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+        topic = ((v) => v != null ? v as String : null)(json['topic']),
+        worldReadable = json['world_readable'] as bool,
+        allowedRoomIds = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['allowed_room_ids']),
+        encryption =
+            ((v) => v != null ? v as String : null)(json['encryption']),
+        roomVersion =
+            ((v) => v != null ? v as String : null)(json['room_version']);
+  @override
+  Map<String, Object?> toJson() {
+    final avatarUrl = this.avatarUrl;
+    final canonicalAlias = this.canonicalAlias;
+    final joinRule = this.joinRule;
+    final name = this.name;
+    final roomType = this.roomType;
+    final topic = this.topic;
+    final allowedRoomIds = this.allowedRoomIds;
+    final encryption = this.encryption;
+    final roomVersion = this.roomVersion;
+    return {
+      if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
+      if (canonicalAlias != null) 'canonical_alias': canonicalAlias,
+      'guest_can_join': guestCanJoin,
+      if (joinRule != null) 'join_rule': joinRule,
+      if (name != null) 'name': name,
+      'num_joined_members': numJoinedMembers,
+      'room_id': roomId,
+      if (roomType != null) 'room_type': roomType,
+      if (topic != null) 'topic': topic,
+      'world_readable': worldReadable,
+      if (allowedRoomIds != null)
+        'allowed_room_ids': allowedRoomIds.map((v) => v).toList(),
+      if (encryption != null) 'encryption': encryption,
+      if (roomVersion != null) 'room_version': roomVersion,
+    };
+  }
+
+  /// The URL for the room's avatar, if one is set.
+  @override
+  Uri? avatarUrl;
+
+  /// The canonical alias of the room, if any.
+  @override
+  String? canonicalAlias;
+
+  /// Whether guest users may join the room and participate in it.
+  /// If they can, they will be subject to ordinary power level
+  /// rules like any other user.
+  @override
+  bool guestCanJoin;
+
+  /// The room's join rule. When not present, the room is assumed to
+  /// be `public`.
+  @override
+  String? joinRule;
+
+  /// The name of the room, if any.
+  @override
+  String? name;
+
+  /// The number of members joined to the room.
+  @override
+  int numJoinedMembers;
+
+  /// The ID of the room.
+  @override
+  String roomId;
+
+  /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
+  @override
+  String? roomType;
+
+  /// The plain text topic of the room. Omitted if no `text/plain` mimetype
+  /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
+  @override
+  String? topic;
+
+  /// Whether the room may be viewed by users without joining.
+  @override
+  bool worldReadable;
+
+  /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
+  /// are specified by the join rules. Empty or omitted otherwise.
+  @override
+  List<String>? allowedRoomIds;
+
+  /// The encryption algorithm to be used to encrypt messages sent in the
+  /// room.
+  @override
+  String? encryption;
+
+  /// The version of the room.
+  @override
+  String? roomVersion;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomSummary$2 &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.canonicalAlias == canonicalAlias &&
+          other.guestCanJoin == guestCanJoin &&
+          other.joinRule == joinRule &&
+          other.name == name &&
+          other.numJoinedMembers == numJoinedMembers &&
+          other.roomId == roomId &&
+          other.roomType == roomType &&
+          other.topic == topic &&
+          other.worldReadable == worldReadable &&
+          other.allowedRoomIds == allowedRoomIds &&
+          other.encryption == encryption &&
+          other.roomVersion == roomVersion);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        avatarUrl,
+        canonicalAlias,
+        guestCanJoin,
+        joinRule,
+        name,
+        numJoinedMembers,
+        roomId,
+        roomType,
+        topic,
+        worldReadable,
+        allowedRoomIds,
+        encryption,
+        roomVersion,
+      );
+}
+
+///
+@_NameSource('spec')
+class SpaceHierarchyRoomsChunk {
+  SpaceHierarchyRoomsChunk({
+    this.allowedRoomIds,
+    required this.childrenState,
+    this.encryption,
+    this.roomType,
+    this.roomVersion,
+  });
+
+  SpaceHierarchyRoomsChunk.fromJson(Map<String, Object?> json)
+      : allowedRoomIds = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['allowed_room_ids']),
+        childrenState = (json['children_state'] as List)
+            .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
+            .toList(),
+        encryption =
+            ((v) => v != null ? v as String : null)(json['encryption']),
+        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+        roomVersion =
+            ((v) => v != null ? v as String : null)(json['room_version']);
+  Map<String, Object?> toJson() {
+    final allowedRoomIds = this.allowedRoomIds;
+    final encryption = this.encryption;
+    final roomType = this.roomType;
+    final roomVersion = this.roomVersion;
+    return {
+      if (allowedRoomIds != null)
+        'allowed_room_ids': allowedRoomIds.map((v) => v).toList(),
+      'children_state': childrenState.map((v) => v.toJson()).toList(),
+      if (encryption != null) 'encryption': encryption,
+      if (roomType != null) 'room_type': roomType,
+      if (roomVersion != null) 'room_version': roomVersion,
+    };
+  }
+
+  ///
+  List<String>? allowedRoomIds;
+
+  /// The [`m.space.child`](https://spec.matrix.org/unstable/client-server-api/#mspacechild) events of the space-room, represented
+  /// as [Stripped State Events](https://spec.matrix.org/unstable/client-server-api/#stripped-state) with an added `origin_server_ts` key.
+  ///
+  /// If the room is not a space-room, this should be empty.
+  List<ChildrenState> childrenState;
+
+  ///
+  String? encryption;
+
+  ///
+  String? roomType;
+
+  ///
+  String? roomVersion;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpaceHierarchyRoomsChunk &&
+          other.runtimeType == runtimeType &&
+          other.allowedRoomIds == allowedRoomIds &&
+          other.childrenState == childrenState &&
+          other.encryption == encryption &&
+          other.roomType == roomType &&
+          other.roomVersion == roomVersion);
+
+  @dart.override
+  int get hashCode => Object.hash(
+        allowedRoomIds,
+        childrenState,
+        encryption,
+        roomType,
+        roomVersion,
+      );
+}
+
+///
+@_NameSource('rule override generated')
+class SpaceRoomsChunk$2 implements RoomSummary$2, SpaceHierarchyRoomsChunk {
+  SpaceRoomsChunk$2({
+    this.avatarUrl,
+    this.canonicalAlias,
+    required this.guestCanJoin,
+    this.joinRule,
+    this.name,
+    required this.numJoinedMembers,
+    required this.roomId,
+    this.roomType,
+    this.topic,
+    required this.worldReadable,
+    this.allowedRoomIds,
+    this.encryption,
+    this.roomVersion,
+    required this.childrenState,
+  });
+
+  SpaceRoomsChunk$2.fromJson(Map<String, Object?> json)
+      : avatarUrl = ((v) =>
+            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+        canonicalAlias =
+            ((v) => v != null ? v as String : null)(json['canonical_alias']),
+        guestCanJoin = json['guest_can_join'] as bool,
+        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
+        name = ((v) => v != null ? v as String : null)(json['name']),
+        numJoinedMembers = json['num_joined_members'] as int,
+        roomId = json['room_id'] as String,
+        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+        topic = ((v) => v != null ? v as String : null)(json['topic']),
+        worldReadable = json['world_readable'] as bool,
+        allowedRoomIds = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['allowed_room_ids']),
+        encryption =
+            ((v) => v != null ? v as String : null)(json['encryption']),
+        roomVersion =
+            ((v) => v != null ? v as String : null)(json['room_version']),
+        childrenState = (json['children_state'] as List)
+            .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
+            .toList();
+  @override
+  Map<String, Object?> toJson() {
+    final avatarUrl = this.avatarUrl;
+    final canonicalAlias = this.canonicalAlias;
+    final joinRule = this.joinRule;
+    final name = this.name;
+    final roomType = this.roomType;
+    final topic = this.topic;
+    final allowedRoomIds = this.allowedRoomIds;
+    final encryption = this.encryption;
+    final roomVersion = this.roomVersion;
+    return {
+      if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
+      if (canonicalAlias != null) 'canonical_alias': canonicalAlias,
+      'guest_can_join': guestCanJoin,
+      if (joinRule != null) 'join_rule': joinRule,
+      if (name != null) 'name': name,
+      'num_joined_members': numJoinedMembers,
+      'room_id': roomId,
+      if (roomType != null) 'room_type': roomType,
+      if (topic != null) 'topic': topic,
+      'world_readable': worldReadable,
+      if (allowedRoomIds != null)
+        'allowed_room_ids': allowedRoomIds.map((v) => v).toList(),
+      if (encryption != null) 'encryption': encryption,
+      if (roomVersion != null) 'room_version': roomVersion,
+      'children_state': childrenState.map((v) => v.toJson()).toList(),
+    };
+  }
+
+  /// The URL for the room's avatar, if one is set.
+  @override
+  Uri? avatarUrl;
+
+  /// The canonical alias of the room, if any.
+  @override
+  String? canonicalAlias;
+
+  /// Whether guest users may join the room and participate in it.
+  /// If they can, they will be subject to ordinary power level
+  /// rules like any other user.
+  @override
+  bool guestCanJoin;
+
+  /// The room's join rule. When not present, the room is assumed to
+  /// be `public`.
+  @override
+  String? joinRule;
+
+  /// The name of the room, if any.
+  @override
+  String? name;
+
+  /// The number of members joined to the room.
+  @override
+  int numJoinedMembers;
+
+  /// The ID of the room.
+  @override
+  String roomId;
+
+  ///
+  @override
+  String? roomType;
+
+  /// The plain text topic of the room. Omitted if no `text/plain` mimetype
+  /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
+  @override
+  String? topic;
+
+  /// Whether the room may be viewed by users without joining.
+  @override
+  bool worldReadable;
+
+  ///
+  @override
+  List<String>? allowedRoomIds;
+
+  ///
+  @override
+  String? encryption;
+
+  ///
+  @override
+  String? roomVersion;
+
+  /// The [`m.space.child`](https://spec.matrix.org/unstable/client-server-api/#mspacechild) events of the space-room, represented
+  /// as [Stripped State Events](https://spec.matrix.org/unstable/client-server-api/#stripped-state) with an added `origin_server_ts` key.
+  ///
+  /// If the room is not a space-room, this should be empty.
+  @override
+  List<ChildrenState> childrenState;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpaceRoomsChunk$2 &&
+          other.runtimeType == runtimeType &&
+          other.avatarUrl == avatarUrl &&
+          other.canonicalAlias == canonicalAlias &&
+          other.guestCanJoin == guestCanJoin &&
+          other.joinRule == joinRule &&
+          other.name == name &&
+          other.numJoinedMembers == numJoinedMembers &&
+          other.roomId == roomId &&
+          other.roomType == roomType &&
+          other.topic == topic &&
+          other.worldReadable == worldReadable &&
+          other.allowedRoomIds == allowedRoomIds &&
+          other.encryption == encryption &&
+          other.roomVersion == roomVersion &&
           other.childrenState == childrenState);
 
   @dart.override
@@ -655,6 +1548,9 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceHierarchyRoomsChunk {
         roomType,
         topic,
         worldReadable,
+        allowedRoomIds,
+        encryption,
+        roomVersion,
         childrenState,
       );
 }
@@ -670,7 +1566,7 @@ class GetSpaceHierarchyResponse {
   GetSpaceHierarchyResponse.fromJson(Map<String, Object?> json)
       : nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
         rooms = (json['rooms'] as List)
-            .map((v) => SpaceRoomsChunk.fromJson(v as Map<String, Object?>))
+            .map((v) => SpaceRoomsChunk$2.fromJson(v as Map<String, Object?>))
             .toList();
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
@@ -695,7 +1591,7 @@ class GetSpaceHierarchyResponse {
   ///   * The room's join rules are set to [`restricted`](#restricted-rooms), provided the user meets one of the specified conditions.
   /// * The room is "knockable" (the room's join rules are set to `knock`, or `knock_restricted`, in a room version that supports those settings).
   /// * The room's [`m.room.history_visibility`](#room-history-visibility) is set to `world_readable`.
-  List<SpaceRoomsChunk> rooms;
+  List<SpaceRoomsChunk$2> rooms;
 
   @dart.override
   bool operator ==(Object other) =>
@@ -1404,6 +2300,65 @@ class BooleanCapability {
   int get hashCode => enabled.hashCode;
 }
 
+///
+@_NameSource('spec')
+class ProfileFieldsCapability {
+  ProfileFieldsCapability({
+    this.allowed,
+    this.disallowed,
+    required this.enabled,
+  });
+
+  ProfileFieldsCapability.fromJson(Map<String, Object?> json)
+      : allowed = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['allowed']),
+        disallowed = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['disallowed']),
+        enabled = json['enabled'] as bool;
+  Map<String, Object?> toJson() {
+    final allowed = this.allowed;
+    final disallowed = this.disallowed;
+    return {
+      if (allowed != null) 'allowed': allowed.map((v) => v).toList(),
+      if (disallowed != null) 'disallowed': disallowed.map((v) => v).toList(),
+      'enabled': enabled,
+    };
+  }
+
+  /// If present, a list of profile fields that clients are allowed to create, modify or delete,
+  /// provided `enabled` is `true`; no other profile fields may be changed.
+  ///
+  /// If absent, clients may set all profile fields except those forbidden by the `disallowed`
+  /// list, where present.
+  ///
+  List<String>? allowed;
+
+  /// This property has no meaning if `allowed` is also specified.
+  ///
+  /// Otherwise, if present, a list of profile fields that clients are _not_ allowed to create, modify or delete.
+  /// Provided `enabled` is `true`, clients MAY assume that they can set any profile field which is not
+  /// included in this list.
+  ///
+  List<String>? disallowed;
+
+  /// `true` if the user can create, update or delete any profile fields, `false` otherwise.
+  bool enabled;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProfileFieldsCapability &&
+          other.runtimeType == runtimeType &&
+          other.allowed == allowed &&
+          other.disallowed == disallowed &&
+          other.enabled == enabled);
+
+  @dart.override
+  int get hashCode => Object.hash(allowed, disallowed, enabled);
+}
+
 /// The stability of the room version.
 @_NameSource('rule override generated')
 enum RoomVersionAvailable {
@@ -1458,6 +2413,7 @@ class Capabilities {
     this.m3pidChanges,
     this.mChangePassword,
     this.mGetLoginToken,
+    this.mProfileFields,
     this.mRoomVersions,
     this.mSetAvatarUrl,
     this.mSetDisplayname,
@@ -1474,6 +2430,9 @@ class Capabilities {
         mGetLoginToken = ((v) => v != null
             ? BooleanCapability.fromJson(v as Map<String, Object?>)
             : null)(json['m.get_login_token']),
+        mProfileFields = ((v) => v != null
+            ? ProfileFieldsCapability.fromJson(v as Map<String, Object?>)
+            : null)(json['m.profile_fields']),
         mRoomVersions = ((v) => v != null
             ? RoomVersionsCapability.fromJson(v as Map<String, Object?>)
             : null)(json['m.room_versions']),
@@ -1490,6 +2449,7 @@ class Capabilities {
                   'm.3pid_changes',
                   'm.change_password',
                   'm.get_login_token',
+                  'm.profile_fields',
                   'm.room_versions',
                   'm.set_avatar_url',
                   'm.set_displayname',
@@ -1501,6 +2461,7 @@ class Capabilities {
     final m3pidChanges = this.m3pidChanges;
     final mChangePassword = this.mChangePassword;
     final mGetLoginToken = this.mGetLoginToken;
+    final mProfileFields = this.mProfileFields;
     final mRoomVersions = this.mRoomVersions;
     final mSetAvatarUrl = this.mSetAvatarUrl;
     final mSetDisplayname = this.mSetDisplayname;
@@ -1510,6 +2471,7 @@ class Capabilities {
       if (mChangePassword != null)
         'm.change_password': mChangePassword.toJson(),
       if (mGetLoginToken != null) 'm.get_login_token': mGetLoginToken.toJson(),
+      if (mProfileFields != null) 'm.profile_fields': mProfileFields.toJson(),
       if (mRoomVersions != null) 'm.room_versions': mRoomVersions.toJson(),
       if (mSetAvatarUrl != null) 'm.set_avatar_url': mSetAvatarUrl.toJson(),
       if (mSetDisplayname != null)
@@ -1526,13 +2488,28 @@ class Capabilities {
   /// Capability to indicate if the user can generate tokens to log further clients into their account.
   BooleanCapability? mGetLoginToken;
 
+  /// Capability to indicate if the user can set or modify extended profile fields via [`PUT /_matrix/client/v3/profile/{userId}/{keyName}`](https://spec.matrix.org/unstable/client-server-api/#put_matrixclientv3profileuseridkeyname). If absent, clients SHOULD assume custom profile fields are supported, provided the homeserver advertises a specification version that includes `m.profile_fields` in the [`/versions`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientversions) response.
+  ProfileFieldsCapability? mProfileFields;
+
   /// The room versions the server supports.
   RoomVersionsCapability? mRoomVersions;
 
-  /// Capability to indicate if the user can change their avatar.
+  /// **Deprecated:** Capability to indicate if the user can change their avatar.
+  /// Refer to `m.profile_fields` for extended profile management.
+  ///
+  /// For backwards compatibility, servers that directly or indirectly include the
+  /// `avatar_url` profile field in the `m.profile_fields` capability MUST also
+  /// set this capability accordingly.
+  ///
   BooleanCapability? mSetAvatarUrl;
 
-  /// Capability to indicate if the user can change their display name.
+  /// **Deprecated:** Capability to indicate if the user can change their display name.
+  /// Refer to `m.profile_fields` for extended profile management.
+  ///
+  /// For backwards compatibility, servers that directly or indirectly include the
+  /// `displayname` profile field in the `m.profile_fields` capability MUST also
+  /// set this capability accordingly.
+  ///
   BooleanCapability? mSetDisplayname;
 
   Map<String, Object?> additionalProperties;
@@ -1545,6 +2522,7 @@ class Capabilities {
           other.m3pidChanges == m3pidChanges &&
           other.mChangePassword == mChangePassword &&
           other.mGetLoginToken == mGetLoginToken &&
+          other.mProfileFields == mProfileFields &&
           other.mRoomVersions == mRoomVersions &&
           other.mSetAvatarUrl == mSetAvatarUrl &&
           other.mSetDisplayname == mSetDisplayname);
@@ -1554,6 +2532,7 @@ class Capabilities {
         m3pidChanges,
         mChangePassword,
         mGetLoginToken,
+        mProfileFields,
         mRoomVersions,
         mSetAvatarUrl,
         mSetDisplayname,
@@ -2516,19 +3495,35 @@ class ProfileInformation {
   ProfileInformation({
     this.avatarUrl,
     this.displayname,
+    this.mTz,
+    this.additionalProperties = const {},
   });
 
   ProfileInformation.fromJson(Map<String, Object?> json)
-      : avatarUrl = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+      : avatarUrl = ((v) => v != null
+            ? ((v as String).startsWith('mxc://')
+                ? Uri.parse(v)
+                : throw Exception('Uri not an mxc URI'))
+            : null)(json['avatar_url']),
         displayname =
-            ((v) => v != null ? v as String : null)(json['displayname']);
+            ((v) => v != null ? v as String : null)(json['displayname']),
+        mTz = ((v) => v != null ? v as String : null)(json['m.tz']),
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where(
+                (e) => !['avatar_url', 'displayname', 'm.tz'].contains(e.key),
+              )
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final displayname = this.displayname;
+    final mTz = this.mTz;
     return {
+      ...additionalProperties,
       if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
       if (displayname != null) 'displayname': displayname,
+      if (mTz != null) 'm.tz': mTz,
     };
   }
 
@@ -2538,19 +3533,25 @@ class ProfileInformation {
   /// The user's display name if they have set one, otherwise not present.
   String? displayname;
 
+  /// The user's time zone.
+  String? mTz;
+
+  Map<String, Object?> additionalProperties;
+
   @dart.override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ProfileInformation &&
           other.runtimeType == runtimeType &&
           other.avatarUrl == avatarUrl &&
-          other.displayname == displayname);
+          other.displayname == displayname &&
+          other.mTz == mTz);
 
   @dart.override
-  int get hashCode => Object.hash(avatarUrl, displayname);
+  int get hashCode => Object.hash(avatarUrl, displayname, mTz);
 }
 
-/// A list of the rooms on the server.
+/// A list of the published rooms on the server.
 @_NameSource('generated')
 class GetPublicRoomsResponse {
   GetPublicRoomsResponse({
@@ -2562,7 +3563,7 @@ class GetPublicRoomsResponse {
 
   GetPublicRoomsResponse.fromJson(Map<String, Object?> json)
       : chunk = (json['chunk'] as List)
-            .map((v) => PublicRoomsChunk.fromJson(v as Map<String, Object?>))
+            .map((v) => PublishedRoomsChunk.fromJson(v as Map<String, Object?>))
             .toList(),
         nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
         prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
@@ -2581,8 +3582,8 @@ class GetPublicRoomsResponse {
     };
   }
 
-  /// A paginated chunk of public rooms.
-  List<PublicRoomsChunk> chunk;
+  /// A paginated chunk of published rooms.
+  List<PublishedRoomsChunk> chunk;
 
   /// A pagination token for the response. The absence of this token
   /// means there are no more results to fetch and the client should
@@ -2594,7 +3595,7 @@ class GetPublicRoomsResponse {
   /// batch, i.e. this is the first batch.
   String? prevBatch;
 
-  /// An estimate on the total number of public rooms, if the
+  /// An estimate on the total number of published rooms, if the
   /// server has an estimate.
   int? totalRoomCountEstimate;
 
@@ -2660,7 +3661,7 @@ class PublicRoomQueryFilter {
   int get hashCode => Object.hash(genericSearchTerm, roomTypes);
 }
 
-/// A list of the rooms on the server.
+/// A list of the published rooms on the server.
 @_NameSource('generated')
 class QueryPublicRoomsResponse {
   QueryPublicRoomsResponse({
@@ -2672,7 +3673,7 @@ class QueryPublicRoomsResponse {
 
   QueryPublicRoomsResponse.fromJson(Map<String, Object?> json)
       : chunk = (json['chunk'] as List)
-            .map((v) => PublicRoomsChunk.fromJson(v as Map<String, Object?>))
+            .map((v) => PublishedRoomsChunk.fromJson(v as Map<String, Object?>))
             .toList(),
         nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
         prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
@@ -2691,8 +3692,8 @@ class QueryPublicRoomsResponse {
     };
   }
 
-  /// A paginated chunk of public rooms.
-  List<PublicRoomsChunk> chunk;
+  /// A paginated chunk of published rooms.
+  List<PublishedRoomsChunk> chunk;
 
   /// A pagination token for the response. The absence of this token
   /// means there are no more results to fetch and the client should
@@ -2704,7 +3705,7 @@ class QueryPublicRoomsResponse {
   /// batch, i.e. this is the first batch.
   String? prevBatch;
 
-  /// An estimate on the total number of public rooms, if the
+  /// An estimate on the total number of published rooms, if the
   /// server has an estimate.
   int? totalRoomCountEstimate;
 
@@ -3813,19 +4814,6 @@ class RoomMember {
   int get hashCode => Object.hash(avatarUrl, displayName);
 }
 
-///
-@_NameSource('(generated, rule override generated)')
-enum Membership {
-  ban('ban'),
-  invite('invite'),
-  join('join'),
-  knock('knock'),
-  leave('leave');
-
-  final String name;
-  const Membership(this.name);
-}
-
 /// A list of messages with a new token to request more.
 @_NameSource('generated')
 class GetRoomEventsResponse {
@@ -3914,6 +4902,16 @@ enum ReceiptType {
 
   final String name;
   const ReceiptType(this.name);
+}
+
+///
+@_NameSource('generated')
+enum Format {
+  content('content'),
+  event('event');
+
+  final String name;
+  const Format(this.name);
 }
 
 ///
@@ -5238,22 +6236,16 @@ class Instances$2 implements ProtocolInstance, Instances$1 {
 @_NameSource('generated')
 class GetProtocolMetadataResponse$1 {
   GetProtocolMetadataResponse$1({
-    this.instances,
+    required this.instances,
   });
 
   GetProtocolMetadataResponse$1.fromJson(Map<String, Object?> json)
-      : instances = ((v) => v != null
-            ? (v as List)
-                .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
-                .toList()
-            : null)(json['instances']);
-  Map<String, Object?> toJson() {
-    final instances = this.instances;
-    return {
-      if (instances != null)
+      : instances = (json['instances'] as List)
+            .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+            .toList();
+  Map<String, Object?> toJson() => {
         'instances': instances.map((v) => v.toJson()).toList(),
-    };
-  }
+      };
 
   /// A list of objects representing independent instances of configuration.
   /// For example, multiple networks on IRC if multiple are provided by the
@@ -5263,7 +6255,7 @@ class GetProtocolMetadataResponse$1 {
   /// [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
   /// to include an `instance_id` to serve as a unique identifier for each
   /// instance on the homeserver.
-  List<Instances$2>? instances;
+  List<Instances$2> instances;
 
   @dart.override
   bool operator ==(Object other) =>
@@ -5285,7 +6277,7 @@ class GetProtocolMetadataResponse$2
     required this.icon,
     required this.locationFields,
     required this.userFields,
-    this.instances,
+    required this.instances,
   });
 
   GetProtocolMetadataResponse$2.fromJson(Map<String, Object?> json)
@@ -5297,23 +6289,17 @@ class GetProtocolMetadataResponse$2
             (json['location_fields'] as List).map((v) => v as String).toList(),
         userFields =
             (json['user_fields'] as List).map((v) => v as String).toList(),
-        instances = ((v) => v != null
-            ? (v as List)
-                .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
-                .toList()
-            : null)(json['instances']);
+        instances = (json['instances'] as List)
+            .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+            .toList();
   @override
-  Map<String, Object?> toJson() {
-    final instances = this.instances;
-    return {
-      'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
-      'icon': icon,
-      'location_fields': locationFields.map((v) => v).toList(),
-      'user_fields': userFields.map((v) => v).toList(),
-      if (instances != null)
+  Map<String, Object?> toJson() => {
+        'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
+        'icon': icon,
+        'location_fields': locationFields.map((v) => v).toList(),
+        'user_fields': userFields.map((v) => v).toList(),
         'instances': instances.map((v) => v.toJson()).toList(),
-    };
-  }
+      };
 
   /// The type definitions for the fields defined in `user_fields` and
   /// `location_fields`. Each entry in those arrays MUST have an entry here.
@@ -5350,7 +6336,7 @@ class GetProtocolMetadataResponse$2
   /// to include an `instance_id` to serve as a unique identifier for each
   /// instance on the homeserver.
   @override
-  List<Instances$2>? instances;
+  List<Instances$2> instances;
 
   @dart.override
   bool operator ==(Object other) =>
@@ -5372,22 +6358,16 @@ class GetProtocolMetadataResponse$2
 @_NameSource('generated')
 class GetProtocolsResponse$1 {
   GetProtocolsResponse$1({
-    this.instances,
+    required this.instances,
   });
 
   GetProtocolsResponse$1.fromJson(Map<String, Object?> json)
-      : instances = ((v) => v != null
-            ? (v as List)
-                .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
-                .toList()
-            : null)(json['instances']);
-  Map<String, Object?> toJson() {
-    final instances = this.instances;
-    return {
-      if (instances != null)
+      : instances = (json['instances'] as List)
+            .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+            .toList();
+  Map<String, Object?> toJson() => {
         'instances': instances.map((v) => v.toJson()).toList(),
-    };
-  }
+      };
 
   /// A list of objects representing independent instances of configuration.
   /// For example, multiple networks on IRC if multiple are provided by the
@@ -5397,7 +6377,7 @@ class GetProtocolsResponse$1 {
   /// [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
   /// to include an `instance_id` to serve as a unique identifier for each
   /// instance on the homeserver.
-  List<Instances$2>? instances;
+  List<Instances$2> instances;
 
   @dart.override
   bool operator ==(Object other) =>
@@ -5418,7 +6398,7 @@ class GetProtocolsResponse$2 implements Protocol, GetProtocolsResponse$1 {
     required this.icon,
     required this.locationFields,
     required this.userFields,
-    this.instances,
+    required this.instances,
   });
 
   GetProtocolsResponse$2.fromJson(Map<String, Object?> json)
@@ -5430,23 +6410,17 @@ class GetProtocolsResponse$2 implements Protocol, GetProtocolsResponse$1 {
             (json['location_fields'] as List).map((v) => v as String).toList(),
         userFields =
             (json['user_fields'] as List).map((v) => v as String).toList(),
-        instances = ((v) => v != null
-            ? (v as List)
-                .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
-                .toList()
-            : null)(json['instances']);
+        instances = (json['instances'] as List)
+            .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+            .toList();
   @override
-  Map<String, Object?> toJson() {
-    final instances = this.instances;
-    return {
-      'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
-      'icon': icon,
-      'location_fields': locationFields.map((v) => v).toList(),
-      'user_fields': userFields.map((v) => v).toList(),
-      if (instances != null)
+  Map<String, Object?> toJson() => {
+        'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
+        'icon': icon,
+        'location_fields': locationFields.map((v) => v).toList(),
+        'user_fields': userFields.map((v) => v).toList(),
         'instances': instances.map((v) => v.toJson()).toList(),
-    };
-  }
+      };
 
   /// The type definitions for the fields defined in `user_fields` and
   /// `location_fields`. Each entry in those arrays MUST have an entry here.
@@ -5483,7 +6457,7 @@ class GetProtocolsResponse$2 implements Protocol, GetProtocolsResponse$1 {
   /// to include an `instance_id` to serve as a unique identifier for each
   /// instance on the homeserver.
   @override
-  List<Instances$2>? instances;
+  List<Instances$2> instances;
 
   @dart.override
   bool operator ==(Object other) =>
