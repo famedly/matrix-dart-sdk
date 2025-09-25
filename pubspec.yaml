@@ -14,7 +14,6 @@ dependencies:
   blurhash_dart: ^1.1.0
   canonical_json: ^1.1.0
   collection: ^1.15.0
-  crypto: ^3.0.0
   html: ^0.15.0
   html_unescape: ^2.0.0
   http: ">=0.13.0 <2.0.0"

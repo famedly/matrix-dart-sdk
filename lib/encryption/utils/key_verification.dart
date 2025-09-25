@@ -21,7 +21,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
-import 'package:crypto/crypto.dart' as crypto;
 import 'package:typed_data/typed_data.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
@@ -1559,8 +1558,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   Future<String> _makeCommitment(String pubKey, String canonicalJson) async {
     if (hash == 'sha256') {
       final bytes = utf8.encoder.convert(pubKey + canonicalJson);
-      final digest = crypto.sha256.convert(bytes);
-      return encodeBase64Unpadded(digest.bytes);
+      final digest = await uc.sha256(bytes);
+      return encodeBase64Unpadded(digest);
     }
     throw Exception('Unknown hash method');
   }

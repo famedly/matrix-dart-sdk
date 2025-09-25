@@ -7,3 +7,5 @@ rm -rf dart-vodozemac
 cd ./rust
 cargo build
 cd ..
+
+dart pub run webcrypto:setup

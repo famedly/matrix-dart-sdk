@@ -23,7 +23,6 @@ import 'dart:typed_data';
 
 import 'package:base58check/base58.dart';
 import 'package:collection/collection.dart';
-import 'package:crypto/crypto.dart';
 
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
@@ -72,18 +71,19 @@ class SSSS {
     _cache.clear();
   }
 
-  static DerivedKeys deriveKeys(Uint8List key, String name) {
+  static Future<DerivedKeys> deriveKeys(Uint8List key, String name) async {
     final zerosalt = Uint8List(8);
-    final prk = Hmac(sha256, zerosalt).convert(key);
+    final prk = await uc.hmac(zerosalt, key);
     final b = Uint8List(1);
     b[0] = 1;
-    final aesKey = Hmac(sha256, prk.bytes).convert(utf8.encode(name) + b);
+    final aesKey =
+        await uc.hmac(prk, Uint8List.fromList(utf8.encode(name) + b));
     b[0] = 2;
     final hmacKey =
-        Hmac(sha256, prk.bytes).convert(aesKey.bytes + utf8.encode(name) + b);
+        await uc.hmac(prk, Uint8List.fromList(aesKey + utf8.encode(name) + b));
     return DerivedKeys(
-      aesKey: Uint8List.fromList(aesKey.bytes),
-      hmacKey: Uint8List.fromList(hmacKey.bytes),
+      aesKey: aesKey,
+      hmacKey: hmacKey,
     );
   }
 
@@ -102,17 +102,17 @@ class SSSS {
     // we need to clear bit 63 of the IV
     iv[8] &= 0x7f;
 
-    final keys = deriveKeys(key, name);
+    final keys = await deriveKeys(key, name);
 
     final plain = Uint8List.fromList(utf8.encode(data));
     final ciphertext = await uc.aesCtr(plain, keys.aesKey, iv);
 
-    final hmac = Hmac(sha256, keys.hmacKey).convert(ciphertext);
+    final hmac = await uc.hmac(keys.hmacKey, ciphertext);
 
     return EncryptedContent(
       iv: base64.encode(iv),
       ciphertext: base64.encode(ciphertext),
-      mac: base64.encode(hmac.bytes),
+      mac: base64.encode(hmac),
     );
   }
 
@@ -121,10 +121,10 @@ class SSSS {
     Uint8List key,
     String name,
   ) async {
-    final keys = deriveKeys(key, name);
+    final keys = await deriveKeys(key, name);
     final cipher = base64decodeUnpadded(data.ciphertext);
     final hmac = base64
-        .encode(Hmac(sha256, keys.hmacKey).convert(cipher).bytes)
+        .encode(await uc.hmac(keys.hmacKey, cipher))
         .replaceAll(RegExp(r'=+$'), '');
     if (hmac != data.mac.replaceAll(RegExp(r'=+$'), '')) {
       throw Exception('Bad MAC');

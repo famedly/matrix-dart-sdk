@@ -43,7 +43,7 @@ FutureOr<Uint8List> pbkdf2(
   Uint8List salt,
   int iterations,
   int bits, {
-  webcrypto.Hash hash = webcrypto.Hash.sha256,
+  webcrypto.Hash hash = webcrypto.Hash.sha512,
 }) async {
   final key = await webcrypto.Pbkdf2SecretKey.importRawKey(passphrase);
   return await key.deriveBits(
@@ -52,6 +52,15 @@ FutureOr<Uint8List> pbkdf2(
     salt,
     iterations,
   );
+}
+
+Future<Uint8List> hmac(
+  Uint8List key,
+  Uint8List input, {
+  webcrypto.Hash hash = webcrypto.Hash.sha256,
+}) async {
+  final hmacSecretKey = await webcrypto.HmacSecretKey.importRawKey(key, hash);
+  return await hmacSecretKey.signBytes(input);
 }
 
 Future<Uint8List> sha256(Uint8List data) =>
