@@ -31,8 +31,8 @@ import 'package:matrix/src/utils/copy_map.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
-import 'package:matrix/src/database/indexeddb_box.dart'
-    if (dart.library.io) 'package:matrix/src/database/sqflite_box.dart';
+import 'package:matrix/src/database/sqflite_box.dart'
+    if (dart.library.js_interop) 'package:matrix/src/database/indexeddb_box.dart';
 
 import 'package:matrix/src/database/database_file_storage_stub.dart'
     if (dart.library.io) 'package:matrix/src/database/database_file_storage_io.dart';
@@ -167,8 +167,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   Database? database;
 
-  /// Custom IdbFactory used to create the indexedDB. On IO platforms it would
-  /// lead to an error to import "dart:indexed_db" so this is dynamically
+  /// Custom [IDBFactory] used to create the indexedDB. On IO platforms it would
+  /// lead to an error to import "package:web/web.dart" so this is dynamically
   /// typed.
   final dynamic idbFactory;
 

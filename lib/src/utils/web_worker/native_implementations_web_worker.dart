@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:html';
+import 'dart:js_interop';
 import 'dart:math';
 import 'dart:typed_data';
+
+import 'package:web/web.dart';
 
 import 'package:matrix/matrix.dart';
 
@@ -23,8 +25,8 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     Uri href, {
     this.timeout = const Duration(seconds: 30),
     this.onStackTrace = defaultStackTraceHandler,
-  }) : worker = Worker(href.toString()) {
-    worker.onMessage.listen(_handleIncomingMessage);
+  }) : worker = Worker(href.toString().toJS) {
+    worker.onmessage = _handleIncomingMessage.toJS;
   }
 
   Future<T> operation<T, U>(WebWorkerOperations name, U argument) async {
@@ -32,27 +34,26 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     final completer = Completer<T>();
     _completers[label] = completer;
     final message = WebWorkerData(label, name, argument);
-    worker.postMessage(message.toJson());
+    worker.postMessage(message.toJson().jsify());
 
     return completer.future.timeout(timeout);
   }
 
-  Future<void> _handleIncomingMessage(MessageEvent event) async {
-    final data = event.data;
+  void _handleIncomingMessage(MessageEvent event) async {
+    final data = event.data.dartify() as LinkedHashMap;
     // don't forget handling errors of our second thread...
     if (data['label'] == 'stacktrace') {
-      final origin = event.data['origin'];
+      final origin = data['origin'];
       final completer = _completers[origin];
 
-      final error = event.data['error']!;
+      final error = data['error']!;
 
-      final stackTrace =
-          await onStackTrace.call(event.data['stacktrace'] as String);
+      final stackTrace = await onStackTrace.call(data['stacktrace'] as String);
       completer?.completeError(
         WebWorkerError(error: error, stackTrace: stackTrace),
       );
     } else {
-      final response = WebWorkerData.fromJson(event.data);
+      final response = WebWorkerData.fromJson(data);
       _completers[response.label]!.complete(response.data);
     }
   }
