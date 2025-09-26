@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export 'native.dart' if (dart.library.js) 'js.dart';
+export 'native.dart' if (dart.library.js_interop) 'js.dart';
 
 import 'dart:math';
 import 'dart:typed_data';

@@ -47,7 +47,7 @@ class WrappedMediaStream {
 
   Future<void> dispose() async {
     // AOT it
-    const isWeb = bool.fromEnvironment('dart.library.js_util');
+    const isWeb = bool.fromEnvironment('dart.library.js_interop');
 
     // libwebrtc does not provide a way to clone MediaStreams. So stopping the
     // local stream here would break calls with all other participants if anyone

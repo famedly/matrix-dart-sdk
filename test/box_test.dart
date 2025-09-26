@@ -1,8 +1,8 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/src/database/indexeddb_box.dart'
-    if (dart.library.io) 'package:matrix/src/database/sqflite_box.dart';
+import 'package:matrix/src/database/sqflite_box.dart'
+    if (dart.library.js_interop) 'package:matrix/src/database/indexeddb_box.dart';
 
 void main() {
   group('Box tests', () {
@@ -11,7 +11,7 @@ void main() {
     const data = {'name': 'Fluffy', 'age': 2};
     const data2 = {'name': 'Loki', 'age': 4};
     Database? db;
-    const isWeb = bool.fromEnvironment('dart.library.js_util');
+    const isWeb = bool.fromEnvironment('dart.library.js_interop');
     setUp(() async {
       if (!isWeb) {
         db = await databaseFactoryFfi.openDatabase(':memory:');

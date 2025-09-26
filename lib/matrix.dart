@@ -84,7 +84,7 @@ export 'msc_extensions/extension_timeline_export/timeline_export.dart';
 export 'msc_extensions/msc_4140_delayed_events/api.dart';
 
 export 'src/utils/web_worker/web_worker_stub.dart'
-    if (dart.library.html) 'src/utils/web_worker/web_worker.dart';
+    if (dart.library.js_interop) 'src/utils/web_worker/web_worker.dart';
 
 export 'src/utils/web_worker/native_implementations_web_worker_stub.dart'
-    if (dart.library.html) 'src/utils/web_worker/native_implementations_web_worker.dart';
+    if (dart.library.js_interop) 'src/utils/web_worker/native_implementations_web_worker.dart';

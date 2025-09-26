@@ -748,9 +748,10 @@ class KeyVerification {
       // no need to request cache, we already have it
       return;
     }
-    // ignore: unawaited_futures
-    encryption.ssss
-        .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList());
+    unawaited(
+      encryption.ssss
+          .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList()),
+    );
     if (requestInterval.length <= i) {
       return;
     }
