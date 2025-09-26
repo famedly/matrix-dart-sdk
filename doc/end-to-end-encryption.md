@@ -6,12 +6,6 @@ For Flutter you can use [flutter_vodozemac](https://pub.dev/packages/flutter_vod
 flutter pub add flutter_vodozemac
 ```
 
-You also need [flutter_openssl_crypto](https://pub.dev/packages/flutter_openssl_crypto).
-
-```sh
-flutter pub add flutter_openssl_crypto
-```
-
 Now before you create your `Client`, init vodozemac:
 
 ```dart
