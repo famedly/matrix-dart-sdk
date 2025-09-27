@@ -96,7 +96,8 @@ extension FamedlyCallMemberEventsExtension on Room {
   }
 
   /// passing no `CallMembership` removes it from the state event.
-  Future<void> updateFamedlyCallMemberStateEvent(
+  /// Returns the event ID of the new membership state event.
+  Future<String?> updateFamedlyCallMemberStateEvent(
     CallMembership callMembership,
   ) async {
     final ownMemberships = getCallMembershipsForUser(
@@ -118,7 +119,7 @@ extension FamedlyCallMemberEventsExtension on Room {
       'memberships': List.from(ownMemberships.map((e) => e.toJson())),
     };
 
-    await setFamedlyCallMemberEvent(
+    return await setFamedlyCallMemberEvent(
       newContent,
       callMembership.voip,
       callMembership.callId,
@@ -168,7 +169,7 @@ extension FamedlyCallMemberEventsExtension on Room {
     }
   }
 
-  Future<void> setFamedlyCallMemberEvent(
+  Future<String?> setFamedlyCallMemberEvent(
     Map<String, List> newContent,
     VoIP voip,
     String groupCallId, {
@@ -259,7 +260,7 @@ extension FamedlyCallMemberEventsExtension on Room {
         );
       }
 
-      await client.setRoomStateWithKey(
+      return await client.setRoomStateWithKey(
         id,
         EventTypes.GroupCallMember,
         stateKey,

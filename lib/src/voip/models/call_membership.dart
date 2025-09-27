@@ -166,4 +166,9 @@ class CallMembership {
       DateTime.now()
           .subtract(voip.timeouts!.expireTsBumpDuration)
           .millisecondsSinceEpoch;
+
+  @override
+  String toString() {
+    return 'CallMembership(userId: $userId, callId: $callId, application: $application, scope: $scope, backend: $backend, deviceId: $deviceId, eventId: $eventId, expiresTs: $expiresTs, membershipId: $membershipId, feeds: $feeds, voip: $voip, roomId: $roomId)';
+  }
 }

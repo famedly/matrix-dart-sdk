@@ -179,7 +179,7 @@ class GroupCallSession {
       );
     }
 
-    await room.updateFamedlyCallMemberStateEvent(
+    final newEventId = await room.updateFamedlyCallMemberStateEvent(
       CallMembership(
         userId: client.userID!,
         roomId: room.id,
@@ -198,8 +198,11 @@ class GroupCallSession {
     );
 
     // Copy permanent reactions to the new member event
-    if (permanentReactions.isNotEmpty) {
-      await _copyPermanentReactionsToNewEvent(permanentReactions);
+    if (permanentReactions.isNotEmpty && newEventId != null) {
+      await _copyPermanentReactionsToNewEvent(
+        permanentReactions,
+        newEventId,
+      );
     }
 
     if (_resendMemberStateEventTimer != null) {
@@ -478,31 +481,11 @@ class GroupCallSession {
   /// Copy permanent reactions to the new member event
   ///
   /// [permanentReactions] - List of permanent reaction events to copy
+  /// [newEventId] - The event ID of the new membership event
   Future<void> _copyPermanentReactionsToNewEvent(
     List<MatrixEvent> permanentReactions,
+    String newEventId,
   ) async {
-    // Get the new member event ID
-    final updatedMemberships = room.getCallMembershipsForUser(
-      client.userID!,
-      client.deviceID!,
-      voip,
-    );
-    final updatedMembership = updatedMemberships.firstWhereOrNull(
-      (m) =>
-          m.callId == groupCallId &&
-          m.application == application &&
-          m.deviceId == client.deviceID! &&
-          m.scope == scope &&
-          m.roomId == room.id,
-    );
-
-    if (updatedMembership?.eventId == null) {
-      Logs().w(
-        '[VOIP] Cannot copy permanent reactions: new member event ID not found',
-      );
-      return;
-    }
-
     // Re-send each permanent reaction with the new event ID
     for (final reactionEvent in permanentReactions) {
       try {
@@ -523,7 +506,7 @@ class GroupCallSession {
           callId: groupCallId,
           deviceId: client.deviceID!,
           relType: RelationshipTypes.reference,
-          eventId: updatedMembership!.eventId!,
+          eventId: newEventId,
         );
 
         // Send the permanent reaction with new event ID
@@ -536,7 +519,7 @@ class GroupCallSession {
         );
 
         Logs().d(
-          '[VOIP] Copied permanent reaction $reactionKey to new member event ${updatedMembership.eventId}',
+          '[VOIP] Copied permanent reaction $reactionKey to new member event $newEventId',
         );
       } catch (e, s) {
         Logs().e(
