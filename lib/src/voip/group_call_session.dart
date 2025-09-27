@@ -19,6 +19,8 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:collection/collection.dart';
+
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
@@ -151,7 +153,33 @@ class GroupCallSession {
   }
 
   Future<void> sendMemberStateEvent() async {
-    await room.updateFamedlyCallMemberStateEvent(
+    // Get current member event ID to preserve permanent reactions
+    final currentMemberships = room.getCallMembershipsForUser(
+      client.userID!,
+      client.deviceID!,
+      voip,
+    );
+
+    final currentMembership = currentMemberships.firstWhereOrNull(
+      (m) =>
+          m.callId == groupCallId &&
+          m.deviceId == client.deviceID! &&
+          m.application == application &&
+          m.scope == scope &&
+          m.roomId == room.id,
+    );
+
+    // Store permanent reactions from the current member event if it exists
+    List<MatrixEvent> permanentReactions = [];
+    final membershipExpired = currentMembership?.isExpired ?? false;
+
+    if (currentMembership?.eventId != null && !membershipExpired) {
+      permanentReactions = await _getPermanentReactionsForEvent(
+        currentMembership!.eventId!,
+      );
+    }
+
+    final newEventId = await room.updateFamedlyCallMemberStateEvent(
       CallMembership(
         userId: client.userID!,
         roomId: room.id,
@@ -168,6 +196,14 @@ class GroupCallSession {
         voip: voip,
       ),
     );
+
+    // Copy permanent reactions to the new member event
+    if (permanentReactions.isNotEmpty && newEventId != null) {
+      await _copyPermanentReactionsToNewEvent(
+        permanentReactions,
+        newEventId,
+      );
+    }
 
     if (_resendMemberStateEventTimer != null) {
       _resendMemberStateEventTimer!.cancel();
@@ -269,6 +305,229 @@ class GroupCallSession {
       }
 
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
+    }
+  }
+
+  /// Send a reaction event to the group call
+  ///
+  /// [emoji] - The reaction emoji (e.g., '🖐️' for hand raise)
+  /// [name] - The reaction name (e.g., 'hand raise')
+  /// [isEphemeral] - Whether the reaction is ephemeral (default: true)
+  ///
+  /// Returns the event ID of the sent reaction event
+  Future<String?> sendReactionEvent({
+    required String emoji,
+    bool isEphemeral = true,
+  }) async {
+    Logs().d('Group call reaction selected: $emoji');
+    final memberships =
+        room.getCallMembershipsForUser(client.userID!, client.deviceID!, voip);
+    final membership = memberships.firstWhereOrNull(
+      (m) =>
+          m.callId == groupCallId &&
+          m.deviceId == client.deviceID! &&
+          m.roomId == room.id &&
+          m.application == 'm.call' &&
+          m.scope == 'm.room',
+    );
+
+    if (membership == null) {
+      Logs().w(
+        'No matching membership found to send group call emoji reaction from ${client.userID!}',
+      );
+      return null;
+    }
+
+    final payload = ReactionPayload(
+      key: emoji,
+      isEphemeral: isEphemeral,
+      callId: groupCallId,
+      deviceId: client.deviceID!,
+      relType: RelationshipTypes.reference,
+      eventId: membership.eventId!,
+    );
+
+    // Send reaction as unencrypted event to avoid decryption issues
+    final txid = client.generateUniqueTransactionId();
+    return await client.sendMessage(
+      room.id,
+      EventTypes.GroupCallMemberReaction,
+      txid,
+      payload.toMap(),
+    );
+  }
+
+  /// Remove a reaction event from the group call
+  ///
+  /// [eventId] - The event ID of the reaction to remove
+  ///
+  /// Returns the event ID of the removed reaction event
+  Future<String?> removeReactionEvent({required String eventId}) async {
+    final originalEvent = await room.getEventById(eventId);
+    final deviceId = originalEvent?.content.tryGet<String>('device_id');
+
+    return await room.redactEvent(eventId, reason: deviceId);
+  }
+
+  /// Get all reactions of a specific type for all participants in the call
+  ///
+  /// [emoji] - The reaction emoji to filter by (e.g., '🖐️')
+  ///
+  /// Returns a list of [MatrixEvent] objects representing the reactions
+  Future<List<MatrixEvent>> getAllReactions({required String emoji}) async {
+    final reactions = <MatrixEvent>[];
+    final timeline = await room.getTimeline();
+
+    for (final participant in participants) {
+      if (participant.deviceId == null || participant.deviceId!.isEmpty) {
+        Logs().w(
+          'Cannot find device ID for ${participant.userId}',
+        );
+        continue;
+      }
+
+      final memberships = room.getCallMembershipsForUser(
+        participant.userId,
+        participant.deviceId ?? '',
+        voip,
+      );
+
+      final membershipsForCurrentGroupCall = memberships
+          .where(
+            (m) =>
+                m.callId == groupCallId &&
+                m.application == application &&
+                m.scope == scope &&
+                m.roomId == room.id,
+          )
+          .toList();
+
+      for (final membership in membershipsForCurrentGroupCall) {
+        if (membership.eventId == null) {
+          Logs().w(
+            'Cannot find membership event for ${participant.userId}',
+          );
+          continue;
+        }
+
+        final reactionEvents = timeline.aggregatedEvents[membership.eventId]
+                    ?[RelationshipTypes.reference]
+                ?.where(
+                  (event) => event.type == EventTypes.GroupCallMemberReaction,
+                )
+                .toList() ??
+            [];
+
+        final eventsToProcess = reactionEvents.isNotEmpty
+            ? reactionEvents
+            : (await client.getRelatingEventsWithRelTypeAndEventType(
+                room.id,
+                membership.eventId!,
+                RelationshipTypes.reference,
+                EventTypes.GroupCallMemberReaction,
+              ))
+                .chunk;
+
+        reactions.addAll(
+          eventsToProcess.where((event) => event.content['key'] == emoji),
+        );
+      }
+    }
+
+    return reactions;
+  }
+
+  /// Get all permanent reactions for a specific member event ID
+  ///
+  /// [eventId] - The member event ID to get reactions for
+  ///
+  /// Returns a list of [MatrixEvent] objects representing permanent reactions
+  Future<List<MatrixEvent>> _getPermanentReactionsForEvent(
+    String eventId,
+  ) async {
+    final permanentReactions = <MatrixEvent>[];
+
+    try {
+      final events = await client.getRelatingEventsWithRelTypeAndEventType(
+        room.id,
+        eventId,
+        RelationshipTypes.reference,
+        EventTypes.GroupCallMemberReaction,
+      );
+
+      for (final event in events.chunk) {
+        final content = event.content;
+        final isEphemeral = content['is_ephemeral'] as bool? ?? false;
+
+        // Only collect permanent reactions (non-ephemeral)
+        if (!isEphemeral) {
+          permanentReactions.add(event);
+          Logs().d(
+            '[VOIP] Found permanent reaction to preserve: ${content['key']} from ${event.senderId}',
+          );
+        }
+      }
+    } catch (e, s) {
+      Logs().e(
+        '[VOIP] Failed to get permanent reactions for event $eventId',
+        e,
+        s,
+      );
+    }
+
+    return permanentReactions;
+  }
+
+  /// Copy permanent reactions to the new member event
+  ///
+  /// [permanentReactions] - List of permanent reaction events to copy
+  /// [newEventId] - The event ID of the new membership event
+  Future<void> _copyPermanentReactionsToNewEvent(
+    List<MatrixEvent> permanentReactions,
+    String newEventId,
+  ) async {
+    // Re-send each permanent reaction with the new event ID
+    for (final reactionEvent in permanentReactions) {
+      try {
+        final content = reactionEvent.content;
+        final reactionKey = content['key'] as String?;
+
+        if (reactionKey == null) {
+          Logs().w(
+            '[VOIP] Skipping permanent reaction copy: missing reaction key',
+          );
+          continue;
+        }
+
+        // Build new reaction event with updated event ID
+        final payload = ReactionPayload(
+          key: reactionKey,
+          isEphemeral: false,
+          callId: groupCallId,
+          deviceId: client.deviceID!,
+          relType: RelationshipTypes.reference,
+          eventId: newEventId,
+        );
+
+        // Send the permanent reaction with new event ID
+        final txid = client.generateUniqueTransactionId();
+        await client.sendMessage(
+          room.id,
+          EventTypes.GroupCallMemberReaction,
+          txid,
+          payload.toMap(),
+        );
+
+        Logs().d(
+          '[VOIP] Copied permanent reaction $reactionKey to new member event $newEventId',
+        );
+      } catch (e, s) {
+        Logs().e(
+          '[VOIP] Failed to copy permanent reaction',
+          e,
+          s,
+        );
+      }
     }
   }
 }
