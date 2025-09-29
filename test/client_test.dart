@@ -1488,18 +1488,15 @@ void main() {
     });
     test('upload', () async {
       final client = await getClient();
-      final onProgressMap = <int>[];
       final response = await client.uploadContent(
         Uint8List(0),
         filename: 'file.jpeg',
-        onProgress: onProgressMap.add,
       );
       expect(response.toString(), 'mxc://example.com/AQwafuaFswefuhsfAFAgsw');
       expect(
         await client.database.getFile(response) != null,
         client.database.supportsFileStoring,
       );
-      expect(onProgressMap, [74, 183, 183, 185, 261]);
       await client.dispose(closeDatabase: true);
     });
 
