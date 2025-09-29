@@ -960,14 +960,12 @@ class Room {
           uploadFile.bytes,
           filename: uploadFile.name,
           contentType: uploadFile.mimeType,
-          onProgress: onUploadProgress,
         );
         thumbnailUploadResp = uploadThumbnail != null
             ? await client.uploadContent(
                 uploadThumbnail.bytes,
                 filename: uploadThumbnail.name,
                 contentType: uploadThumbnail.mimeType,
-                onProgress: onThumbnailUploadProgress,
               )
             : null;
       } on MatrixException catch (_) {
@@ -2120,7 +2118,6 @@ class Room {
         : await client.uploadContent(
             file.bytes,
             filename: file.name,
-            onProgress: onUploadProgress,
           );
     return await client.setRoomStateWithKey(
       id,
