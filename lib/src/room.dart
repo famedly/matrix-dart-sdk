@@ -838,6 +838,11 @@ class Room {
     Map<String, dynamic>? extraContent,
     String? threadRootEventId,
     String? threadLastEventId,
+
+    /// Callback which gets triggered on progress containing the amount of
+    /// uploaded bytes.
+    void Function(int)? onUploadProgress,
+    void Function(int)? onThumbnailUploadProgress,
   }) async {
     txid ??= client.generateUniqueTransactionId();
     sendingFilePlaceholders[txid] = file;
@@ -955,12 +960,14 @@ class Room {
           uploadFile.bytes,
           filename: uploadFile.name,
           contentType: uploadFile.mimeType,
+          onProgress: onUploadProgress,
         );
         thumbnailUploadResp = uploadThumbnail != null
             ? await client.uploadContent(
                 uploadThumbnail.bytes,
                 filename: uploadThumbnail.name,
                 contentType: uploadThumbnail.mimeType,
+                onProgress: onThumbnailUploadProgress,
               )
             : null;
       } on MatrixException catch (_) {
@@ -2104,10 +2111,17 @@ class Room {
 
   /// Uploads a new avatar for this room. Returns the event ID of the new
   /// m.room.avatar event. Insert null to remove the current avatar.
-  Future<String> setAvatar(MatrixFile? file) async {
+  Future<String> setAvatar(
+    MatrixFile? file, {
+    void Function(int)? onUploadProgress,
+  }) async {
     final uploadResp = file == null
         ? null
-        : await client.uploadContent(file.bytes, filename: file.name);
+        : await client.uploadContent(
+            file.bytes,
+            filename: file.name,
+            onProgress: onUploadProgress,
+          );
     return await client.setRoomStateWithKey(
       id,
       EventTypes.RoomAvatar,

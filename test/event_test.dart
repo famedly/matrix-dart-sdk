@@ -2485,6 +2485,30 @@ void main() async {
         await room.client.dispose(closeDatabase: true);
       },
     );
+
+    test('downloadAndDecryptAttachment from server', () async {
+      final client = await getClient();
+      final event = Event(
+        room: client.rooms.first,
+        eventId: 'test',
+        originServerTs: DateTime.now(),
+        senderId: client.userID!,
+        content: {
+          'body': 'ascii.txt',
+          'filename': 'ascii.txt',
+          'info': {'mimetype': 'application/msword', 'size': 6},
+          'msgtype': 'm.file',
+          'url': 'mxc://example.org/abcd1234ascii',
+        },
+        type: EventTypes.Message,
+      );
+      final progressList = <int>[];
+      await event.downloadAndDecryptAttachment(
+        onDownloadProgress: progressList.add,
+      );
+      await client.dispose();
+      expect(progressList, [112]);
+    });
     test('downloadAndDecryptAttachment store', tags: 'olm', () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       var serverHits = 0;
