@@ -3771,10 +3771,30 @@ class Client extends MatrixApi {
 
   /// Ignore another user. This will clear the local cached messages to
   /// hide all previous messages from this user.
-  Future<void> ignoreUser(String userId) async {
+  Future<void> ignoreUser(
+    String userId, {
+    /// Whether to also decline all invites and leave DM rooms with this user.
+    bool leaveRooms = true,
+  }) async {
     if (!userId.isValidMatrixId) {
       throw Exception('$userId is not a valid mxid!');
     }
+
+    if (leaveRooms) {
+      for (final room in rooms) {
+        final isInviteFromUser = room.membership == Membership.invite &&
+            room.getState(EventTypes.RoomMember, userID!)?.senderId == userId;
+
+        if (room.directChatMatrixID == userId || isInviteFromUser) {
+          try {
+            await room.leave();
+          } catch (e, s) {
+            Logs().w('Unable to leave room with blocked user $userId', e, s);
+          }
+        }
+      }
+    }
+
     await setAccountData(userID!, 'm.ignored_user_list', {
       'ignored_users': Map.fromEntries(
         (ignoredUsers..add(userId)).map((key) => MapEntry(key, {})),
