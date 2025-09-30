@@ -34,6 +34,12 @@ class Api {
   /// suitably namespaced for each application and reduces the risk of
   /// clashes.
   ///
+  /// **NOTE:**
+  /// This endpoint should be accessed with the hostname of the homeserver's
+  /// [server name](https://spec.matrix.org/unstable/appendices/#server-name) by making a
+  /// GET request to `https://hostname/.well-known/matrix/client`.
+  ///
+  ///
   /// Note that this endpoint is not necessarily handled by the homeserver,
   /// but by another webserver, to be used for discovering the homeserver URL.
   Future<DiscoveryInformation> getWellknown() async {
@@ -49,9 +55,12 @@ class Api {
 
   /// Gets server admin contact and support page of the domain.
   ///
-  /// Like the [well-known discovery URI](https://spec.matrix.org/unstable/client-server-api/#well-known-uri),
-  /// this should be accessed with the hostname of the homeserver by making a
+  /// **NOTE:**
+  /// Like the [well-known discovery URI](https://spec.matrix.org/unstable/client-server-api/#well-known-uris),
+  /// this endpoint should be accessed with the hostname of the homeserver's
+  /// [server name](https://spec.matrix.org/unstable/appendices/#server-name) by making a
   /// GET request to `https://hostname/.well-known/matrix/support`.
+  ///
   ///
   /// Note that this endpoint is not necessarily handled by the homeserver.
   /// It may be served by another webserver, used for discovering support
@@ -112,6 +121,36 @@ class Api {
     return json['duration_ms'] as int;
   }
 
+  /// Gets the OAuth 2.0 authorization server metadata, as defined in
+  /// [RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414), including the
+  /// endpoint URLs and the supported parameters that can be used by the
+  /// clients.
+  ///
+  /// This endpoint definition includes only the fields that are meaningful in
+  /// the context of the Matrix specification. The full list of possible
+  /// fields is available in the [OAuth Authorization Server Metadata
+  /// registry](https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#authorization-server-metadata),
+  /// and normative definitions of them are available in their respective
+  /// RFCs.
+  ///
+  /// **NOTE:**
+  /// The authorization server metadata is relatively large and may change
+  /// over time. Clients should:
+  ///
+  /// - Cache the metadata appropriately based on HTTP caching headers
+  /// - Refetch the metadata if it is stale
+  ///
+  Future<GetAuthMetadataResponse> getAuthMetadata() async {
+    final requestUri = Uri(path: '_matrix/client/v1/auth_metadata');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetAuthMetadataResponse.fromJson(json as Map<String, Object?>);
+  }
+
   /// Optional endpoint - the server is not required to implement this endpoint if it does not
   /// intend to use or support this functionality.
   ///
@@ -169,12 +208,12 @@ class Api {
   /// All values are intentionally left optional. Clients SHOULD follow
   /// the advice given in the field description when the field is not available.
   ///
-  /// {{% boxes/note %}}
+  /// **NOTE:**
   /// Both clients and server administrators should be aware that proxies
   /// between the client and the server may affect the apparent behaviour of content
   /// repository APIs, for example, proxies may enforce a lower upload size limit
   /// than is advertised by the server on this endpoint.
-  /// {{% /boxes/note %}}
+  ///
   Future<MediaConfig> getConfigAuthed() async {
     final requestUri = Uri(path: '_matrix/client/v1/media/config');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
@@ -187,11 +226,11 @@ class Api {
     return MediaConfig.fromJson(json as Map<String, Object?>);
   }
 
-  /// {{% boxes/note %}}
+  /// **NOTE:**
   /// Clients SHOULD NOT generate or use URLs which supply the access token in
   /// the query string. These URLs may be copied by users verbatim and provided
   /// in a chat message to another user, disclosing the sender's access token.
-  /// {{% /boxes/note %}}
+  ///
   ///
   /// Clients MAY be redirected using the 307/308 responses below to download
   /// the request object. This is typical when the homeserver uses a Content
@@ -236,11 +275,11 @@ class Api {
   /// the previous endpoint) but replaces the target file name with the one
   /// provided by the caller.
   ///
-  /// {{% boxes/note %}}
+  /// **NOTE:**
   /// Clients SHOULD NOT generate or use URLs which supply the access token in
   /// the query string. These URLs may be copied by users verbatim and provided
   /// in a chat message to another user, disclosing the sender's access token.
-  /// {{% /boxes/note %}}
+  ///
   ///
   /// Clients MAY be redirected using the 307/308 responses below to download
   /// the request object. This is typical when the homeserver uses a Content
@@ -287,12 +326,12 @@ class Api {
   /// Get information about a URL for the client. Typically this is called when a
   /// client sees a URL in a message and wants to render a preview for the user.
   ///
-  /// {{% boxes/note %}}
+  /// **NOTE:**
   /// Clients should consider avoiding this endpoint for URLs posted in encrypted
   /// rooms. Encrypted rooms often contain more sensitive information the users
   /// do not want to share with the homeserver, and this can mean that the URLs
   /// being shared should also not be shared with the homeserver.
-  /// {{% /boxes/note %}}
+  ///
   ///
   /// [url] The URL to get a preview of.
   ///
@@ -320,11 +359,11 @@ class Api {
   /// Download a thumbnail of content from the content repository.
   /// See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails) section for more information.
   ///
-  /// {{% boxes/note %}}
+  /// **NOTE:**
   /// Clients SHOULD NOT generate or use URLs which supply the access token in
   /// the query string. These URLs may be copied by users verbatim and provided
   /// in a chat message to another user, disclosing the sender's access token.
-  /// {{% /boxes/note %}}
+  ///
   ///
   /// Clients MAY be redirected using the 307/308 responses below to download
   /// the request object. This is typical when the homeserver uses a Content
@@ -425,6 +464,48 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return json['valid'] as bool;
+  }
+
+  /// Retrieves a summary for a room.
+  ///
+  /// Clients should note that requests for rooms where the user's membership
+  /// is `invite` or `knock` might yield outdated, partial or even no data
+  /// since the server may not have access to the current state of the room.
+  ///
+  /// Servers MAY allow unauthenticated access to this API if at least one of
+  /// the following conditions holds true:
+  ///
+  /// - The room has a [join rule](#mroomjoin_rules) of `public`, `knock` or
+  ///   `knock_restricted`.
+  /// - The room has a `world_readable` [history visibility](#room-history-visibility).
+  ///
+  /// Servers should consider rate limiting requests that require a federation
+  /// request more heavily if the client is unauthenticated.
+  ///
+  /// [roomIdOrAlias] The room identifier or alias to summarise.
+  ///
+  /// [via] The servers to attempt to request the summary from when
+  /// the local server cannot generate it (for instance, because
+  /// it has no local user in the room).
+  Future<GetRoomSummaryResponse$3> getRoomSummary(
+    String roomIdOrAlias, {
+    List<String>? via,
+  }) async {
+    final requestUri = Uri(
+      path:
+          '_matrix/client/v1/room_summary/${Uri.encodeComponent(roomIdOrAlias)}',
+      queryParameters: {
+        if (via != null) 'via': via,
+      },
+    );
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetRoomSummaryResponse$3.fromJson(json as Map<String, Object?>);
   }
 
   /// Paginates over the space tree in a depth-first manner to locate child rooms of a given space.
@@ -914,6 +995,11 @@ class Api {
   ///
   /// Homeservers should prevent the caller from adding a 3PID to their account if it has
   /// already been added to another user's account on the homeserver.
+  ///
+  /// **WARNING:**
+  /// Since this endpoint uses User-Interactive Authentication, it cannot be used when the access token was obtained
+  /// via the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
+  ///
   ///
   /// [auth] Additional authentication information for the
   /// user-interactive authentication API.
@@ -1588,9 +1674,23 @@ class Api {
   /// 2. An `m.room.member` event for the creator to join the room. This is
   ///    needed so the remaining events can be sent.
   ///
-  /// 3. A default `m.room.power_levels` event, giving the room creator
-  ///    (and not other members) permission to send state events. Overridden
-  ///    by the `power_level_content_override` parameter.
+  /// 3. A default `m.room.power_levels` event. Overridden by the
+  ///    `power_level_content_override` parameter.
+  ///
+  ///    In [room versions](https://spec.matrix.org/unstable/rooms) 1 through 11, the room creator (and not
+  ///    other members) will be given permission to send state events.
+  ///
+  ///    In room versions 12 and later, the room creator is given infinite
+  ///    power level and cannot be specified in the `users` field of
+  ///    `m.room.power_levels`, so is not listed explicitly.
+  ///
+  ///    **Note**: For `trusted_private_chat`, the users specified in the
+  ///    `invite` parameter SHOULD also be appended to `additional_creators`
+  ///    by the server, per the `creation_content` parameter.
+  ///
+  ///    If the room's version is 12 or higher, the power level for sending
+  ///    `m.room.tombstone` events MUST explicitly be higher than `state_default`.
+  ///    For example, set to 150 instead of 100.
   ///
   /// 4. An `m.room.canonical_alias` event if `room_alias_name` is given.
   ///
@@ -1616,12 +1716,19 @@ class Api {
   ///
   /// The server will create a `m.room.create` event in the room with the
   /// requesting user as the creator, alongside other keys provided in the
-  /// `creation_content`.
+  /// `creation_content` or implied by behaviour of `creation_content`.
   ///
   /// [creationContent] Extra keys, such as `m.federate`, to be added to the content
-  /// of the [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate) event. The server will overwrite the following
+  /// of the [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate) event.
+  ///
+  /// The server will overwrite the following
   /// keys: `creator`, `room_version`. Future versions of the specification
   /// may allow the server to overwrite other keys.
+  ///
+  /// When using the `trusted_private_chat` preset, the server SHOULD combine
+  /// `additional_creators` specified here and the `invite` array into the
+  /// eventual `m.room.create` event's `additional_creators`, deduplicating
+  /// between the two parameters.
   ///
   /// [initialState] A list of state events to set in the new room. This allows
   /// the user to override the default state events set in the new
@@ -1641,9 +1748,10 @@ class Api {
   /// `m.room.member` events sent to the users in `invite` and
   /// `invite_3pid`. See [Direct Messaging](https://spec.matrix.org/unstable/client-server-api/#direct-messaging) for more information.
   ///
-  /// [name] If this is included, an `m.room.name` event will be sent
-  /// into the room to indicate the name of the room. See Room
-  /// Events for more information on `m.room.name`.
+  /// [name] If this is included, an [`m.room.name`](https://spec.matrix.org/unstable/client-server-api/#mroomname) event
+  /// will be sent into the room to indicate the name for the room.
+  /// This overwrites any [`m.room.name`](https://spec.matrix.org/unstable/client-server-api/#mroomname)
+  /// event in `initial_state`.
   ///
   /// [powerLevelContentOverride] The power level content to override in the default power level
   /// event. This object is applied on top of the generated
@@ -1675,16 +1783,14 @@ class Api {
   /// 400 error with the errcode `M_UNSUPPORTED_ROOM_VERSION` if it does not
   /// support the room version.
   ///
-  /// [topic] If this is included, an `m.room.topic` event will be sent
-  /// into the room to indicate the topic for the room. See Room
-  /// Events for more information on `m.room.topic`.
+  /// [topic] If this is included, an [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic)
+  /// event with a `text/plain` mimetype will be sent into the room
+  /// to indicate the topic for the room. This overwrites any
+  /// [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic) event in `initial_state`.
   ///
-  /// [visibility] A `public` visibility indicates that the room will be shown
-  /// in the published room list. A `private` visibility will hide
-  /// the room from the published room list. Rooms default to
-  /// `private` visibility if this key is not included. NB: This
-  /// should not be confused with `join_rules` which also uses the
-  /// word `public`.
+  /// [visibility] The room's visibility in the server's
+  /// [published room directory](https://spec.matrix.org/unstable/client-server-api#published-room-directory).
+  /// Defaults to `private`.
   ///
   /// returns `room_id`:
   /// The created room's ID.
@@ -1737,6 +1843,11 @@ class Api {
   ///
   /// Deletes the given devices, and invalidates any access token associated with them.
   ///
+  /// **WARNING:**
+  /// Since this endpoint uses User-Interactive Authentication, it cannot be used when the access token was obtained
+  /// via the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
+  ///
+  ///
   /// [auth] Additional authentication information for the
   /// user-interactive authentication API.
   ///
@@ -1786,6 +1897,11 @@ class Api {
   /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
   ///
   /// Deletes the given device, and invalidates any access token associated with it.
+  ///
+  /// **WARNING:**
+  /// Since this endpoint uses User-Interactive Authentication, it cannot be used when the access token was obtained
+  /// via the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
+  ///
   ///
   /// [deviceId] The device to delete.
   ///
@@ -1851,11 +1967,12 @@ class Api {
     return ignore(json);
   }
 
-  /// Updates the visibility of a given room on the application service's room
-  /// directory.
+  /// Updates the visibility of a given room in the application service's
+  /// published room directory.
   ///
-  /// This API is similar to the room directory visibility API used by clients
-  /// to update the homeserver's more general room directory.
+  /// This API is similar to the
+  /// [visibility API](https://spec.matrix.org/unstable/client-server-api#put_matrixclientv3directorylistroomroomid)
+  /// used by clients to update the homeserver's more general published room directory.
   ///
   /// This API requires the use of an application service access token (`as_token`)
   /// instead of a typical client's access_token. This API cannot be invoked by
@@ -1894,7 +2011,8 @@ class Api {
     return json as Map<String, Object?>;
   }
 
-  /// Gets the visibility of a given room on the server's public room directory.
+  /// Gets the visibility of a given room in the server's
+  /// published room directory.
   ///
   /// [roomId] The room ID.
   ///
@@ -1916,17 +2034,16 @@ class Api {
         : null)(json['visibility']);
   }
 
-  /// Sets the visibility of a given room in the server's public room
-  /// directory.
+  /// Sets the visibility of a given room in the server's published room directory.
   ///
-  /// Servers may choose to implement additional access control checks
-  /// here, for instance that room visibility can only be changed by
-  /// the room creator or a server administrator.
+  /// Servers MAY implement additional access control checks, for instance,
+  /// to ensure that a room's visibility can only be changed by the room creator
+  /// or a server administrator.
   ///
   /// [roomId] The room ID.
   ///
   /// [visibility] The new visibility setting for the room.
-  /// Defaults to 'public'.
+  /// Defaults to `public`.
   Future<void> setRoomVisibilityOnDirectory(
     String roomId, {
     Visibility? visibility,
@@ -2296,6 +2413,11 @@ class Api {
   /// makes this endpoint idempotent in the case where the response is lost over the network,
   /// which would otherwise cause a UIA challenge upon retry.
   ///
+  /// **WARNING:**
+  /// When this endpoint requires User-Interactive Authentication, it cannot be used when the access token was obtained
+  /// via the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
+  ///
+  ///
   /// [auth] Additional authentication information for the
   /// user-interactive authentication API.
   ///
@@ -2639,7 +2761,7 @@ class Api {
   /// deleted alongside the device.
   ///
   /// This endpoint does not use the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api) because
-  /// User-Interactive Authentication is designed to protect against attacks where the
+  /// User-Interactive Authentication is designed to protect against attacks where
   /// someone gets hold of a single access token then takes over the account. This
   /// endpoint invalidates all access tokens for the user, including the token used in
   /// the request, and therefore the attacker is unable to take over the account in
@@ -2742,9 +2864,7 @@ class Api {
     return ignore(json);
   }
 
-  /// Get the combined profile information for this user. This API may be used
-  /// to fetch the user's own profile information or other users; either
-  /// locally or on remote homeservers.
+  /// Get the complete profile for a user.
   ///
   /// [userId] The user whose profile information to get.
   Future<ProfileInformation> getUserProfile(String userId) async {
@@ -2762,18 +2882,41 @@ class Api {
     return ProfileInformation.fromJson(json as Map<String, Object?>);
   }
 
-  /// Get the user's avatar URL. This API may be used to fetch the user's
-  /// own avatar URL or to query the URL of other users; either locally or
-  /// on remote homeservers.
+  /// Remove a specific field from a user's profile.
   ///
-  /// [userId] The user whose avatar URL to get.
+  /// [userId] The user whose profile field should be deleted.
   ///
-  /// returns `avatar_url`:
-  /// The user's avatar URL if they have set one, otherwise not present.
-  Future<Uri?> getAvatarUrl(String userId) async {
+  /// [keyName] The name of the profile field to delete.
+  Future<Map<String, Object?>> deleteProfileField(
+    String userId,
+    String keyName,
+  ) async {
     final requestUri = Uri(
       path:
-          '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/avatar_url',
+          '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/${Uri.encodeComponent(keyName)}',
+    );
+    final request = Request('DELETE', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json as Map<String, Object?>;
+  }
+
+  /// Get the value of a profile field for a user.
+  ///
+  /// [userId] The user whose profile field should be returned.
+  ///
+  /// [keyName] The name of the profile field to retrieve.
+  Future<Map<String, Object?>> getProfileField(
+    String userId,
+    String keyName,
+  ) async {
+    final requestUri = Uri(
+      path:
+          '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/${Uri.encodeComponent(keyName)}',
     );
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     if (bearerToken != null) {
@@ -2784,90 +2927,44 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ((v) =>
-        v != null ? Uri.parse(v as String) : null)(json['avatar_url']);
+    return json as Map<String, Object?>;
   }
 
-  /// This API sets the given user's avatar URL. You must have permission to
-  /// set this user's avatar URL, e.g. you need to have their `access_token`.
+  /// Set or update a profile field for a user. Must be authenticated with an
+  /// access token authorised to make changes. Servers MAY impose size limits
+  /// on individual fields, and the total profile MUST be under 64 KiB.
   ///
-  /// [userId] The user whose avatar URL to set.
+  /// Servers MAY reject `null` values. Servers that accept `null` values SHOULD store
+  /// them rather than treating `null` as a deletion request. Clients that want to delete a
+  /// field, including its key and value, SHOULD use the `DELETE` endpoint instead.
   ///
-  /// [avatarUrl] The new avatar URL for this user.
-  Future<void> setAvatarUrl(String userId, Uri? avatarUrl) async {
+  /// [userId] The user whose profile field should be set.
+  ///
+  /// [keyName] The name of the profile field to set. This MUST be either `avatar_url`, `displayname`, `m.tz`, or a custom field following the [Common Namespaced Identifier Grammar](https://spec.matrix.org/unstable/appendices/#common-namespaced-identifier-grammar).
+  ///
+  /// [body] A JSON object containing the property whose name matches the `keyName` specified in the URL. See `additionalProperties` for further details.
+  Future<Map<String, Object?>> setProfileField(
+    String userId,
+    String keyName,
+    Map<String, Object?> body,
+  ) async {
     final requestUri = Uri(
       path:
-          '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/avatar_url',
+          '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/${Uri.encodeComponent(keyName)}',
     );
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(
-      jsonEncode({
-        if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
-      }),
-    );
+    request.bodyBytes = utf8.encode(jsonEncode(body));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ignore(json);
+    return json as Map<String, Object?>;
   }
 
-  /// Get the user's display name. This API may be used to fetch the user's
-  /// own displayname or to query the name of other users; either locally or
-  /// on remote homeservers.
-  ///
-  /// [userId] The user whose display name to get.
-  ///
-  /// returns `displayname`:
-  /// The user's display name if they have set one, otherwise not present.
-  Future<String?> getDisplayName(String userId) async {
-    final requestUri = Uri(
-      path:
-          '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/displayname',
-    );
-    final request = Request('GET', baseUri!.resolveUri(requestUri));
-    if (bearerToken != null) {
-      request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    }
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    final responseString = utf8.decode(responseBody);
-    final json = jsonDecode(responseString);
-    return ((v) => v != null ? v as String : null)(json['displayname']);
-  }
-
-  /// This API sets the given user's display name. You must have permission to
-  /// set this user's display name, e.g. you need to have their `access_token`.
-  ///
-  /// [userId] The user whose display name to set.
-  ///
-  /// [displayname] The new display name for this user.
-  Future<void> setDisplayName(String userId, String? displayname) async {
-    final requestUri = Uri(
-      path:
-          '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/displayname',
-    );
-    final request = Request('PUT', baseUri!.resolveUri(requestUri));
-    request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(
-      jsonEncode({
-        if (displayname != null) 'displayname': displayname,
-      }),
-    );
-    final response = await httpClient.send(request);
-    final responseBody = await response.stream.toBytes();
-    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
-    final responseString = utf8.decode(responseBody);
-    final json = jsonDecode(responseString);
-    return ignore(json);
-  }
-
-  /// Lists the public rooms on the server.
+  /// Lists a server's published room directory.
   ///
   /// This API returns paginated responses. The rooms are ordered by the number
   /// of joined members, with the largest rooms first.
@@ -2879,8 +2976,8 @@ class Api {
   /// The direction of pagination is specified solely by which token
   /// is supplied, rather than via an explicit flag.
   ///
-  /// [server] The server to fetch the public room lists from. Defaults to the
-  /// local server. Case sensitive.
+  /// [server] The server to fetch the published room directory from. Defaults
+  /// to the local server. Case sensitive.
   Future<GetPublicRoomsResponse> getPublicRooms({
     int? limit,
     String? since,
@@ -2903,13 +3000,13 @@ class Api {
     return GetPublicRoomsResponse.fromJson(json as Map<String, Object?>);
   }
 
-  /// Lists the public rooms on the server, with optional filter.
+  /// Lists a server's published room directory with an optional filter.
   ///
   /// This API returns paginated responses. The rooms are ordered by the number
   /// of joined members, with the largest rooms first.
   ///
-  /// [server] The server to fetch the public room lists from. Defaults to the
-  /// local server. Case sensitive.
+  /// [server] The server to fetch the published room directory from. Defaults
+  /// to the local server. Case sensitive.
   ///
   /// [filter] Filter to apply to the results.
   ///
@@ -4134,9 +4231,6 @@ class Api {
   ///
   /// - The matrix user ID who invited them to the room
   ///
-  /// If a token is requested from the identity server, the homeserver will
-  /// append a `m.room.third_party_invite` event to the room.
-  ///
   /// [roomId] The room identifier (not alias) to which to invite the user.
   ///
   /// [body]
@@ -4739,14 +4833,23 @@ class Api {
   ///
   /// [stateKey] The key of the state to look up. Defaults to an empty string. When
   /// an empty string, the trailing slash on this endpoint is optional.
+  ///
+  /// [format] The format to use for the returned data. `content` (the default) will
+  /// return only the content of the state event. `event` will return the entire
+  /// event in the usual format suitable for clients, including fields like event
+  /// ID, sender and timestamp.
   Future<Map<String, Object?>> getRoomStateWithKey(
     String roomId,
     String eventType,
-    String stateKey,
-  ) async {
+    String stateKey, {
+    Format? format,
+  }) async {
     final requestUri = Uri(
       path:
           '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/state/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(stateKey)}',
+      queryParameters: {
+        if (format != null) 'format': format.name,
+      },
     );
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -4886,11 +4989,26 @@ class Api {
   ///
   /// [roomId] The ID of the room to upgrade.
   ///
+  /// [additionalCreators] When upgrading to a [room version](https://spec.matrix.org/unstable/rooms) which supports additional creators,
+  /// the [user IDs](https://spec.matrix.org/unstable/appendices#user-identifiers) which should be considered room
+  /// creators in addition to the user performing the upgrade.
+  ///
+  /// If the room being upgraded has additional creators, they are *not* automatically
+  /// copied to the new room. The full set of additional creators needs to be set to
+  /// retain (or add/remove) more room creators.
+  ///
+  /// When upgrading to a room version which doesn't support additional creators, this
+  /// field is ignored and has no effect during the upgrade process.
+  ///
   /// [newVersion] The new version for the room.
   ///
   /// returns `replacement_room`:
   /// The ID of the new room.
-  Future<String> upgradeRoom(String roomId, String newVersion) async {
+  Future<String> upgradeRoom(
+    String roomId,
+    String newVersion, {
+    List<String>? additionalCreators,
+  }) async {
     final requestUri = Uri(
       path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/upgrade',
     );
@@ -4899,6 +5017,8 @@ class Api {
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(
       jsonEncode({
+        if (additionalCreators != null)
+          'additional_creators': additionalCreators.map((v) => v).toList(),
         'new_version': newVersion,
       }),
     );
@@ -5043,12 +5163,32 @@ class Api {
   ///
   /// By default, this is `0`, so the server will return immediately
   /// even if the response is empty.
+  ///
+  /// [useStateAfter] Controls whether to receive state changes between the previous sync
+  /// and the **start** of the timeline, or between the previous sync and
+  /// the **end** of the timeline.
+  ///
+  /// If this is set to `true`, servers MUST respond with the state
+  /// between the previous sync and the **end** of the timeline in
+  /// `state_after` and MUST omit `state`.
+  ///
+  /// If `false`, servers MUST respond with the state between the previous
+  /// sync and the **start** of the timeline in `state` and MUST omit
+  /// `state_after`.
+  ///
+  /// Even if this is set to `true`, clients MUST update their local state
+  /// with events in `state` and `timeline` if `state_after` is missing in
+  /// the response, for compatibility with servers that don't support this
+  /// parameter.
+  ///
+  /// By default, this is `false`.
   Future<SyncUpdate> sync({
     String? filter,
     String? since,
     bool? fullState,
     PresenceType? setPresence,
     int? timeout,
+    bool? useStateAfter,
   }) async {
     final requestUri = Uri(
       path: '_matrix/client/v3/sync',
@@ -5058,6 +5198,7 @@ class Api {
         if (fullState != null) 'full_state': fullState.toString(),
         if (setPresence != null) 'set_presence': setPresence.name,
         if (timeout != null) 'timeout': timeout.toString(),
+        if (useStateAfter != null) 'use_state_after': useStateAfter.toString(),
       },
     );
     final request = Request('GET', baseUri!.resolveUri(requestUri));
@@ -5507,10 +5648,17 @@ class Api {
     return ignore(json);
   }
 
-  /// Performs a search for users. The homeserver may
-  /// determine which subset of users are searched, however the homeserver
-  /// MUST at a minimum consider the users the requesting user shares a
-  /// room with and those who reside in public rooms (known to the homeserver).
+  /// Performs a search for users. The homeserver may determine which
+  /// subset of users are searched. However, the homeserver MUST at a
+  /// minimum consider users who are visible to the requester based
+  /// on their membership in rooms known to the homeserver. This means:
+  ///
+  /// -   users that share a room with the requesting user
+  /// -   users who are joined to rooms known to the homeserver that have a
+  ///     `public` [join rule](#mroomjoin_rules)
+  /// -   users who are joined to rooms known to the homeserver that have a
+  ///     `world_readable` [history visibility](#room-history-visibility)
+  ///
   /// The search MUST consider local users to the homeserver, and SHOULD
   /// query remote users as part of the search.
   ///
@@ -5663,9 +5811,9 @@ class Api {
     return CreateContentResponse.fromJson(json as Map<String, Object?>);
   }
 
-  /// {{% boxes/note %}}
+  /// **NOTE:**
   /// Replaced by [`GET /_matrix/client/v1/media/config`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv1mediaconfig).
-  /// {{% /boxes/note %}}
+  ///
   ///
   /// This endpoint allows clients to retrieve the configuration of the content
   /// repository, such as upload limitations.
@@ -5690,17 +5838,17 @@ class Api {
     return MediaConfig.fromJson(json as Map<String, Object?>);
   }
 
-  /// {{% boxes/note %}}
+  /// **NOTE:**
   /// Replaced by [`GET /_matrix/client/v1/media/download/{serverName}/{mediaId}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv1mediadownloadservernamemediaid)
   /// (requires authentication).
-  /// {{% /boxes/note %}}
   ///
-  /// {{% boxes/warning %}}
-  /// {{% changed-in v="1.11" %}} This endpoint MAY return `404 M_NOT_FOUND`
+  ///
+  /// **WARNING:**
+  /// **[Changed in `v1.11`]**  This endpoint MAY return `404 M_NOT_FOUND`
   /// for media which exists, but is after the server froze unauthenticated
   /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
   /// information.
-  /// {{% /boxes/warning %}}
+  ///
   ///
   /// [serverName] The server name from the `mxc://` URI (the authority component).
   ///
@@ -5752,21 +5900,21 @@ class Api {
     );
   }
 
-  /// {{% boxes/note %}}
+  /// **NOTE:**
   /// Replaced by [`GET /_matrix/client/v1/media/download/{serverName}/{mediaId}/{fileName}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv1mediadownloadservernamemediaidfilename)
   /// (requires authentication).
-  /// {{% /boxes/note %}}
+  ///
   ///
   /// This will download content from the content repository (same as
   /// the previous endpoint) but replace the target file name with the one
   /// provided by the caller.
   ///
-  /// {{% boxes/warning %}}
-  /// {{% changed-in v="1.11" %}} This endpoint MAY return `404 M_NOT_FOUND`
+  /// **WARNING:**
+  /// **[Changed in `v1.11`]**  This endpoint MAY return `404 M_NOT_FOUND`
   /// for media which exists, but is after the server froze unauthenticated
   /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
   /// information.
-  /// {{% /boxes/warning %}}
+  ///
   ///
   /// [serverName] The server name from the `mxc://` URI (the authority component).
   ///
@@ -5821,9 +5969,9 @@ class Api {
     );
   }
 
-  /// {{% boxes/note %}}
+  /// **NOTE:**
   /// Replaced by [`GET /_matrix/client/v1/media/preview_url`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv1mediapreview_url).
-  /// {{% /boxes/note %}}
+  ///
   ///
   /// Get information about a URL for the client. Typically this is called when a
   /// client sees a URL in a message and wants to render a preview for the user.
@@ -5858,20 +6006,20 @@ class Api {
     return PreviewForUrl.fromJson(json as Map<String, Object?>);
   }
 
-  /// {{% boxes/note %}}
+  /// **NOTE:**
   /// Replaced by [`GET /_matrix/client/v1/media/thumbnail/{serverName}/{mediaId}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv1mediathumbnailservernamemediaid)
   /// (requires authentication).
-  /// {{% /boxes/note %}}
+  ///
   ///
   /// Download a thumbnail of content from the content repository.
   /// See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails) section for more information.
   ///
-  /// {{% boxes/warning %}}
-  /// {{% changed-in v="1.11" %}} This endpoint MAY return `404 M_NOT_FOUND`
+  /// **WARNING:**
+  /// **[Changed in `v1.11`]**  This endpoint MAY return `404 M_NOT_FOUND`
   /// for media which exists, but is after the server froze unauthenticated
   /// media access. See [Client Behaviour](https://spec.matrix.org/unstable/client-server-api/#content-repo-client-behaviour) for more
   /// information.
-  /// {{% /boxes/warning %}}
+  ///
   ///
   /// [serverName] The server name from the `mxc://` URI (the authority component).
   ///
