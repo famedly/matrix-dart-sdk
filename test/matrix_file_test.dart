@@ -22,10 +22,14 @@ import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
+import 'fake_client.dart';
 
 void main() {
   /// All Tests related to device keys
   group('Matrix File', tags: 'olm', () {
+    setUpAll(() async {
+      await getClient(); // To trigger vodozemac init
+    });
     Logs().level = Level.error;
     test('Decrypt', () async {
       final text = 'hello world';

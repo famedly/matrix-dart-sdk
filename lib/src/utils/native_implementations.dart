@@ -155,7 +155,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
     bool retryInDummy = true,
   }) {
     return runInBackground<Uint8List?, EncryptedFile>(
-      NativeImplementations.dummy.decryptFile,
+      (EncryptedFile args) async {
+        await vodozemacInit?.call();
+        return NativeImplementations.dummy.decryptFile(args);
+      },
       file,
     );
   }
@@ -180,7 +183,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
     bool retryInDummy = true,
   }) {
     return runInBackground<Uint8List, KeyFromPassphraseArgs>(
-      NativeImplementations.dummy.keyFromPassphrase,
+      (KeyFromPassphraseArgs args) async {
+        await vodozemacInit?.call();
+        return NativeImplementations.dummy.keyFromPassphrase(args);
+      },
       args,
     );
   }

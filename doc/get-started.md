@@ -12,7 +12,6 @@ In your `pubspec.yaml` file add the following dependencies:
   # (Optional) For end to end encryption, please head on the
   # encryption guide and add these dependencies:
   flutter_vodozemac: <latest-version>
-  flutter_openssl_crypto: <latest-version>
 ```
 
 ## Step 2: Create the client
