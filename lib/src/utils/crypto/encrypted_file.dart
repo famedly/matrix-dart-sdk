@@ -19,6 +19,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:vodozemac/vodozemac.dart';
+
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 
@@ -38,8 +40,8 @@ class EncryptedFile {
 Future<EncryptedFile> encryptFile(Uint8List input) async {
   final key = secureRandomBytes(32);
   final iv = secureRandomBytes(16);
-  final data = await aesCtr.encrypt(input, key, iv);
-  final hash = await sha256(data);
+  final data = CryptoUtils.aesCtr(input: input, key: key, iv: iv);
+  final hash = CryptoUtils.sha256(input: data);
   return EncryptedFile(
     data: data,
     k: base64Url.encode(key).replaceAll('=', ''),
@@ -51,12 +53,12 @@ Future<EncryptedFile> encryptFile(Uint8List input) async {
 /// you would likely want to use [NativeImplementations] and
 /// [Client.nativeImplementations] instead
 Future<Uint8List?> decryptFileImplementation(EncryptedFile input) async {
-  if (base64.encode(await sha256(input.data)) !=
+  if (base64.encode(CryptoUtils.sha256(input: input.data)) !=
       base64.normalize(input.sha256)) {
     return null;
   }
 
   final key = base64decodeUnpadded(base64.normalize(input.k));
   final iv = base64decodeUnpadded(base64.normalize(input.iv));
-  return await aesCtr.encrypt(input.data, key, iv);
+  return CryptoUtils.aesCtr(input: input.data, key: key, iv: iv);
 }

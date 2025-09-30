@@ -6,16 +6,13 @@ Matrix (matrix.org) SDK written in dart.
 
 For E2EE, vodozemac must be provided.
 
-Additionally, OpenSSL (libcrypto) must be provided on native platforms for E2EE.
-
-For flutter apps you can easily import it with the [flutter_vodozemac](https://pub.dev/packages/flutter_vodozemac) and the [flutter_openssl_crypto](https://pub.dev/packages/flutter_openssl_crypto) packages.
+For flutter apps you can easily import it with the [flutter_vodozemac](https://pub.dev/packages/flutter_vodozemac) package.
 
 ```sh
 flutter pub add matrix
 
 # Optional: For end to end encryption:
 flutter pub add flutter_vodozemac
-flutter pub add flutter_openssl_crypto
 ```
 
 ## Get started
