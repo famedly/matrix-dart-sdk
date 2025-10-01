@@ -134,6 +134,7 @@ class MeshBackend extends CallBackend {
     _callSessions.add(call);
     _initCall(groupCall, call);
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
+    groupCall.matrixRTCEventStream.add(CallAddedEvent(call));
   }
 
   /// init a peer call from group calls.
@@ -184,6 +185,8 @@ class MeshBackend extends CallBackend {
     _initCall(groupCall, replacementCall);
 
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
+    groupCall.matrixRTCEventStream
+        .add(CallReplacedEvent(existingCall, replacementCall));
   }
 
   /// Removes a peer call from group calls.
@@ -197,6 +200,7 @@ class MeshBackend extends CallBackend {
     _callSessions.removeWhere((element) => call.callId == element.callId);
 
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
+    groupCall.matrixRTCEventStream.add(CallRemovedEvent(call));
   }
 
   Future<void> _disposeCall(
@@ -376,6 +380,8 @@ class MeshBackend extends CallBackend {
     if (nextActiveSpeaker != null && _activeSpeaker != nextActiveSpeaker) {
       _activeSpeaker = nextActiveSpeaker;
       groupCall.onGroupCallEvent.add(GroupCallStateChange.activeSpeakerChanged);
+      groupCall.matrixRTCEventStream
+          .add(GroupCallActiveSpeakerChanged(_activeSpeaker!));
     }
     _activeSpeakerLoopTimeout?.cancel();
     _activeSpeakerLoopTimeout = Timer(
@@ -403,6 +409,8 @@ class MeshBackend extends CallBackend {
     onStreamAdd.add(stream);
     groupCall.onGroupCallEvent
         .add(GroupCallStateChange.screenshareStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamAdded(GroupCallStreamType.screenshare));
   }
 
   Future<void> _replaceScreenshareStream(
@@ -425,6 +433,8 @@ class MeshBackend extends CallBackend {
     await existingStream.dispose();
     groupCall.onGroupCallEvent
         .add(GroupCallStateChange.screenshareStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamReplaced(GroupCallStreamType.screenshare));
   }
 
   Future<void> _removeScreenshareStream(
@@ -452,6 +462,8 @@ class MeshBackend extends CallBackend {
 
     groupCall.onGroupCallEvent
         .add(GroupCallStateChange.screenshareStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamRemoved(GroupCallStreamType.screenshare));
   }
 
   Future<void> _onCallStateChanged(CallSession call, CallState state) async {
@@ -488,6 +500,8 @@ class MeshBackend extends CallBackend {
     onStreamAdd.add(stream);
     groupCall.onGroupCallEvent
         .add(GroupCallStateChange.userMediaStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamAdded(GroupCallStreamType.userMedia));
   }
 
   Future<void> _replaceUserMediaStream(
@@ -510,6 +524,8 @@ class MeshBackend extends CallBackend {
     await existingStream.dispose();
     groupCall.onGroupCallEvent
         .add(GroupCallStateChange.userMediaStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamReplaced(GroupCallStreamType.userMedia));
   }
 
   Future<void> _removeUserMediaStream(
@@ -538,10 +554,14 @@ class MeshBackend extends CallBackend {
 
     groupCall.onGroupCallEvent
         .add(GroupCallStateChange.userMediaStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamRemoved(GroupCallStreamType.userMedia));
 
     if (_activeSpeaker == stream.participant && _userMediaStreams.isNotEmpty) {
       _activeSpeaker = _userMediaStreams[0].participant;
       groupCall.onGroupCallEvent.add(GroupCallStateChange.activeSpeakerChanged);
+      groupCall.matrixRTCEventStream
+          .add(GroupCallActiveSpeakerChanged(_activeSpeaker!));
     }
   }
 
@@ -664,6 +684,7 @@ class MeshBackend extends CallBackend {
     }
 
     groupCall.onGroupCallEvent.add(GroupCallStateChange.localMuteStateChanged);
+    groupCall.matrixRTCEventStream.add(GroupCallLocalMutedChanged(muted, kind));
     return;
   }
 
@@ -801,6 +822,8 @@ class MeshBackend extends CallBackend {
 
         groupCall.onGroupCallEvent
             .add(GroupCallStateChange.localScreenshareStateChanged);
+        groupCall.matrixRTCEventStream
+            .add(GroupCallLocalScreenshareStateChanged(true));
         for (final call in _callSessions) {
           await call.addLocalStream(
             await localScreenshareStream!.stream!.clone(),
@@ -814,6 +837,8 @@ class MeshBackend extends CallBackend {
       } catch (e, s) {
         Logs().e('[VOIP] Enabling screensharing error', e, s);
         groupCall.onGroupCallEvent.add(GroupCallStateChange.error);
+        groupCall.matrixRTCEventStream
+            .add(GroupCallStateError(e.toString(), s));
         return;
       }
     } else {
@@ -828,6 +853,8 @@ class MeshBackend extends CallBackend {
 
       groupCall.onGroupCallEvent
           .add(GroupCallStateChange.localMuteStateChanged);
+      groupCall.matrixRTCEventStream
+          .add(GroupCallLocalScreenshareStateChanged(false));
       return;
     }
   }
