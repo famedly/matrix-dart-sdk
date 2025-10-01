@@ -244,3 +244,9 @@ class EventTooLarge implements Exception {
   int maxSize, actualSize;
   EventTooLarge(this.maxSize, this.actualSize);
 }
+
+@Deprecated('Use PublishedRoomsChunk instead')
+typedef PublicRoomsChunk = PublishedRoomsChunk;
+
+@Deprecated('Use SpaceRoomsChunk\$1 or SpaceRoomsChunk\$2 instead')
+typedef SpaceRoomsChunk = SpaceRoomsChunk$2;
