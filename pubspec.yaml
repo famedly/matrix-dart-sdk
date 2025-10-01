@@ -18,7 +18,6 @@ dependencies:
   html_unescape: ^2.0.0
   http: ">=0.13.0 <2.0.0"
   image: ^4.0.15
-  js_interop: ^0.0.1
   markdown: ^7.1.1
   mime: ">=1.0.0 <3.0.0"
   path: ^1.9.1
