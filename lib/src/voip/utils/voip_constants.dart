@@ -68,7 +68,7 @@ class CallTimeouts {
 
 class CallConstants {
   static final callEventsRegxp = RegExp(
-    r'm.call.|org.matrix.call.|org.matrix.msc3401.call.|com.famedly.call.',
+    r'm.call.|org.matrix.call.|org.matrix.msc3401.call.|com.famedly.call.|m.room.redaction',
   );
 
   static const callEndedEventTypes = {
@@ -88,4 +88,5 @@ class CallConstants {
   static const updateExpireTsTimerDuration = Duration(seconds: 15);
   static const expireTsBumpDuration = Duration(seconds: 45);
   static const activeSpeakerInterval = Duration(seconds: 5);
+  static const ephemeralReactionTimeout = Duration(seconds: 2);
 }

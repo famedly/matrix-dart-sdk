@@ -18,3 +18,31 @@ final class ParticipantsLeftEvent implements ParticipantsChangeEvent {
 
   ParticipantsLeftEvent({required this.participants});
 }
+
+sealed class CallReactionEvent implements MatrixRTCCallEvent {}
+
+final class CallReactionAddedEvent implements CallReactionEvent {
+  final CallParticipant participant;
+  final String reactionKey;
+  final String membershipEventId;
+  final String reactionEventId;
+  final bool isEphemeral;
+
+  CallReactionAddedEvent({
+    required this.participant,
+    required this.reactionKey,
+    required this.membershipEventId,
+    required this.reactionEventId,
+    required this.isEphemeral,
+  });
+}
+
+final class CallReactionRemovedEvent implements CallReactionEvent {
+  final CallParticipant participant;
+  final String redactedEventId;
+
+  CallReactionRemovedEvent({
+    required this.participant,
+    required this.redactedEventId,
+  });
+}

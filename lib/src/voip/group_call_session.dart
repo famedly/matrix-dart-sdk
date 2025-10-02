@@ -19,8 +19,11 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:collection/collection.dart';
+
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/voip/models/call_reaction_payload.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
 
@@ -110,6 +113,9 @@ class GroupCallSession {
     return _participants.contains(localParticipant);
   }
 
+  Timer? _reactionsTimer;
+  int _reactionsTicker = 0;
+
   /// enter the group call.
   Future<void> enter({WrappedMediaStream? stream}) async {
     if (!(state == GroupCallState.localCallFeedUninitialized ||
@@ -136,6 +142,10 @@ class GroupCallSession {
     voip.currentGroupCID = VoipId(roomId: room.id, callId: groupCallId);
 
     await voip.delegate.handleNewGroupCall(this);
+
+    _reactionsTimer = Timer.periodic(Duration(seconds: 1), (_) {
+      if (_reactionsTicker > 0) _reactionsTicker--;
+    });
   }
 
   Future<void> leave() async {
@@ -147,11 +157,38 @@ class GroupCallSession {
     voip.groupCalls.remove(VoipId(roomId: room.id, callId: groupCallId));
     await voip.delegate.handleGroupCallEnded(this);
     _resendMemberStateEventTimer?.cancel();
+    _reactionsTimer?.cancel();
     setState(GroupCallState.ended);
   }
 
   Future<void> sendMemberStateEvent() async {
-    await room.updateFamedlyCallMemberStateEvent(
+    // Get current member event ID to preserve permanent reactions
+    final currentMemberships = room.getCallMembershipsForUser(
+      client.userID!,
+      client.deviceID!,
+      voip,
+    );
+
+    final currentMembership = currentMemberships.firstWhereOrNull(
+      (m) =>
+          m.callId == groupCallId &&
+          m.deviceId == client.deviceID! &&
+          m.application == application &&
+          m.scope == scope &&
+          m.roomId == room.id,
+    );
+
+    // Store permanent reactions from the current member event if it exists
+    List<MatrixEvent> permanentReactions = [];
+    final membershipExpired = currentMembership?.isExpired ?? false;
+
+    if (currentMembership?.eventId != null && !membershipExpired) {
+      permanentReactions = await _getPermanentReactionsForEvent(
+        currentMembership!.eventId!,
+      );
+    }
+
+    final newEventId = await room.updateFamedlyCallMemberStateEvent(
       CallMembership(
         userId: client.userID!,
         roomId: room.id,
@@ -168,6 +205,14 @@ class GroupCallSession {
         voip: voip,
       ),
     );
+
+    // Copy permanent reactions to the new member event
+    if (permanentReactions.isNotEmpty && newEventId != null) {
+      await _copyPermanentReactionsToNewEvent(
+        permanentReactions,
+        newEventId,
+      );
+    }
 
     if (_resendMemberStateEventTimer != null) {
       _resendMemberStateEventTimer!.cancel();
@@ -269,6 +314,228 @@ class GroupCallSession {
       }
 
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
+    }
+  }
+
+  /// Send a reaction event to the group call
+  ///
+  /// [emoji] - The reaction emoji (e.g., '🖐️' for hand raise)
+  /// [name] - The reaction name (e.g., 'hand raise')
+  /// [isEphemeral] - Whether the reaction is ephemeral (default: true)
+  ///
+  /// Returns the event ID of the sent reaction event
+  Future<String> sendReactionEvent({
+    required String emoji,
+    bool isEphemeral = true,
+  }) async {
+    if (isEphemeral && _reactionsTicker > 10) {
+      throw Exception(
+        '[sendReactionEvent] manual throttling, too many ephemral reactions sent',
+      );
+    }
+
+    Logs().d('Group call reaction selected: $emoji');
+
+    final memberships =
+        room.getCallMembershipsForUser(client.userID!, client.deviceID!, voip);
+    final membership = memberships.firstWhereOrNull(
+      (m) =>
+          m.callId == groupCallId &&
+          m.deviceId == client.deviceID! &&
+          m.roomId == room.id &&
+          m.application == application &&
+          m.scope == scope,
+    );
+
+    if (membership == null) {
+      throw Exception(
+        '[sendReactionEvent] No matching membership found to send group call emoji reaction from ${client.userID!}',
+      );
+    }
+
+    final payload = ReactionPayload(
+      key: emoji,
+      isEphemeral: isEphemeral,
+      callId: groupCallId,
+      deviceId: client.deviceID!,
+      relType: RelationshipTypes.reference,
+      eventId: membership.eventId!,
+    );
+
+    // Send reaction as unencrypted event to avoid decryption issues
+    final txid = client.generateUniqueTransactionId();
+    _reactionsTicker++;
+    return await client.sendMessage(
+      room.id,
+      EventTypes.GroupCallMemberReaction,
+      txid,
+      payload.toJson(),
+    );
+  }
+
+  /// Remove a reaction event from the group call
+  ///
+  /// [eventId] - The event ID of the reaction to remove
+  ///
+  /// Returns the event ID of the removed reaction event
+  Future<String?> removeReactionEvent({required String eventId}) async {
+    return await client.redactEventWithMetadata(
+      room.id,
+      eventId,
+      client.generateUniqueTransactionId(),
+      metadata: {
+        'device_id': client.deviceID,
+        'call_id': groupCallId,
+        'redacts_type': EventTypes.GroupCallMemberReaction,
+      },
+    );
+  }
+
+  /// Get all reactions of a specific type for all participants in the call
+  ///
+  /// [emoji] - The reaction emoji to filter by (e.g., '🖐️')
+  ///
+  /// Returns a list of [MatrixEvent] objects representing the reactions
+  Future<List<MatrixEvent>> getAllReactions({required String emoji}) async {
+    final reactions = <MatrixEvent>[];
+
+    final memberships = room
+        .getCallMembershipsFromRoom(
+          voip,
+        )
+        .values
+        .expand((e) => e);
+
+    final membershipsForCurrentGroupCall = memberships
+        .where(
+          (m) =>
+              m.callId == groupCallId &&
+              m.application == application &&
+              m.scope == scope &&
+              m.roomId == room.id,
+        )
+        .toList();
+
+    for (final membership in membershipsForCurrentGroupCall) {
+      if (membership.eventId == null) continue;
+
+      // this could cause a problem in large calls because it would make
+      // n number of /relations requests where n is the number of participants
+      // but turns our synapse does not rate limit these so should be fine?
+      final eventsToProcess =
+          (await client.getRelatingEventsWithRelTypeAndEventType(
+        room.id,
+        membership.eventId!,
+        RelationshipTypes.reference,
+        EventTypes.GroupCallMemberReaction,
+        recurse: false,
+        limit: 100,
+      ))
+              .chunk;
+
+      reactions.addAll(
+        eventsToProcess.where((event) => event.content['key'] == emoji),
+      );
+    }
+
+    return reactions;
+  }
+
+  /// Get all permanent reactions for a specific member event ID
+  ///
+  /// [eventId] - The member event ID to get reactions for
+  ///
+  /// Returns a list of [MatrixEvent] objects representing permanent reactions
+  Future<List<MatrixEvent>> _getPermanentReactionsForEvent(
+    String eventId,
+  ) async {
+    final permanentReactions = <MatrixEvent>[];
+
+    try {
+      final events = await client.getRelatingEventsWithRelTypeAndEventType(
+        room.id,
+        eventId,
+        RelationshipTypes.reference,
+        EventTypes.GroupCallMemberReaction,
+        recurse: false,
+        // makes sure that if you make too many reactions, permanent reactions don't miss out
+        // hopefully 100 is a good value
+        limit: 100,
+      );
+
+      for (final event in events.chunk) {
+        final content = event.content;
+        final isEphemeral = content['is_ephemeral'] as bool? ?? false;
+        final isRedacted = event.redacts != null;
+
+        if (!isEphemeral && !isRedacted) {
+          permanentReactions.add(event);
+          Logs().d(
+            '[VOIP] Found permanent reaction to preserve: ${content['key']} from ${event.senderId}',
+          );
+        }
+      }
+    } catch (e, s) {
+      Logs().e(
+        '[VOIP] Failed to get permanent reactions for event $eventId',
+        e,
+        s,
+      );
+    }
+
+    return permanentReactions;
+  }
+
+  /// Copy permanent reactions to the new member event
+  ///
+  /// [permanentReactions] - List of permanent reaction events to copy
+  /// [newEventId] - The event ID of the new membership event
+  Future<void> _copyPermanentReactionsToNewEvent(
+    List<MatrixEvent> permanentReactions,
+    String newEventId,
+  ) async {
+    // Re-send each permanent reaction with the new event ID
+    for (final reactionEvent in permanentReactions) {
+      try {
+        final content = reactionEvent.content;
+        final reactionKey = content['key'] as String?;
+
+        if (reactionKey == null) {
+          Logs().w(
+            '[VOIP] Skipping permanent reaction copy: missing reaction key',
+          );
+          continue;
+        }
+
+        // Build new reaction event with updated event ID
+        final payload = ReactionPayload(
+          key: reactionKey,
+          isEphemeral: false,
+          callId: groupCallId,
+          deviceId: client.deviceID!,
+          relType: RelationshipTypes.reference,
+          eventId: newEventId,
+        );
+
+        // Send the permanent reaction with new event ID
+        final txid = client.generateUniqueTransactionId();
+        await client.sendMessage(
+          room.id,
+          EventTypes.GroupCallMemberReaction,
+          txid,
+          payload.toJson(),
+        );
+
+        Logs().d(
+          '[VOIP] Copied permanent reaction $reactionKey to new member event $newEventId',
+        );
+      } catch (e, s) {
+        Logs().e(
+          '[VOIP] Failed to copy permanent reaction',
+          e,
+          s,
+        );
+      }
     }
   }
 }

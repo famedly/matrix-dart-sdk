@@ -4039,6 +4039,59 @@ class Client extends MatrixApi {
       onInitStateChanged: onInitStateChanged,
     );
   }
+
+  /// Strips all information out of an event which isn't critical to the
+  /// integrity of the server-side representation of the room.
+  ///
+  /// This cannot be undone.
+  ///
+  /// Any user with a power level greater than or equal to the `m.room.redaction`
+  /// event power level may send redaction events in the room. If the user's power
+  /// level is also greater than or equal to the `redact` power level of the room,
+  /// the user may redact events sent by other users.
+  ///
+  /// Server administrators may redact events sent by users on their server.
+  ///
+  /// [roomId] The room from which to redact the event.
+  ///
+  /// [eventId] The ID of the event to redact
+  ///
+  /// [txnId] The [transaction ID](https://spec.matrix.org/unstable/client-server-api/#transaction-identifiers) for this event. Clients should generate a
+  /// unique ID; it will be used by the server to ensure idempotency of requests.
+  ///
+  /// [reason] The reason for the event being redacted.
+  ///
+  /// [metadata] is a map which will be expanded and sent along the reason field
+  ///
+  /// returns `event_id`:
+  /// A unique identifier for the event.
+  Future<String?> redactEventWithMetadata(
+    String roomId,
+    String eventId,
+    String txnId, {
+    String? reason,
+    Map<String, Object?>? metadata,
+  }) async {
+    final requestUri = Uri(
+      path:
+          '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/redact/${Uri.encodeComponent(eventId)}/${Uri.encodeComponent(txnId)}',
+    );
+    final request = http.Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(
+      jsonEncode({
+        if (reason != null) 'reason': reason,
+        if (metadata != null) ...metadata,
+      }),
+    );
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null ? v as String : null)(json['event_id']);
+  }
 }
 
 class SdkError {
