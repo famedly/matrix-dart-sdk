@@ -191,6 +191,14 @@ class FakeMatrixApi extends BaseClient {
           !action.endsWith('%40alicyy%3Aexample.com') &&
           !action.contains('%40getme')) {
         res = {'displayname': '', 'membership': 'ban'};
+      } else if (method == 'GET' &&
+          action.contains('/client/v1/rooms/') &&
+          action.contains('/relations/')) {
+        res = {
+          'chunk': [],
+          'next_batch': null,
+          'prev_batch': null,
+        };
       } else if (method == 'PUT' &&
           action.contains(
             '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/',
@@ -200,6 +208,18 @@ class FakeMatrixApi extends BaseClient {
           action.contains(
             '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/',
           )) {
+        res = {'event_id': '\$event${_eventCounter++}'};
+      } else if (method == 'PUT' &&
+          action.contains('/client/v3/rooms/') &&
+          action.contains('/state/com.famedly.call.member/')) {
+        res = {'event_id': '\$event${_eventCounter++}'};
+      } else if (method == 'PUT' &&
+          action.contains('/client/v3/rooms/') &&
+          action.contains('/send/com.famedly.call.member.reaction/')) {
+        res = {'event_id': '\$event${_eventCounter++}'};
+      } else if (method == 'PUT' &&
+          action.contains('/client/v3/rooms/') &&
+          action.contains('/redact/')) {
         res = {'event_id': '\$event${_eventCounter++}'};
       } else if (action.contains('/client/v3/sync')) {
         // Sync requests with timeout
