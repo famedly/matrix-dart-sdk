@@ -35,7 +35,7 @@ void main() {
           '(cw spiders) ███████████████████████',
       '<img src="test.gif" alt="a test case" />': 'a test case',
       'List of cute animals:\n<ul>\n<li>Kittens</li>\n<li>Puppies</li>\n<li>Snakes<br/>(I think they\'re cute!)</li>\n</ul>\n(This list is incomplete, you can help by adding to it!)':
-          'List of cute animals:\n● Kittens\n● Puppies\n● Snakes\n  (I think they\'re cute!)\n(This list is incomplete, you can help by adding to it!)',
+          'List of cute animals:\n• Kittens\n• Puppies\n• Snakes\n  (I think they\'re cute!)\n(This list is incomplete, you can help by adding to it!)',
       '<em>fox</em>': '*fox*',
       '<i>fox</i>': '*fox*',
       '<strong>fox</i>': '**fox**',
@@ -67,15 +67,15 @@ void main() {
       '<blockquote><blockquote>fox</blockquote>floof</blockquote>fluff':
           '> > fox\n> floof\nfluff',
       '<ul><li>hey<ul><li>a</li><li>b</li></ul></li><li>foxies</li></ul>':
-          '● hey\n      ○ a\n      ○ b\n● foxies',
+          '• hey\n      ◦ a\n      ◦ b\n• foxies',
       '<ol><li>a</li><li>b</li></ol>': '1. a\n2. b',
       '<ol start="42"><li>a</li><li>b</li></ol>': '42. a\n43. b',
       '<ol><li>a<ol><li>aa</li><li>bb</li></ol></li><li>b</li></ol>':
           '1. a\n      1. aa\n      2. bb\n2. b',
       '<ol><li>a<ul><li>aa</li><li>bb</li></ul></li><li>b</li></ol>':
-          '1. a\n      ○ aa\n      ○ bb\n2. b',
+          '1. a\n      ◦ aa\n      ◦ bb\n2. b',
       '<ul><li>a<ol><li>aa</li><li>bb</li></ol></li><li>b</li></ul>':
-          '● a\n      1. aa\n      2. bb\n● b',
+          '• a\n      1. aa\n      2. bb\n• b',
       '<mx-reply>bunny</mx-reply>fox': 'fox',
       'fox<hr>floof': 'fox\n----------\nfloof',
       '<p>fox</p><hr><p>floof</p>': 'fox\n----------\nfloof',
