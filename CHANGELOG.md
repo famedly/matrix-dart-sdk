@@ -1,3 +1,30 @@
+## [3.0.0] 7th October 2025
+
+#### Migration hints:
+
+- With extended profiles in Matrix 1.16 you now have to use `Client.getProfileField()` instead of `Client.getAvatar()` or `Client.getDisplayname()`.
+
+- You no longer need to ship [flutter_openssl_crypto](https://pub.dev/packages/flutter_openssl_crypto). The necessary encryption algorithms now come from the Vodozemac package. This should make the platform integration much easier.
+
+#### All changes:
+
+- feat: Add deleteDeviceDisplayName() method to matrix API (Christian Kußowski)
+- feat: Add onProgress for upload and download methods (Christian Kußowski)
+- feat: Auto refresh last event after limited timeline (Christian Kußowski)
+- feat: Implement get mentions from event content (Christian Kußowski)
+- feat: Leave DM rooms and invite when ignoring a user (Christian Kußowski)
+- feat: reactions for voip calls (td)
+- feat: Set m.mention field when sending text event (Christian Kußowski)
+- fix: (BREAKING CHANGE) remove only your device call membership if room is not msc3757 (td)
+- fix: Set unread notification count only if not null in sync (Christian Kußowski)
+- refactor: migrate to web and js_interop pkgs (Karthikeyan S)
+- refactor: Return a better default for lastEventReceivedTime (Christian Kußowski)
+- refactor: Support matrix spec 1.16 (Christian Kußowski)
+- refactor: Upgrade to vodozemac cryptoutils (Christian Kußowski)
+- chore: Remove unused callbacks (Christian Kußowski)
+- chore: Remove unused dependency (Christian Kußowski)
+- chore: Revert on upload progress (Christian Kußowski)
+
 ## [2.0.1] 9th Sept 2025
 - fix: scheduled event list init (td)
 
