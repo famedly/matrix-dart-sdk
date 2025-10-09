@@ -86,13 +86,42 @@ class MockEncryptionKeyProvider implements EncryptionKeyProvider {
   }
 }
 
+class MockMediaDeviceInfo implements MediaDeviceInfo {
+  @override
+  final String deviceId;
+  @override
+  final String kind;
+  @override
+  final String label;
+  @override
+  final String? groupId;
+
+  MockMediaDeviceInfo({
+    required this.deviceId,
+    required this.kind,
+    required this.label,
+    this.groupId,
+  });
+}
+
 class MockMediaDevices implements MediaDevices {
   @override
   Function(dynamic event)? ondevicechange;
 
   @override
-  Future<List<MediaDeviceInfo>> enumerateDevices() {
-    throw UnimplementedError();
+  Future<List<MediaDeviceInfo>> enumerateDevices() async {
+    return [
+      MockMediaDeviceInfo(
+        deviceId: 'default_audio_input',
+        kind: 'audioinput',
+        label: 'Default Audio Input',
+      ),
+      MockMediaDeviceInfo(
+        deviceId: 'default_video_input',
+        kind: 'videoinput',
+        label: 'Default Video Input',
+      ),
+    ];
   }
 
   @override
