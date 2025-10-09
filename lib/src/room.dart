@@ -711,6 +711,12 @@ class Room {
     String? threadLastEventId,
     StringBuffer? commandStdout,
     bool addMentions = true,
+
+    /// Displays an event in the timeline with the transaction ID as the event
+    /// ID and a status of SENDING, SENT or ERROR until it gets replaced by
+    /// the sync event. Using this can display a different sort order of events
+    /// as the sync event does replace but not relocate the pending event.
+    bool displayPendingEvent = true,
   }) {
     if (parseCommands) {
       return client.parseAndRunCommand(
@@ -784,6 +790,7 @@ class Room {
       editEventId: editEventId,
       threadRootEventId: threadRootEventId,
       threadLastEventId: threadLastEventId,
+      displayPendingEvent: displayPendingEvent,
     );
   }
 
@@ -838,6 +845,12 @@ class Room {
     Map<String, dynamic>? extraContent,
     String? threadRootEventId,
     String? threadLastEventId,
+
+    /// Displays an event in the timeline with the transaction ID as the event
+    /// ID and a status of SENDING, SENT or ERROR until it gets replaced by
+    /// the sync event. Using this can display a different sort order of events
+    /// as the sync event does replace but not relocate the pending event.
+    bool displayPendingEvent = true,
   }) async {
     txid ??= client.generateUniqueTransactionId();
     sendingFilePlaceholders[txid] = file;
@@ -1035,6 +1048,7 @@ class Room {
       editEventId: editEventId,
       threadRootEventId: threadRootEventId,
       threadLastEventId: threadLastEventId,
+      displayPendingEvent: displayPendingEvent,
     );
     sendingFilePlaceholders.remove(txid);
     sendingFileThumbnails.remove(txid);
