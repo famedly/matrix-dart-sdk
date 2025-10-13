@@ -133,7 +133,9 @@ class MeshBackend extends CallBackend {
   Future<void> _addCall(GroupCallSession groupCall, CallSession call) async {
     _callSessions.add(call);
     _initCall(groupCall, call);
+    // ignore: deprecated_member_use_from_same_package
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
+    groupCall.matrixRTCEventStream.add(CallAddedEvent(call));
   }
 
   /// init a peer call from group calls.
@@ -183,7 +185,10 @@ class MeshBackend extends CallBackend {
     _registerListenersBeforeCallAdd(replacementCall);
     _initCall(groupCall, replacementCall);
 
+    // ignore: deprecated_member_use_from_same_package
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
+    groupCall.matrixRTCEventStream
+        .add(CallReplacedEvent(existingCall, replacementCall));
   }
 
   /// Removes a peer call from group calls.
@@ -196,7 +201,9 @@ class MeshBackend extends CallBackend {
 
     _callSessions.removeWhere((element) => call.callId == element.callId);
 
+    // ignore: deprecated_member_use_from_same_package
     groupCall.onGroupCallEvent.add(GroupCallStateChange.callsChanged);
+    groupCall.matrixRTCEventStream.add(CallRemovedEvent(call));
   }
 
   Future<void> _disposeCall(
@@ -375,7 +382,10 @@ class MeshBackend extends CallBackend {
 
     if (nextActiveSpeaker != null && _activeSpeaker != nextActiveSpeaker) {
       _activeSpeaker = nextActiveSpeaker;
+      // ignore: deprecated_member_use_from_same_package
       groupCall.onGroupCallEvent.add(GroupCallStateChange.activeSpeakerChanged);
+      groupCall.matrixRTCEventStream
+          .add(GroupCallActiveSpeakerChanged(_activeSpeaker!));
     }
     _activeSpeakerLoopTimeout?.cancel();
     _activeSpeakerLoopTimeout = Timer(
@@ -401,8 +411,12 @@ class MeshBackend extends CallBackend {
   ) {
     _screenshareStreams.add(stream);
     onStreamAdd.add(stream);
+    // ignore: deprecated_member_use_from_same_package
     groupCall.onGroupCallEvent
+        // ignore: deprecated_member_use_from_same_package
         .add(GroupCallStateChange.screenshareStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamAdded(GroupCallStreamType.screenshare));
   }
 
   Future<void> _replaceScreenshareStream(
@@ -423,8 +437,12 @@ class MeshBackend extends CallBackend {
     _screenshareStreams.replaceRange(streamIndex, 1, [replacementStream]);
 
     await existingStream.dispose();
+    // ignore: deprecated_member_use_from_same_package
     groupCall.onGroupCallEvent
+        // ignore: deprecated_member_use_from_same_package
         .add(GroupCallStateChange.screenshareStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamReplaced(GroupCallStreamType.screenshare));
   }
 
   Future<void> _removeScreenshareStream(
@@ -450,8 +468,12 @@ class MeshBackend extends CallBackend {
       await stopMediaStream(stream.stream);
     }
 
+    // ignore: deprecated_member_use_from_same_package
     groupCall.onGroupCallEvent
+        // ignore: deprecated_member_use_from_same_package
         .add(GroupCallStateChange.screenshareStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamRemoved(GroupCallStreamType.screenshare));
   }
 
   Future<void> _onCallStateChanged(CallSession call, CallState state) async {
@@ -486,8 +508,12 @@ class MeshBackend extends CallBackend {
   ) async {
     _userMediaStreams.add(stream);
     onStreamAdd.add(stream);
+    // ignore: deprecated_member_use_from_same_package
     groupCall.onGroupCallEvent
+        // ignore: deprecated_member_use_from_same_package
         .add(GroupCallStateChange.userMediaStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamAdded(GroupCallStreamType.userMedia));
   }
 
   Future<void> _replaceUserMediaStream(
@@ -508,8 +534,12 @@ class MeshBackend extends CallBackend {
     _userMediaStreams.replaceRange(streamIndex, 1, [replacementStream]);
 
     await existingStream.dispose();
+    // ignore: deprecated_member_use_from_same_package
     groupCall.onGroupCallEvent
+        // ignore: deprecated_member_use_from_same_package
         .add(GroupCallStateChange.userMediaStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamReplaced(GroupCallStreamType.userMedia));
   }
 
   Future<void> _removeUserMediaStream(
@@ -536,12 +566,19 @@ class MeshBackend extends CallBackend {
       await stopMediaStream(stream.stream);
     }
 
+    // ignore: deprecated_member_use_from_same_package
     groupCall.onGroupCallEvent
+        // ignore: deprecated_member_use_from_same_package
         .add(GroupCallStateChange.userMediaStreamsChanged);
+    groupCall.matrixRTCEventStream
+        .add(GroupCallStreamRemoved(GroupCallStreamType.userMedia));
 
     if (_activeSpeaker == stream.participant && _userMediaStreams.isNotEmpty) {
       _activeSpeaker = _userMediaStreams[0].participant;
+      // ignore: deprecated_member_use_from_same_package
       groupCall.onGroupCallEvent.add(GroupCallStateChange.activeSpeakerChanged);
+      groupCall.matrixRTCEventStream
+          .add(GroupCallActiveSpeakerChanged(_activeSpeaker!));
     }
   }
 
@@ -663,7 +700,9 @@ class MeshBackend extends CallBackend {
       }
     }
 
+    // ignore: deprecated_member_use_from_same_package
     groupCall.onGroupCallEvent.add(GroupCallStateChange.localMuteStateChanged);
+    groupCall.matrixRTCEventStream.add(GroupCallLocalMutedChanged(muted, kind));
     return;
   }
 
@@ -799,8 +838,12 @@ class MeshBackend extends CallBackend {
 
         _addScreenshareStream(groupCall, localScreenshareStream!);
 
+        // ignore: deprecated_member_use_from_same_package
         groupCall.onGroupCallEvent
+            // ignore: deprecated_member_use_from_same_package
             .add(GroupCallStateChange.localScreenshareStateChanged);
+        groupCall.matrixRTCEventStream
+            .add(GroupCallLocalScreenshareStateChanged(true));
         for (final call in _callSessions) {
           await call.addLocalStream(
             await localScreenshareStream!.stream!.clone(),
@@ -813,7 +856,10 @@ class MeshBackend extends CallBackend {
         return;
       } catch (e, s) {
         Logs().e('[VOIP] Enabling screensharing error', e, s);
+        // ignore: deprecated_member_use_from_same_package
         groupCall.onGroupCallEvent.add(GroupCallStateChange.error);
+        groupCall.matrixRTCEventStream
+            .add(GroupCallStateError(e.toString(), s));
         return;
       }
     } else {
@@ -826,8 +872,12 @@ class MeshBackend extends CallBackend {
 
       await groupCall.sendMemberStateEvent();
 
+      // ignore: deprecated_member_use_from_same_package
       groupCall.onGroupCallEvent
+          // ignore: deprecated_member_use_from_same_package
           .add(GroupCallStateChange.localMuteStateChanged);
+      groupCall.matrixRTCEventStream
+          .add(GroupCallLocalScreenshareStateChanged(false));
       return;
     }
   }
