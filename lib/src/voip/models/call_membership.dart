@@ -91,9 +91,7 @@ class CallMembership {
       'scope': scope,
       'foci_active': [backend.toJson()],
       'device_id': deviceId,
-      'event_id': eventId,
       'expires_ts': expiresTs,
-      'expires': 7200000, // element compatibiltiy remove asap
       'membershipID': membershipId, // sessionId
       if (feeds != null) 'feeds': feeds,
     };
