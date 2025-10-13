@@ -349,7 +349,7 @@ class Room {
     final cache = _cachedDirectChatMatrixId;
     if (cache != null) {
       final roomIds = client.directChats[cache];
-      if (roomIds is List && roomIds.contains(id)) {
+      if (roomIds != null && roomIds.contains(id)) {
         return cache;
       }
     }
@@ -1519,21 +1519,21 @@ class Room {
 
   /// Sets this room as a direct chat for this user if not already.
   Future<void> addToDirectChat(String userID) async {
-    final directChats = client.directChats;
-    if (directChats[userID] is List) {
-      if (!directChats[userID].contains(id)) {
-        directChats[userID].add(id);
-      } else {
-        return;
-      } // Is already in direct chats
-    } else {
-      directChats[userID] = [id];
+    final dmRooms = List<String>.from(client.directChats[userID] ?? []);
+    if (dmRooms.contains(id)) {
+      Logs().d('Already a direct chat.');
+      return;
     }
+
+    dmRooms.add(id);
 
     await client.setAccountData(
       client.userID!,
       'm.direct',
-      directChats,
+      {
+        ...client.directChats,
+        userID: dmRooms,
+      },
     );
     return;
   }
