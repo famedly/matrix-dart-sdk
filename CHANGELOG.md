@@ -1,3 +1,8 @@
+## [3.0.1] 15th October 2025
+- feat: Make display sending event configurable in Room.sendEvent() (Christian Kußowski)
+- chore: tidy up call membership event (td)
+- fix: Remove avatar crashes with invalid uri (Christian Kußowski)
+
 ## [3.0.0] 7th October 2025
 
 #### Migration hints:
