@@ -1614,7 +1614,7 @@ class Client extends MatrixApi {
       await setProfileField(
         userID!,
         'avatar_url',
-        {'avatar_url': Uri.parse('')},
+        {'avatar_url': ''},
       );
       return;
     }
