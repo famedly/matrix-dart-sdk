@@ -86,18 +86,49 @@ class MockEncryptionKeyProvider implements EncryptionKeyProvider {
   }
 }
 
+class MockMediaDeviceInfo implements MediaDeviceInfo {
+  @override
+  final String deviceId;
+  @override
+  final String kind;
+  @override
+  final String label;
+  @override
+  final String? groupId;
+
+  MockMediaDeviceInfo({
+    required this.deviceId,
+    required this.kind,
+    required this.label,
+    this.groupId,
+  });
+}
+
 class MockMediaDevices implements MediaDevices {
   @override
   Function(dynamic event)? ondevicechange;
 
   @override
-  Future<List<MediaDeviceInfo>> enumerateDevices() {
-    throw UnimplementedError();
+  Future<List<MediaDeviceInfo>> enumerateDevices() async {
+    return [
+      MockMediaDeviceInfo(
+        deviceId: 'default_audio_input',
+        kind: 'audioinput',
+        label: 'Default Audio Input',
+      ),
+      MockMediaDeviceInfo(
+        deviceId: 'default_video_input',
+        kind: 'videoinput',
+        label: 'Default Video Input',
+      ),
+    ];
   }
 
   @override
-  Future<MediaStream> getDisplayMedia(Map<String, dynamic> mediaConstraints) {
-    throw UnimplementedError();
+  Future<MediaStream> getDisplayMedia(
+    Map<String, dynamic> mediaConstraints,
+  ) async {
+    return MockMediaStream('', '');
   }
 
   @override
@@ -159,6 +190,9 @@ class MockRTCPeerConnection implements RTCPeerConnection {
 
   @override
   Function(RTCTrackEvent event)? onTrack;
+
+  // Mock stats to simulate audio levels
+  double mockAudioLevel = 0.0;
 
   @override
   RTCSignalingState? get signalingState => throw UnimplementedError();
@@ -276,8 +310,23 @@ class MockRTCPeerConnection implements RTCPeerConnection {
   @override
   Future<List<StatsReport>> getStats([MediaStreamTrack? track]) async {
     // Mock implementation for getting stats
-    Logs().i('Mock: Getting stats');
-    return [];
+    Logs().i('Mock: Getting stats with audioLevel: $mockAudioLevel');
+    return [
+      MockStatsReport(
+        type: 'inbound-rtp',
+        values: {
+          'kind': 'audio',
+          'audioLevel': mockAudioLevel,
+        },
+      ),
+      MockStatsReport(
+        type: 'media-source',
+        values: {
+          'kind': 'audio',
+          'audioLevel': mockAudioLevel,
+        },
+      ),
+    ];
   }
 
   @override
@@ -849,4 +898,46 @@ class MockVideoRenderer implements VideoRenderer {
     // Mock implementation for disposing VideoRenderer
     Logs().i('Mock: Disposing VideoRenderer');
   }
+}
+
+class MockStatsReport implements StatsReport {
+  @override
+  final String type;
+
+  @override
+  final Map<String, dynamic> values;
+
+  @override
+  final String id;
+
+  @override
+  final double timestamp;
+
+  MockStatsReport({
+    required this.type,
+    required this.values,
+    this.id = 'mock-stats-id',
+    this.timestamp = 0.0,
+  });
+}
+
+class MockRTCTrackEvent implements RTCTrackEvent {
+  @override
+  final MediaStreamTrack track;
+
+  @override
+  final RTCRtpReceiver? receiver;
+
+  @override
+  final List<MediaStream> streams;
+
+  @override
+  final RTCRtpTransceiver? transceiver;
+
+  MockRTCTrackEvent({
+    required this.track,
+    this.receiver,
+    required this.streams,
+    this.transceiver,
+  });
 }

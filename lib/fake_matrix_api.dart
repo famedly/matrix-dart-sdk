@@ -2753,6 +2753,14 @@ class FakeMatrixApi extends BaseClient {
           (var reqI) => {
                 'event_id': '42',
               },
+      '/client/v3/rooms/!calls%3Aexample.com/state/com.famedly.call.member/%40test%3AfakeServer.notExisting':
+          (var reqI) => {
+                'event_id': 'call_member_42',
+              },
+      '/client/v3/rooms/!calls%3Aexample.com/state/com.famedly.call.member/%40remoteuser%3Aexample.com':
+          (var reqI) => {
+                'event_id': 'call_member_remote_42',
+              },
       '/client/v3/directory/list/room/!localpart%3Aexample.com': (var req) =>
           {},
       '/client/v3/room_keys/version/5': (var req) => {},

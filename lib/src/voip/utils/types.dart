@@ -165,6 +165,7 @@ class GroupCallError extends Error {
   }
 }
 
+@Deprecated('Use the events implementing MatrixRTCCallEvent instead')
 enum GroupCallStateChange {
   groupCallStateChanged,
   activeSpeakerChanged,
@@ -175,13 +176,4 @@ enum GroupCallStateChange {
   localMuteStateChanged,
   participantsChanged,
   error
-}
-
-enum GroupCallState {
-  localCallFeedUninitialized,
-  initializingLocalCallFeed,
-  localCallFeedInitialized,
-  entering,
-  entered,
-  ended
 }
