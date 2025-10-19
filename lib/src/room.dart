@@ -2437,18 +2437,30 @@ class Room {
     JoinRules joinRules, {
     /// For restricted rooms, the id of the room where a user needs to be member.
     /// Learn more at https://spec.matrix.org/latest/client-server-api/#restricted-rooms
+    List<String>? allowConditionRoomIds,
+    @Deprecated('Use allowConditionRoomIds instead!')
     String? allowConditionRoomId,
   }) async {
+    if (allowConditionRoomId != null) {
+      allowConditionRoomIds ??= [];
+      allowConditionRoomIds.add(allowConditionRoomId);
+    }
+
     await client.setRoomStateWithKey(
       id,
       EventTypes.RoomJoinRules,
       '',
       {
-        'join_rule': joinRules.toString().replaceAll('JoinRules.', ''),
-        if (allowConditionRoomId != null)
-          'allow': [
-            {'room_id': allowConditionRoomId, 'type': 'm.room_membership'},
-          ],
+        'join_rule': joinRules.text,
+        if (allowConditionRoomIds != null && allowConditionRoomIds.isNotEmpty)
+          'allow': allowConditionRoomIds
+              .map(
+                (allowConditionRoomId) => {
+                  'room_id': allowConditionRoomId,
+                  'type': 'm.room_membership',
+                },
+              )
+              .toList(),
       },
     );
     return;
