@@ -2538,16 +2538,13 @@ class Client extends MatrixApi {
   Future<void> _handleDeviceListsEvents(DeviceListsUpdate deviceLists) async {
     if (deviceLists.changed is List) {
       for (final userId in deviceLists.changed ?? []) {
-        final userKeys = _userDeviceKeys[userId];
-        if (userKeys != null) {
-          userKeys.outdated = true;
-          await database.storeUserDeviceKeysInfo(userId, true);
-        }
+        final userKeys =
+            _userDeviceKeys[userId] ??= DeviceKeysList(userId, this);
+        userKeys.outdated = true;
+        await database.storeUserDeviceKeysInfo(userId, true);
       }
       for (final userId in deviceLists.left ?? []) {
-        if (_userDeviceKeys.containsKey(userId)) {
-          _userDeviceKeys.remove(userId);
-        }
+        _userDeviceKeys.remove(userId);
       }
     }
   }
@@ -3192,26 +3189,6 @@ class Client extends MatrixApi {
     return null;
   }
 
-  Future<Set<String>> _getUserIdsInEncryptedRooms() async {
-    final userIds = <String>{};
-    for (final room in rooms) {
-      if (room.encrypted && room.membership == Membership.join) {
-        try {
-          final userList = await room.requestParticipants();
-          for (final user in userList) {
-            if ([Membership.join, Membership.invite]
-                .contains(user.membership)) {
-              userIds.add(user.id);
-            }
-          }
-        } catch (e, s) {
-          Logs().e('[E2EE] Failed to fetch participants', e, s);
-        }
-      }
-    }
-    return userIds;
-  }
-
   final Map<String, DateTime> _keyQueryFailures = {};
 
   Future<void> updateUserDeviceKeys({Set<String>? additionalUsers}) async {
@@ -3219,23 +3196,15 @@ class Client extends MatrixApi {
       final database = this.database;
       if (!isLogged()) return;
       final dbActions = <Future<dynamic> Function()>[];
-      final trackedUserIds = await _getUserIdsInEncryptedRooms();
-      if (!isLogged()) return;
-      trackedUserIds.add(userID!);
-      if (additionalUsers != null) trackedUserIds.addAll(additionalUsers);
-
-      // Remove all userIds we no longer need to track the devices of.
-      _userDeviceKeys
-          .removeWhere((String userId, v) => !trackedUserIds.contains(userId));
 
       // Check if there are outdated device key lists. Add it to the set.
       final outdatedLists = <String, List<String>>{};
       for (final userId in (additionalUsers ?? <String>[])) {
         outdatedLists[userId] = [];
       }
-      for (final userId in trackedUserIds) {
-        final deviceKeysList =
-            _userDeviceKeys[userId] ??= DeviceKeysList(userId, this);
+      for (final entry in _userDeviceKeys.entries) {
+        final userId = entry.key;
+        final deviceKeysList = entry.value;
         final failure = _keyQueryFailures[userId.domain];
 
         // deviceKeysList.outdated is not nullable but we have seen this error
