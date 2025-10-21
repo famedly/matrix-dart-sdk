@@ -54,9 +54,11 @@ class GroupCallSession {
 
   String groupCallId;
 
+  @Deprecated('Use matrixRTCEventStream instead')
   final CachedStreamController<GroupCallState> onGroupCallState =
       CachedStreamController();
 
+  @Deprecated('Use matrixRTCEventStream instead')
   final CachedStreamController<GroupCallStateChange> onGroupCallEvent =
       CachedStreamController();
 
@@ -105,8 +107,11 @@ class GroupCallSession {
 
   void setState(GroupCallState newState) {
     state = newState;
+    // ignore: deprecated_member_use_from_same_package
     onGroupCallState.add(newState);
+    // ignore: deprecated_member_use_from_same_package
     onGroupCallEvent.add(GroupCallStateChange.groupCallStateChanged);
+    matrixRTCEventStream.add(GroupCallStateChanged(newState));
   }
 
   bool hasLocalParticipant() {
@@ -313,6 +318,7 @@ class GroupCallSession {
             .add(ParticipantsLeftEvent(participants: anyLeft.toList()));
       }
 
+      // ignore: deprecated_member_use_from_same_package
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
     }
   }
