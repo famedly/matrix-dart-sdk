@@ -1,3 +1,9 @@
+## [3.0.2] 24th October 2025
+
+- chore: bump vodozemac version to v0.4.0 (Karthikeyan S)
+- refactor: merge onGroupCallState and onGroupCallEvent into matrixRTCEventStream with proper types (Karthikeyan S)
+- test: matrixRTCEventStream emitted events in a group call (Karthikeyan S)
+
 ## [3.0.1] 15th October 2025
 - feat: Make display sending event configurable in Room.sendEvent() (Christian Kußowski)
 - chore: tidy up call membership event (td)
