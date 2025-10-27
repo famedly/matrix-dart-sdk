@@ -2690,10 +2690,21 @@ class Room {
     );
   }
 
-  /// Remove a child from this space by setting the `via` to an empty list.
-  Future<void> removeSpaceChild(String roomId) => !isSpace
-      ? throw Exception('Room is not a space!')
-      : setSpaceChild(roomId, via: const []);
+  /// Remove a child from this space by removing the space child and optionally
+  /// space parent state events.
+  Future<void> removeSpaceChild(String roomId) async {
+    if (!isSpace) throw Exception('Room is not a space!');
+
+    await client.setRoomStateWithKey(id, EventTypes.SpaceChild, roomId, {});
+
+    // Optionally remove the space parent state event in the former space child.
+    if (client
+            .getRoomById(roomId)
+            ?.canChangeStateEvent(EventTypes.SpaceParent) ==
+        true) {
+      await client.setRoomStateWithKey(roomId, EventTypes.SpaceParent, id, {});
+    }
+  }
 
   @override
   bool operator ==(Object other) => (other is Room && other.id == id);
