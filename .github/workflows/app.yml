@@ -119,10 +119,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
-      - uses: subosito/flutter-action@48cafc24713cca54bbe03cdc3a423187d413aafa
+      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
-          flutter-version: ${{ env.flutter_version }}
-          cache: true
+          sdk: ${{ env.dart_version }}
       - name: Ensure SDK compiles on web
         run: |
           pushd web_test
