@@ -2235,8 +2235,8 @@ class Client extends MatrixApi {
       await dispose();
     }
 
-    _id = accessToken = _syncFilterId =
-        homeserver = _userID = _deviceID = _deviceName = _prevBatch = null;
+    _id = accessToken = _syncFilterId = homeserver =
+        _userID = _deviceID = _deviceName = _prevBatch = _trackedUserIds = null;
     _rooms = [];
     _eventsPendingDecryption.clear();
     await encryption?.dispose();
@@ -2547,6 +2547,7 @@ class Client extends MatrixApi {
       for (final userId in deviceLists.left ?? []) {
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys.remove(userId);
+          _trackedUserIds?.remove(userId);
         }
       }
     }
@@ -2815,16 +2816,26 @@ class Client extends MatrixApi {
     final callEvents = <Event>[];
 
     for (var event in events) {
-      // The client must ignore any new m.room.encryption event to prevent
-      // man-in-the-middle attacks!
-      if ((event.type == EventTypes.Encryption &&
-          room.encrypted &&
-          event.content.tryGet<String>('algorithm') !=
-              room
-                  .getState(EventTypes.Encryption)
-                  ?.content
-                  .tryGet<String>('algorithm'))) {
-        continue;
+      if (event.type == EventTypes.Encryption) {
+        // The client must ignore any new m.room.encryption event to prevent
+        // man-in-the-middle attacks!
+        if ((room.encrypted &&
+            event.content.tryGet<String>('algorithm') !=
+                room
+                    .getState(EventTypes.Encryption)
+                    ?.content
+                    .tryGet<String>('algorithm'))) {
+          Logs().wtf(
+            'Received an `m.room.encryption` event in a room, where encryption is already enabled! This event must be ignored as it could be an attack!',
+            jsonEncode(event.toJson()),
+          );
+          continue;
+        } else {
+          // Encryption has been enabled in a room -> Reset tracked user IDs so
+          // sync they can be calculated again.
+          Logs().i('End to end encryption enabled in', room.id);
+          _trackedUserIds = null;
+        }
       }
 
       if (event is MatrixEvent &&
@@ -3058,10 +3069,20 @@ class Client extends MatrixApi {
         final event = Event.fromMatrixEvent(eventUpdate, room);
 
         // Update the room state:
-        if (event.stateKey != null &&
+        final stateKey = event.stateKey;
+        if (stateKey != null &&
             (!room.partial || importantStateEvents.contains(event.type))) {
           room.setState(event);
+
+          if (room.encrypted &&
+              event.type == EventTypes.RoomMember &&
+              {'join', 'invite'}
+                  .contains(event.content.tryGet<String>('membership'))) {
+            // New members should be added to the tracked user IDs for encryption:
+            _trackedUserIds?.add(stateKey);
+          }
         }
+
         if (type != EventUpdateType.timeline) break;
 
         // Is this event redacting the last event?
@@ -3197,13 +3218,11 @@ class Client extends MatrixApi {
     for (final room in rooms) {
       if (room.encrypted && room.membership == Membership.join) {
         try {
-          final userList = await room.requestParticipants();
-          for (final user in userList) {
-            if ([Membership.join, Membership.invite]
-                .contains(user.membership)) {
-              userIds.add(user.id);
-            }
-          }
+          final userList = await room.requestParticipants(
+            [Membership.join, Membership.invite],
+            true,
+          );
+          userIds.addAll(userList.map((user) => user.id));
         } catch (e, s) {
           Logs().e('[E2EE] Failed to fetch participants', e, s);
         }
@@ -3214,13 +3233,25 @@ class Client extends MatrixApi {
 
   final Map<String, DateTime> _keyQueryFailures = {};
 
+  /// These are the user IDs we share an encrypted room with and need to track
+  /// the devices from, cached here for performance reasons.
+  /// It gets initialized after the first sync of every
+  /// instance and then updated on member changes or sync device changes.
+  Set<String>? _trackedUserIds;
+
   Future<void> updateUserDeviceKeys({Set<String>? additionalUsers}) async {
     try {
       final database = this.database;
       if (!isLogged()) return;
       final dbActions = <Future<dynamic> Function()>[];
-      final trackedUserIds = await _getUserIdsInEncryptedRooms();
-      if (!isLogged()) return;
+      final trackedUserIds =
+          _trackedUserIds ??= await _getUserIdsInEncryptedRooms();
+      if (!isLogged()) {
+        // For the case we get logged out while `_getUserIdsInEncryptedRooms()`
+        // was already started.
+        _trackedUserIds = null;
+        return;
+      }
       trackedUserIds.add(userID!);
       if (additionalUsers != null) trackedUserIds.addAll(additionalUsers);
 
@@ -3760,6 +3791,7 @@ class Client extends MatrixApi {
   Future<void> clearCache() async {
     await abortSync();
     _prevBatch = null;
+    _trackedUserIds = null;
     rooms.clear();
     await database.clearCache();
     encryption?.keyManager.clearOutboundGroupSessions();
