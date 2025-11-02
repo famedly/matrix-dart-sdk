@@ -300,5 +300,9 @@ abstract class EventLocalizations {
               body,
         ),
     EventTypes.refreshingLastEvent: (_, i18n, ___) => i18n.refreshingLastEvent,
+    PollEventContent.startType: (event, i18n, body) => i18n.startedAPoll(
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        ),
+    PollEventContent.endType: (event, i18n, body) => i18n.pollHasBeenEnded,
   };
 }

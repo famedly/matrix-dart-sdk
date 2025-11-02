@@ -321,4 +321,10 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String get refreshingLastEvent => 'Refreshing last event...';
+
+  @override
+  String startedAPoll(String senderName) => '$senderName started a poll';
+
+  @override
+  String get pollHasBeenEnded => 'Poll has been ended';
 }
