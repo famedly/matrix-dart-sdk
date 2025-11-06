@@ -220,6 +220,10 @@ void main() {
         ),
         '<p>The first<br/>codeblock</p><pre><code class="language-dart">void main(){\nprint(something);\n}\n</code></pre><p>And the second code block</p><pre><code class="language-js">meow\nmeow\n</code></pre>',
       );
+      expect(
+        markdown('Test <m> *unescaped*'),
+        'Test &lt;m&gt; <em>unescaped</em>',
+      );
     });
     test('Checkboxes', () {
       expect(
