@@ -515,6 +515,7 @@ class Client extends MatrixApi {
         DiscoveryInformation?,
         GetVersionsResponse versions,
         List<LoginFlow>,
+        GetAuthMetadataResponse? authMetadata,
       )> checkHomeserver(
     Uri homeserverUrl, {
     bool checkWellKnown = true,
@@ -554,7 +555,20 @@ class Client extends MatrixApi {
         );
       }
 
-      return (wellKnown, versions, loginTypes);
+      GetAuthMetadataResponse? authMetadata;
+      if (versions.versions.any(
+        (v) => isVersionGreaterThanOrEqualTo(v, 'v1.16'),
+      )) {
+        try {
+          authMetadata = await getAuthMetadata();
+        } on MatrixException catch (e, s) {
+          if (e.error != MatrixError.M_UNRECOGNIZED) {
+            Logs().w('Unable to discover OIDC auth metadata.', e, s);
+          }
+        }
+      }
+
+      return (wellKnown, versions, loginTypes, authMetadata);
     } catch (_) {
       homeserver = null;
       rethrow;
