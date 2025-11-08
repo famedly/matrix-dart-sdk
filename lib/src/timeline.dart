@@ -610,7 +610,7 @@ class Timeline {
     }
   }
 
-  @Deprecated('Use [startSearch] instead.')
+  @Deprecated('Use [Room.searchEvent] instead.')
   Stream<List<Event>> searchEvent({
     String? searchTerm,
     int requestHistoryCount = 100,
@@ -637,6 +637,7 @@ class Timeline {
   /// ignore [searchTerm].
   /// Returns the List of Events and the next prevBatch at the end of the
   /// search.
+  @Deprecated('Use [Room.searchEvent] instead.')
   Stream<(List<Event>, String?)> startSearch({
     String? searchTerm,
     int requestHistoryCount = 100,
