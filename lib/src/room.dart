@@ -2718,6 +2718,102 @@ class Room {
     }
   }
 
+  /// Performs a search for `searchTerm` or a more complex `searchFunc()`.
+  /// The behavior is different for unencrypted rooms where it performs a
+  /// server side search which works very well when using `searchTerm`. For
+  /// encrypted rooms the entire room history (limited by `limit`) will be
+  /// downloaded, decrypted and then checked which needs much more time. If
+  /// there are events left in the timeline you get a `nextBatch` back which
+  /// you can use for the next iteration.
+  Future<({List<Event> events, String? nextBatch})> searchEvents({
+    String? searchTerm,
+    bool Function(Event)? searchFunc,
+    String? nextBatch,
+    int limit = 1000,
+  }) async {
+    assert(searchTerm != null || searchFunc != null);
+
+    // We first check out what we have in database:
+    searchFunc ??= (event) => event.body.toLowerCase().contains(
+          searchTerm!.toLowerCase(),
+        );
+    final foundEvents = <Event>[];
+    if (nextBatch == null) {
+      final databaseEvents = await client.database.getEventList(this, start: 0);
+      foundEvents.addAll(databaseEvents.where(searchFunc));
+    }
+    if (foundEvents.isNotEmpty &&
+        foundEvents.last.type == EventTypes.RoomCreate) {
+      // We have the complete timeline locally, so we stop here:
+      return (events: foundEvents, nextBatch: null);
+    }
+
+    // For unencrypted rooms we can use the server search:
+    if (!encrypted) {
+      final serverSearchResult = await client.search(
+        Categories(
+          roomEvents: RoomEventsCriteria(
+            searchTerm: searchTerm ?? '',
+            orderBy: SearchOrder.recent,
+            filter: SearchFilter(
+              rooms: [id],
+              types: client.roomPreviewLastEvents.toList(),
+              limit: limit,
+            ),
+            includeState: false,
+            groupings: Groupings(groupBy: [Group(key: GroupKey.roomId)]),
+          ),
+        ),
+        nextBatch: nextBatch,
+      );
+      final newNextBatch = serverSearchResult
+          .searchCategories.roomEvents?.groups?['room_id']?[id]?.nextBatch;
+      final events = serverSearchResult.searchCategories.roomEvents?.results
+              ?.map((result) => result.result)
+              .whereType<MatrixEvent>()
+              .map((matrixEvent) => Event.fromMatrixEvent(matrixEvent, this))
+              .toList() ??
+          [];
+      if (searchTerm == null) events.removeWhere(searchFunc);
+      foundEvents.addAll(events);
+      return (events: events, nextBatch: newNextBatch);
+    }
+
+    final filter = StateFilter(types: client.roomPreviewLastEvents.toList());
+    nextBatch ??= foundEvents.isEmpty
+        ? null
+        : (await client.getEventContext(id, foundEvents.last.eventId, limit: 0))
+            .end;
+    // Request `limit` events from server, decrypt and filter them and return.
+    final historyResult = await client.getRoomEvents(
+      id,
+      Direction.b,
+      from: nextBatch ?? prev_batch,
+      limit: limit,
+      filter: jsonEncode(filter.toJson()),
+    );
+    final events = historyResult.chunk
+        .map((matrixEvent) => Event.fromMatrixEvent(matrixEvent, this))
+        .toList();
+
+    // Decrypt all events one after another:
+    for (final (index, event) in events.indexed) {
+      if (event.type == EventTypes.Encrypted) {
+        final decrypted = await client.encryption?.decryptRoomEvent(
+          event,
+          store: false,
+          updateType: EventUpdateType.history,
+        );
+        if (decrypted != null && decrypted.type != EventTypes.Encrypted) {
+          events[index] = decrypted;
+        }
+      }
+    }
+    events.removeWhere((event) => event.type == EventTypes.Encrypted);
+    foundEvents.addAll(events.where(searchFunc));
+    return (events: foundEvents, nextBatch: historyResult.end);
+  }
+
   @override
   bool operator ==(Object other) => (other is Room && other.id == id);
 
