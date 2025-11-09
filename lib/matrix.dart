@@ -85,6 +85,8 @@ export 'msc_extensions/msc_4140_delayed_events/api.dart';
 export 'msc_extensions/msc_3381_polls/models/poll_event_content.dart';
 export 'msc_extensions/msc_3381_polls/poll_event_extension.dart';
 export 'msc_extensions/msc_3381_polls/poll_room_extension.dart';
+export 'msc_extensions/msc_2966_oidc_dynamic_client_registration/msc_2966_oidc_dynamic_client_registration.dart';
+export 'msc_extensions/msc_2964_oidc_login_flow/msc_2964_oidc_login_flow.dart';
 
 export 'src/utils/web_worker/web_worker_stub.dart'
     if (dart.library.js_interop) 'src/utils/web_worker/web_worker.dart';
