@@ -135,6 +135,10 @@ class FakeMatrixApi extends BaseClient {
       );
     }
 
+    if ({'/oauth2/clients/register'}.contains(action)) {
+      statusCode = 201;
+    }
+
     if (!{
           '/client/v3/refresh',
           '/client/v3/login',
@@ -1821,7 +1825,7 @@ class FakeMatrixApi extends BaseClient {
       '/client/v3/rooms/!5345234234%3Aexample.com/messages?from=t_1234a&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => archivesMessageResponse,
       '/client/versions': (var req) => {
-            'versions': ['v1.1', 'v1.2', 'v1.11'],
+            'versions': ['v1.1', 'v1.2', 'v1.11', 'v1.15'],
             'unstable_features': {'m.lazy_load_members': true},
           },
       '/client/v3/login': (var req) => {
@@ -2214,6 +2218,30 @@ class FakeMatrixApi extends BaseClient {
           },
     },
     'POST': {
+      '/oauth2/token': (var req) => {
+            'access_token': '2YotnFZFEjr1zCsicMWpAA',
+            'token_type': 'Bearer',
+            'expires_in': 299,
+            'refresh_token': 'tGz3JOkF0XG5Qx2TlKWIA',
+            'scope':
+                'urn:matrix:client:api:* urn:matrix:client:device:AAABBBCCCDDD',
+          },
+      '/oauth2/clients/register': (var req) {
+        final jsonReq = jsonDecode(req);
+        return {
+          'client_id': '1234',
+          'client_name': jsonReq['client_name'],
+          'client_uri': jsonReq['client_uri'],
+          'logo_uri': jsonReq['logo_uri'],
+          'tos_uri': jsonReq['tos_uri'],
+          'policy_uri': jsonReq['policy_uri'],
+          'redirect_uris': jsonReq['redirect_uris'],
+          'token_endpoint_auth_method': jsonReq['token_endpoint_auth_method'],
+          'response_types': jsonReq['code'],
+          'grant_types': jsonReq['grant_types'],
+          'application_type': jsonReq['web'],
+        };
+      },
       '/client/v3/refresh': (var req) => {
             'access_token': 'a_new_token',
             'expires_in_ms': 1000 * 60 * 5,

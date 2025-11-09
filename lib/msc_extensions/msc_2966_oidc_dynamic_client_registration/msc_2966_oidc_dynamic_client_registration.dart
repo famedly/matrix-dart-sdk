@@ -19,7 +19,7 @@ extension Msc2966OidcDynamicClientRegistration on Client {
     Map<String, OidcClientInformation>? localizedClientInformation,
     String tokenEndpointAuthMethod = 'none',
     List<String> responseTypes = const ['code'],
-    List<String> grandTypes = const ['authorization_code', 'refresh_token'],
+    List<String> grantTypes = const ['authorization_code', 'refresh_token'],
     Map<String, Object?>? additionalProperties,
   }) async {
     final authMetadata = await getAuthMetadata();
@@ -55,7 +55,7 @@ extension Msc2966OidcDynamicClientRegistration on Client {
       'redirect_uris': redirectUris.map((uri) => uri.toString()).toList(),
       'token_endpoint_auth_method': tokenEndpointAuthMethod,
       'response_types': responseTypes,
-      'grand_types': grandTypes,
+      'grant_types': grantTypes,
       'application_type': applicationType.name,
       ...clientInformation.toJson(),
       if (localizedClientInformation != null)
