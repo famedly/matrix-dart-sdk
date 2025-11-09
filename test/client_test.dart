@@ -524,6 +524,22 @@ void main() {
       FakeMatrixApi.currentApi?.api = oldapi!;
     });
 
+    test('init() with access token', () async {
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
+      await client.init(
+        newToken: 'abcd1234',
+        newHomeserver: Uri.parse('https://fakeserver.notexisting'),
+      );
+      expect(client.isLogged(), true);
+      expect(client.userID, 'alice@example.com');
+      expect(client.deviceID, 'ABCDEFGH');
+      await client.dispose();
+    });
+
     test('Login', () async {
       matrix = Client(
         'testclient',

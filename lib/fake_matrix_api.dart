@@ -1352,7 +1352,7 @@ class FakeMatrixApi extends BaseClient {
             },
           },
       '/client/v3/account/whoami': (var req) =>
-          {'user_id': 'alice@example.com'},
+          {'user_id': 'alice@example.com', 'device_id': 'ABCDEFGH'},
       '/client/v3/capabilities': (var req) => {
             'capabilities': {
               'm.change_password': {'enabled': false},
