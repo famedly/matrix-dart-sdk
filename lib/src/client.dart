@@ -1982,9 +1982,9 @@ class Client extends MatrixApi {
   ///
   /// Sends [LoginState.loggedIn] to [onLoginStateChanged].
   ///
-  /// If one of [newToken], [newUserID], [newDeviceID], [newDeviceName] is set then
-  /// all of them must be set! If you don't set them, this method will try to
-  /// get them from the database.
+  /// If one of [newToken] is set, but one of [newUserID], [newDeviceID] is
+  /// null, then this method calls `/whoami` to fetch user ID and device ID
+  /// and rethrows if this request fails.
   ///
   /// Set [waitForFirstSync] and [waitUntilLoadCompletedLoaded] to false to speed this
   /// up. You can then wait for `roomsLoading`, `_accountDataLoading` and
@@ -2008,16 +2008,9 @@ class Client extends MatrixApi {
     /// To track what actually happens you can set a callback here.
     void Function(InitState)? onInitStateChanged,
   }) async {
-    if ((newToken != null ||
-            newUserID != null ||
-            newDeviceID != null ||
-            newDeviceName != null) &&
-        (newToken == null ||
-            newUserID == null ||
-            newDeviceID == null ||
-            newDeviceName == null)) {
+    if (newToken != null && homeserver == null && newHomeserver == null) {
       throw ClientInitPreconditionError(
-        'If one of [newToken, newUserID, newDeviceID, newDeviceName] is set then all of them must be set!',
+        'init() can not be performed with an access token when no homeserver was specified.',
       );
     }
 
@@ -2107,6 +2100,12 @@ class Client extends MatrixApi {
         onInitStateChanged?.call(InitState.finished);
         onLoginStateChanged.add(LoginState.loggedIn);
         return;
+      }
+
+      if (accessToken != null && (userID == null || deviceID == null)) {
+        final userInfo = await getTokenOwner();
+        _userID = userID = userInfo.userId;
+        _deviceID = userInfo.deviceId;
       }
 
       if (accessToken == null || homeserver == null || userID == null) {
