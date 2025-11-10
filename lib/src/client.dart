@@ -132,7 +132,7 @@ class Client extends MatrixApi {
   @override
   set homeserver(Uri? homeserver) {
     if (this.homeserver != null && homeserver?.host != this.homeserver?.host) {
-      _wellKnown = null;
+      _wellKnown = _getAuthMetadataResponseCache = null;
     }
     super.homeserver = homeserver;
   }
@@ -740,6 +740,12 @@ class Client extends MatrixApi {
     );
     return response;
   }
+
+  GetAuthMetadataResponse? _getAuthMetadataResponseCache;
+
+  @override
+  Future<GetAuthMetadataResponse> getAuthMetadata() async =>
+      _getAuthMetadataResponseCache ??= await super.getAuthMetadata();
 
   /// Sends a logout command to the homeserver and clears all local data,
   /// including all persistent data from the store.
