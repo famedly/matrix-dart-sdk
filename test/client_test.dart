@@ -531,9 +531,14 @@ void main() {
         database: await getDatabase(),
       );
 
-      await matrix.checkHomeserver(
+      final (_, _, _, authMetadata) = await matrix.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
+        fetchAuthMetadata: true,
+      );
+      expect(
+        authMetadata?.issuer.toString(),
+        'https://fakeserver.notexisting/',
       );
 
       final loginResp = await matrix.login(

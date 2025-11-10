@@ -519,6 +519,13 @@ class Client extends MatrixApi {
       )> checkHomeserver(
     Uri homeserverUrl, {
     bool checkWellKnown = true,
+
+    /// Weither this method should also call `/auth_metadata` to fetch
+    /// Matrix native OIDC information. Defaults to if the `/versions` endpoint
+    /// returns version v1.15 or higher. Set to `true` to always call the
+    /// endpoint if your homeserver supports the endpoint while not fully
+    /// supporting version v1.15 yet.
+    bool? fetchAuthMetadata,
     Set<String>? overrideSupportedVersions,
   }) async {
     final supportedVersions =
@@ -555,10 +562,11 @@ class Client extends MatrixApi {
         );
       }
 
+      fetchAuthMetadata ??= versions.versions.any(
+        (v) => isVersionGreaterThanOrEqualTo(v, 'v1.15'),
+      );
       GetAuthMetadataResponse? authMetadata;
-      if (versions.versions.any(
-        (v) => isVersionGreaterThanOrEqualTo(v, 'v1.16'),
-      )) {
+      if (fetchAuthMetadata) {
         try {
           authMetadata = await getAuthMetadata();
         } on MatrixException catch (e, s) {
