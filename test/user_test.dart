@@ -139,6 +139,7 @@ void main() async {
       await user1.setPower(50);
     });
     test('startDirectChat', () async {
+      FakeMatrixApi.client = user1.room.client;
       await user1.startDirectChat(waitForSync: false);
     });
     test('getPresence', () async {
