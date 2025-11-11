@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/rust/event/event_content.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 
 class LiveKitBackend extends CallBackend {
@@ -60,6 +61,30 @@ class LiveKitBackend extends CallBackend {
   Future<void> preShareKey(GroupCallSession groupCall) async {
     await groupCall.onMemberStateChanged();
     await _changeEncryptionKey(groupCall, groupCall.participants, false);
+
+    final mlsClient = groupCall.voip.mlsClient!;
+    // we are first, create MLS group
+
+    final mlsGroup = mlsClient.crypto.createGroup(name: groupCall.room.id);
+    Logs().w('created group');
+    await mlsClient.sync_();
+    Logs().w('sync done');
+    final keyPackages =
+        await mlsClient.claimKeyPackages(userId: groupCall.client.userID!);
+    Logs().w('claimed keys');
+    final (commitMsg, welcomeMsg, _) = mlsClient.crypto
+        .invite(groupId: groupCall.room.id, keyPackagesBase64: keyPackages);
+    Logs().w('invited ourself');
+    await mlsClient.sendMlsMessage(
+        roomId: groupCall.room.id,
+        mlsMessage: commitMsg,
+        eventContent: EventContent.message(MessageContent.text(
+            body: 'Invite user ${groupCall.client.userID!}')),
+        waitForSyncAndMergeCommit: true);
+
+    await mlsClient.sendWelcomeMessage(
+        userId: groupCall.client.userID!, body: welcomeMsg);
+    Logs().e('created mls group ${mlsGroup.hashCode}');
   }
 
   /// makes a new e2ee key for local user and sets it with a delay if specified
@@ -166,6 +191,43 @@ class LiveKitBackend extends CallBackend {
     bool delayBeforeUsingKeyOurself,
   ) async {
     if (!e2eeEnabled) return;
+    final mlsClient = groupCall.voip.mlsClient!;
+
+    for (final user in anyJoined) {
+      final mems = groupCall.room.getCallMembershipsForUser(
+          user.userId, user.deviceId!, groupCall.voip);
+      Logs().w('found ${mems.length} mems');
+      final ownMems = groupCall.room.getCallMembershipsForUser(
+          groupCall.client.userID!, groupCall.client.deviceID!, groupCall.voip);
+      Logs().w('found ${ownMems.length} own mems');
+
+      if (mems.isNotEmpty &&
+          ownMems.isNotEmpty &&
+          (await groupCall.room.getEventById(mems.last.eventId!))!
+              .originServerTs
+              .isAfter(
+                  (await groupCall.room.getEventById(ownMems.last.eventId!))!
+                      .originServerTs)) {
+        Logs().e('inviting user ${user.userId} to mls group');
+        // send welcome messages?
+        final keyPackages =
+            await mlsClient.claimKeyPackages(userId: user.userId);
+
+        final (commitMsg, welcomeMsg, _) = await mlsClient.crypto
+            .invite(groupId: groupCall.room.id, keyPackagesBase64: keyPackages);
+
+        await mlsClient.sendMlsMessage(
+            roomId: groupCall.room.id,
+            mlsMessage: commitMsg,
+            eventContent: EventContent.message(
+                MessageContent.text(body: 'Invite user ${user.userId}')),
+            waitForSyncAndMergeCommit: true);
+
+        await mlsClient.sendWelcomeMessage(
+            userId: user.userId, body: welcomeMsg);
+      }
+    }
+
     if (groupCall.voip.enableSFUE2EEKeyRatcheting) {
       await _ratchetLocalParticipantKey(
         groupCall,
@@ -299,12 +361,12 @@ class LiveKitBackend extends CallBackend {
         EventTypes.GroupCallMemberEncryptionKeys,
       );
     } catch (e, s) {
-      Logs().e('[VOIP E2EE] Failed to send e2ee keys, retrying', e, s);
-      await _sendEncryptionKeysEvent(
-        groupCall,
-        keyIndex,
-        sendTo: sendTo,
-      );
+      // Logs().e('[VOIP E2EE] Failed to send e2ee keys, retrying', e, s);
+      // await _sendEncryptionKeysEvent(
+      //   groupCall,
+      //   keyIndex,
+      //   sendTo: sendTo,
+      // );
     }
   }
 
@@ -345,20 +407,38 @@ class LiveKitBackend extends CallBackend {
       }
     }
 
+    await groupCall.voip.mlsClient!.sync_();
+    await groupCall.voip.mlsClient!
+        .sendMessage(roomId: groupCall.room.id, body: jsonEncode(data));
+
+    // then send a todevice message to indicate you have to sync
+    // this can be unencrypted has no data in it
+    await groupCall.client.sendToDevice(
+      EventTypes.GroupCallMemberEncryptionKeysSync,
+      txid,
+      {},
+    );
+
+    Logs().i('sent MLS message');
     // prepped data, now we send
-    if (mustEncrypt) {
-      await groupCall.client.sendToDeviceEncrypted(
-        mustEncryptkeysToSendTo,
-        eventType,
-        data,
-      );
-    } else {
-      await groupCall.client.sendToDevice(
-        eventType,
-        txid,
-        unencryptedDataToSend,
-      );
-    }
+    // if (mustEncrypt) {
+    //   // send the keys as a MLS message
+    //   await groupCall.voip.mlsClient
+    //       ?.sendMessage(roomId: groupCall.room.id, body: jsonEncode(data));
+    //   // then send a todevice message to indicate you have to sync
+    //   // this can be unencrypted has no data in it
+    //   await groupCall.client.sendToDevice(
+    //     EventTypes.GroupCallMemberEncryptionKeysSync,
+    //     txid,
+    //     {},
+    //   );
+    // } else {
+    //   await groupCall.client.sendToDevice(
+    //     eventType,
+    //     txid,
+    //     unencryptedDataToSend,
+    //   );
+    // }
   }
 
   @override
@@ -387,6 +467,24 @@ class LiveKitBackend extends CallBackend {
       data,
       EventTypes.GroupCallMemberEncryptionKeysRequest,
     );
+  }
+
+  @override
+  Future<void> onCallEncryptionSync(
+    GroupCallSession groupCall,
+    String userId,
+    String deviceId,
+    Map<String, dynamic> content,
+  ) async {
+    final mlsClient = groupCall.voip.mlsClient;
+    if (mlsClient == null) {
+      throw Exception('[onCallEncryptionSync] mlsClient null');
+    }
+    await groupCall.voip.mlsClient?.sync_();
+    final events = mlsClient.rooms[groupCall.room.id]!.events;
+    for (final event in events) {
+      Logs().e(event.content.toString());
+    }
   }
 
   @override

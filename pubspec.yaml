@@ -6,7 +6,7 @@ repository: https://github.com/famedly/matrix-dart-sdk.git
 issue_tracker: https://github.com/famedly/matrix-dart-sdk/issues
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   async: ^2.8.0
@@ -30,8 +30,13 @@ dependencies:
   vodozemac: ^0.4.0
   web: ^1.1.1
   webrtc_interface: ^1.2.0
+  matrix_mls_client:
+    path: ../matrix-mls-client/flutter/rust_builder
+  flutter_rust_bridge: 2.11.1
+  freezed_annotation: ^3.1.0
 
 dev_dependencies:
+  freezed: ^3.2.0
   build_runner: ^2.4.15
   coverage: ">=0.15.0 <2.0.0"
   file: ">=6.1.1 <8.0.0"

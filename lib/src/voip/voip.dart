@@ -7,6 +7,7 @@ import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/rust/client/client.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
@@ -50,6 +51,7 @@ class VoIP {
   String get localPartyId => currentSessionId;
 
   final Client client;
+  MatrixClient? mlsClient;
   final WebRTCDelegate delegate;
   final StreamController<GroupCallSession> onIncomingGroupCall =
       StreamController();
@@ -374,6 +376,14 @@ class VoIP {
         break;
       case EventTypes.GroupCallMemberEncryptionKeys:
         await groupCallSession!.backend.onCallEncryption(
+          groupCallSession,
+          remoteUserId,
+          remoteDeviceId!,
+          content,
+        );
+        break;
+      case EventTypes.GroupCallMemberEncryptionKeysSync:
+        await groupCallSession!.backend.onCallEncryptionSync(
           groupCallSession,
           remoteUserId,
           remoteDeviceId!,
