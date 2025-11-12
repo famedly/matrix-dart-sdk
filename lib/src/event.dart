@@ -32,7 +32,6 @@ import 'package:matrix/src/utils/markdown.dart';
 import 'package:matrix/src/utils/multipart_request_progress.dart';
 
 abstract class RelationshipTypes {
-  static const String reply = 'm.in_reply_to';
   static const String edit = 'm.replace';
   static const String reaction = 'm.annotation';
   static const String reference = 'm.reference';
@@ -490,31 +489,13 @@ class Event extends MatrixEvent {
   /// event fallback if the relationship type is `m.thread`.
   /// https://spec.matrix.org/v1.14/client-server-api/#fallback-for-unthreaded-clients
   Future<Event?> getReplyEvent(Timeline timeline) async {
-    switch (relationshipType) {
-      case RelationshipTypes.reply:
-        final relationshipEventId = this.relationshipEventId;
-        return relationshipEventId == null
-            ? null
-            : await timeline.getEventById(relationshipEventId);
-
-      case RelationshipTypes.thread:
-        final relationshipContent =
-            content.tryGetMap<String, Object?>('m.relates_to');
-        if (relationshipContent == null) return null;
-        final String? relationshipEventId;
-        if (relationshipContent.tryGet<bool>('is_falling_back') == true) {
-          relationshipEventId = relationshipContent
-              .tryGetMap<String, Object?>('m.in_reply_to')
-              ?.tryGet<String>('event_id');
-        } else {
-          relationshipEventId = this.relationshipEventId;
-        }
-        return relationshipEventId == null
-            ? null
-            : await timeline.getEventById(relationshipEventId);
-      default:
-        return null;
-    }
+    final relationshipEventId = content
+        .tryGetMap<String, Object?>('m.relates_to')
+        ?.tryGetMap<String, Object?>('m.in_reply_to')
+        ?.tryGet<String>('event_id');
+    return relationshipEventId == null
+        ? null
+        : await timeline.getEventById(relationshipEventId);
   }
 
   /// If this event is encrypted and the decryption was not successful because
@@ -1021,30 +1002,30 @@ class Event extends MatrixEvent {
     return transactionId == search;
   }
 
-  /// Get the relationship type of an event. `null` if there is none
-  String? get relationshipType {
-    final mRelatesTo = content.tryGetMap<String, Object?>('m.relates_to');
-    if (mRelatesTo == null) {
-      return null;
-    }
-    final relType = mRelatesTo.tryGet<String>('rel_type');
-    if (relType == RelationshipTypes.thread) {
-      return RelationshipTypes.thread;
-    }
+  /// Get the relationship type of an event. `null` if there is none.
+  String? get relationshipType => content
+      .tryGetMap<String, Object?>('m.relates_to')
+      ?.tryGet<String>('rel_type');
 
-    if (mRelatesTo.containsKey('m.in_reply_to')) {
-      return RelationshipTypes.reply;
-    }
-    return relType;
-  }
+  /// Get the event ID that this relationship will reference and `null` if there
+  /// is none. This could for example be the thread root, the original event for
+  /// an edit or the event, this is an reaction for. For replies please use
+  /// `Event.inReplyToEventId()` instead!
+  String? get relationshipEventId => content
+      .tryGetMap<String, Object?>('m.relates_to')
+      ?.tryGet<String>('event_id');
 
-  /// Get the event ID that this relationship will reference. `null` if there is none
-  String? get relationshipEventId {
-    final relatesToMap = content.tryGetMap<String, Object?>('m.relates_to');
-    return relatesToMap?.tryGet<String>('event_id') ??
-        relatesToMap
-            ?.tryGetMap<String, Object?>('m.in_reply_to')
-            ?.tryGet<String>('event_id');
+  /// If this event is in reply to another event, this returns the event ID or
+  /// null if this event is not a reply.
+  String? inReplyToEventId({bool includingFallback = true}) {
+    final isFallback = content
+        .tryGetMap<String, Object?>('m.relates_to')
+        ?.tryGet<bool>('is_falling_back');
+    if (isFallback == true && !includingFallback) return null;
+    return content
+        .tryGetMap<String, Object?>('m.relates_to')
+        ?.tryGetMap<String, Object?>('m.in_reply_to')
+        ?.tryGet<String>('event_id');
   }
 
   /// Get whether this event has aggregated events from a certain [type]

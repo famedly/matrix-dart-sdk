@@ -79,7 +79,7 @@ void main() async {
       expect(event.formattedText, formatted_body);
       expect(event.body, body);
       expect(event.type, EventTypes.Message);
-      expect(event.relationshipType, RelationshipTypes.reply);
+      expect(event.inReplyToEventId(), '\$1234:example.com');
       jsonObj['state_key'] = '';
       final state = Event.fromJson(jsonObj, room);
       expect(state.eventId, id);
@@ -178,8 +178,8 @@ void main() async {
       };
       event = Event.fromJson(jsonObj, room);
       expect(event.messageType, MessageTypes.Text);
-      expect(event.relationshipType, RelationshipTypes.reply);
-      expect(event.relationshipEventId, '1234');
+      expect(event.inReplyToEventId(), '1234');
+      expect(event.relationshipEventId, null);
     });
 
     test('relationship types', () async {
@@ -212,8 +212,22 @@ void main() async {
         },
       };
       event = Event.fromJson(jsonObj, room);
-      expect(event.relationshipType, RelationshipTypes.reply);
-      expect(event.relationshipEventId, 'def');
+      expect(event.inReplyToEventId(), 'def');
+      expect(event.relationshipEventId, null);
+
+      jsonObj['content']['m.relates_to'] = {
+        'rel_type': 'm.thread',
+        'event_id': '\$root',
+        'm.in_reply_to': {
+          'event_id': '\$target',
+        },
+        'is_falling_back': true,
+      };
+      event = Event.fromJson(jsonObj, room);
+      expect(event.relationshipType, RelationshipTypes.thread);
+      expect(event.inReplyToEventId(), '\$target');
+      expect(event.inReplyToEventId(includingFallback: false), null);
+      expect(event.relationshipEventId, '\$root');
     });
 
     test('redact', () async {
