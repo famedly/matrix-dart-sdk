@@ -1,3 +1,31 @@
+## [4.0.0] 13th November 2025
+
+Matrix Dart SDK 4.0.0 comes with support for polls, adds first bits towards OIDC and improved
+support for spaces and threads.
+This release also fixes a major performance leak while updating user device keys in the sync loop.
+Especially for larger accounts this should improve the performance a lot.
+v4.0.0 It comes with some breaking changes:
+
+#### Migration guide
+
+- `Client.checkHomeserver()` now returns a fourth value. You can just ignore it if you don't need auth_metadata.
+- `RelationshipType.reply` has been removed in favor of `Event.inReplyToEventId()` where you can set if you want to ignore fallbacks or not. This makes it easier to differenciate fallback replies and replies inside of a thread.
+
+#### All changes
+- feat: (BREAKING) Discover OIDC auth metadata on Client.checkHomeserver() (Christian Kußowski)
+- feat: Allow init with access token (Christian Kußowski)
+- feat: Implement msc 3381 polls (krille-chan)
+- feat: Use small versions of bullet point characters (Kelrap)
+- fix: Correctly remove space child (Christian Kußowski)
+- fix: Set join rules with knowk_restricted and multiple allow condition room ids (Christian Kußowski)
+- refactor: (BREAKING) Replace Event.relationshipType and Event.relationshipEventId with Event.inReplyToEventId() for replies. (Christian Kußowski)
+- refactor: Add option to always call auth metadata (Christian Kußowski)
+- refactor: Escape HTML tags before markdown rendering (Christian Kußowski)
+- refactor: Make direct chat getter type safe (Christian Kußowski)
+- refactor: Simpler update user device keys (Christian Kußowski)
+- chore: Cache auth metadata response in client (Christian Kußowski)
+- chore: Remove flutter from CI (Christian Kußowski)
+
 ## [3.0.2] 24th October 2025
 
 - chore: bump vodozemac version to v0.4.0 (Karthikeyan S)
