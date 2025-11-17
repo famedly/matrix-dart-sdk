@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' hide Client;
+import 'package:vodozemac/vodozemac.dart' show CryptoUtils;
 
 import 'package:matrix/matrix.dart';
 
@@ -143,8 +143,8 @@ extension OidcOauthGrantFlowExtension on Client {
     String? prompt,
   }) async {
     // https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
-    final digest = sha256.convert(latin1.encode(codeVerifier));
-    final encodedChallenge = base64UrlEncode(digest.bytes);
+    final digest = CryptoUtils.sha256(input: latin1.encode(codeVerifier));
+    final encodedChallenge = base64UrlEncode(digest);
 
     final requestUri = authorizationEndpoint.replace(
       queryParameters: {
