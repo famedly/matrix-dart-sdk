@@ -32,10 +32,10 @@ dependencies:
   webrtc_interface: ^1.2.0
 
 dev_dependencies:
-  build_runner: ^2.4.15
+  build_runner: ^2.10.3
   coverage: ">=0.15.0 <2.0.0"
   file: ">=6.1.1 <8.0.0"
   import_sorter: ^4.6.0
-  lints: ^5.0.0
+  lints: ^6.0.0
   sqflite_common_ffi: ^2.3.4+4 # sqflite_common_ffi aggressively requires newer dart versions
-  test: ^1.25.13
+  test: ^1.27.0
