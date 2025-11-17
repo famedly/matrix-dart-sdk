@@ -1,9 +1,33 @@
-name: "All the sdk specific jobs"
+name: Continious Integration
 
 on:
-  workflow_call:
+  push:
+    branches:
+      - main
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  dart:
+    permissions:
+      contents: read
+    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@main
+    with:
+      env_file: ".github/workflows/versions.env"
+    secrets:
+      ssh_key: "${{ secrets.CI_SSH_PRIVATE_KEY }}"
+
+  general:
+    permissions:
+      contents: read
+    uses: famedly/frontend-ci-templates/.github/workflows/general.yml@main
+
   e2ee_test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -24,12 +48,11 @@ jobs:
           export HOMESERVER_IMPLEMENTATION=${{matrix.homeserver}}
           export HOMESERVER="localhost:80"
           scripts/integration-server-${{matrix.homeserver}}.sh 2>&1 > /dev/null &
-          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y libssl3 sqlite3 libsqlite3-dev
           source scripts/integration-create-environment-variables.sh
           scripts/integration-prepare-homeserver.sh
-          scripts/prepare.sh
+          dart pub get
           scripts/prepare_vodozemac.sh
-          scripts/test_driver.sh
+          dart --define=HOMESERVER=$HOMESERVER --define=USER1_NAME=$USER1_NAME --define=USER2_NAME=$USER2_NAME --define=USER3_NAME=$USER3_NAME --define=USER1_PW=$USER1_PW --define=USER2_PW=$USER2_PW --define=USER3_PW=$USER3_PW test test_driver/matrixsdk_test.dart -p vm
 
   coverage_without_olm:
     runs-on: ubuntu-latest
@@ -101,17 +124,6 @@ jobs:
           name: merged
           path: merged/
           retention-days: 1
-
-  review_app_coverage:
-    if: github.event_name == 'pull_request'
-    needs: [merge_coverage]
-    secrets: inherit
-    uses: famedly/frontend-ci-templates/.github/workflows/review-app.yml@main
-    with:
-      projectname: "matrix-dart-sdk-coverage"
-      pr: ${{ github.event.pull_request.number }}
-      environment: "review"
-      artifact-name: "merged"
 
   dart_web_compatible:
     runs-on: ubuntu-latest
