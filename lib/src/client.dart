@@ -3409,7 +3409,7 @@ class Client extends MatrixApi {
                   userKeys.deviceKeys[deviceId] = oldKeys[deviceId]!;
                 }
               } else {
-                Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
+                // Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
               }
             }
             // delete old/unused entries

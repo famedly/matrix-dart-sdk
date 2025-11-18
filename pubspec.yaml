@@ -14,11 +14,15 @@ dependencies:
   blurhash_dart: ^1.1.0
   canonical_json: ^1.1.0
   collection: ^1.15.0
+  flutter_rust_bridge: 2.11.1
+  freezed_annotation: ^3.1.0
   html: ^0.15.0
   html_unescape: ^2.0.0
   http: ">=0.13.0 <2.0.0"
   image: ^4.0.15
   markdown: ^7.1.1
+  matrix_mls_client:
+    path: ../matrix-mls-client/flutter/rust_builder
   mime: ">=1.0.0 <3.0.0"
   path: ^1.9.1
   random_string: ^2.3.1
@@ -30,16 +34,13 @@ dependencies:
   vodozemac: ^0.4.0
   web: ^1.1.1
   webrtc_interface: ^1.2.0
-  matrix_mls_client:
-    path: ../matrix-mls-client/flutter/rust_builder
-  flutter_rust_bridge: 2.11.1
-  freezed_annotation: ^3.1.0
 
 dev_dependencies:
-  freezed: ^3.2.0
+  ffigen: ^20.0.0
   build_runner: ^2.4.15
   coverage: ">=0.15.0 <2.0.0"
   file: ">=6.1.1 <8.0.0"
+  freezed: ^3.2.0
   import_sorter: ^4.6.0
   lints: ^5.0.0
   sqflite_common_ffi: ^2.3.4+4 # sqflite_common_ffi aggressively requires newer dart versions

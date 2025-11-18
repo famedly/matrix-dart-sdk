@@ -1,6 +1,10 @@
-rust_input: crate::client,crate::room,crate::event,crate::crypto
+rust_input: crate::client,crate::room,crate::event
 rust_root: ../matrix-mls-client/
 dart_output: lib/rust
 enable_lifetime: true
-default_dart_async: false
 wasm_bindgen_name: 'mls_wasm_bindgen'
+full_dep: true
+rust_preamble: |
+  use openmls::group::{GroupId, MlsGroup};
+  use openmls::prelude::CryptoError;
+  use serde_json::Value;

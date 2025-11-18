@@ -30,3 +30,8 @@ dart test --concurrency=$thread_count test
 
 - Adding the `-x olm` flag will skip tests which require olm
 - Using `-t olm` will run only olm specific tests, but these will probably break as they need prior setup (which is not marked as olm and hence won't be run)
+
+dump
+```
+/Users/techno_disaster/Projects/Famedly/flutter_rust_bridge/target/debug/flutter_rust_bridge_codegen generate && /Users/techno_disaster/Projects/Famedly/flutter_rust_bridge/target/debug/flutter_rust_bridge_codegen build-web --dart-root "./" --rust-root "../matrix-mls-client" --wasm-bindgen-args="--no-modules-global=mls_wasm_bindgen" && rm ../call/web/matrix_mls_client* && cp web/pkg/matrix_mls_client* ../call/web/
+```

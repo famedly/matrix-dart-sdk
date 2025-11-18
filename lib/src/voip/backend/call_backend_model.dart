@@ -87,13 +87,6 @@ abstract class CallBackend {
     Map<String, dynamic> content,
   );
 
-  Future<void> onCallEncryptionSync(
-    GroupCallSession groupCall,
-    String userId,
-    String deviceId,
-    Map<String, dynamic> content,
-  );
-
   Future<void> onCallEncryptionKeyRequest(
     GroupCallSession groupCall,
     String userId,

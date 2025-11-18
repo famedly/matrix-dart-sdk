@@ -1073,14 +1073,4 @@ class MeshBackend extends CallBackend {
   Future<void> preShareKey(GroupCallSession groupCall) async {
     return;
   }
-
-  @override
-  Future<void> onCallEncryptionSync(
-    GroupCallSession groupCall,
-    String userId,
-    String deviceId,
-    Map<String, dynamic> content,
-  ) async {
-    return;
-  }
 }

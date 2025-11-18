@@ -101,8 +101,6 @@ abstract class EventTypes {
 
   // MatrixRTC
   static const String GroupCallMember = 'com.famedly.call.member';
-  static const String GroupCallMemberEncryptionKeysSync =
-      '$GroupCallMember.encryption_keys_sync';
   static const String GroupCallMemberEncryptionKeys =
       '$GroupCallMember.encryption_keys';
   static const String GroupCallMemberEncryptionKeysRequest =

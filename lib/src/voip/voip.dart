@@ -10,6 +10,7 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/rust/client/client.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
+import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
@@ -376,14 +377,6 @@ class VoIP {
         break;
       case EventTypes.GroupCallMemberEncryptionKeys:
         await groupCallSession!.backend.onCallEncryption(
-          groupCallSession,
-          remoteUserId,
-          remoteDeviceId!,
-          content,
-        );
-        break;
-      case EventTypes.GroupCallMemberEncryptionKeysSync:
-        await groupCallSession!.backend.onCallEncryptionSync(
           groupCallSession,
           remoteUserId,
           remoteDeviceId!,
@@ -1095,8 +1088,96 @@ class VoIP {
     if (preShareKey) {
       await groupCall.backend.preShareKey(groupCall);
     }
+    final mlsClient = groupCall.voip.mlsClient!;
+    if (groupCall.participants.isEmpty) {
+      // we are first, create MLS group
 
+      final mlsGroup = mlsClient.createMlsGroup(name: groupCall.room.id);
+      Logs().w('created group');
+      // await mlsClient.sync_();
+      // Logs().w('sync done');
+
+      await mlsClient.claimKeyPackages(userId: groupCall.client.userID!);
+      Logs().w('claimed keys');
+      // final (commitMsg, welcomeMsg, _) = mlsClient.inviteToMlsGroup(groupId: groupCall.room.id, keyPackagesBase64: keyPackages);
+      // Logs().w('invited ourself');
+      // await mlsClient.sendMlsMessage(
+      //     roomId: groupCall.room.id,
+      //     mlsMessage: commitMsg,
+      //     eventContent: EventContent.message(MessageContent.text(
+      //         body: 'Invite user ${groupCall.client.userID!}')),
+      //     waitForSyncAndMergeCommit: true);
+
+      // await mlsClient.sendWelcomeMessage(
+      //     userId: groupCall.client.userID!, body: welcomeMsg);
+      Logs().e('created mls group ${mlsGroup.hashCode}, starting sync now');
+      //
+    }
+
+    Logs().w('starting mls sync loop now');
+    runInRoot(() async => _mlsSync(groupCall!));
     return groupCall;
+  }
+
+  Future<void>? _currentMlsSync;
+  Future<void> _mlsSync(GroupCallSession groupCall) {
+    final currentSync =
+        _currentMlsSync ??= mlsClient!.sync_().then((resp) async {
+      final events =
+          resp.rooms?.join?[groupCall.room.id]?.timeline?.events ?? [];
+      final decryptedEvents =
+          (await mlsClient?.roomsSafe())?[groupCall.room.id]?.events ?? [];
+      for (final e in events) {
+        try {
+          final event =
+              decryptedEvents.singleWhereOrNull((i) => i.eventId == e.eventId);
+          if (event == null) continue;
+          Logs().e(event.eventId.toString());
+          Logs().e(event.content.toString());
+          Logs().e(event.eventType);
+          Logs().e(event.getBody());
+          final keysObject =
+              Map<String, Object?>.from(jsonDecode(event.getBody()));
+          Logs().e(
+            keysObject.tryGet<String>('type')!,
+          );
+          Logs().w('---------');
+
+          if (keysObject.tryGet<String>('type') != null &&
+              keysObject.tryGet<String>('user_id') != null &&
+              keysObject.tryGet<String>('user_id') !=
+                  groupCall.client.userID! &&
+              keysObject.tryGet<String>('device_id') != null &&
+              keysObject.tryGet<String>('device_id') !=
+                  groupCall.client.deviceID!) {
+            if (keysObject.tryGet<String>('type') ==
+                EventTypes.GroupCallMemberEncryptionKeysRequest) {
+              await groupCall.backend.onCallEncryptionKeyRequest(
+                groupCall,
+                keysObject.tryGet<String>('user_id')!,
+                keysObject.tryGet<String>('device_id')!,
+                keysObject,
+              );
+            } else if (keysObject.tryGet<String>('type') ==
+                EventTypes.GroupCallMemberEncryptionKeys) {
+              await groupCall.backend.onCallEncryption(
+                groupCall,
+                keysObject.tryGet<String>('user_id')!,
+                keysObject.tryGet<String>('device_id')!,
+                keysObject,
+              );
+            }
+          }
+        } catch (error, s) {
+          Logs().w('failed to print event ${e.eventId}', error, s);
+          continue;
+        }
+      }
+
+      _currentMlsSync = null;
+      unawaited(_mlsSync(groupCall));
+    });
+    return currentSync;
   }
 
   GroupCallSession? getGroupCallById(String roomId, String groupCallId) {

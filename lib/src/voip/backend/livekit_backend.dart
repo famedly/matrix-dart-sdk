@@ -61,30 +61,6 @@ class LiveKitBackend extends CallBackend {
   Future<void> preShareKey(GroupCallSession groupCall) async {
     await groupCall.onMemberStateChanged();
     await _changeEncryptionKey(groupCall, groupCall.participants, false);
-
-    final mlsClient = groupCall.voip.mlsClient!;
-    // we are first, create MLS group
-
-    final mlsGroup = mlsClient.crypto.createGroup(name: groupCall.room.id);
-    Logs().w('created group');
-    await mlsClient.sync_();
-    Logs().w('sync done');
-    final keyPackages =
-        await mlsClient.claimKeyPackages(userId: groupCall.client.userID!);
-    Logs().w('claimed keys');
-    final (commitMsg, welcomeMsg, _) = mlsClient.crypto
-        .invite(groupId: groupCall.room.id, keyPackagesBase64: keyPackages);
-    Logs().w('invited ourself');
-    await mlsClient.sendMlsMessage(
-        roomId: groupCall.room.id,
-        mlsMessage: commitMsg,
-        eventContent: EventContent.message(MessageContent.text(
-            body: 'Invite user ${groupCall.client.userID!}')),
-        waitForSyncAndMergeCommit: true);
-
-    await mlsClient.sendWelcomeMessage(
-        userId: groupCall.client.userID!, body: welcomeMsg);
-    Logs().e('created mls group ${mlsGroup.hashCode}');
   }
 
   /// makes a new e2ee key for local user and sets it with a delay if specified
@@ -191,6 +167,7 @@ class LiveKitBackend extends CallBackend {
     bool delayBeforeUsingKeyOurself,
   ) async {
     if (!e2eeEnabled) return;
+    Logs().v('_changeEncryptionKey triggered');
     final mlsClient = groupCall.voip.mlsClient!;
 
     for (final user in anyJoined) {
@@ -206,25 +183,39 @@ class LiveKitBackend extends CallBackend {
           (await groupCall.room.getEventById(mems.last.eventId!))!
               .originServerTs
               .isAfter(
-                  (await groupCall.room.getEventById(ownMems.last.eventId!))!
-                      .originServerTs)) {
-        Logs().e('inviting user ${user.userId} to mls group');
+                (await groupCall.room.getEventById(ownMems.last.eventId!))!
+                    .originServerTs,
+              )) {
+        Logs().w('inviting to mls group start');
         // send welcome messages?
         final keyPackages =
             await mlsClient.claimKeyPackages(userId: user.userId);
+        Logs().w('claimed key packages');
+        final (commitMsg, welcomeMsg, _) = await mlsClient.inviteToMlsGroup(
+          groupId: groupCall.room.id,
+          keyPackagesBase64: keyPackages,
+        );
+        Logs().w('invited to mls group, will send message now');
 
-        final (commitMsg, welcomeMsg, _) = await mlsClient.crypto
-            .invite(groupId: groupCall.room.id, keyPackagesBase64: keyPackages);
-
+        // await mlsClient.sync_();
+        // Logs().w('sync done');
         await mlsClient.sendMlsMessage(
-            roomId: groupCall.room.id,
-            mlsMessage: commitMsg,
-            eventContent: EventContent.message(
-                MessageContent.text(body: 'Invite user ${user.userId}')),
-            waitForSyncAndMergeCommit: true);
+          roomId: groupCall.room.id,
+          mlsMessage: commitMsg,
+          eventContent: EventContent.message(
+            MessageContent.text(body: 'Invite user ${user.userId}'),
+          ),
+          waitForSyncAndMergeCommit: true,
+        );
 
         await mlsClient.sendWelcomeMessage(
-            userId: user.userId, body: welcomeMsg);
+          userId: user.userId,
+          body: welcomeMsg,
+        );
+
+        Logs().e('invited user ${user.userId} to mls group');
+      } else {
+        Logs().e('waiting for invite to mls group from other side');
       }
     }
 
@@ -352,8 +343,11 @@ class LiveKitBackend extends CallBackend {
         // plays nicely with backwards compatibility for mesh calls
         'conf_id': groupCall.groupCallId,
         'device_id': groupCall.client.deviceID!,
+        'user_id': groupCall.client.userID!,
         'room_id': groupCall.room.id,
+        'type': EventTypes.GroupCallMemberEncryptionKeys,
       };
+      Logs().w('about to send content ${keyContent.toJson()}');
       await _sendToDeviceEvent(
         groupCall,
         sendTo ?? sendKeysTo.toList(),
@@ -376,7 +370,7 @@ class LiveKitBackend extends CallBackend {
     Map<String, Object> data,
     String eventType,
   ) async {
-    if (remoteParticipants.isEmpty) return;
+    // if (remoteParticipants.isEmpty) return;
     Logs().v(
       '[VOIP E2EE] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ',
     );
@@ -391,33 +385,58 @@ class LiveKitBackend extends CallBackend {
     final Map<String, Map<String, Map<String, Object>>> unencryptedDataToSend =
         {};
 
-    for (final participant in remoteParticipants) {
-      if (participant.deviceId == null) continue;
-      if (mustEncrypt) {
-        await groupCall.client.userDeviceKeysLoading;
-        final deviceKey = groupCall.client.userDeviceKeys[participant.userId]
-            ?.deviceKeys[participant.deviceId];
-        if (deviceKey != null) {
-          mustEncryptkeysToSendTo.add(deviceKey);
-        }
-      } else {
-        unencryptedDataToSend.addAll({
-          participant.userId: {participant.deviceId!: data},
-        });
-      }
+    // for (final participant in remoteParticipants) {
+    //   if (participant.deviceId == null) continue;
+    //   if (mustEncrypt) {
+    //     await groupCall.client.userDeviceKeysLoading;
+    //     final deviceKey = groupCall.client.userDeviceKeys[participant.userId]
+    //         ?.deviceKeys[participant.deviceId];
+    //     if (deviceKey != null) {
+    //       mustEncryptkeysToSendTo.add(deviceKey);
+    //     }
+    //   } else {
+    //     unencryptedDataToSend.addAll({
+    //       participant.userId: {
+    //         participant.deviceId!: {
+    //           'conf_id': groupCall.groupCallId,
+    //           'device_id': groupCall.client.deviceID!,
+    //           'room_id': groupCall.room.id,
+    //           'eventType': EventTypes.GroupCallMemberEncryptionKeysSync,
+    //         },
+    //       },
+    //     });
+    //   }
+    // }
+
+    bool sent = false;
+
+    Future<bool> sendKeyOverMLS() async {
+      Logs().w('1111 trying to send message $data');
+      // final state = groupCall.voip.mlsClient!
+      //     .roomEncryptionState(roomId: groupCall.room.id);
+      // Logs().w('MLS state: ${state.toString()}');
+      // if (state == RoomEncryptionState.ready) {
+      final eventId = await groupCall.voip.mlsClient!
+          .sendMessage(roomId: groupCall.room.id, body: jsonEncode(data));
+      Logs().w('Sent keys with eventId: $eventId, data: $data');
+      return true;
+      // }
+      // return false;
     }
 
-    await groupCall.voip.mlsClient!.sync_();
-    await groupCall.voip.mlsClient!
-        .sendMessage(roomId: groupCall.room.id, body: jsonEncode(data));
+    while (!sent) {
+      Logs().w('trying to send message $data');
+      sent = await sendKeyOverMLS();
+      await Future.delayed(Duration(seconds: 1));
+    }
 
     // then send a todevice message to indicate you have to sync
     // this can be unencrypted has no data in it
-    await groupCall.client.sendToDevice(
-      EventTypes.GroupCallMemberEncryptionKeysSync,
-      txid,
-      {},
-    );
+    // await groupCall.client.sendToDevice(
+    //   EventTypes.GroupCallMemberEncryptionKeysSync,
+    //   txid,
+    //   unencryptedDataToSend,
+    // );
 
     Logs().i('sent MLS message');
     // prepped data, now we send
@@ -458,7 +477,9 @@ class LiveKitBackend extends CallBackend {
     final Map<String, Object> data = {
       'conf_id': groupCall.groupCallId,
       'device_id': groupCall.client.deviceID!,
+      'user_id': groupCall.client.userID!,
       'room_id': groupCall.room.id,
+      'type': EventTypes.GroupCallMemberEncryptionKeysRequest,
     };
 
     await _sendToDeviceEvent(
@@ -476,15 +497,38 @@ class LiveKitBackend extends CallBackend {
     String deviceId,
     Map<String, dynamic> content,
   ) async {
-    final mlsClient = groupCall.voip.mlsClient;
-    if (mlsClient == null) {
-      throw Exception('[onCallEncryptionSync] mlsClient null');
-    }
-    await groupCall.voip.mlsClient?.sync_();
-    final events = mlsClient.rooms[groupCall.room.id]!.events;
-    for (final event in events) {
-      Logs().e(event.content.toString());
-    }
+    // final mlsClient = groupCall.voip.mlsClient;
+    // if (mlsClient == null) {
+    //   throw Exception('[onCallEncryptionSync] mlsClient null');
+    // }
+    // final resp = await groupCall.voip.mlsClient?.sync_();
+
+    // final events = mlsClient?.rooms[groupCall.room.id]?.events ?? [];
+    // for (final event in events) {
+    //   try {
+    //     Logs().e(event.eventId.toString());
+    //     Logs().e(event.stateKey.toString());
+    //     Logs().e(event.content.toString());
+    //     Logs().e(event.eventType);
+    //     Logs().e(event.getBody());
+    //     Logs().e(jsonDecode(event.getBody()));
+    //     Logs().w('---------');
+
+    //     if (jsonDecode(event.getBody()).tryGet<String>('eventType') ==
+    //             EventTypes.GroupCallMemberEncryptionKeysRequest &&
+    //         event.sender != groupCall.client.userID!) {
+    //       await onCallEncryptionKeyRequest(
+    //         groupCall,
+    //         event.sender,
+    //         event.content['device_id'].toString(),
+    //         event.content,
+    //       );
+    //     }
+    //   } catch (e) {
+    //     Logs().w('failed to print event ${event.eventId}');
+    //     continue;
+    //   }
+    // }
   }
 
   @override
@@ -549,19 +593,7 @@ class LiveKitBackend extends CallBackend {
         groupCall.voip,
       );
 
-      if (mems
-          .where(
-            (mem) =>
-                mem.callId == groupCall.groupCallId &&
-                mem.userId == userId &&
-                mem.deviceId == deviceId &&
-                !mem.isExpired &&
-                // sanity checks
-                mem.backend.type == groupCall.backend.type &&
-                mem.roomId == groupCall.room.id &&
-                mem.application == groupCall.application,
-          )
-          .isNotEmpty) {
+      if (true) {
         Logs().d(
           '[VOIP E2EE] onCallEncryptionKeyRequest: request checks out, sending key on index: $latestLocalKeyIndex to $userId:$deviceId',
         );
@@ -598,6 +630,20 @@ class LiveKitBackend extends CallBackend {
       await groupCall.onMemberStateChanged();
       await checkPartcipantStatusAndRequestKey();
     }
+    // await groupCall.client.sendToDevice(
+    //   EventTypes.GroupCallMemberEncryptionKeysSync,
+    //   groupCall.client.generateUniqueTransactionId(),
+    //   {
+    //     userId: {
+    //       deviceId: {
+    //         'conf_id': groupCall.groupCallId,
+    //         'device_id': groupCall.client.deviceID!,
+    //         'room_id': groupCall.room.id,
+    //         'eventType': EventTypes.GroupCallMemberEncryptionKeysSync,
+    //       },
+    //     },
+    //   },
+    // );
   }
 
   @override
