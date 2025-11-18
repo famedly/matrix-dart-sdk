@@ -1575,7 +1575,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       _seenDeviceKeysBox.put(publicKey, deviceId);
 
   @override
-  Future<String?> deviceIdSeen(userId, deviceId) async {
+  Future<String?> deviceIdSeen(String userId, String deviceId) async {
     final raw =
         await _seenDeviceIdsBox.get(TupleKey(userId, deviceId).toString());
     if (raw == null) return null;

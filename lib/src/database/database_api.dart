@@ -337,7 +337,7 @@ abstract class DatabaseApi {
 
   Future<void> addSeenPublicKey(String publicKey, String deviceId);
 
-  Future<String?> deviceIdSeen(userId, deviceId);
+  Future<String?> deviceIdSeen(String userId, String deviceId);
 
   Future<String?> publicKeySeen(String publicKey);
 
