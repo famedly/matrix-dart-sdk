@@ -79,6 +79,7 @@ export 'msc_extensions/extension_recent_emoji/recent_emoji.dart';
 export 'msc_extensions/msc_3935_cute_events/msc_3935_cute_events.dart';
 export 'msc_extensions/msc_1236_widgets/msc_1236_widgets.dart';
 export 'msc_extensions/msc_2835_uia_login/msc_2835_uia_login.dart';
+export 'msc_extensions/msc_3861_native_oidc/msc_3861_native_oidc.dart';
 export 'msc_extensions/msc_3814_dehydrated_devices/msc_3814_dehydrated_devices.dart';
 export 'msc_extensions/extension_timeline_export/timeline_export.dart';
 export 'msc_extensions/msc_4140_delayed_events/api.dart';

@@ -250,6 +250,8 @@ class GetWellknownSupportResponse {
 @_NameSource('generated')
 class GetAuthMetadataResponse {
   GetAuthMetadataResponse({
+    this.accountManagementActionsSupported,
+    this.accountManagementUri,
     required this.authorizationEndpoint,
     required this.codeChallengeMethodsSupported,
     required this.grantTypesSupported,
@@ -260,10 +262,17 @@ class GetAuthMetadataResponse {
     required this.responseTypesSupported,
     required this.revocationEndpoint,
     required this.tokenEndpoint,
+    this.additionalProperties = const {},
   });
 
   GetAuthMetadataResponse.fromJson(Map<String, Object?> json)
-      : authorizationEndpoint =
+      : accountManagementActionsSupported = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['account_management_actions_supported']),
+        accountManagementUri = ((v) => v != null
+            ? Uri.parse(v as String)
+            : null)(json['account_management_uri']),
+        authorizationEndpoint =
             Uri.parse(json['authorization_endpoint'] as String),
         codeChallengeMethodsSupported =
             (json['code_challenge_methods_supported'] as List)
@@ -285,10 +294,39 @@ class GetAuthMetadataResponse {
             .map((v) => v as String)
             .toList(),
         revocationEndpoint = Uri.parse(json['revocation_endpoint'] as String),
-        tokenEndpoint = Uri.parse(json['token_endpoint'] as String);
+        tokenEndpoint = Uri.parse(json['token_endpoint'] as String),
+        additionalProperties = Map.fromEntries(
+          json.entries
+              .where(
+                (e) => ![
+                  'account_management_actions_supported',
+                  'account_management_uri',
+                  'authorization_endpoint',
+                  'code_challenge_methods_supported',
+                  'grant_types_supported',
+                  'issuer',
+                  'prompt_values_supported',
+                  'registration_endpoint',
+                  'response_modes_supported',
+                  'response_types_supported',
+                  'revocation_endpoint',
+                  'token_endpoint',
+                ].contains(e.key),
+              )
+              .map((e) => MapEntry(e.key, e.value)),
+        );
   Map<String, Object?> toJson() {
+    final accountManagementActionsSupported =
+        this.accountManagementActionsSupported;
+    final accountManagementUri = this.accountManagementUri;
     final promptValuesSupported = this.promptValuesSupported;
     return {
+      ...additionalProperties,
+      if (accountManagementActionsSupported != null)
+        'account_management_actions_supported':
+            accountManagementActionsSupported.map((v) => v).toList(),
+      if (accountManagementUri != null)
+        'account_management_uri': accountManagementUri.toString(),
       'authorization_endpoint': authorizationEndpoint.toString(),
       'code_challenge_methods_supported':
           codeChallengeMethodsSupported.map((v) => v).toList(),
@@ -303,6 +341,16 @@ class GetAuthMetadataResponse {
       'token_endpoint': tokenEndpoint.toString(),
     };
   }
+
+  /// A JSON array of actions that the account management URL supports
+  List<String>? accountManagementActionsSupported;
+
+  /// The URL where the user is able to access the account management capabilities of the homeserver.
+  ///
+  ///   This is what is currently referred to as the "homeserver's web UI"
+  ///
+  ///   MSC4191: Account management for OAuth 2.0 API
+  Uri? accountManagementUri;
 
   /// URL of the authorization endpoint, necessary to use the authorization code
   /// grant.
@@ -365,11 +413,16 @@ class GetAuthMetadataResponse {
   /// the refresh token grant.
   Uri tokenEndpoint;
 
+  Map<String, Object?> additionalProperties;
+
   @dart.override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is GetAuthMetadataResponse &&
           other.runtimeType == runtimeType &&
+          other.accountManagementActionsSupported ==
+              accountManagementActionsSupported &&
+          other.accountManagementUri == accountManagementUri &&
           other.authorizationEndpoint == authorizationEndpoint &&
           other.codeChallengeMethodsSupported ==
               codeChallengeMethodsSupported &&
@@ -384,6 +437,8 @@ class GetAuthMetadataResponse {
 
   @dart.override
   int get hashCode => Object.hash(
+        accountManagementActionsSupported,
+        accountManagementUri,
         authorizationEndpoint,
         codeChallengeMethodsSupported,
         grantTypesSupported,
