@@ -1150,6 +1150,7 @@ class VoIP {
     final state = client.mlsClient!.groupIsFound(groupId: roomId);
 
     if (!state) {
+      await Future.delayed((Duration(seconds: 2)));
       throw Exception(
         'sendMessageMLSFRThisNamingSucks, room enc state was: $state',
       );
