@@ -147,7 +147,8 @@ class GroupCallSession {
     await onMemberStateChanged();
 
     Logs().v(
-        'Entered group call $groupCallId, participants: ${participants.length.toString()}');
+      'Entered group call $groupCallId, participants: ${participants.length.toString()}',
+    );
 
     await backend.setupP2PCallsWithExistingMembers(this);
 
@@ -337,7 +338,8 @@ class GroupCallSession {
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
 
       Logs().v(
-          'onGroupCallEvent, participants: ${_participants.length.toString()}');
+        'onGroupCallEvent, participants: ${_participants.length.toString()}',
+      );
     }
   }
 

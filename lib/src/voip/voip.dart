@@ -1147,7 +1147,7 @@ class VoIP {
     required String roomId,
     required Map<String, Object> body,
   }) async {
-    final state = await client.mlsClient!.groupIsFound(groupId: roomId);
+    final state = client.mlsClient!.groupIsFound(groupId: roomId);
 
     if (!state) {
       throw Exception(
@@ -1252,68 +1252,6 @@ class VoIP {
 
     return groupCall;
   }
-
-  Future<void>? _currentMlsSync;
-  // Future<void> _mlsSync(GroupCallSession groupCall) {
-  //   Logs().w('starting mls sync loop now ${DateTime.now()}');
-  //   final currentSync =
-  //       _currentMlsSync ??= mlsClient!.sync_().then((resp) async {
-  //     Logs().w('got sync response ${DateTime.now()}');
-  //     final events =
-  //         resp.rooms?.join?[groupCall.room.id]?.timeline?.events ?? [];
-  //     final decryptedEvents =
-  //         (await mlsClient?.roomsSafe())?[groupCall.room.id]?.events ?? [];
-  //     for (final e in events) {
-  //       try {
-  //         final event =
-  //             decryptedEvents.singleWhereOrNull((i) => i.eventId == e.eventId);
-  //         if (event == null) continue;
-  //         Logs().e(event.eventId.toString());
-  //         Logs().e(event.content.toString());
-  //         Logs().e(event.eventType);
-  //         Logs().e(event.getBody());
-  //         final keysObject =
-  //             Map<String, Object?>.from(jsonDecode(event.getBody()));
-  //         Logs().e(
-  //           keysObject.tryGet<String>('type')!,
-  //         );
-  //         Logs().w('---------');
-
-  //         if (keysObject.tryGet<String>('type') != null &&
-  //             keysObject.tryGet<String>('user_id') != null &&
-  //             keysObject.tryGet<String>('user_id') !=
-  //                 groupCall.client.userID! &&
-  //             keysObject.tryGet<String>('device_id') != null &&
-  //             keysObject.tryGet<String>('device_id') !=
-  //                 groupCall.client.deviceID!) {
-  //           if (keysObject.tryGet<String>('type') ==
-  //               EventTypes.GroupCallMemberEncryptionKeysRequest) {
-  //             await groupCall.backend.onCallEncryptionKeyRequest(
-  //               groupCall,
-  //               keysObject.tryGet<String>('user_id')!,
-  //               keysObject.tryGet<String>('device_id')!,
-  //               keysObject,
-  //             );
-  //           } else if (keysObject.tryGet<String>('type') ==
-  //               EventTypes.GroupCallMemberEncryptionKeys) {
-  //             await groupCall.backend.onCallEncryption(
-  //               groupCall,
-  //               keysObject.tryGet<String>('user_id')!,
-  //               keysObject.tryGet<String>('device_id')!,
-  //               keysObject,
-  //             );
-  //           }
-  //         }
-  //       } catch (error, s) {
-  //         Logs().w('failed to print event ${e.eventId}', error, s);
-  //         continue;
-  //       }
-  //     }
-  //     _currentMlsSync = null;
-  //     await _mlsSync(groupCall);
-  //   });
-  //   return currentSync;
-  // }
 
   GroupCallSession? getGroupCallById(String roomId, String groupCallId) {
     return groupCalls[VoipId(roomId: roomId, callId: groupCallId)];

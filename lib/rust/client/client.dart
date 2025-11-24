@@ -64,8 +64,10 @@ abstract class MatrixClient implements RustOpaqueInterface {
 
   Future<String> createKeyPackage();
 
-  Future<String> createMessage(
-      {required String groupId, required String message});
+  Future<String> createMessage({
+    required String groupId,
+    required String message,
+  });
 
   Future<MlsGroup> createMlsGroup({required String name});
 
@@ -73,32 +75,42 @@ abstract class MatrixClient implements RustOpaqueInterface {
 
   List<Room> getRoomList();
 
-  Future<bool> groupIsFound({required String groupId});
+  bool groupIsFound({required String groupId});
 
   Future<void> invite({required String roomId, required String userId});
 
-  Future<(String, String, String?)> inviteToMlsGroup(
-      {required String groupId, required List<String> keyPackagesBase64});
+  Future<(String, String, String?)> inviteToMlsGroup({
+    required String groupId,
+    required List<String> keyPackagesBase64,
+  });
 
   Future<String> joinRoom({required String roomId});
 
   Future<void> leaveRoom({required String roomId});
 
-  static Future<MatrixClient> login(
-          {required String homeserverUrl,
-          required String username,
-          required String password}) =>
+  static Future<MatrixClient> login({
+    required String homeserverUrl,
+    required String username,
+    required String password,
+  }) =>
       RustLib.instance.api.crateClientClientMatrixClientLogin(
-          homeserverUrl: homeserverUrl, username: username, password: password);
+        homeserverUrl: homeserverUrl,
+        username: username,
+        password: password,
+      );
 
   Future<void> mainThreadSleep();
 
-  static Future<MatrixClient> matrixClientCrypto(
-          {required String homeserverUrl,
-          required String userId,
-          required String deviceId}) =>
+  static Future<MatrixClient> matrixClientCrypto({
+    required String homeserverUrl,
+    required String userId,
+    required String deviceId,
+  }) =>
       RustLib.instance.api.crateClientClientMatrixClientMatrixClientCrypto(
-          homeserverUrl: homeserverUrl, userId: userId, deviceId: deviceId);
+        homeserverUrl: homeserverUrl,
+        userId: userId,
+        deviceId: deviceId,
+      );
 
   Future<void> mergePendingCommit({required String groupId});
 
@@ -106,20 +118,23 @@ abstract class MatrixClient implements RustOpaqueInterface {
 
   Future<BigInt?> publishKeyPackages({required int count});
 
-  Future<RoomEncryptionState?> roomEncryptionState({required String roomId});
+  RoomEncryptionState? roomEncryptionState({required String roomId});
 
   Future<Map<String, Room>> roomsSafe();
 
   Future<String> sendMessage({required String roomId, required String body});
 
-  Future<String> sendMlsMessage(
-      {required String roomId,
-      required String mlsMessage,
-      required EventContent eventContent,
-      required bool waitForSyncAndMergeCommit});
+  Future<String> sendMlsMessage({
+    required String roomId,
+    required String mlsMessage,
+    required EventContent eventContent,
+    required bool waitForSyncAndMergeCommit,
+  });
 
-  Future<void> sendWelcomeMessage(
-      {required String userId, required String body});
+  Future<void> sendWelcomeMessage({
+    required String userId,
+    required String body,
+  });
 
   Future<SyncResponse> sync_({BigInt? timeout});
 

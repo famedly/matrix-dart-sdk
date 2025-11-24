@@ -2313,10 +2313,11 @@ class RustLibWire implements BaseWire {
           wasmModule
               .wire__crate__client__client__MatrixClient_get_room_list(that);
 
-  void wire__crate__client__client__MatrixClient_group_is_found(
-          NativePortType port_, int that, String group_id) =>
-      wasmModule.wire__crate__client__client__MatrixClient_group_is_found(
-          port_, that, group_id);
+  JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
+      wire__crate__client__client__MatrixClient_group_is_found(
+              int that, String group_id) =>
+          wasmModule.wire__crate__client__client__MatrixClient_group_is_found(
+              that, group_id);
 
   void wire__crate__client__client__MatrixClient_invite(
           NativePortType port_, int that, String room_id, String user_id) =>
@@ -2374,11 +2375,12 @@ class RustLibWire implements BaseWire {
       wasmModule.wire__crate__client__client__MatrixClient_publish_key_packages(
           port_, that, count);
 
-  void wire__crate__client__client__MatrixClient_room_encryption_state(
-          NativePortType port_, int that, String room_id) =>
-      wasmModule
-          .wire__crate__client__client__MatrixClient_room_encryption_state(
-              port_, that, room_id);
+  JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
+      wire__crate__client__client__MatrixClient_room_encryption_state(
+              int that, String room_id) =>
+          wasmModule
+              .wire__crate__client__client__MatrixClient_room_encryption_state(
+                  that, room_id);
 
   void wire__crate__client__client__MatrixClient_rooms_safe(
           NativePortType port_, int that) =>
@@ -2420,10 +2422,10 @@ class RustLibWire implements BaseWire {
       wasmModule.wire__crate__client__client__MatrixClient_unsafe_logout(
           port_, that);
 
-  void wire__crate__crypto__mls_crypto__decrypted_message_content(
-          NativePortType port_, JSAny that) =>
-      wasmModule.wire__crate__crypto__mls_crypto__decrypted_message_content(
-          port_, that);
+  JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
+      wire__crate__crypto__mls_crypto__decrypted_message_content(JSAny that) =>
+          wasmModule
+              .wire__crate__crypto__mls_crypto__decrypted_message_content(that);
 
   void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEvent(
           int ptr) =>
@@ -2613,8 +2615,9 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
       wire__crate__client__client__MatrixClient_get_room_list(int that);
 
-  external void wire__crate__client__client__MatrixClient_group_is_found(
-      NativePortType port_, int that, String group_id);
+  external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
+      wire__crate__client__client__MatrixClient_group_is_found(
+          int that, String group_id);
 
   external void wire__crate__client__client__MatrixClient_invite(
       NativePortType port_, int that, String room_id, String user_id);
@@ -2655,8 +2658,9 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void wire__crate__client__client__MatrixClient_publish_key_packages(
       NativePortType port_, int that, int count);
 
-  external void wire__crate__client__client__MatrixClient_room_encryption_state(
-      NativePortType port_, int that, String room_id);
+  external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
+      wire__crate__client__client__MatrixClient_room_encryption_state(
+          int that, String room_id);
 
   external void wire__crate__client__client__MatrixClient_rooms_safe(
       NativePortType port_, int that);
@@ -2681,8 +2685,8 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void wire__crate__client__client__MatrixClient_unsafe_logout(
       NativePortType port_, int that);
 
-  external void wire__crate__crypto__mls_crypto__decrypted_message_content(
-      NativePortType port_, JSAny that);
+  external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
+      wire__crate__crypto__mls_crypto__decrypted_message_content(JSAny that);
 
   external void
       rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEvent(

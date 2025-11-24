@@ -34,7 +34,6 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/matrix_api_lite/generated/fixed_model.dart';
 import 'package:matrix/msc_extensions/msc_unpublished_custom_refresh_token_lifetime/msc_unpublished_custom_refresh_token_lifetime.dart';
 import 'package:matrix/rust/client/client.dart';
-import 'package:matrix/rust/crypto/mls_crypto.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
@@ -2619,7 +2618,8 @@ class Client extends MatrixApi {
     for (final event in events) {
       var toDeviceEvent = ToDeviceEvent.fromJson(event.toJson());
       Logs().v(
-          '${event.content.tryGet<String>('algorithm')} ${event.content.tryGet<String>('algorithm') == AlgorithmTypes.mls} Got to_device event of type ${toDeviceEvent.type}, ${event.toJson()}, from: ${event.senderId}');
+        '${event.content.tryGet<String>('algorithm')} ${event.content.tryGet<String>('algorithm') == AlgorithmTypes.mls} Got to_device event of type ${toDeviceEvent.type}, ${event.toJson()}, from: ${event.senderId}',
+      );
 
       if (event.content.tryGet<String>('algorithm') == AlgorithmTypes.mls) {
         try {
@@ -2632,7 +2632,7 @@ class Client extends MatrixApi {
           final decryptedMLSMessage =
               await mlsClient!.processMlsMessage(cipherText: cipherText);
           Logs().e(
-            'decrypted to device mls message ${await decryptedMLSMessage.content()}',
+            'decrypted to device mls message ${decryptedMLSMessage.content()}',
           );
         } catch (e, s) {
           Logs()
@@ -2935,7 +2935,7 @@ class Client extends MatrixApi {
             final decryptedMLSMessage =
                 await mlsClient!.processMlsMessage(cipherText: cipherText);
             Logs().e(
-              'decrypted room timeline mls message ${await decryptedMLSMessage.content()}',
+              'decrypted room timeline mls message ${decryptedMLSMessage.content()}',
             );
 
             // {
@@ -2959,8 +2959,7 @@ class Client extends MatrixApi {
             //   }
             // }
             final keysContent =
-                (jsonDecode(await decryptedMLSMessage.content()))['content']
-                    ['body'];
+                (jsonDecode(decryptedMLSMessage.content()))['content']['body'];
             // this could be cleaner but I'm lazy
 
             onCallEvents.add([
@@ -2996,7 +2995,10 @@ class Client extends MatrixApi {
             // }
           } catch (e, s) {
             Logs().e(
-                'failed to decrypt timeline mls msg: ${event.toJson()}', e, s);
+              'failed to decrypt timeline mls msg: ${event.toJson()}',
+              e,
+              s,
+            );
           }
           continue;
         }

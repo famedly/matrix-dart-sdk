@@ -2,6 +2,7 @@ rust_input: crate::client
 rust_root: ../matrix-mls-client/
 dart_output: lib/rust
 enable_lifetime: true
+default_dart_async: false
 wasm_bindgen_name: 'mls_wasm_bindgen'
 full_dep: true
 rust_preamble: |

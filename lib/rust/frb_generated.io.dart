@@ -2989,13 +2989,11 @@ class RustLibWire implements BaseWire {
       _wire__crate__client__client__MatrixClient_get_room_listPtr
           .asFunction<WireSyncRust2DartDco Function(int)>();
 
-  void wire__crate__client__client__MatrixClient_group_is_found(
-    int port_,
+  WireSyncRust2DartDco wire__crate__client__client__MatrixClient_group_is_found(
     int that,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> group_id,
   ) {
     return _wire__crate__client__client__MatrixClient_group_is_found(
-      port_,
       that,
       group_id,
     );
@@ -3004,8 +3002,7 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__client__client__MatrixClient_group_is_foundPtr =
       _lookup<
           ffi.NativeFunction<
-              ffi.Void Function(
-                ffi.Int64,
+              WireSyncRust2DartDco Function(
                 ffi.UintPtr,
                 ffi.Pointer<wire_cst_list_prim_u_8_strict>,
               )>>(
@@ -3013,8 +3010,10 @@ class RustLibWire implements BaseWire {
   );
   late final _wire__crate__client__client__MatrixClient_group_is_found =
       _wire__crate__client__client__MatrixClient_group_is_foundPtr.asFunction<
-          void Function(
-              int, int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)>();
+          WireSyncRust2DartDco Function(
+            int,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+          )>();
 
   void wire__crate__client__client__MatrixClient_invite(
     int port_,
@@ -3294,13 +3293,12 @@ class RustLibWire implements BaseWire {
       _wire__crate__client__client__MatrixClient_publish_key_packagesPtr
           .asFunction<void Function(int, int, int)>();
 
-  void wire__crate__client__client__MatrixClient_room_encryption_state(
-    int port_,
+  WireSyncRust2DartDco
+      wire__crate__client__client__MatrixClient_room_encryption_state(
     int that,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> room_id,
   ) {
     return _wire__crate__client__client__MatrixClient_room_encryption_state(
-      port_,
       that,
       room_id,
     );
@@ -3309,8 +3307,7 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__client__client__MatrixClient_room_encryption_statePtr =
       _lookup<
           ffi.NativeFunction<
-              ffi.Void Function(
-                ffi.Int64,
+              WireSyncRust2DartDco Function(
                 ffi.UintPtr,
                 ffi.Pointer<wire_cst_list_prim_u_8_strict>,
               )>>(
@@ -3319,8 +3316,10 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__client__client__MatrixClient_room_encryption_state =
       _wire__crate__client__client__MatrixClient_room_encryption_statePtr
           .asFunction<
-              void Function(
-                  int, int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)>();
+              WireSyncRust2DartDco Function(
+                int,
+                ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+              )>();
 
   void wire__crate__client__client__MatrixClient_rooms_safe(
     int port_,
@@ -3486,26 +3485,25 @@ class RustLibWire implements BaseWire {
       _wire__crate__client__client__MatrixClient_unsafe_logoutPtr
           .asFunction<void Function(int, int)>();
 
-  void wire__crate__crypto__mls_crypto__decrypted_message_content(
-    int port_,
+  WireSyncRust2DartDco
+      wire__crate__crypto__mls_crypto__decrypted_message_content(
     ffi.Pointer<wire_cst_decrypted_message> that,
   ) {
-    return _wire__crate__crypto__mls_crypto__decrypted_message_content(
-      port_,
-      that,
-    );
+    return _wire__crate__crypto__mls_crypto__decrypted_message_content(that);
   }
 
   late final _wire__crate__crypto__mls_crypto__decrypted_message_contentPtr =
       _lookup<
           ffi.NativeFunction<
-              ffi.Void Function(
-                  ffi.Int64, ffi.Pointer<wire_cst_decrypted_message>)>>(
+              WireSyncRust2DartDco Function(
+                  ffi.Pointer<wire_cst_decrypted_message>)>>(
     'frbgen_matrix_wire__crate__crypto__mls_crypto__decrypted_message_content',
   );
   late final _wire__crate__crypto__mls_crypto__decrypted_message_content =
       _wire__crate__crypto__mls_crypto__decrypted_message_contentPtr.asFunction<
-          void Function(int, ffi.Pointer<wire_cst_decrypted_message>)>();
+          WireSyncRust2DartDco Function(
+            ffi.Pointer<wire_cst_decrypted_message>,
+          )>();
 
   void
       rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEvent(

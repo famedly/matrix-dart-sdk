@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/rust/event/event_content.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 
 class LiveKitBackend extends CallBackend {
@@ -217,7 +216,8 @@ class LiveKitBackend extends CallBackend {
         );
 
         Logs().e(
-            'invited user ${user.userId} to mls group ${DateTime.now()} with $eventId');
+          'invited user ${user.userId} to mls group ${DateTime.now()} with $eventId',
+        );
       } else {
         Logs().e('waiting for invite to mls group from other side');
       }
@@ -359,12 +359,12 @@ class LiveKitBackend extends CallBackend {
         EventTypes.GroupCallMemberEncryptionKeys,
       );
     } catch (e, s) {
-      // Logs().e('[VOIP E2EE] Failed to send e2ee keys, retrying', e, s);
-      // await _sendEncryptionKeysEvent(
-      //   groupCall,
-      //   keyIndex,
-      //   sendTo: sendTo,
-      // );
+      Logs().e('[VOIP E2EE] Failed to send e2ee keys, retrying', e, s);
+      await _sendEncryptionKeysEvent(
+        groupCall,
+        keyIndex,
+        sendTo: sendTo,
+      );
     }
   }
 
@@ -378,16 +378,16 @@ class LiveKitBackend extends CallBackend {
     Logs().v(
       '[VOIP E2EE] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ',
     );
-    final txid =
-        VoIP.customTxid ?? groupCall.client.generateUniqueTransactionId();
-    final mustEncrypt =
-        groupCall.room.encrypted && groupCall.client.encryptionEnabled;
+    // final txid =
+    //     VoIP.customTxid ?? groupCall.client.generateUniqueTransactionId();
+    // final mustEncrypt =
+    //     groupCall.room.encrypted && groupCall.client.encryptionEnabled;
 
     // could just combine the two but do not want to rewrite the enc thingy
     // wrappers here again.
-    final List<DeviceKeys> mustEncryptkeysToSendTo = [];
-    final Map<String, Map<String, Map<String, Object>>> unencryptedDataToSend =
-        {};
+    // final List<DeviceKeys> mustEncryptkeysToSendTo = [];
+    // final Map<String, Map<String, Map<String, Object>>> unencryptedDataToSend =
+    // {};
 
     // for (final participant in remoteParticipants) {
     //   if (participant.deviceId == null) continue;
@@ -499,47 +499,6 @@ class LiveKitBackend extends CallBackend {
   }
 
   @override
-  Future<void> onCallEncryptionSync(
-    GroupCallSession groupCall,
-    String userId,
-    String deviceId,
-    Map<String, dynamic> content,
-  ) async {
-    // final mlsClient = groupCall.voip.mlsClient;
-    // if (mlsClient == null) {
-    //   throw Exception('[onCallEncryptionSync] mlsClient null');
-    // }
-    // final resp = await groupCall.voip.mlsClient?.sync_();
-
-    // final events = mlsClient?.rooms[groupCall.room.id]?.events ?? [];
-    // for (final event in events) {
-    //   try {
-    //     Logs().e(event.eventId.toString());
-    //     Logs().e(event.stateKey.toString());
-    //     Logs().e(event.content.toString());
-    //     Logs().e(event.eventType);
-    //     Logs().e(event.getBody());
-    //     Logs().e(jsonDecode(event.getBody()));
-    //     Logs().w('---------');
-
-    //     if (jsonDecode(event.getBody()).tryGet<String>('eventType') ==
-    //             EventTypes.GroupCallMemberEncryptionKeysRequest &&
-    //         event.sender != groupCall.client.userID!) {
-    //       await onCallEncryptionKeyRequest(
-    //         groupCall,
-    //         event.sender,
-    //         event.content['device_id'].toString(),
-    //         event.content,
-    //       );
-    //     }
-    //   } catch (e) {
-    //     Logs().w('failed to print event ${event.eventId}');
-    //     continue;
-    //   }
-    // }
-  }
-
-  @override
   Future<void> onCallEncryption(
     GroupCallSession groupCall,
     String userId,
@@ -601,7 +560,19 @@ class LiveKitBackend extends CallBackend {
         groupCall.voip,
       );
 
-      if (true) {
+      if (mems
+          .where(
+            (mem) =>
+                mem.callId == groupCall.groupCallId &&
+                mem.userId == userId &&
+                mem.deviceId == deviceId &&
+                !mem.isExpired &&
+                // sanity checks
+                mem.backend.type == groupCall.backend.type &&
+                mem.roomId == groupCall.room.id &&
+                mem.application == groupCall.application,
+          )
+          .isNotEmpty) {
         Logs().d(
           '[VOIP E2EE] onCallEncryptionKeyRequest: request checks out, sending key on index: $latestLocalKeyIndex to $userId:$deviceId',
         );

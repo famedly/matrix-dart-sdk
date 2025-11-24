@@ -34,7 +34,7 @@ sealed class DecryptedMessage with _$DecryptedMessage {
   const factory DecryptedMessage.unimplemented() =
       DecryptedMessage_Unimplemented;
 
-  Future<String> content() =>
+  String content() =>
       RustLib.instance.api.crateCryptoMlsCryptoDecryptedMessageContent(
         that: this,
       );

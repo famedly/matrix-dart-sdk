@@ -174,7 +174,7 @@ abstract class RustLibApi extends BaseApi {
   List<Room> crateClientClientMatrixClientGetRoomList(
       {required MatrixClient that});
 
-  Future<bool> crateClientClientMatrixClientGroupIsFound(
+  bool crateClientClientMatrixClientGroupIsFound(
       {required MatrixClient that, required String groupId});
 
   Future<void> crateClientClientMatrixClientInvite(
@@ -216,7 +216,7 @@ abstract class RustLibApi extends BaseApi {
   Future<BigInt?> crateClientClientMatrixClientPublishKeyPackages(
       {required MatrixClient that, required int count});
 
-  Future<RoomEncryptionState?> crateClientClientMatrixClientRoomEncryptionState(
+  RoomEncryptionState? crateClientClientMatrixClientRoomEncryptionState(
       {required MatrixClient that, required String roomId});
 
   Future<Map<String, Room>> crateClientClientMatrixClientRoomsSafe(
@@ -245,7 +245,7 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateClientClientMatrixClientUnsafeLogout(
       {required MatrixClient that});
 
-  Future<String> crateCryptoMlsCryptoDecryptedMessageContent(
+  String crateCryptoMlsCryptoDecryptedMessageContent(
       {required DecryptedMessage that});
 
   RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_Event;
@@ -1145,17 +1145,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<bool> crateClientClientMatrixClientGroupIsFound(
+  bool crateClientClientMatrixClientGroupIsFound(
       {required MatrixClient that, required String groupId}) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
           final arg0 =
               cst_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMatrixClient(
                   that);
           final arg1 = cst_encode_String(groupId);
           return wire.wire__crate__client__client__MatrixClient_group_is_found(
-              port_, arg0, arg1);
+              arg0, arg1);
         },
         codec: DcoCodec(
           decodeSuccessData: dco_decode_bool,
@@ -1491,18 +1491,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<RoomEncryptionState?> crateClientClientMatrixClientRoomEncryptionState(
+  RoomEncryptionState? crateClientClientMatrixClientRoomEncryptionState(
       {required MatrixClient that, required String roomId}) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
           final arg0 =
               cst_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMatrixClient(
                   that);
           final arg1 = cst_encode_String(roomId);
           return wire
               .wire__crate__client__client__MatrixClient_room_encryption_state(
-                  port_, arg0, arg1);
+                  arg0, arg1);
         },
         codec: DcoCodec(
           decodeSuccessData: dco_decode_opt_box_autoadd_room_encryption_state,
@@ -1729,15 +1729,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<String> crateCryptoMlsCryptoDecryptedMessageContent(
+  String crateCryptoMlsCryptoDecryptedMessageContent(
       {required DecryptedMessage that}) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
           final arg0 = cst_encode_box_autoadd_decrypted_message(that);
           return wire
-              .wire__crate__crypto__mls_crypto__decrypted_message_content(
-                  port_, arg0);
+              .wire__crate__crypto__mls_crypto__decrypted_message_content(arg0);
         },
         codec: DcoCodec(
           decodeSuccessData: dco_decode_String,
@@ -5307,7 +5306,7 @@ class MatrixClientImpl extends RustOpaque implements MatrixClient {
         that: this,
       );
 
-  Future<bool> groupIsFound({required String groupId}) => RustLib.instance.api
+  bool groupIsFound({required String groupId}) => RustLib.instance.api
       .crateClientClientMatrixClientGroupIsFound(that: this, groupId: groupId);
 
   Future<void> invite({required String roomId, required String userId}) =>
@@ -5342,7 +5341,7 @@ class MatrixClientImpl extends RustOpaque implements MatrixClient {
       RustLib.instance.api.crateClientClientMatrixClientPublishKeyPackages(
           that: this, count: count);
 
-  Future<RoomEncryptionState?> roomEncryptionState({required String roomId}) =>
+  RoomEncryptionState? roomEncryptionState({required String roomId}) =>
       RustLib.instance.api.crateClientClientMatrixClientRoomEncryptionState(
           that: this, roomId: roomId);
 

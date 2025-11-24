@@ -47,4 +47,5 @@ analyzer:
     todo: ignore
   exclude:
     - example/main.dart
+    - lib/rust/frb_generated*
   plugins:
