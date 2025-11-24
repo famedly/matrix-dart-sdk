@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
+
 import 'package:matrix/matrix.dart';
 import 'package:matrix/rust/event/event_content.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
@@ -166,54 +168,56 @@ class LiveKitBackend extends CallBackend {
     List<CallParticipant> anyJoined,
     bool delayBeforeUsingKeyOurself,
   ) async {
-    if (!e2eeEnabled) return;
+    if (!e2eeEnabled || anyJoined.isEmpty) return;
     Logs().v('_changeEncryptionKey triggered');
-    final mlsClient = groupCall.voip.mlsClient!;
+
+    final memberships = groupCall.room
+        .getCallMembershipsFromRoom(groupCall.voip)
+        .values
+        .expand((e) => e)
+        .toList();
+
+    final oldestMem = memberships.firstWhereOrNull((m) => !m.isExpired);
+    final amIOldest = oldestMem?.userId == groupCall.client.userID! &&
+        oldestMem?.deviceId == groupCall.client.deviceID!;
 
     for (final user in anyJoined) {
-      final mems = groupCall.room.getCallMembershipsForUser(
-          user.userId, user.deviceId!, groupCall.voip);
-      Logs().w('found ${mems.length} mems');
-      final ownMems = groupCall.room.getCallMembershipsForUser(
-          groupCall.client.userID!, groupCall.client.deviceID!, groupCall.voip);
-      Logs().w('found ${ownMems.length} own mems');
-
-      if (mems.isNotEmpty &&
-          ownMems.isNotEmpty &&
-          (await groupCall.room.getEventById(mems.last.eventId!))!
-              .originServerTs
-              .isAfter(
-                (await groupCall.room.getEventById(ownMems.last.eventId!))!
-                    .originServerTs,
-              )) {
-        Logs().w('inviting to mls group start');
-        // send welcome messages?
+      if (amIOldest) {
+        Logs().w('inviting to mls group start with claiming ${DateTime.now()}');
         final keyPackages =
-            await mlsClient.claimKeyPackages(userId: user.userId);
-        Logs().w('claimed key packages');
-        final (commitMsg, welcomeMsg, _) = await mlsClient.inviteToMlsGroup(
+            await groupCall.voip.claimMLSKeyPackages(user.userId);
+        // final keyPackages = await groupCall.client.mlsClient!
+        //     .claimKeyPackages(userId: user.userId);
+        Logs().w('claimed key packages to invite ${DateTime.now()}');
+        final (commitMsg, welcomeMsg, _) =
+            await groupCall.client.mlsClient!.inviteToMlsGroup(
           groupId: groupCall.room.id,
           keyPackagesBase64: keyPackages,
         );
-        Logs().w('invited to mls group, will send message now');
+        Logs()
+            .w('invited to mls group, will send message now ${DateTime.now()}');
 
         // await mlsClient.sync_();
         // Logs().w('sync done');
-        await mlsClient.sendMlsMessage(
+
+        // Logs().w(
+        //     'sent welcome message, wait for sanity here DONE, will send commit msg now');
+
+        final eventId = await groupCall.voip.sendMLSMessage(
           roomId: groupCall.room.id,
-          mlsMessage: commitMsg,
-          eventContent: EventContent.message(
-            MessageContent.text(body: 'Invite user ${user.userId}'),
-          ),
+          cipherText: commitMsg,
           waitForSyncAndMergeCommit: true,
         );
 
-        await mlsClient.sendWelcomeMessage(
+        // Logs().w('sent welcome message, wait for sanity here');
+
+        await groupCall.voip.sendMLSWelcomeMessage(
           userId: user.userId,
           body: welcomeMsg,
         );
 
-        Logs().e('invited user ${user.userId} to mls group');
+        Logs().e(
+            'invited user ${user.userId} to mls group ${DateTime.now()} with $eventId');
       } else {
         Logs().e('waiting for invite to mls group from other side');
       }
@@ -411,21 +415,25 @@ class LiveKitBackend extends CallBackend {
     bool sent = false;
 
     Future<bool> sendKeyOverMLS() async {
-      Logs().w('1111 trying to send message $data');
+      Logs().w('1111 trying to send message $data, ${DateTime.now()}');
       // final state = groupCall.voip.mlsClient!
       //     .roomEncryptionState(roomId: groupCall.room.id);
       // Logs().w('MLS state: ${state.toString()}');
       // if (state == RoomEncryptionState.ready) {
-      final eventId = await groupCall.voip.mlsClient!
-          .sendMessage(roomId: groupCall.room.id, body: jsonEncode(data));
-      Logs().w('Sent keys with eventId: $eventId, data: $data');
+      final eventId = await groupCall.voip.sendMessageMLSFRThisNamingSucks(
+        roomId: groupCall.room.id,
+        body: data,
+      );
+      Logs().w(
+        'Sent keys with eventId: $eventId, data: $data, ${DateTime.now()}',
+      );
       return true;
       // }
       // return false;
     }
 
     while (!sent) {
-      Logs().w('trying to send message $data');
+      Logs().w('trying to send message $data ${DateTime.now()}');
       sent = await sendKeyOverMLS();
       await Future.delayed(Duration(seconds: 1));
     }

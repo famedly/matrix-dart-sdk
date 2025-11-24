@@ -185,6 +185,7 @@ class OlmManager {
         'algorithms': [
           AlgorithmTypes.olmV1Curve25519AesSha2,
           AlgorithmTypes.megolmV1AesSha2,
+          AlgorithmTypes.mls,
         ],
         'keys': <String, dynamic>{},
       };

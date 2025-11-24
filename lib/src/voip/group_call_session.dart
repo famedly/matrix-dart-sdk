@@ -136,11 +136,18 @@ class GroupCallSession {
 
     setState(GroupCallState.entered);
 
-    Logs().v('Entered group call $groupCallId');
+    // trigger keys for participants already in the call
+    await backend.onNewParticipant(
+      this,
+      participants.where((e) => !e.isLocal).toList(),
+    );
 
     // Set up _participants for the members currently in the call.
     // Other members will be picked up by the RoomState.members event.
     await onMemberStateChanged();
+
+    Logs().v(
+        'Entered group call $groupCallId, participants: ${participants.length.toString()}');
 
     await backend.setupP2PCallsWithExistingMembers(this);
 
@@ -260,6 +267,7 @@ class GroupCallSession {
         .getCallMembershipsFromRoom(voip)
         .values
         .expand((element) => element);
+
     final memsForCurrentGroupCall = mems.where((element) {
       return element.callId == groupCallId &&
           !element.isExpired &&
@@ -294,21 +302,28 @@ class GroupCallSession {
       if (anyJoined.isNotEmpty) {
         final nonLocalAnyJoined = Set<CallParticipant>.from(anyJoined)
           ..remove(localParticipant);
+
         if (nonLocalAnyJoined.isNotEmpty && state == GroupCallState.entered) {
-          Logs().v(
+          Logs().e(
             'nonLocalAnyJoined: ${nonLocalAnyJoined.map((e) => e.id).toString()} roomId: ${room.id} groupCallId: $groupCallId',
           );
+
           await backend.onNewParticipant(this, nonLocalAnyJoined.toList());
         }
+
         _participants.addAll(anyJoined);
         matrixRTCEventStream
             .add(ParticipantsJoinEvent(participants: anyJoined.toList()));
+        for (final p in _participants) {
+          Logs().e(p.id.toString());
+        }
+        Logs().e('======');
       }
       if (anyLeft.isNotEmpty) {
         final nonLocalAnyLeft = Set<CallParticipant>.from(anyLeft)
           ..remove(localParticipant);
         if (nonLocalAnyLeft.isNotEmpty && state == GroupCallState.entered) {
-          Logs().v(
+          Logs().e(
             'nonLocalAnyLeft: ${nonLocalAnyLeft.map((e) => e.id).toString()} roomId: ${room.id} groupCallId: $groupCallId',
           );
           await backend.onLeftParticipant(this, nonLocalAnyLeft.toList());
@@ -320,6 +335,9 @@ class GroupCallSession {
 
       // ignore: deprecated_member_use_from_same_package
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
+
+      Logs().v(
+          'onGroupCallEvent, participants: ${_participants.length.toString()}');
     }
   }
 

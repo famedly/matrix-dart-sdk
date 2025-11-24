@@ -1,4 +1,4 @@
-rust_input: crate::client,crate::room,crate::event
+rust_input: crate::client
 rust_root: ../matrix-mls-client/
 dart_output: lib/rust
 enable_lifetime: true

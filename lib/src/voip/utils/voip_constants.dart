@@ -61,8 +61,8 @@ class CallTimeouts {
     this.makeKeyOnLeaveDelay = const Duration(seconds: 4),
     this.makeKeyOnJoinDelay = const Duration(seconds: 8),
     this.useKeyDelay = const Duration(seconds: 4),
-    this.delayedEventApplyLeave = const Duration(seconds: 18),
-    this.delayedEventRestart = const Duration(seconds: 4),
+    this.delayedEventApplyLeave = const Duration(seconds: 38),
+    this.delayedEventRestart = const Duration(seconds: 12),
   });
 }
 

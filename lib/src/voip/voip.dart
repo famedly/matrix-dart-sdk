@@ -7,10 +7,8 @@ import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/rust/client/client.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
-import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
@@ -52,7 +50,7 @@ class VoIP {
   String get localPartyId => currentSessionId;
 
   final Client client;
-  MatrixClient? mlsClient;
+
   final WebRTCDelegate delegate;
   final StreamController<GroupCallSession> onIncomingGroupCall =
       StreamController();
@@ -91,6 +89,15 @@ class VoIP {
     this.keyRingSize = 16,
     this.timeouts,
   }) : super() {
+    client.onLoginStateChanged.stream.listen((d) async {
+      if (d == LoginState.loggedOut) {
+        for (final call in groupCalls.values) {
+          if (call.state == GroupCallState.entered) {
+            await call.leave();
+          }
+        }
+      }
+    });
     timeouts ??= CallTimeouts();
     currentSessionId = base64Encode(secureRandomBytes(16));
     Logs().v('set currentSessionId to $currentSessionId');
@@ -1033,6 +1040,140 @@ class VoIP {
     return groupCall;
   }
 
+  Future<List<String>> claimMLSKeyPackages(String userId) async {
+    final keys = await client.queryKeys({userId: []});
+
+    final mlsKeys = keys.deviceKeys?[userId];
+
+    if (mlsKeys == null) {
+      throw Exception(
+        'claimKeyPackagesForMLS failed, no device keys found for user $userId',
+      );
+    }
+
+    mlsKeys.removeWhere(
+      (k, v) =>
+          k == client.deviceID! && !v.algorithms.contains(AlgorithmTypes.mls),
+    );
+
+    if (mlsKeys.isEmpty) {
+      throw Exception(
+        'claimKeyPackagesForMLS failed, no device keys with MLS algorithm found for user $userId',
+      );
+    }
+
+    final deviceMap = <String, String>{};
+    for (final device in mlsKeys.entries) {
+      deviceMap[device.key] = AlgorithmTypes.mls;
+    }
+
+    final otks = {userId: deviceMap};
+
+    final claimed = await client.claimKeys(otks);
+    final userKeys = claimed.oneTimeKeys[userId];
+
+    if (userKeys == null || userKeys.isEmpty) {
+      throw Exception(
+        'claimKeyPackagesForMLS failed, claim failed for userKeys $userId, $userKeys',
+      );
+    }
+    final mlsClaimed = <String>[];
+
+    userKeys.forEach((key, value) {
+      value.forEach((k, v) {
+        if (k.startsWith(AlgorithmTypes.mls) && v != null) {
+          mlsClaimed.add(v as String);
+        }
+      });
+    });
+    return mlsClaimed;
+  }
+
+  Future<String> sendMLSMessage({
+    required String roomId,
+    required String cipherText,
+    required bool waitForSyncAndMergeCommit,
+  }) async {
+    final eventId = await client.sendMessage(
+      roomId,
+      'm.room.encrypted',
+      client.generateUniqueTransactionId(),
+      {
+        'algorithm': AlgorithmTypes.mls,
+        'ciphertext': cipherText,
+      },
+    );
+
+    if (waitForSyncAndMergeCommit) {
+      // very very race condition prone, ideally do oneshotsync and check for room.timeline
+      final syncRequest = await client.sync(
+        filter: '0',
+        since: client.prevBatch,
+        timeout: 30000,
+      );
+
+      if ((syncRequest.rooms?.join ?? {}).containsKey(roomId)) {
+        await client.mlsClient!.mergePendingCommit(groupId: roomId);
+      } else {
+        throw Exception('sendMLSMessage, did not find event in sync resp');
+      }
+    }
+
+    return eventId;
+  }
+
+  Future<void> sendMLSWelcomeMessage({
+    required String userId,
+    required String body,
+  }) async {
+    final Map<String, Map<String, Map<String, Object>>> messages = {};
+    final Map<String, Map<String, Object>> device_messages = {};
+    final content = <String, Object>{};
+    content['algorithm'] = AlgorithmTypes.mls;
+    content['ciphertext'] = body;
+
+    device_messages['*'] = content;
+
+    messages[userId] = device_messages;
+
+    await client.sendToDevice(
+      'm.room.encrypted',
+      client.generateUniqueTransactionId(),
+      messages,
+    );
+  }
+
+  Future<String> sendMessageMLSFRThisNamingSucks({
+    required String roomId,
+    required Map<String, Object> body,
+  }) async {
+    final state = await client.mlsClient!.groupIsFound(groupId: roomId);
+
+    if (!state) {
+      throw Exception(
+        'sendMessageMLSFRThisNamingSucks, room enc state was: $state',
+      );
+    }
+
+    final message = {
+      'type': 'm.room.message',
+      'content': {
+        'msgtype': 'm.text',
+        'body': body,
+      },
+    };
+
+    final mlsEncryptedMessage = await client.mlsClient!
+        .createMessage(groupId: roomId, message: jsonEncode(message));
+
+    final eventId = await sendMLSMessage(
+      roomId: roomId,
+      cipherText: mlsEncryptedMessage,
+      waitForSyncAndMergeCommit: false,
+    );
+    return eventId;
+  }
+
   /// Create a new group call in an existing room.
   ///
   /// [groupCallId] The room id to call
@@ -1088,97 +1229,91 @@ class VoIP {
     if (preShareKey) {
       await groupCall.backend.preShareKey(groupCall);
     }
-    final mlsClient = groupCall.voip.mlsClient!;
+
     if (groupCall.participants.isEmpty) {
       // we are first, create MLS group
 
-      final mlsGroup = mlsClient.createMlsGroup(name: groupCall.room.id);
-      Logs().w('created group');
+      Logs().w('creating group ${DateTime.now()}');
+      final mlsGroup =
+          client.mlsClient!.createMlsGroup(name: groupCall.room.id);
+      Logs().w('created group ${DateTime.now()} ');
       // await mlsClient.sync_();
       // Logs().w('sync done');
-
-      await mlsClient.claimKeyPackages(userId: groupCall.client.userID!);
-      Logs().w('claimed keys');
-      // final (commitMsg, welcomeMsg, _) = mlsClient.inviteToMlsGroup(groupId: groupCall.room.id, keyPackagesBase64: keyPackages);
-      // Logs().w('invited ourself');
-      // await mlsClient.sendMlsMessage(
-      //     roomId: groupCall.room.id,
-      //     mlsMessage: commitMsg,
-      //     eventContent: EventContent.message(MessageContent.text(
-      //         body: 'Invite user ${groupCall.client.userID!}')),
-      //     waitForSyncAndMergeCommit: true);
-
-      // await mlsClient.sendWelcomeMessage(
-      //     userId: groupCall.client.userID!, body: welcomeMsg);
-      Logs().e('created mls group ${mlsGroup.hashCode}, starting sync now');
+      Logs().w('start claiming keys  ${DateTime.now()}');
+      await claimMLSKeyPackages(groupCall.client.userID!);
+      // await client.mlsClient!
+      //     .claimKeyPackages(userId: groupCall.client.userID!);
+      Logs().w('claimed keys  ${DateTime.now()}');
+      Logs().e(
+        'created mls group ${mlsGroup.hashCode}, starting sync now  ${DateTime.now()}',
+      );
       //
     }
 
-    Logs().w('starting mls sync loop now');
-    runInRoot(() async => _mlsSync(groupCall!));
     return groupCall;
   }
 
   Future<void>? _currentMlsSync;
-  Future<void> _mlsSync(GroupCallSession groupCall) {
-    final currentSync =
-        _currentMlsSync ??= mlsClient!.sync_().then((resp) async {
-      final events =
-          resp.rooms?.join?[groupCall.room.id]?.timeline?.events ?? [];
-      final decryptedEvents =
-          (await mlsClient?.roomsSafe())?[groupCall.room.id]?.events ?? [];
-      for (final e in events) {
-        try {
-          final event =
-              decryptedEvents.singleWhereOrNull((i) => i.eventId == e.eventId);
-          if (event == null) continue;
-          Logs().e(event.eventId.toString());
-          Logs().e(event.content.toString());
-          Logs().e(event.eventType);
-          Logs().e(event.getBody());
-          final keysObject =
-              Map<String, Object?>.from(jsonDecode(event.getBody()));
-          Logs().e(
-            keysObject.tryGet<String>('type')!,
-          );
-          Logs().w('---------');
+  // Future<void> _mlsSync(GroupCallSession groupCall) {
+  //   Logs().w('starting mls sync loop now ${DateTime.now()}');
+  //   final currentSync =
+  //       _currentMlsSync ??= mlsClient!.sync_().then((resp) async {
+  //     Logs().w('got sync response ${DateTime.now()}');
+  //     final events =
+  //         resp.rooms?.join?[groupCall.room.id]?.timeline?.events ?? [];
+  //     final decryptedEvents =
+  //         (await mlsClient?.roomsSafe())?[groupCall.room.id]?.events ?? [];
+  //     for (final e in events) {
+  //       try {
+  //         final event =
+  //             decryptedEvents.singleWhereOrNull((i) => i.eventId == e.eventId);
+  //         if (event == null) continue;
+  //         Logs().e(event.eventId.toString());
+  //         Logs().e(event.content.toString());
+  //         Logs().e(event.eventType);
+  //         Logs().e(event.getBody());
+  //         final keysObject =
+  //             Map<String, Object?>.from(jsonDecode(event.getBody()));
+  //         Logs().e(
+  //           keysObject.tryGet<String>('type')!,
+  //         );
+  //         Logs().w('---------');
 
-          if (keysObject.tryGet<String>('type') != null &&
-              keysObject.tryGet<String>('user_id') != null &&
-              keysObject.tryGet<String>('user_id') !=
-                  groupCall.client.userID! &&
-              keysObject.tryGet<String>('device_id') != null &&
-              keysObject.tryGet<String>('device_id') !=
-                  groupCall.client.deviceID!) {
-            if (keysObject.tryGet<String>('type') ==
-                EventTypes.GroupCallMemberEncryptionKeysRequest) {
-              await groupCall.backend.onCallEncryptionKeyRequest(
-                groupCall,
-                keysObject.tryGet<String>('user_id')!,
-                keysObject.tryGet<String>('device_id')!,
-                keysObject,
-              );
-            } else if (keysObject.tryGet<String>('type') ==
-                EventTypes.GroupCallMemberEncryptionKeys) {
-              await groupCall.backend.onCallEncryption(
-                groupCall,
-                keysObject.tryGet<String>('user_id')!,
-                keysObject.tryGet<String>('device_id')!,
-                keysObject,
-              );
-            }
-          }
-        } catch (error, s) {
-          Logs().w('failed to print event ${e.eventId}', error, s);
-          continue;
-        }
-      }
-
-      _currentMlsSync = null;
-      unawaited(_mlsSync(groupCall));
-    });
-    return currentSync;
-  }
+  //         if (keysObject.tryGet<String>('type') != null &&
+  //             keysObject.tryGet<String>('user_id') != null &&
+  //             keysObject.tryGet<String>('user_id') !=
+  //                 groupCall.client.userID! &&
+  //             keysObject.tryGet<String>('device_id') != null &&
+  //             keysObject.tryGet<String>('device_id') !=
+  //                 groupCall.client.deviceID!) {
+  //           if (keysObject.tryGet<String>('type') ==
+  //               EventTypes.GroupCallMemberEncryptionKeysRequest) {
+  //             await groupCall.backend.onCallEncryptionKeyRequest(
+  //               groupCall,
+  //               keysObject.tryGet<String>('user_id')!,
+  //               keysObject.tryGet<String>('device_id')!,
+  //               keysObject,
+  //             );
+  //           } else if (keysObject.tryGet<String>('type') ==
+  //               EventTypes.GroupCallMemberEncryptionKeys) {
+  //             await groupCall.backend.onCallEncryption(
+  //               groupCall,
+  //               keysObject.tryGet<String>('user_id')!,
+  //               keysObject.tryGet<String>('device_id')!,
+  //               keysObject,
+  //             );
+  //           }
+  //         }
+  //       } catch (error, s) {
+  //         Logs().w('failed to print event ${e.eventId}', error, s);
+  //         continue;
+  //       }
+  //     }
+  //     _currentMlsSync = null;
+  //     await _mlsSync(groupCall);
+  //   });
+  //   return currentSync;
+  // }
 
   GroupCallSession? getGroupCallById(String roomId, String groupCallId) {
     return groupCalls[VoipId(roomId: roomId, callId: groupCallId)];

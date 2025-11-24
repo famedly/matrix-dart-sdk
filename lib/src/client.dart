@@ -33,6 +33,8 @@ import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/matrix_api_lite/generated/fixed_model.dart';
 import 'package:matrix/msc_extensions/msc_unpublished_custom_refresh_token_lifetime/msc_unpublished_custom_refresh_token_lifetime.dart';
+import 'package:matrix/rust/client/client.dart';
+import 'package:matrix/rust/crypto/mls_crypto.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
@@ -181,6 +183,9 @@ class Client extends MatrixApi {
   /// Set [customImageResizer] to your own implementation for a more advanced
   /// and faster image resizing experience.
   /// Set [enableDehydratedDevices] to enable experimental support for enabling MSC3814 dehydrated devices.
+
+  MatrixClient? mlsClient;
+
   Client(
     this.clientName, {
     required DatabaseApi database,
@@ -2200,6 +2205,13 @@ class Client extends MatrixApi {
 
       _initLock = false;
       onLoginStateChanged.add(LoginState.loggedIn);
+
+      mlsClient = await MatrixClient.matrixClientCrypto(
+        homeserverUrl: baseUri.toString(),
+        userId: userID,
+        deviceId: deviceID!,
+      );
+
       Logs().i(
         'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
       );
@@ -2558,6 +2570,27 @@ class Client extends MatrixApi {
         sync.deviceUnusedFallbackKeyTypes,
       );
     }
+
+    if (mlsClient != null) {
+      // for (final roomId in (sync.rooms?.join?.keys ?? <String>[])) {
+      //   await mlsClient!.mergePendingCommit(groupId: roomId);
+      // }
+      final countJson = sync.deviceOneTimeKeysCount;
+
+      final keyCount = countJson?.tryGet<int>(AlgorithmTypes.mls) ?? 0;
+
+      final Map<String, Object?> mlsOTKs = {};
+
+      if (keyCount < 50) {
+        for (var i = 0; i < 30; i++) {
+          final keyPackage = await mlsClient!.createKeyPackage();
+          final suffix = randomAlpha(12);
+          mlsOTKs['${AlgorithmTypes.mls}:$suffix'] = keyPackage;
+        }
+
+        await uploadKeys(oneTimeKeys: mlsOTKs);
+      }
+    }
     _sortRooms();
     onSync.add(sync);
   }
@@ -2585,7 +2618,28 @@ class Client extends MatrixApi {
     final List<ToDeviceEvent> callToDeviceEvents = [];
     for (final event in events) {
       var toDeviceEvent = ToDeviceEvent.fromJson(event.toJson());
-      Logs().v('Got to_device event of type ${toDeviceEvent.type}');
+      Logs().v(
+          '${event.content.tryGet<String>('algorithm')} ${event.content.tryGet<String>('algorithm') == AlgorithmTypes.mls} Got to_device event of type ${toDeviceEvent.type}, ${event.toJson()}, from: ${event.senderId}');
+
+      if (event.content.tryGet<String>('algorithm') == AlgorithmTypes.mls) {
+        try {
+          Logs().e(
+            'trying to decrypt todevice mls event ${event.content.toString()}',
+          );
+          final cipherText = event.content.tryGet<String>('ciphertext');
+          if (cipherText == null) continue;
+          if (mlsClient == null) continue;
+          final decryptedMLSMessage =
+              await mlsClient!.processMlsMessage(cipherText: cipherText);
+          Logs().e(
+            'decrypted to device mls message ${await decryptedMLSMessage.content()}',
+          );
+        } catch (e, s) {
+          Logs()
+              .e('failed to decrypt todevice mls msg: ${event.toJson()}', e, s);
+        }
+        continue;
+      }
       if (encryptionEnabled) {
         if (toDeviceEvent.type == EventTypes.Encrypted) {
           toDeviceEvent = await encryption!.decryptToDeviceEvent(toDeviceEvent);
@@ -2868,6 +2922,85 @@ class Client extends MatrixApi {
       if (event is MatrixEvent &&
           event.type == EventTypes.Encrypted &&
           encryptionEnabled) {
+        if (event.content.tryGet<String>('algorithm') == AlgorithmTypes.mls &&
+            // actually should be a deviceId check but I am too lazy to figure out how to do that right now.
+            event.senderId != userID) {
+          try {
+            Logs().e(
+              'trying to decrypt timeline mls event ${event.eventId}',
+            );
+            final cipherText = event.content.tryGet<String>('ciphertext');
+            if (cipherText == null) continue;
+            if (mlsClient == null) continue;
+            final decryptedMLSMessage =
+                await mlsClient!.processMlsMessage(cipherText: cipherText);
+            Logs().e(
+              'decrypted room timeline mls message ${await decryptedMLSMessage.content()}',
+            );
+
+            // {
+            //   "type": "m.room.message",
+            //   "content": {
+            //     "msgtype": "m.text",
+            //     "body": {
+            //       "keys": [
+            //         {
+            //           "index": 0,
+            //           "key": "mzOWCA+Z6zwA665LEHxQhajka+biB6o3Eqw2FxBYu2I="
+            //         }
+            //       ],
+            //       "call_id": "",
+            //       "conf_id": "",
+            //       "device_id": "DDVWNSPNLU",
+            //       "user_id": "@huybagsbhobu:cliniserve.dev.famedly.de",
+            //       "room_id": "!OYuLjJsiZJhEdaYZQz:cliniserve.dev.famedly.de",
+            //       "type": "com.famedly.call.member.encryption_keys"
+            //     }
+            //   }
+            // }
+            final keysContent =
+                (jsonDecode(await decryptedMLSMessage.content()))['content']
+                    ['body'];
+            // this could be cleaner but I'm lazy
+
+            onCallEvents.add([
+              ToDeviceEvent(
+                sender: event.senderId,
+                type: keysContent['type'],
+                content: keysContent,
+              ),
+            ]);
+
+            // if (keysObject.tryGet<String>('type') != null &&
+            //     keysObject.tryGet<String>('user_id') != null &&
+            //     keysObject.tryGet<String>('user_id') != userID! &&
+            //     keysObject.tryGet<String>('device_id') != null &&
+            //     keysObject.tryGet<String>('device_id') != deviceID!) {
+            //   if (keysObject.tryGet<String>('type') ==
+            //       EventTypes.GroupCallMemberEncryptionKeysRequest) {
+            //     await groupCall.backend.onCallEncryptionKeyRequest(
+            //       groupCall,
+            //       keysObject.tryGet<String>('user_id')!,
+            //       keysObject.tryGet<String>('device_id')!,
+            //       keysObject,
+            //     );
+            //   } else if (keysObject.tryGet<String>('type') ==
+            //       EventTypes.GroupCallMemberEncryptionKeys) {
+            //     await groupCall.backend.onCallEncryption(
+            //       groupCall,
+            //       keysObject.tryGet<String>('user_id')!,
+            //       keysObject.tryGet<String>('device_id')!,
+            //       keysObject,
+            //     );
+            //   }
+            // }
+          } catch (e, s) {
+            Logs().e(
+                'failed to decrypt timeline mls msg: ${event.toJson()}', e, s);
+          }
+          continue;
+        }
+
         event = await encryption!.decryptRoomEvent(
           Event.fromMatrixEvent(event, room),
           updateType: type,
