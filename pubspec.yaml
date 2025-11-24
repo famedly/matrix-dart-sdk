@@ -22,7 +22,10 @@ dependencies:
   image: ^4.0.15
   markdown: ^7.1.1
   matrix_mls_client:
-    path: ../matrix-mls-client/flutter/rust_builder
+    git:
+      url: git@github.com:famedly/matrix-mls-client.git 
+      ref: td/calls_mls
+      path: flutter/rust_builder
   mime: ">=1.0.0 <3.0.0"
   path: ^1.9.1
   random_string: ^2.3.1
