@@ -1,0 +1,25 @@
+[package]
+name = "vodozemac_bindings_dart"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+aes = "0.8.4"
+anyhow = "1.0.69"
+ctr = "0.9.2"
+flutter_rust_bridge = "=2.11.1"
+hmac = "0.12.1"
+pbkdf2 = "0.12.2"
+sha2 = "0.10.9"
+vodozemac = { version = "0.9.0", features = ["libolm-compat", "js", "insecure-pk-encryption", "low-level-api"] }
+
+[build-dependencies]
+flutter_rust_bridge_codegen = "2.9.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

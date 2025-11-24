@@ -1,0 +1,3 @@
+target/
+src/bridge_generated.*
+logs/
