@@ -1,3 +1,9 @@
+## [4.0.1] 9th December 2025
+
+- refactor: CI as integrate.yaml file without file (Christian Kußowski)
+- refactor: Update lints package and add missing type annotations (Christian Kußowski)
+- feat: add a flag to use MSC3757 (Yash Garg)
+
 ## [4.0.0] 13th November 2025
 
 Matrix Dart SDK 4.0.0 comes with support for polls, adds first bits towards OIDC and improved
