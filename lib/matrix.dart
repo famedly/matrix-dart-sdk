@@ -85,6 +85,7 @@ export 'msc_extensions/msc_4140_delayed_events/api.dart';
 export 'msc_extensions/msc_3381_polls/models/poll_event_content.dart';
 export 'msc_extensions/msc_3381_polls/poll_event_extension.dart';
 export 'msc_extensions/msc_3381_polls/poll_room_extension.dart';
+export 'msc_extensions/msc_4186_simplified_sliding_sync/msc_4186_simplified_sliding_sync.dart';
 
 export 'src/utils/web_worker/web_worker_stub.dart'
     if (dart.library.js_interop) 'src/utils/web_worker/web_worker.dart';
