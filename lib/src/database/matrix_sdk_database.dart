@@ -870,6 +870,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
+    String? oidcClientId,
   ) async {
     await transaction(() async {
       await _clientBox.put('homeserver_url', homeserverUrl);
@@ -886,6 +887,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await _clientBox.delete('refresh_token');
       } else {
         await _clientBox.put('refresh_token', refreshToken);
+      }
+      if (oidcClientId == null) {
+        await _clientBox.delete('oidc_client_id');
+      } else {
+        await _clientBox.put('oidc_client_id', oidcClientId);
       }
       await _clientBox.put('user_id', userId);
       if (deviceId == null) {
@@ -1485,6 +1491,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
+    String? oidcClientId,
   ) async {
     await transaction(() async {
       await _clientBox.put('homeserver_url', homeserverUrl);
@@ -1501,6 +1508,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await _clientBox.delete('refresh_token');
       } else {
         await _clientBox.put('refresh_token', refreshToken);
+      }
+      if (oidcClientId == null) {
+        await _clientBox.delete('oidc_client_id');
+      } else {
+        await _clientBox.put('oidc_client_id', oidcClientId);
       }
       await _clientBox.put('user_id', userId);
       if (deviceId == null) {

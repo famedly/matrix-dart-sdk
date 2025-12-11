@@ -106,6 +106,7 @@ extension Msc2964OidcLoginFlow on Client {
       newRefreshToken: json['refresh_token'],
       newTokenExpiresAt:
           DateTime.now().add(Duration(milliseconds: json['expires_in'] as int)),
+      newOidcClientId: session.oidcClientData.clientId,
     );
   }
 }
