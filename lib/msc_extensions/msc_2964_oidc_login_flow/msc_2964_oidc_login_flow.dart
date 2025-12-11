@@ -117,15 +117,14 @@ extension Msc2964OidcLoginFlow on Client {
     String oidcClientId,
     String refreshToken,
   ) async {
-    final body = <String, String>{
-      'grant_type': 'refresh_token',
-      'refresh_token': refreshToken,
-      'client_id': oidcClientId,
-    };
     final authMetadata = await getAuthMetadata();
     final response = await httpClient.post(
       authMetadata.tokenEndpoint,
-      body: body,
+      body: <String, String>{
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken,
+        'client_id': oidcClientId,
+      },
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
     if (response.statusCode != 200) {
@@ -136,6 +135,29 @@ extension Msc2964OidcLoginFlow on Client {
     }
     final responseString = utf8.decode(response.bodyBytes);
     return OidcAuthResponse.fromJson(jsonDecode(responseString));
+  }
+
+  Future<void> revokeOidcToken(
+    String oidcClientId,
+    String token,
+    String tokenType,
+  ) async {
+    final authMetadata = await getAuthMetadata();
+    final response = await httpClient.post(
+      authMetadata.revocationEndpoint,
+      body: <String, String>{
+        'token': token,
+        'token_type': tokenType,
+        'client_id': oidcClientId,
+      },
+      headers: {'content-type': 'application/x-www-form-urlencoded'},
+    );
+    if (response.statusCode != 200) {
+      unexpectedResponse(
+        response,
+        response.bodyBytes,
+      );
+    }
   }
 }
 
