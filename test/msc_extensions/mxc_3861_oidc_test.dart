@@ -85,8 +85,24 @@ void main() {
         code: 'faketestcode',
         state: session.state,
       );
+      expect(
+        FakeMatrixApi.calledEndpoints['/oauth2/token'] != null,
+        true,
+      );
 
       expect(client.isLogged(), true);
+
+      await client.refreshAccessToken();
+      expect(
+        FakeMatrixApi.calledEndpoints['/client/v3/refresh'],
+        null,
+      );
+
+      await client.logout();
+      expect(
+        FakeMatrixApi.calledEndpoints.containsKey('/oauth2/revoke'),
+        true,
+      );
     });
   });
 }
