@@ -287,13 +287,27 @@ class Client extends MatrixApi {
       throw Exception('Cannot refresh access token when not logged in');
     }
 
-    final tokenResponse = await refreshWithCustomRefreshTokenLifetime(
-      refreshToken,
-      refreshTokenLifetimeMs: customRefreshTokenLifetime?.inMilliseconds,
-    );
+    final tokenResponse = switch (oidcClientId) {
+      // We do not use Matrix Native OIDC so we use the legacy /refresh endpoint:
+      null => await refreshWithCustomRefreshTokenLifetime(
+          refreshToken,
+          refreshTokenLifetimeMs: customRefreshTokenLifetime?.inMilliseconds,
+        ).then(
+          (legacyFormat) => OidcAuthResponse(
+            accessToken: legacyFormat.accessToken,
+            tokenType: 'Bearer',
+            refreshToken: legacyFormat.refreshToken,
+            expiresIn: legacyFormat.expiresInMs,
+            scope: null,
+          ),
+        ),
+      // We are using Matrix Native OIDC so we fetch the refresh endpoint first:
+      final String oidcClientId =>
+        await oidcRefresh(refreshToken, oidcClientId),
+    };
 
     accessToken = tokenResponse.accessToken;
-    final expiresInMs = tokenResponse.expiresInMs;
+    final expiresInMs = tokenResponse.expiresIn;
     final tokenExpiresAt = expiresInMs == null
         ? null
         : DateTime.now().add(Duration(milliseconds: expiresInMs));
