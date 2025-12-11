@@ -779,7 +779,17 @@ class Client extends MatrixApi {
     try {
       // Upload keys to make sure all are cached on the next login.
       await encryption?.keyManager.uploadInboundGroupSessions();
-      await super.logout();
+
+      final storedClient = await database.getClient(clientName);
+      final oidcClientId = storedClient?.tryGet<String>('oidc_client_id');
+
+      if (oidcClientId == null) {
+        // Legacy logout with Matrix spec
+        await super.logout();
+      } else {
+        // Logout with Matrix Native OIDC
+        await revokeOidcToken(oidcClientId, accessToken!, 'access_token');
+      }
     } catch (e, s) {
       Logs().e('Logout failed', e, s);
       rethrow;
@@ -790,6 +800,8 @@ class Client extends MatrixApi {
 
   /// Sends a logout command to the homeserver and clears all local data,
   /// including all persistent data from the store.
+  /// Notice: This endpoint does **not** work with Matrix Native OIDC and will
+  /// be removed once Matrix < 2.0 becomes deprecated.
   @override
   Future<void> logoutAll() async {
     // Upload keys to make sure all are cached on the next login.
