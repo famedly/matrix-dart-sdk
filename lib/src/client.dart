@@ -276,6 +276,7 @@ class Client extends MatrixApi {
     customRefreshTokenLifetime ??= this.customRefreshTokenLifetime;
     final storedClient = await database.getClient(clientName);
     final refreshToken = storedClient?.tryGet<String>('refresh_token');
+    final oidcClientId = storedClient?.tryGet<String>('oidc_client_Id');
     if (refreshToken == null) {
       throw Exception('No refresh token available');
     }
@@ -307,6 +308,7 @@ class Client extends MatrixApi {
       deviceName,
       prevBatch,
       encryption?.pickledOlmAccount,
+      oidcClientId,
     );
   }
 
@@ -2027,6 +2029,7 @@ class Client extends MatrixApi {
     String? newDeviceName,
     String? newDeviceID,
     String? newOlmAccount,
+    String? newOidcClientId,
     bool waitForFirstSync = true,
     bool waitUntilLoadCompletedLoaded = true,
 
@@ -2065,6 +2068,7 @@ class Client extends MatrixApi {
 
       final account = await database.getClient(clientName);
       newRefreshToken ??= account?.tryGet<String>('refresh_token');
+      newOidcClientId ??= account?.tryGet<String>('oidc_client_id');
       // can have discovery_information so make sure it also has the proper
       // account creds
       if (account != null &&
@@ -2118,6 +2122,7 @@ class Client extends MatrixApi {
             _deviceName,
             prevBatch,
             encryption?.pickledOlmAccount,
+            newOidcClientId,
           );
         }
         onInitStateChanged?.call(InitState.finished);
@@ -2176,6 +2181,7 @@ class Client extends MatrixApi {
           _deviceName,
           prevBatch,
           encryption?.pickledOlmAccount,
+          newOidcClientId,
         );
       } else {
         _id = await database.insertClient(
@@ -2189,6 +2195,7 @@ class Client extends MatrixApi {
           _deviceName,
           prevBatch,
           encryption?.pickledOlmAccount,
+          newOidcClientId,
         );
       }
       userDeviceKeysLoading = database
@@ -4004,6 +4011,7 @@ class Client extends MatrixApi {
       migrateClient['device_name'],
       null,
       migrateClient['olm_account'],
+      migrateClient['oidc_client_id'],
     );
     Logs().d('Migrate SSSSCache...');
     for (final type in cacheTypes) {
