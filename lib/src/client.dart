@@ -285,7 +285,7 @@ class Client extends MatrixApi {
   Future<void> refreshAccessToken() async {
     final storedClient = await database.getClient(clientName);
     final refreshToken = storedClient?.tryGet<String>('refresh_token');
-    final oidcClientId = storedClient?.tryGet<String>('oidc_client_Id');
+    final oidcClientId = storedClient?.tryGet<String>('oidc_client_id');
     if (refreshToken == null) {
       throw Exception('No refresh token available');
     }
@@ -312,7 +312,7 @@ class Client extends MatrixApi {
         ),
       // We are using Matrix Native OIDC so we fetch the refresh endpoint first:
       final String oidcClientId =>
-        await oidcRefresh(refreshToken, oidcClientId),
+        await oidcRefresh(oidcClientId, refreshToken),
     };
 
     accessToken = tokenResponse.accessToken;
