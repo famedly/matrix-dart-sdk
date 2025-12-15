@@ -1968,8 +1968,18 @@ class Room {
           if (!ignoreErrors) {
             rethrow;
           } else {
-            Logs()
-                .w('Unable to request the profile $mxID from the server', e, s);
+            if (e is MatrixException && e.errcode == 'M_NOT_FOUND') {
+              Logs().v(
+                'Unable to request the profile $mxID from the server (user not found)',
+                e,
+              );
+            } else {
+              Logs().w(
+                'Unable to request the profile $mxID from the server',
+                e,
+                s,
+              );
+            }
           }
         }
       }

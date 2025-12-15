@@ -158,15 +158,18 @@ abstract class EventLocalizations {
       }
     },
     EventTypes.RoomMember: (event, i18n, body) {
-      final targetName = event.stateKeyUser?.calcDisplayname(i18n: i18n) ?? '';
-      final senderName =
+      // Use lazy functions to avoid triggering profile fetches for cases
+      // like displayname changes where we don't need the sender/target name.
+      String targetName() =>
+          event.stateKeyUser?.calcDisplayname(i18n: i18n) ?? '';
+      String senderName() =>
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
       final userIsTarget = event.stateKey == event.room.client.userID;
       final userIsSender = event.senderId == event.room.client.userID;
 
       switch (event.roomMemberChangeType) {
         case RoomMemberChangeType.avatar:
-          return i18n.changedTheProfileAvatar(targetName);
+          return i18n.changedTheProfileAvatar(targetName());
         case RoomMemberChangeType.displayname:
           final newDisplayname =
               event.content.tryGet<String>('displayname') ?? '';
@@ -176,45 +179,45 @@ abstract class EventLocalizations {
         case RoomMemberChangeType.join:
           return userIsTarget
               ? i18n.youJoinedTheChat
-              : i18n.joinedTheChat(targetName);
+              : i18n.joinedTheChat(targetName());
         case RoomMemberChangeType.acceptInvite:
           return userIsTarget
               ? i18n.youAcceptedTheInvitation
-              : i18n.acceptedTheInvitation(targetName);
+              : i18n.acceptedTheInvitation(targetName());
         case RoomMemberChangeType.rejectInvite:
           return userIsTarget
               ? i18n.youRejectedTheInvitation
-              : i18n.rejectedTheInvitation(targetName);
+              : i18n.rejectedTheInvitation(targetName());
         case RoomMemberChangeType.withdrawInvitation:
           return userIsSender
-              ? i18n.youHaveWithdrawnTheInvitationFor(targetName)
-              : i18n.hasWithdrawnTheInvitationFor(senderName, targetName);
+              ? i18n.youHaveWithdrawnTheInvitationFor(targetName())
+              : i18n.hasWithdrawnTheInvitationFor(senderName(), targetName());
         case RoomMemberChangeType.leave:
-          return i18n.userLeftTheChat(targetName);
+          return i18n.userLeftTheChat(targetName());
         case RoomMemberChangeType.kick:
           return userIsSender
-              ? i18n.youKicked(targetName)
-              : i18n.kicked(senderName, targetName);
+              ? i18n.youKicked(targetName())
+              : i18n.kicked(senderName(), targetName());
         case RoomMemberChangeType.invite:
           return userIsSender
-              ? i18n.youInvitedUser(targetName)
+              ? i18n.youInvitedUser(targetName())
               : userIsTarget
-                  ? i18n.youInvitedBy(senderName)
-                  : i18n.invitedUser(senderName, targetName);
+                  ? i18n.youInvitedBy(senderName())
+                  : i18n.invitedUser(senderName(), targetName());
         case RoomMemberChangeType.ban:
           return userIsSender
-              ? i18n.youBannedUser(targetName)
-              : i18n.bannedUser(senderName, targetName);
+              ? i18n.youBannedUser(targetName())
+              : i18n.bannedUser(senderName(), targetName());
         case RoomMemberChangeType.unban:
           return userIsSender
-              ? i18n.youUnbannedUser(targetName)
-              : i18n.unbannedUser(senderName, targetName);
+              ? i18n.youUnbannedUser(targetName())
+              : i18n.unbannedUser(senderName(), targetName());
         case RoomMemberChangeType.knock:
-          return i18n.hasKnocked(targetName);
+          return i18n.hasKnocked(targetName());
         case RoomMemberChangeType.other:
           return userIsTarget
               ? i18n.youJoinedTheChat
-              : i18n.joinedTheChat(targetName);
+              : i18n.joinedTheChat(targetName());
       }
     },
     EventTypes.RoomPowerLevels: (event, i18n, body) =>
