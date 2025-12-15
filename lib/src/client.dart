@@ -285,6 +285,7 @@ class Client extends MatrixApi {
   Future<void> refreshAccessToken() async {
     final storedClient = await database.getClient(clientName);
     final refreshToken = storedClient?.tryGet<String>('refresh_token');
+    final oidcClientId = storedClient?.tryGet<String>('oidc_client_id');
     if (refreshToken == null) {
       throw Exception('No refresh token available');
     }
@@ -295,13 +296,27 @@ class Client extends MatrixApi {
       throw Exception('Cannot refresh access token when not logged in');
     }
 
-    final tokenResponse = await refreshWithCustomRefreshTokenLifetime(
-      refreshToken,
-      refreshTokenLifetimeMs: customRefreshTokenLifetime?.inMilliseconds,
-    );
+    final tokenResponse = switch (oidcClientId) {
+      // We do not use Matrix Native OIDC so we use the legacy /refresh endpoint:
+      null => await refreshWithCustomRefreshTokenLifetime(
+          refreshToken,
+          refreshTokenLifetimeMs: customRefreshTokenLifetime?.inMilliseconds,
+        ).then(
+          (legacyFormat) => OidcAuthResponse(
+            accessToken: legacyFormat.accessToken,
+            tokenType: 'Bearer',
+            refreshToken: legacyFormat.refreshToken,
+            expiresIn: legacyFormat.expiresInMs,
+            scope: null,
+          ),
+        ),
+      // We are using Matrix Native OIDC so we fetch the refresh endpoint first:
+      final String oidcClientId =>
+        await oidcRefresh(oidcClientId, refreshToken),
+    };
 
     accessToken = tokenResponse.accessToken;
-    final expiresInMs = tokenResponse.expiresInMs;
+    final expiresInMs = tokenResponse.expiresIn;
     final tokenExpiresAt = expiresInMs == null
         ? null
         : DateTime.now().add(Duration(milliseconds: expiresInMs));
@@ -316,6 +331,7 @@ class Client extends MatrixApi {
       deviceName,
       prevBatch,
       encryption?.pickledOlmAccount,
+      oidcClientId,
     );
   }
 
@@ -759,7 +775,17 @@ class Client extends MatrixApi {
     try {
       // Upload keys to make sure all are cached on the next login.
       await encryption?.keyManager.uploadInboundGroupSessions();
-      await super.logout();
+
+      final storedClient = await database.getClient(clientName);
+      final oidcClientId = storedClient?.tryGet<String>('oidc_client_id');
+
+      if (oidcClientId == null) {
+        // Legacy logout with Matrix spec
+        await super.logout();
+      } else {
+        // Logout with Matrix Native OIDC
+        await revokeOidcToken(oidcClientId, accessToken!, 'access_token');
+      }
     } catch (e, s) {
       Logs().e('Logout failed', e, s);
       rethrow;
@@ -770,6 +796,8 @@ class Client extends MatrixApi {
 
   /// Sends a logout command to the homeserver and clears all local data,
   /// including all persistent data from the store.
+  /// Notice: This endpoint does **not** work with Matrix Native OIDC and will
+  /// be removed once Matrix < 2.0 becomes deprecated.
   @override
   Future<void> logoutAll() async {
     // Upload keys to make sure all are cached on the next login.
@@ -2009,6 +2037,7 @@ class Client extends MatrixApi {
     String? newDeviceName,
     String? newDeviceID,
     String? newOlmAccount,
+    String? newOidcClientId,
     bool waitForFirstSync = true,
     bool waitUntilLoadCompletedLoaded = true,
 
@@ -2053,6 +2082,7 @@ class Client extends MatrixApi {
 
       final account = await database.getClient(clientName);
       newRefreshToken ??= account?.tryGet<String>('refresh_token');
+      newOidcClientId ??= account?.tryGet<String>('oidc_client_id');
       // can have discovery_information so make sure it also has the proper
       // account creds
       if (account != null &&
@@ -2106,6 +2136,7 @@ class Client extends MatrixApi {
             _deviceName,
             prevBatch,
             encryption?.pickledOlmAccount,
+            newOidcClientId,
           );
         }
         onInitStateChanged?.call(InitState.finished);
@@ -2164,6 +2195,7 @@ class Client extends MatrixApi {
           _deviceName,
           prevBatch,
           encryption?.pickledOlmAccount,
+          newOidcClientId,
         );
       } else {
         _id = await database.insertClient(
@@ -2177,6 +2209,7 @@ class Client extends MatrixApi {
           _deviceName,
           prevBatch,
           encryption?.pickledOlmAccount,
+          newOidcClientId,
         );
       }
       userDeviceKeysLoading = database
@@ -3999,6 +4032,7 @@ class Client extends MatrixApi {
       migrateClient['device_name'],
       null,
       migrateClient['olm_account'],
+      migrateClient['oidc_client_id'],
     );
     Logs().d('Migrate SSSSCache...');
     for (final type in cacheTypes) {

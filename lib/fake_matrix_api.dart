@@ -2218,6 +2218,7 @@ class FakeMatrixApi extends BaseClient {
           },
     },
     'POST': {
+      '/oauth2/revoke': (var req) => {},
       '/oauth2/token': (var req) => {
             'access_token': '2YotnFZFEjr1zCsicMWpAA',
             'token_type': 'Bearer',
