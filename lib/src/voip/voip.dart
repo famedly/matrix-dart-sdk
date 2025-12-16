@@ -26,13 +26,8 @@ class VoIP {
   /// everytime this changed would be a pain
   final bool enableSFUE2EEKeyRatcheting;
 
-  /// whether to allow MSC3757 group calls (per-device state keys) even if the
-  /// room version doesn't officially support it.
-  ///
-  /// Note: If the room is not actually created for MSC3757, state keys that
-  /// start with your userId but are appended with other strings are not
-  /// protected and anyone can change them.
-  final bool forceMSC3757;
+  /// uses unprotected state keys for group call member events.
+  final bool useUnprotectedPerDeviceStateKeys;
 
   /// cached turn creds
   TurnServerCredentials? _turnServerCredentials;
@@ -93,7 +88,7 @@ class VoIP {
     this.client,
     this.delegate, {
     this.enableSFUE2EEKeyRatcheting = false,
-    this.forceMSC3757 = false,
+    this.useUnprotectedPerDeviceStateKeys = false,
     this.keyRingSize = 16,
     this.timeouts,
   }) : super() {

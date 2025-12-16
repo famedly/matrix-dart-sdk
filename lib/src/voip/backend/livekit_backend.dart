@@ -488,9 +488,15 @@ class LiveKitBackend extends CallBackend {
       Logs().i(
         '[VOIP E2EE] onCallEncryptionKeyRequest: checkPartcipantStatusAndRequestKey returned false, therefore retrying by getting state from server and rebuilding participant list for sanity',
       );
-      final useMSC3757 = groupCall.voip.forceMSC3757 ||
+
+      final useMSC3757 =
           (groupCall.room.roomVersion?.contains('msc3757') ?? false);
-      final stateKey = useMSC3757 ? '${userId}_$deviceId' : userId;
+
+      final stateKey = groupCall.voip.useUnprotectedPerDeviceStateKeys
+          ? '${deviceId}_$userId'
+          : useMSC3757
+              ? '${userId}_$deviceId'
+              : userId;
       await groupCall.room.client.getRoomStateWithKey(
         groupCall.room.id,
         EventTypes.GroupCallMember,
