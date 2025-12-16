@@ -46,9 +46,12 @@ extension FamedlyCallMemberEventsExtension on Room {
     String deviceId,
     VoIP voip,
   ) {
-    final useMSC3757 =
-        voip.forceMSC3757 || (roomVersion?.contains('msc3757') ?? false);
-    final stateKey = useMSC3757 ? '${userId}_$deviceId' : userId;
+    final useMSC3757 = (roomVersion?.contains('msc3757') ?? false);
+    final stateKey = voip.useUnprotectedPerDeviceStateKeys
+        ? '${deviceId}_$userId'
+        : useMSC3757
+            ? '${userId}_$deviceId'
+            : userId;
     final parsedMemberEvents = getCallMembershipsFromRoom(voip);
     final mem = parsedMemberEvents.tryGet<List<CallMembership>>(stateKey);
     return mem ?? [];
@@ -176,12 +179,14 @@ extension FamedlyCallMemberEventsExtension on Room {
     String? application = 'm.call',
     String? scope = 'm.room',
   }) async {
-    final useMSC3757 =
-        voip.forceMSC3757 || (roomVersion?.contains('msc3757') ?? false);
+    final useMSC3757 = (roomVersion?.contains('msc3757') ?? false);
 
     if (canJoinGroupCall) {
-      final stateKey =
-          useMSC3757 ? '${client.userID!}_${client.deviceID!}' : client.userID!;
+      final stateKey = voip.useUnprotectedPerDeviceStateKeys
+          ? '${client.deviceID!}_${client.userID!}'
+          : useMSC3757
+              ? '${client.userID!}_${client.deviceID!}'
+              : client.userID!;
 
       final useDelayedEvents = (await client.versionsResponse)
               .unstableFeatures?['org.matrix.msc4140'] ??
