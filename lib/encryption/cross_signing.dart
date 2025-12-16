@@ -123,6 +123,19 @@ class CrossSigning {
                 key.identifier != client.deviceID,
       );
 
+  Future<void> wipe() async {
+    await client.accountDataLoading;
+    const crossSigningTypes = {
+      EventTypes.CrossSigningMasterKey,
+      EventTypes.CrossSigningSelfSigning,
+      EventTypes.CrossSigningUserSigning,
+    };
+    for (final type in crossSigningTypes) {
+      if (!client.accountData.containsKey(type)) continue;
+      await client.setAccountData(client.userID!, type, {});
+    }
+  }
+
   Future<void> sign(List<SignableKey> keys) async {
     final signedKeys = <MatrixSignableKey>[];
     Uint8List? selfSigningKey;
