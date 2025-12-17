@@ -1,3 +1,6 @@
+## [4.0.3] 17th December 2025
+- fix: remove call member event wrt unprotected state keys (td)
+
 ## [4.0.2] 16th December 2025
 
 - feat: New searchEvents method in room (Christian Kußowski)

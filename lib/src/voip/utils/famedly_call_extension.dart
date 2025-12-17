@@ -220,7 +220,7 @@ extension FamedlyCallMemberEventsExtension on Room {
         }
 
         Map<String, List> newContent;
-        if (useMSC3757) {
+        if (useMSC3757 || voip.useUnprotectedPerDeviceStateKeys) {
           // scoped to deviceIds so clear the whole mems list
           newContent = {
             'memberships': [],
