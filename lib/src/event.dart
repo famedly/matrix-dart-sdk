@@ -519,13 +519,13 @@ class Event extends MatrixEvent {
   }
 
   /// Gets the info map of file events, or a blank map if none present
-  Map get infoMap =>
+  Map<String, Object?> get infoMap =>
       content.tryGetMap<String, Object?>('info') ?? <String, Object?>{};
 
   /// Gets the thumbnail info map of file events, or a blank map if nonepresent
-  Map get thumbnailInfoMap => infoMap['thumbnail_info'] is Map
-      ? infoMap['thumbnail_info']
-      : <String, dynamic>{};
+  Map<String, Object?> get thumbnailInfoMap => infoMap['thumbnail_info'] is Map
+      ? (infoMap['thumbnail_info'] as Map).cast<String, Object?>()
+      : <String, Object?>{};
 
   /// Returns if a file event has an attachment
   bool get hasAttachment => content['url'] is String || content['file'] is Map;
@@ -541,20 +541,18 @@ class Event extends MatrixEvent {
   bool get isThumbnailEncrypted => infoMap['thumbnail_file'] is Map;
 
   /// Gets the mimetype of the attachment of a file event, or a blank string if not present
-  String get attachmentMimetype => infoMap['mimetype'] is String
-      ? infoMap['mimetype'].toLowerCase()
-      : (content
-              .tryGetMap<String, Object?>('file')
-              ?.tryGet<String>('mimetype') ??
+  String get attachmentMimetype =>
+      infoMap.tryGet<String>('mimetype')?.toLowerCase() ??
+      (content.tryGetMap<String, Object?>('file')?.tryGet<String>('mimetype') ??
           '');
 
   /// Gets the mimetype of the thumbnail of a file event, or a blank string if not present
-  String get thumbnailMimetype => thumbnailInfoMap['mimetype'] is String
-      ? thumbnailInfoMap['mimetype'].toLowerCase()
-      : (infoMap['thumbnail_file'] is Map &&
-              infoMap['thumbnail_file']['mimetype'] is String
-          ? infoMap['thumbnail_file']['mimetype']
-          : '');
+  String get thumbnailMimetype =>
+      thumbnailInfoMap.tryGet<String>('mimetype')?.toLowerCase() ??
+      (infoMap
+              .tryGetMap<String, Object?>('thumbnail_file')
+              ?.tryGet<String>('mimetype') ??
+          '');
 
   /// Gets the underlying mxc url of an attachment of a file event, or null if not present
   Uri? get attachmentMxcUrl {
@@ -567,7 +565,7 @@ class Event extends MatrixEvent {
   /// Gets the underlying mxc url of a thumbnail of a file event, or null if not present
   Uri? get thumbnailMxcUrl {
     final url = isThumbnailEncrypted
-        ? infoMap['thumbnail_file']['url']
+        ? (infoMap['thumbnail_file'] as Map)['url']
         : infoMap['thumbnail_url'];
     return url is String ? Uri.tryParse(url) : null;
   }
@@ -577,7 +575,7 @@ class Event extends MatrixEvent {
     if (getThumbnail &&
         infoMap['size'] is int &&
         thumbnailInfoMap['size'] is int &&
-        infoMap['size'] <= thumbnailInfoMap['size']) {
+        (infoMap['size'] as int) <= (thumbnailInfoMap['size'] as int)) {
       getThumbnail = false;
     }
     if (getThumbnail && !hasThumbnail) {
@@ -626,12 +624,12 @@ class Event extends MatrixEvent {
     if (getThumbnail &&
         method == ThumbnailMethod.scale &&
         thisInfoMap['size'] is int &&
-        thisInfoMap['size'] < minNoThumbSize) {
+        (thisInfoMap['size'] as int) < minNoThumbSize) {
       getThumbnail = false;
     }
     // now generate the actual URLs
     if (getThumbnail) {
-      return await Uri.parse(thisMxcUrl).getThumbnailUri(
+      return await Uri.parse(thisMxcUrl as String).getThumbnailUri(
         room.client,
         width: width,
         height: height,
@@ -639,7 +637,7 @@ class Event extends MatrixEvent {
         animated: animated,
       );
     } else {
-      return await Uri.parse(thisMxcUrl).getDownloadUri(room.client);
+      return await Uri.parse(thisMxcUrl as String).getDownloadUri(room.client);
     }
   }
 
@@ -681,12 +679,12 @@ class Event extends MatrixEvent {
     if (getThumbnail &&
         method == ThumbnailMethod.scale &&
         thisInfoMap['size'] is int &&
-        thisInfoMap['size'] < minNoThumbSize) {
+        (thisInfoMap['size'] as int) < minNoThumbSize) {
       getThumbnail = false;
     }
     // now generate the actual URLs
     if (getThumbnail) {
-      return Uri.parse(thisMxcUrl).getThumbnail(
+      return Uri.parse(thisMxcUrl as String).getThumbnail(
         room.client,
         width: width,
         height: height,
@@ -694,7 +692,7 @@ class Event extends MatrixEvent {
         animated: animated,
       );
     } else {
-      return Uri.parse(thisMxcUrl).getDownloadLink(room.client);
+      return Uri.parse(thisMxcUrl as String).getDownloadLink(room.client);
     }
   }
 
@@ -713,7 +711,7 @@ class Event extends MatrixEvent {
     final database = room.client.database;
 
     final storeable = thisInfoMap['size'] is int &&
-        thisInfoMap['size'] <= database.maxFileSize;
+        (thisInfoMap['size'] as int) <= database.maxFileSize;
 
     Uint8List? uint8list;
     if (storeable) {
@@ -759,7 +757,7 @@ class Event extends MatrixEvent {
     // Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
     var storeable = thisInfoMap['size'] is int &&
-        thisInfoMap['size'] <= database.maxFileSize;
+        (thisInfoMap['size'] as int) <= database.maxFileSize;
 
     Uint8List? uint8list;
     if (storeable) {
@@ -794,16 +792,17 @@ class Event extends MatrixEvent {
 
     // Decrypt the file
     if (isEncrypted) {
-      final fileMap =
-          getThumbnail ? infoMap['thumbnail_file'] : content['file'];
-      if (!fileMap['key']['key_ops'].contains('decrypt')) {
+      final fileMap = getThumbnail
+          ? infoMap['thumbnail_file'] as Map
+          : content['file'] as Map;
+      if (!(fileMap['key'] as Map)['key_ops'].contains('decrypt')) {
         throw ("Missing 'decrypt' in 'key_ops'.");
       }
       final encryptedFile = EncryptedFile(
         data: uint8list,
-        iv: fileMap['iv'],
-        k: fileMap['key']['k'],
-        sha256: fileMap['hashes']['sha256'],
+        iv: fileMap['iv'] as String,
+        k: (fileMap['key'] as Map)['k'] as String,
+        sha256: (fileMap['hashes'] as Map)['sha256'] as String,
       );
       uint8list =
           await room.client.nativeImplementations.decryptFile(encryptedFile);
