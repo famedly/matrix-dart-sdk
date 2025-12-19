@@ -219,10 +219,9 @@ class Client extends MatrixApi {
     /// most common reason for soft logouts.
     /// You can also perform a new login here by passing the existing deviceId.
     this.onSoftLogout,
-
-    /// Experimental feature which allows to send a custom refresh token
-    /// lifetime to the server which overrides the default one. Needs server
-    /// support.
+    @Deprecated(
+      'Use `customRefreshTokenLifetime` in `Client.refreshAccessToken() directly.',
+    )
     this.customRefreshTokenLifetime,
     this.typingIndicatorTimeout = const Duration(seconds: 30),
 
@@ -274,6 +273,9 @@ class Client extends MatrixApi {
     registerDefaultCommands();
   }
 
+  @Deprecated(
+    'Use `customRefreshTokenLifetime` in `Client.refreshAccessToken() directly.',
+  )
   Duration? customRefreshTokenLifetime;
 
   /// Fetches the refreshToken from the database and tries to get a new
@@ -282,7 +284,14 @@ class Client extends MatrixApi {
   /// logout case.
   /// Throws an Exception if there is no refresh token available or the
   /// client is not logged in.
-  Future<void> refreshAccessToken() async {
+  Future<void> refreshAccessToken({
+    /// Experimental feature which allows to send a custom refresh token
+    /// lifetime to the server which overrides the default one. Needs server
+    /// support.
+    Duration? customRefreshTokenLifetime,
+  }) async {
+    // ignore: deprecated_member_use_from_same_package
+    customRefreshTokenLifetime ??= this.customRefreshTokenLifetime;
     final storedClient = await database.getClient(clientName);
     final refreshToken = storedClient?.tryGet<String>('refresh_token');
     if (refreshToken == null) {
