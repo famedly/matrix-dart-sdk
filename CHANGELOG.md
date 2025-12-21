@@ -1,3 +1,6 @@
+## [4.1.0] 20th December 2025
+- refactor: Deprecated Client.customRefreshTokenLifetime in favor of method parameter (Christian Kußowski)
+
 ## [4.0.3] 17th December 2025
 - fix: remove call member event wrt unprotected state keys (td)
 
