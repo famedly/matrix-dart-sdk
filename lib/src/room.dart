@@ -364,15 +364,21 @@ class Room {
     }
 
     final mxId = client.directChats.entries
-        .firstWhereOrNull((MapEntry<String, dynamic> e) {
-      final roomIds = e.value;
-      return roomIds is List<dynamic> && roomIds.contains(id);
-    })?.key;
+        .firstWhereOrNull((e) => e.value.contains(id))
+        ?.key;
     if (mxId?.isValidMatrixId == true) return _cachedDirectChatMatrixId = mxId;
     return _cachedDirectChatMatrixId = null;
   }
 
-  /// Wheither this is a direct chat or not
+  /// Whether this is a direct chat or not.
+  ///
+  /// Returns `true` if this room is marked as a direct chat in the user's
+  /// `m.direct` account data. Note that this is a user-level annotation,
+  /// not an inherent property of the room - a room with only 2 members
+  /// is NOT automatically considered a direct chat.
+  ///
+  /// To mark a room as a direct chat, use [addToDirectChat] or set
+  /// `isDirect: true` when creating the room.
   bool get isDirectChat => directChatMatrixID != null;
 
   Event? lastEvent;

@@ -878,6 +878,58 @@ void main() {
       await room.addToDirectChat('Testname');
     });
 
+    test('isDirectChat', () async {
+      // Room !726s6s6q:example.com is in m.direct with @bob:example.com
+      final dmRoom = matrix.getRoomById('!726s6s6q:example.com');
+      expect(dmRoom, isNotNull);
+      expect(dmRoom!.isDirectChat, true);
+      expect(dmRoom.directChatMatrixID, '@bob:example.com');
+
+      // Room !calls:example.com is NOT in m.direct
+      final nonDmRoom = matrix.getRoomById('!calls:example.com');
+      expect(nonDmRoom, isNotNull);
+      expect(nonDmRoom!.isDirectChat, false);
+      expect(nonDmRoom.directChatMatrixID, isNull);
+
+      // Simulate m.direct update via sync - add nonDmRoom as direct chat
+      await matrix.handleSync(
+        SyncUpdate.fromJson(
+          jsonDecode('''
+          {
+            "next_batch": "sync_dc1",
+            "account_data": {
+              "events": [{
+                "type": "m.direct",
+                "content": {"@alice:example.com": ["!calls:example.com"]}
+              }]
+            }
+          }
+        '''),
+        ),
+      );
+      expect(nonDmRoom.isDirectChat, true);
+      expect(nonDmRoom.directChatMatrixID, '@alice:example.com');
+
+      // Simulate m.direct update - remove room from direct chats
+      await matrix.handleSync(
+        SyncUpdate.fromJson(
+          jsonDecode('''
+          {
+            "next_batch": "sync_dc2",
+            "account_data": {
+              "events": [{
+                "type": "m.direct",
+                "content": {}
+              }]
+            }
+          }
+        '''),
+        ),
+      );
+      expect(nonDmRoom.isDirectChat, false);
+      expect(nonDmRoom.directChatMatrixID, isNull);
+    });
+
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
       expect(timeline.events.length, 17);
