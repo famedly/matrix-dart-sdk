@@ -50,7 +50,7 @@ void main() {
         bootstrap = client.encryption!.bootstrap(
           onUpdate: (bootstrap) async {
             if (bootstrap.state == BootstrapState.askWipeSsss) {
-              bootstrap.wipeSsss(true);
+              await bootstrap.wipeSsss(true);
             } else if (bootstrap.state == BootstrapState.askNewSsss) {
               await bootstrap.newSsss('foxies');
             } else if (bootstrap.state == BootstrapState.askWipeCrossSigning) {
@@ -106,7 +106,7 @@ void main() {
         bootstrap = client.encryption!.bootstrap(
           onUpdate: (bootstrap) async {
             if (bootstrap.state == BootstrapState.askWipeSsss) {
-              bootstrap.wipeSsss(false);
+              await bootstrap.wipeSsss(false);
             } else if (bootstrap.state == BootstrapState.askUseExistingSsss) {
               bootstrap.useExistingSsss(false);
             } else if (bootstrap.state == BootstrapState.askUnlockSsss) {
@@ -159,7 +159,7 @@ void main() {
         bootstrap = client.encryption!.bootstrap(
           onUpdate: (bootstrap) async {
             if (bootstrap.state == BootstrapState.askWipeSsss) {
-              bootstrap.wipeSsss(false);
+              await bootstrap.wipeSsss(false);
             } else if (bootstrap.state == BootstrapState.askUseExistingSsss) {
               bootstrap.useExistingSsss(false);
             } else if (bootstrap.state == BootstrapState.askUnlockSsss) {
@@ -239,7 +239,7 @@ void main() {
       bootstrap = client.encryption!.bootstrap(
         onUpdate: (bootstrap) async {
           if (bootstrap.state == BootstrapState.askWipeSsss) {
-            bootstrap.wipeSsss(false);
+            await bootstrap.wipeSsss(false);
           } else if (bootstrap.state == BootstrapState.askBadSsss) {
             askedBadSsss = true;
             bootstrap.ignoreBadSecrets(false);
