@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/models/retry_event_model.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 
 class LiveKitBackend extends CallBackend {
@@ -23,6 +24,18 @@ class LiveKitBackend extends CallBackend {
 
   /// participant:keyIndex:keyBin
   final Map<CallParticipant, Map<int, Uint8List>> _encryptionKeysMap = {};
+
+  /// Tracks pending encryption key request retries per participant
+  final Map<CallParticipant, RetryEventModel> _requestEncryptionKeyPending = {};
+
+  /// Tracks retry count per participant to prevent infinite retries
+  final Map<CallParticipant, int> _keyRequestRetryCount = {};
+
+  /// Maximum number of retry attempts for key requests
+  static const int _maxKeyRequestRetries = 5;
+
+  /// Retry interval for key requests
+  static const Duration _keyRequestRetryInterval = Duration(seconds: 2);
 
   final List<Future> _setNewKeyTimeouts = [];
 
@@ -79,10 +92,7 @@ class LiveKitBackend extends CallBackend {
         '_makeNewSenderKey using previous key because last created at ${_lastNewKeyTime.toString()}',
       );
       // still a fairly new key, just send that
-      await _sendEncryptionKeysEvent(
-        groupCall,
-        _latestLocalKeyIndex,
-      );
+      await _sendEncryptionKeysEvent(groupCall, _latestLocalKeyIndex);
       return;
     }
 
@@ -222,20 +232,22 @@ class LiveKitBackend extends CallBackend {
       );
       // now wait for the key to propogate and then set it, hopefully users can
       // stil decrypt everything
-      final useKeyTimeout =
-          Future.delayed(groupCall.voip.timeouts!.useKeyDelay, () async {
-        Logs().i(
-          '[VOIP E2EE] delayed setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
-        );
-        await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
-          participant,
-          encryptionKeyBin,
-          encryptionKeyIndex,
-        );
-        if (participant.isLocal) {
-          _currentLocalKeyIndex = encryptionKeyIndex;
-        }
-      });
+      final useKeyTimeout = Future.delayed(
+        groupCall.voip.timeouts!.useKeyDelay,
+        () async {
+          Logs().i(
+            '[VOIP E2EE] delayed setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
+          );
+          await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
+            participant,
+            encryptionKeyBin,
+            encryptionKeyIndex,
+          );
+          if (participant.isLocal) {
+            _currentLocalKeyIndex = encryptionKeyIndex;
+          }
+        },
+      );
       _setNewKeyTimeouts.add(useKeyTimeout);
     } else {
       Logs().i(
@@ -271,17 +283,15 @@ class LiveKitBackend extends CallBackend {
         '[VOIP E2EE] _sendEncryptionKeysEvent Tried to send encryption keys event but no keys found!',
       );
       await _makeNewSenderKey(groupCall, false);
-      await _sendEncryptionKeysEvent(
-        groupCall,
-        keyIndex,
-        sendTo: sendTo,
-      );
+      await _sendEncryptionKeysEvent(groupCall, keyIndex, sendTo: sendTo);
       return;
     }
 
     try {
       final keyContent = EncryptionKeysEventContent(
-        [EncryptionKeyEntry(keyIndex, base64Encode(myLatestKey))],
+        [
+          EncryptionKeyEntry(keyIndex, base64Encode(myLatestKey)),
+        ],
         groupCall.groupCallId,
       );
       final Map<String, Object> data = {
@@ -300,11 +310,7 @@ class LiveKitBackend extends CallBackend {
       );
     } catch (e, s) {
       Logs().e('[VOIP E2EE] Failed to send e2ee keys, retrying', e, s);
-      await _sendEncryptionKeysEvent(
-        groupCall,
-        keyIndex,
-        sendTo: sendTo,
-      );
+      await _sendEncryptionKeysEvent(groupCall, keyIndex, sendTo: sendTo);
     }
   }
 
@@ -375,6 +381,10 @@ class LiveKitBackend extends CallBackend {
     GroupCallSession groupCall,
     List<CallParticipant> remoteParticipants,
   ) async {
+    Logs().v(
+      '[VOIP E2EE] requesting stream encryption keys from ${remoteParticipants.map((e) => e.id)}',
+    );
+
     final Map<String, Object> data = {
       'conf_id': groupCall.groupCallId,
       'device_id': groupCall.client.deviceID!,
@@ -387,6 +397,32 @@ class LiveKitBackend extends CallBackend {
       data,
       EventTypes.GroupCallMemberEncryptionKeysRequest,
     );
+
+    // Set up retry timers for each participant
+    for (final rp in remoteParticipants) {
+      // Skip if a retry is already pending for this participant
+      if (_requestEncryptionKeyPending.containsKey(rp)) continue;
+
+      // Check retry count to prevent infinite retries
+      final currentCount = _keyRequestRetryCount[rp] ?? 0;
+      if (currentCount >= _maxKeyRequestRetries) {
+        Logs().w(
+          '[VOIP E2EE] Max retries ($_maxKeyRequestRetries) reached for ${rp.id}, giving up key request',
+        );
+        _keyRequestRetryCount.remove(rp);
+        continue;
+      }
+      _keyRequestRetryCount[rp] = currentCount + 1;
+
+      _requestEncryptionKeyPending[rp] = RetryEventModel(
+        timeInterval: _keyRequestRetryInterval,
+        retryFunction: (_) {
+          // Remove the pending entry before retrying to allow new retry to be scheduled
+          _requestEncryptionKeyPending.remove(rp)?.dispose();
+          unawaited(requestEncrytionKey(groupCall, [rp]));
+        },
+      );
+    }
   }
 
   @override
@@ -403,8 +439,15 @@ class LiveKitBackend extends CallBackend {
     final keyContent = EncryptionKeysEventContent.fromJson(content);
 
     final callId = keyContent.callId;
-    final p =
-        CallParticipant(groupCall.voip, userId: userId, deviceId: deviceId);
+    final p = CallParticipant(
+      groupCall.voip,
+      userId: userId,
+      deviceId: deviceId,
+    );
+
+    // Cancel any pending retry for this participant since we received keys
+    _requestEncryptionKeyPending.remove(p)?.dispose();
+    _keyRequestRetryCount.remove(p);
 
     if (keyContent.keys.isEmpty) {
       Logs().w(
@@ -471,11 +514,7 @@ class LiveKitBackend extends CallBackend {
           groupCall,
           _latestLocalKeyIndex,
           sendTo: [
-            CallParticipant(
-              groupCall.voip,
-              userId: userId,
-              deviceId: deviceId,
-            ),
+            CallParticipant(groupCall.voip, userId: userId, deviceId: deviceId),
           ],
         );
         return true;
@@ -525,16 +564,14 @@ class LiveKitBackend extends CallBackend {
     if (_memberLeaveEncKeyRotateDebounceTimer != null) {
       _memberLeaveEncKeyRotateDebounceTimer!.cancel();
     }
-    _memberLeaveEncKeyRotateDebounceTimer =
-        Timer(groupCall.voip.timeouts!.makeKeyOnLeaveDelay, () async {
-      // we skipJoinDebounce here because we want to make sure a new key is generated
-      // and that the join debounce does not block us from making a new key
-      await _makeNewSenderKey(
-        groupCall,
-        true,
-        skipJoinDebounce: true,
-      );
-    });
+    _memberLeaveEncKeyRotateDebounceTimer = Timer(
+      groupCall.voip.timeouts!.makeKeyOnLeaveDelay,
+      () async {
+        // we skipJoinDebounce here because we want to make sure a new key is generated
+        // and that the join debounce does not block us from making a new key
+        await _makeNewSenderKey(groupCall, true, skipJoinDebounce: true);
+      },
+    );
   }
 
   @override
@@ -545,6 +582,13 @@ class LiveKitBackend extends CallBackend {
     _currentLocalKeyIndex = 0;
     _latestLocalKeyIndex = 0;
     _memberLeaveEncKeyRotateDebounceTimer?.cancel();
+
+    // Clean up all pending encryption key request retries
+    for (final retry in _requestEncryptionKeyPending.values) {
+      retry.dispose();
+    }
+    _requestEncryptionKeyPending.clear();
+    _keyRequestRetryCount.clear();
   }
 
   @override
