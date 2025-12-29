@@ -484,13 +484,15 @@ class Room {
     Map<String, BasicEvent>? roomAccountData,
     RoomSummary? summary,
     this.lastEvent,
+    LatestReceiptState? receiptState,
   })  : roomAccountData = roomAccountData ?? <String, BasicEvent>{},
         summary = summary ??
             RoomSummary.fromJson({
               'm.joined_member_count': 0,
               'm.invited_member_count': 0,
               'm.heroes': [],
-            });
+            }),
+        receiptState = receiptState ?? LatestReceiptState.empty();
 
   /// The default count of how much events should be requested when requesting the
   /// history of this room.
@@ -623,10 +625,7 @@ class Room {
     return readAtMilliseconds < lastEvent.originServerTs.millisecondsSinceEpoch;
   }
 
-  LatestReceiptState get receiptState => LatestReceiptState.fromJson(
-        roomAccountData[LatestReceiptState.eventType]?.content ??
-            <String, dynamic>{},
-      );
+  LatestReceiptState receiptState;
 
   /// Returns true if this room is unread. To check if there are new messages
   /// in muted rooms, use [hasNewMessages].

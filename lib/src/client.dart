@@ -2834,12 +2834,8 @@ class Client extends MatrixApi {
         await receiptStateContent.update(e, room);
       }
 
-      final event = BasicEvent(
-        type: LatestReceiptState.eventType,
-        content: receiptStateContent.toJson(),
-      );
-      await database.storeRoomAccountData(room.id, event);
-      room.roomAccountData[event.type] = event;
+      await database.storeLatestReceiptState(room.id, receiptStateContent);
+      room.receiptState = receiptStateContent;
     }
   }
 
