@@ -208,7 +208,7 @@ void main() {
       expect(matrix.rooms[1].ephemerals.length, 2);
       expect(matrix.rooms[1].typingUsers.length, 1);
       expect(matrix.rooms[1].typingUsers[0].id, '@alice:example.com');
-      expect(matrix.rooms[1].roomAccountData.length, 3);
+      expect(matrix.rooms[1].roomAccountData.length, 2);
       expect(matrix.rooms[1].encrypted, true);
       expect(
         matrix.rooms[1].encryptionAlgorithm,
@@ -327,9 +327,11 @@ void main() {
       expect(
         matrix
             .getRoomById('!726s6s6q:example.com')
-            ?.roomAccountData[LatestReceiptState.eventType]
-            ?.type,
-        LatestReceiptState.eventType,
+            ?.receiptState
+            .global
+            .otherUsers['@alice:example.com']!
+            .eventId,
+        '\$7365636s6r6432:example.com',
       );
       expect(
         matrix
