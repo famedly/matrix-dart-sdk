@@ -205,6 +205,7 @@ class LatestReceiptStateForTimeline {
 }
 
 class LatestReceiptState {
+  @Deprecated('Now stored in their own database box.')
   static const eventType = 'com.famedly.receipts_state';
 
   /// Receipts for no specific thread
@@ -221,6 +222,8 @@ class LatestReceiptState {
     this.mainThread,
     this.byThread = const {},
   });
+
+  factory LatestReceiptState.empty() => LatestReceiptState.fromJson({});
 
   factory LatestReceiptState.fromJson(Map<String, dynamic> json) {
     final global = json['global'] ?? <String, dynamic>{};
