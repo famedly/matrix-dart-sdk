@@ -185,7 +185,7 @@ client_api:
   # will be released after the cooloff time in milliseconds. Server administrators
   # and appservice users are exempt from rate limiting by default.
   rate_limiting:
-    enabled: true
+    enabled: false
     threshold: 5
     cooloff_ms: 500
     exempt_user_ids:
