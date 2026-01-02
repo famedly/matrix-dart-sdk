@@ -1490,6 +1490,7 @@ class Room {
   Future<void> forget() async {
     await client.database.forgetRoom(id);
     await client.forgetRoom(id);
+    client.rooms.remove(this);
     return;
   }
 
@@ -1767,7 +1768,11 @@ class Room {
       });
     }
 
-    var chunk = TimelineChunk(events: events);
+    var chunk = TimelineChunk(
+      events: events,
+      // Leave rooms paginate via getRoomEvents which uses chunk.prevBatch.
+      prevBatch: isArchived ? (prev_batch ?? '') : '',
+    );
     // Load the timeline arround eventContextId if set
     if (eventContextId != null) {
       if (!events.any((Event event) => event.eventId == eventContextId)) {

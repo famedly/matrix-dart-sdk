@@ -442,8 +442,7 @@ class Client extends MatrixApi {
   }
 
   /// Searches in the local cache for the given room and returns null if not
-  /// found. If you have loaded the [loadArchive()] before, it can also return
-  /// archived rooms.
+  /// found. This does not include archived rooms.
   Room? getRoomById(String id) {
     for (final room in rooms) {
       if (room.id == id) return room;
@@ -1247,6 +1246,7 @@ class Client extends MatrixApi {
                     .map((e) => Event.fromMatrixEvent(e, room))
                     .toList() ??
                 [],
+            prevBatch: entry.value.timeline?.prevBatch ?? '',
           ),
         );
         for (var i = 0; i < timeline.events.length; i++) {
@@ -1259,6 +1259,9 @@ class Client extends MatrixApi {
             }
           }
         }
+        room.lastEvent = timeline.events.firstWhereOrNull(
+          (event) => roomPreviewLastEvents.contains(event.type),
+        );
 
         archivedRooms.add(ArchivedRoom(room: room, timeline: timeline));
       }
@@ -2750,12 +2753,15 @@ class Client extends MatrixApi {
             room,
             timelineEvents,
             timelineUpdateType,
-            store: false,
+            store: syncFilter.room?.includeLeave == true,
           );
         }
         final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
           for (final event in accountData) {
+            if (syncFilter.room?.includeLeave == true) {
+              await database.storeRoomAccountData(room.id, event);
+            }
             room.roomAccountData[event.type] = event;
           }
         }
@@ -2765,7 +2771,7 @@ class Client extends MatrixApi {
             room,
             state,
             EventUpdateType.state,
-            store: false,
+            store: syncFilter.room?.includeLeave == true,
           );
         }
       }
@@ -3011,8 +3017,12 @@ class Client extends MatrixApi {
       rooms.insert(position, room);
     }
     // If the membership is "leave" then remove the item and stop here
-    else if (found && membership == Membership.leave) {
-      rooms.removeAt(roomIndex);
+    else if (membership == Membership.leave) {
+      if (syncFilter.room?.includeLeave == true && !found) {
+        rooms.add(room);
+      } else if (found) {
+        rooms.removeAt(roomIndex);
+      }
     }
     // Update notification, highlight count and/or additional information
     else if (found &&
