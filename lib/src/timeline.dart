@@ -102,6 +102,9 @@ class Timeline {
       direction: Direction.b,
       historyCount: historyCount,
       filter: filter,
+      inMemoryOnly:
+          room.membership == Membership.leave &&
+          room.client.syncFilter.room?.includeLeave != true,
     );
     isRequestingHistory = false;
   }
@@ -136,6 +139,7 @@ class Timeline {
     int historyCount = Room.defaultHistoryCount,
     required Direction direction,
     StateFilter? filter,
+    bool inMemoryOnly = false,
   }) async {
     onUpdate?.call();
 
@@ -184,7 +188,7 @@ class Timeline {
         _fetchedAllDatabaseEvents = true;
         Logs().i('No more events found in the store. Request from server...');
 
-        if (isFragmentedTimeline) {
+        if (isFragmentedTimeline || inMemoryOnly) {
           await getRoomEvents(
             historyCount: historyCount,
             direction: direction,
