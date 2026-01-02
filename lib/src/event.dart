@@ -519,13 +519,13 @@ class Event extends MatrixEvent {
   }
 
   /// Gets the info map of file events, or a blank map if none present
-  Map get infoMap =>
+  Map<String, Object?> get infoMap =>
       content.tryGetMap<String, Object?>('info') ?? <String, Object?>{};
 
   /// Gets the thumbnail info map of file events, or a blank map if nonepresent
-  Map get thumbnailInfoMap => infoMap['thumbnail_info'] is Map
-      ? infoMap['thumbnail_info']
-      : <String, dynamic>{};
+  Map<String, Object?> get thumbnailInfoMap =>
+      infoMap.tryGetMap<String, Object?>('thumbnail_info') ??
+      <String, Object?>{};
 
   /// Returns if a file event has an attachment
   bool get hasAttachment => content['url'] is String || content['file'] is Map;
@@ -541,20 +541,22 @@ class Event extends MatrixEvent {
   bool get isThumbnailEncrypted => infoMap['thumbnail_file'] is Map;
 
   /// Gets the mimetype of the attachment of a file event, or a blank string if not present
-  String get attachmentMimetype => infoMap['mimetype'] is String
-      ? infoMap['mimetype'].toLowerCase()
-      : (content
-              .tryGetMap<String, Object?>('file')
-              ?.tryGet<String>('mimetype') ??
-          '');
+  String get attachmentMimetype =>
+      infoMap.tryGet<String>('mimetype')?.toLowerCase() ??
+      content
+          .tryGetMap<String, Object?>('file')
+          ?.tryGet<String>('mimetype')
+          ?.toLowerCase() ??
+      '';
 
   /// Gets the mimetype of the thumbnail of a file event, or a blank string if not present
-  String get thumbnailMimetype => thumbnailInfoMap['mimetype'] is String
-      ? thumbnailInfoMap['mimetype'].toLowerCase()
-      : (infoMap['thumbnail_file'] is Map &&
-              infoMap['thumbnail_file']['mimetype'] is String
-          ? infoMap['thumbnail_file']['mimetype']
-          : '');
+  String get thumbnailMimetype =>
+      thumbnailInfoMap.tryGet<String>('mimetype')?.toLowerCase() ??
+      infoMap
+          .tryGetMap<String, Object?>('thumbnail_file')
+          ?.tryGet<String>('mimetype')
+          ?.toLowerCase() ??
+      '';
 
   /// Gets the underlying mxc url of an attachment of a file event, or null if not present
   Uri? get attachmentMxcUrl {
@@ -565,19 +567,23 @@ class Event extends MatrixEvent {
   }
 
   /// Gets the underlying mxc url of a thumbnail of a file event, or null if not present
-  Uri? get thumbnailMxcUrl {
-    final url = isThumbnailEncrypted
-        ? infoMap['thumbnail_file']['url']
-        : infoMap['thumbnail_url'];
-    return url is String ? Uri.tryParse(url) : null;
-  }
+  Uri? get thumbnailMxcUrl => Uri.tryParse(
+        isThumbnailEncrypted
+            ? (infoMap
+                    .tryGetMap<String, Object?>('thumbnail_file')
+                    ?.tryGet<String>('url') ??
+                '')
+            : (infoMap.tryGet<String>('thumbnail_url') ?? ''),
+      );
 
   /// Gets the mxc url of an attachment/thumbnail of a file event, taking sizes into account, or null if not present
   Uri? attachmentOrThumbnailMxcUrl({bool getThumbnail = false}) {
+    final fileSize = infoMap.tryGet<int>('size');
+    final thumbnailFileSize = thumbnailInfoMap.tryGet<int>('size');
     if (getThumbnail &&
-        infoMap['size'] is int &&
-        thumbnailInfoMap['size'] is int &&
-        infoMap['size'] <= thumbnailInfoMap['size']) {
+        fileSize != null &&
+        thumbnailFileSize != null &&
+        fileSize <= thumbnailFileSize) {
       getThumbnail = false;
     }
     if (getThumbnail && !hasThumbnail) {
@@ -620,13 +626,17 @@ class Event extends MatrixEvent {
       return null; // can't fetch from thumbnail
     }
     final thisInfoMap = useThumbnailMxcUrl ? thumbnailInfoMap : infoMap;
-    final thisMxcUrl =
-        useThumbnailMxcUrl ? infoMap['thumbnail_url'] : content['url'];
+    final thisMxcUrl = useThumbnailMxcUrl
+        ? infoMap.tryGet<String>('thumbnail_url')
+        : content.tryGet<String>('url');
+    if (thisMxcUrl == null) return null;
+
     // if we have as method scale, we can return safely the original image, should it be small enough
+    final thisInfoMapSize = thisInfoMap.tryGet<int>('size');
     if (getThumbnail &&
         method == ThumbnailMethod.scale &&
-        thisInfoMap['size'] is int &&
-        thisInfoMap['size'] < minNoThumbSize) {
+        thisInfoMapSize != null &&
+        thisInfoMapSize < minNoThumbSize) {
       getThumbnail = false;
     }
     // now generate the actual URLs
@@ -675,13 +685,16 @@ class Event extends MatrixEvent {
       return null; // can't fetch from thumbnail
     }
     final thisInfoMap = useThumbnailMxcUrl ? thumbnailInfoMap : infoMap;
-    final thisMxcUrl =
-        useThumbnailMxcUrl ? infoMap['thumbnail_url'] : content['url'];
+    final thisMxcUrl = useThumbnailMxcUrl
+        ? infoMap.tryGet<String>('thumbnail_url')
+        : content.tryGet<String>('url');
+    if (thisMxcUrl == null) return null;
     // if we have as method scale, we can return safely the original image, should it be small enough
+    final thisInfoMapSize = thisInfoMap.tryGet<int>('size');
     if (getThumbnail &&
         method == ThumbnailMethod.scale &&
-        thisInfoMap['size'] is int &&
-        thisInfoMap['size'] < minNoThumbSize) {
+        thisInfoMapSize != null &&
+        thisInfoMapSize < minNoThumbSize) {
       getThumbnail = false;
     }
     // now generate the actual URLs
@@ -712,8 +725,9 @@ class Event extends MatrixEvent {
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
     final database = room.client.database;
 
-    final storeable = thisInfoMap['size'] is int &&
-        thisInfoMap['size'] <= database.maxFileSize;
+    final thisInfoMapSize = thisInfoMap.tryGet<int>('size');
+    final storeable =
+        thisInfoMapSize != null && thisInfoMapSize <= database.maxFileSize;
 
     Uint8List? uint8list;
     if (storeable) {
@@ -758,8 +772,9 @@ class Event extends MatrixEvent {
 
     // Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
-    var storeable = thisInfoMap['size'] is int &&
-        thisInfoMap['size'] <= database.maxFileSize;
+    final thisInfoMapSize = thisInfoMap.tryGet<int>('size');
+    var storeable =
+        thisInfoMapSize != null && thisInfoMapSize <= database.maxFileSize;
 
     Uint8List? uint8list;
     if (storeable) {
@@ -794,16 +809,24 @@ class Event extends MatrixEvent {
 
     // Decrypt the file
     if (isEncrypted) {
-      final fileMap =
-          getThumbnail ? infoMap['thumbnail_file'] : content['file'];
-      if (!fileMap['key']['key_ops'].contains('decrypt')) {
+      final fileMap = getThumbnail
+          ? infoMap.tryGetMap<String, Object?>('thumbnail_file')
+          : content.tryGetMap<String, Object?>('file');
+      if (fileMap == null) throw ('No encrypted file info found');
+      if (fileMap
+              .tryGetMap<String, Object?>('key')
+              ?.tryGetList<String>('key_ops')
+              ?.contains('decrypt') !=
+          true) {
         throw ("Missing 'decrypt' in 'key_ops'.");
       }
       final encryptedFile = EncryptedFile(
         data: uint8list,
-        iv: fileMap['iv'],
-        k: fileMap['key']['k'],
-        sha256: fileMap['hashes']['sha256'],
+        iv: fileMap.tryGet<String>('iv')!,
+        k: fileMap.tryGetMap<String, Object?>('key')!.tryGet<String>('k')!,
+        sha256: fileMap
+            .tryGetMap<String, Object?>('hashes')!
+            .tryGet<String>('sha256')!,
       );
       uint8list =
           await room.client.nativeImplementations.decryptFile(encryptedFile);
