@@ -405,6 +405,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await _userProfilesBox.clear();
         await _readReceiptsBox.clear();
         await _clientBox.delete('prev_batch');
+        await clearCustomCacheObjects();
       });
 
   @override
@@ -1794,22 +1795,35 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeWellKnown(DiscoveryInformation? discoveryInformation) {
-    if (discoveryInformation == null) {
-      return _clientBox.delete('discovery_information');
-    }
+  Future<void> cacheCustomObject(String cacheKey, Map<String, Object?> object) {
     return _clientBox.put(
-      'discovery_information',
-      jsonEncode(discoveryInformation.toJson()),
+      'custom_cache_$cacheKey',
+      jsonEncode({
+        'saved_at': DateTime.now().millisecondsSinceEpoch,
+        'content': object,
+      }),
     );
   }
 
   @override
-  Future<DiscoveryInformation?> getWellKnown() async {
-    final rawDiscoveryInformation =
-        await _clientBox.get('discovery_information');
-    if (rawDiscoveryInformation == null) return null;
-    return DiscoveryInformation.fromJson(jsonDecode(rawDiscoveryInformation));
+  Future<({Map<String, Object?> content, DateTime savedAt})?>
+      getCustomCacheObject(String cacheKey) async {
+    final jsonStr = await _clientBox.get('custom_cache_$cacheKey');
+    if (jsonStr == null) return null;
+    final json = jsonDecode(jsonStr) as Map<String, Object?>;
+    return (
+      content: json['content'] as Map<String, Object?>,
+      savedAt: DateTime.fromMillisecondsSinceEpoch(json['saved_at'] as int),
+    );
+  }
+
+  Future<void> clearCustomCacheObjects() async {
+    final keys = await _clientBox.getAllKeys();
+    await Future.wait(
+      keys
+          .where((key) => key.startsWith('custom_cache_'))
+          .map(_clientBox.delete),
+    );
   }
 
   @override

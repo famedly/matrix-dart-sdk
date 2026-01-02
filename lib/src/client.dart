@@ -22,7 +22,6 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
@@ -37,12 +36,12 @@ import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
 import 'package:matrix/src/utils/multilock.dart';
+import 'package:matrix/src/utils/request_and_cache.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:matrix/src/utils/try_get_push_rule.dart';
 import 'package:matrix/src/utils/versions_comparator.dart';
-import 'package:matrix/src/voip/utils/async_cache_try_fetch.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -119,23 +118,6 @@ class Client extends MatrixApi {
 
   /// The timeout until a typing indicator gets removed automatically.
   final Duration typingIndicatorTimeout;
-
-  DiscoveryInformation? _wellKnown;
-
-  /// the cached .well-known file updated using [getWellknown]
-  DiscoveryInformation? get wellKnown => _wellKnown;
-
-  /// The homeserver this client is communicating with.
-  ///
-  /// In case the [homeserver]'s host differs from the previous value, the
-  /// [wellKnown] cache will be invalidated.
-  @override
-  set homeserver(Uri? homeserver) {
-    if (this.homeserver != null && homeserver?.host != this.homeserver?.host) {
-      _wellKnown = _getAuthMetadataResponseCache = null;
-    }
-    super.homeserver = homeserver;
-  }
 
   Future<MatrixImageFileResizedResponse?> Function(
     MatrixImageFileResizeArguments,
@@ -608,24 +590,29 @@ class Client extends MatrixApi {
   ///
   /// The result of this call is stored in [wellKnown] for later use at runtime.
   @override
-  Future<DiscoveryInformation> getWellknown() async {
-    final wellKnownResponse = await httpClient.get(
-      Uri.https(
-        userID?.domain ?? homeserver!.host,
-        '/.well-known/matrix/client',
-      ),
-    );
-    final wellKnown = DiscoveryInformation.fromJson(
-      jsonDecode(utf8.decode(wellKnownResponse.bodyBytes))
-          as Map<String, Object?>,
-    );
-
-    // do not reset the well known here, so super call
-    super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
-    _wellKnown = wellKnown;
-    await database.storeWellKnown(wellKnown);
-    return wellKnown;
-  }
+  Future<DiscoveryInformation> getWellknown({
+    Duration cacheLifetime = const Duration(days: 3),
+    bool throwOnUpdateFailure = false,
+  }) =>
+      requestAndCache(
+        () async {
+          final wellKnownResponse = await httpClient.get(
+            Uri.https(
+              userID?.domain ?? homeserver!.host,
+              '/.well-known/matrix/client',
+            ),
+          );
+          return DiscoveryInformation.fromJson(
+            jsonDecode(utf8.decode(wellKnownResponse.bodyBytes))
+                as Map<String, Object?>,
+          );
+        },
+        fromJson: DiscoveryInformation.fromJson,
+        toJson: (wellKnown) => wellKnown.toJson(),
+        cacheKey: 'well_known',
+        cacheLifetime: cacheLifetime,
+        throwOnUpdateFailure: throwOnUpdateFailure,
+      );
 
   /// Checks to see if a username is available, and valid, for the server.
   /// Returns the fully-qualified Matrix user ID (MXID) that has been registered.
@@ -755,11 +742,19 @@ class Client extends MatrixApi {
     return response;
   }
 
-  GetAuthMetadataResponse? _getAuthMetadataResponseCache;
-
   @override
-  Future<GetAuthMetadataResponse> getAuthMetadata() async =>
-      _getAuthMetadataResponseCache ??= await super.getAuthMetadata();
+  Future<GetAuthMetadataResponse> getAuthMetadata({
+    Duration cacheLifetime = const Duration(days: 3),
+    bool throwOnUpdateFailure = false,
+  }) =>
+      requestAndCache(
+        super.getAuthMetadata,
+        fromJson: GetAuthMetadataResponse.fromJson,
+        toJson: (response) => response.toJson(),
+        cacheKey: 'auth_metadata',
+        cacheLifetime: cacheLifetime,
+        throwOnUpdateFailure: throwOnUpdateFailure,
+      );
 
   /// Sends a logout command to the homeserver and clears all local data,
   /// including all persistent data from the store.
@@ -1304,22 +1299,27 @@ class Client extends MatrixApi {
     _archivedRooms.add(ArchivedRoom(room: archivedRoom, timeline: timeline));
   }
 
-  final _versionsCache =
-      AsyncCache<GetVersionsResponse>(const Duration(hours: 1));
-
-  Future<GetVersionsResponse> get versionsResponse =>
-      _versionsCache.tryFetch(() => getVersions());
+  @override
+  Future<GetVersionsResponse> getVersions({
+    Duration cacheLifetime = const Duration(days: 3),
+    bool throwOnUpdateFailure = false,
+  }) =>
+      requestAndCache(
+        super.getVersions,
+        fromJson: GetVersionsResponse.fromJson,
+        toJson: (response) => response.toJson(),
+        cacheKey: 'get_versions',
+        cacheLifetime: cacheLifetime,
+        throwOnUpdateFailure: throwOnUpdateFailure,
+      );
 
   Future<bool> authenticatedMediaSupported() async {
-    return (await versionsResponse).versions.any(
+    return (await getVersions()).versions.any(
               (v) => isVersionGreaterThanOrEqualTo(v, 'v1.11'),
             ) ||
-        (await versionsResponse)
-                .unstableFeatures?['org.matrix.msc3916.stable'] ==
+        (await getVersions()).unstableFeatures?['org.matrix.msc3916.stable'] ==
             true;
   }
-
-  final _serverConfigCache = AsyncCache<MediaConfig>(const Duration(hours: 1));
 
   /// This endpoint allows clients to retrieve the configuration of the content
   /// repository, such as upload limitations.
@@ -1332,11 +1332,20 @@ class Client extends MatrixApi {
   /// repository APIs, for example, proxies may enforce a lower upload size limit
   /// than is advertised by the server on this endpoint.
   @override
-  Future<MediaConfig> getConfig() => _serverConfigCache.tryFetch(
+  Future<MediaConfig> getConfig({
+    Duration cacheLifetime = const Duration(days: 3),
+    bool throwOnUpdateFailure = false,
+  }) =>
+      requestAndCache(
         () async => (await authenticatedMediaSupported())
             ? getConfigAuthed()
             // ignore: deprecated_member_use_from_same_package
             : super.getConfig(),
+        fromJson: MediaConfig.fromJson,
+        toJson: (response) => response.toJson(),
+        cacheKey: 'media_config',
+        cacheLifetime: cacheLifetime,
+        throwOnUpdateFailure: throwOnUpdateFailure,
       );
 
   ///
@@ -2054,12 +2063,6 @@ class Client extends MatrixApi {
 
       _groupCallSessionId = randomAlpha(12);
 
-      /// while I would like to move these to a onLoginStateChanged stream listener
-      /// that might be too much overhead and you don't have any use of these
-      /// when you are logged out anyway. So we just invalidate them on next login
-      _serverConfigCache.invalidate();
-      _versionsCache.invalidate();
-
       final account = await database.getClient(clientName);
       newRefreshToken ??= account?.tryGet<String>('refresh_token');
       // can have discovery_information so make sure it also has the proper
@@ -2198,9 +2201,6 @@ class Client extends MatrixApi {
       _accountDataLoading = database.getAccountData().then((data) {
         _accountData = data;
         _updatePushrules();
-      });
-      _discoveryDataLoading = database.getWellKnown().then((data) {
-        _wellKnown = data;
       });
       // ignore: deprecated_member_use_from_same_package
       presences.clear();
