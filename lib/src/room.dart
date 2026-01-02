@@ -1490,6 +1490,7 @@ class Room {
   Future<void> forget() async {
     await client.database.forgetRoom(id);
     await client.forgetRoom(id);
+    client.rooms.remove(this);
     return;
   }
 

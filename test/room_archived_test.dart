@@ -52,12 +52,13 @@ void main() async {
 
       await timeline.requestHistory();
 
-      expect(timeline.events.length, 5);
-      expect(timeline.events[0].eventId, '143274597443PhrSn:example.org');
-      expect(timeline.events[1].eventId, '143274597446PhrSn:example.org');
-      expect(timeline.events[2].eventId, '3143273582443PhrSn:example.org');
-      expect(timeline.events[3].eventId, '2143273582443PhrSn:example.org');
-      expect(timeline.events[4].eventId, '1143273582466PhrSn:example.org');
+      expect(timeline.events.length, 6);
+      expect(timeline.events[0].eventId, '1532735824654:example.org');
+      expect(timeline.events[1].eventId, '1532735824650:example.org');
+      expect(timeline.events[2].eventId, '1432735824656:example.org');
+      expect(timeline.events[3].eventId, '1432735824655:example.org');
+      expect(timeline.events[4].eventId, '1432735824654:example.org');
+      expect(timeline.events[5].eventId, '1432735824653:example.org');
     });
 
     test('expect database to be empty', () async {
