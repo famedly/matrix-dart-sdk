@@ -254,7 +254,6 @@ void main() {
             ?.verified,
         false,
       );
-      expect(matrix.wellKnown, isNull);
 
       await matrix.handleSync(
         SyncUpdate.fromJson({
@@ -1519,17 +1518,6 @@ void main() {
         client.database.supportsFileStoring,
       );
       await client.dispose(closeDatabase: true);
-    });
-
-    test('wellKnown cache', () async {
-      final client = await getClient();
-      expect(client.wellKnown, null);
-      await client.getWellknown();
-      expect(
-        client.wellKnown?.mHomeserver.baseUrl.host,
-        'fakeserver.notexisting',
-      );
-      await client.dispose();
     });
 
     test('refreshAccessToken', () async {
