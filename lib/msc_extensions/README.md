@@ -21,4 +21,5 @@ Please try to cover the following conventions:
 - MSC 2835 - UIA login
 - MSC 3814 - Dehydrated Devices
 - MSC 3935 - Cute Events
+- MSC 4075 - MatrixRTC Notification Event (call ringing)
 - `io.element.recent_emoji` - recent emoji sync in account data
