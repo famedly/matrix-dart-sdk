@@ -811,5 +811,79 @@ void main() {
         returnsNormally,
       );
     });
+
+    test('escaped dot in property key (m.mentions)', () async {
+      // The Matrix spec uses \. to escape literal dots in property paths.
+      // e.g., content.m\.mentions.room means content["m.mentions"]["room"]
+      final event = Event.fromJson(jsonObj, room);
+
+      // Test 1: event_property_is with escaped dot - room mention
+      event.content['m.mentions'] = {'room': true};
+
+      final roomMentionRuleset = PushRuleSet(
+        override: [
+          PushRule(
+            ruleId: '.m.is_room_mention',
+            default$: true,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            conditions: [
+              PushCondition(
+                kind: 'event_property_is',
+                key: r'content.m\.mentions.room', // escaped dot!
+                value: true,
+              ),
+            ],
+          ),
+        ],
+      );
+
+      var evaluator = PushruleEvaluator.fromRuleset(roomMentionRuleset);
+      var actions = evaluator.match(event);
+      expect(actions.notify, true, reason: 'room mention should match');
+      expect(actions.highlight, true);
+
+      // Test 2: same rule shouldn't match when room is false
+      event.content['m.mentions'] = {'room': false};
+      evaluator = PushruleEvaluator.fromRuleset(roomMentionRuleset);
+      actions = evaluator.match(event);
+      expect(actions.notify, false, reason: 'room=false should not match');
+
+      // Test 3: event_property_contains with escaped dot - user mention
+      event.content['m.mentions'] = {
+        'user_ids': ['@alice:example.com', '@bob:example.com'],
+      };
+
+      final userMentionRuleset = PushRuleSet(
+        override: [
+          PushRule(
+            ruleId: '.m.is_user_mention',
+            default$: true,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+              {'set_tweak': 'sound', 'value': 'goose.wav'},
+            ],
+            conditions: [
+              PushCondition(
+                kind: 'event_property_contains',
+                key: r'content.m\.mentions.user_ids', // escaped dot!
+                value: '@alice:example.com',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      evaluator = PushruleEvaluator.fromRuleset(userMentionRuleset);
+      actions = evaluator.match(event);
+      expect(actions.notify, true, reason: 'user mention should match');
+      expect(actions.highlight, true);
+    });
   });
 }
