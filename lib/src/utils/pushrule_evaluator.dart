@@ -82,7 +82,8 @@ class _PatternCondition {
     if (tempField == null) {
       throw 'No field to match pattern on!';
     }
-    field = tempField;
+    // Unescape \. to . per Matrix spec for property access paths
+    field = tempField.replaceAll(r'\.', '.');
 
     var tempPat = condition.pattern;
     if (tempPat == null) {
@@ -126,7 +127,8 @@ class _EventPropertyCondition {
     if (tempField == null) {
       throw 'No field to check event property on!';
     }
-    field = tempField;
+    // Unescape \. to . per Matrix spec for property access paths
+    field = tempField.replaceAll(r'\.', '.');
 
     final tempValue = condition.value;
     if (![String, int, bool, Null].contains(tempValue.runtimeType)) {
