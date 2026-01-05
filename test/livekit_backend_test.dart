@@ -12,7 +12,7 @@ void main() {
   late VoIP voip;
   late LiveKitBackend backend;
 
-  group('LiveKitBackend encryption key request retry tests', () {
+  group('LiveKitBackend encryption key retry', () {
     Logs().level = Level.info;
 
     setUp(() async {
@@ -21,19 +21,16 @@ void main() {
 
       voip = VoIP(matrix, MockWebRTCDelegate());
       VoIP.customTxid = '1234';
-      final id = '!calls:example.com';
-      room = matrix.getRoomById(id)!;
+      room = matrix.getRoomById('!calls:example.com')!;
 
       backend = LiveKitBackend(
         livekitServiceUrl: 'https://livekit.example.com',
         livekitAlias: 'test_alias',
       );
 
-      // Clear logs before each test to avoid interference
       Logs().outputEvents.clear();
     });
 
-    /// Helper to create a group call session for testing
     Future<GroupCallSession> createGroupCall(String callId) async {
       final membership = CallMembership(
         userId: matrix.userID!,
@@ -63,131 +60,118 @@ void main() {
       );
 
       await voip.createGroupCallFromRoomStateEvent(membership);
-      final groupCall = voip.getGroupCallById(room.id, callId);
-      await groupCall!.enter();
+      final groupCall = voip.getGroupCallById(room.id, callId)!;
+      await groupCall.enter();
       return groupCall;
     }
 
-    /// Helper to count key request log messages for a specific participant
-    int countKeyRequestsFor(String participantId) {
-      return Logs()
-          .outputEvents
-          .where(
-            (event) =>
-                event.title
-                    .contains('requesting stream encryption keys from') &&
-                event.title.contains(participantId),
-          )
-          .length;
-    }
+    int countKeyRequests(String userId) => Logs()
+        .outputEvents
+        .where(
+          (e) =>
+              e.title.contains('requesting stream encryption keys') &&
+              e.title.contains(userId),
+        )
+        .length;
 
     test(
-      'retry mechanism automatically re-requests keys when initial request fails',
-      () async {
-        // This test verifies: without retry, a failed key request leaves the call
-        // in an unrecoverable state. With retry, requests are automatically retried.
+        'retries keys periodically until received and receiving keys cancels retry for that participant only',
+        () async {
+      final groupCall = await createGroupCall('test1');
+      final p1 = CallParticipant(voip, userId: '@alice:x.com', deviceId: 'D1');
+      final p2 = CallParticipant(voip, userId: '@bob:x.com', deviceId: 'D2');
 
-        final groupCall = await createGroupCall('test_retry_mechanism');
+      Logs().outputEvents.clear();
+      Logs().level = Level.verbose;
 
-        const remoteUserId = '@retry_test_user:example.com';
-        const remoteDeviceId = 'RETRY_TEST_DEVICE';
-        final remoteParticipant = CallParticipant(
-          voip,
-          userId: remoteUserId,
-          deviceId: remoteDeviceId,
-        );
+      await backend.requestEncrytionKey(groupCall, [p1]);
+      await backend.requestEncrytionKey(groupCall, [p2]);
 
-        Logs().outputEvents.clear();
-        Logs().level = Level.verbose;
-
-        // Step 1: Initial key request (simulates framecryptor detecting missingKey)
-        await backend.requestEncrytionKey(groupCall, [remoteParticipant]);
-        expect(countKeyRequestsFor(remoteUserId), 1);
-
-        // Step 2: Wait for retry timer (2 second interval)
-        // WITHOUT retry: count stays at 1 (STUCK!)
-        // WITH retry: count increases (RECOVERY!)
-        await Future.delayed(Duration(milliseconds: 2100));
-
-        expect(
-          countKeyRequestsFor(remoteUserId),
-          greaterThan(1),
-          reason: 'Retry mechanism should automatically re-request keys. '
-              'Without retry, the call would be stuck in an unrecoverable state.',
-        );
-
-        await backend.dispose(groupCall);
-      },
-    );
-
-    test(
-      'each participant has independent retry - receiving keys for one does not affect another',
-      () async {
-        final groupCall = await createGroupCall('test_independent_retries');
-
-        const user1 = '@independent_user1:example.com';
-        const device1 = 'DEVICE_1';
-        const user2 = '@independent_user2:example.com';
-        const device2 = 'DEVICE_2';
-
-        final participant1 =
-            CallParticipant(voip, userId: user1, deviceId: device1);
-        final participant2 =
-            CallParticipant(voip, userId: user2, deviceId: device2);
-
-        Logs().outputEvents.clear();
-        Logs().level = Level.verbose;
-
-        // Request keys from both participants
-        await backend.requestEncrytionKey(groupCall, [participant1]);
-        await backend.requestEncrytionKey(groupCall, [participant2]);
-
-        expect(countKeyRequestsFor(user1), 1);
-        expect(countKeyRequestsFor(user2), 1);
-
-        // Wait for retry
-        await Future.delayed(Duration(milliseconds: 2100));
-        expect(countKeyRequestsFor(user1), greaterThan(1));
-        expect(countKeyRequestsFor(user2), greaterThan(1));
-
-        // Receive keys ONLY from participant 1
-        await backend.onCallEncryption(
-          groupCall,
-          user1,
-          device1,
+      // Receive keys for p1 only
+      await backend.onCallEncryption(groupCall, '@alice:x.com', 'D1', {
+        'keys': [
           {
-            'keys': [
-              {
-                'key': base64Encode([1, 2, 3, 4, 5, 6, 7, 8]),
-                'index': 0,
-              },
-            ],
-            'call_id': 'test_independent_retries',
-          },
-        );
+            'key': base64Encode([1, 2, 3, 4]),
+            'index': 0,
+          }
+        ],
+        'call_id': 'test1',
+      });
 
-        final countUser1AfterKeys = countKeyRequestsFor(user1);
-        final countUser2AfterKeys = countKeyRequestsFor(user2);
+      final countP1 = countKeyRequests('@alice:x.com');
+      final countP2 = countKeyRequests('@bob:x.com');
 
-        // Wait another retry interval
+      await Future.delayed(Duration(milliseconds: 2100));
+
+      // p1 stopped, p2 continues
+      expect(countKeyRequests('@alice:x.com'), countP1);
+      expect(countKeyRequests('@bob:x.com'), greaterThan(countP2));
+
+      await backend.dispose(groupCall);
+    });
+
+    test('can start fresh retry cycle after receiving keys', () async {
+      final groupCall = await createGroupCall('test2');
+      final p = CallParticipant(voip, userId: '@bob:x.com', deviceId: 'D1');
+
+      Logs().outputEvents.clear();
+      Logs().level = Level.verbose;
+
+      // Request -> receive keys -> timer cancelled
+      await backend.requestEncrytionKey(groupCall, [p]);
+      await backend.onCallEncryption(groupCall, '@bob:x.com', 'D1', {
+        'keys': [
+          {
+            'key': base64Encode([1, 2, 3, 4]),
+            'index': 0,
+          }
+        ],
+        'call_id': 'test2',
+      });
+
+      final countAfterReceive = countKeyRequests('@bob:x.com');
+
+      // New request starts fresh cycle
+      await backend.requestEncrytionKey(groupCall, [p]);
+      expect(countKeyRequests('@bob:x.com'), countAfterReceive + 1);
+
+      // New timer works
+      await Future.delayed(Duration(milliseconds: 2100));
+      expect(
+        countKeyRequests('@bob:x.com'),
+        greaterThan(countAfterReceive + 1),
+      );
+
+      await backend.dispose(groupCall);
+    });
+
+    test(
+      'stops after 5 retries',
+      () async {
+        final groupCall = await createGroupCall('test3');
+        final p = CallParticipant(voip, userId: '@bob:x.com', deviceId: 'D1');
+
+        Logs().outputEvents.clear();
+        Logs().level = Level.verbose;
+
+        await backend.requestEncrytionKey(groupCall, [p]);
+
+        // Wait for 5 retries (5 * 2s = 10s)
+        await Future.delayed(Duration(milliseconds: 10500));
+
+        final hasMaxRetryLog = Logs()
+            .outputEvents
+            .any((e) => e.title.contains('Max retries (5) reached'));
+        expect(hasMaxRetryLog, true);
+
+        // No more retries after max
+        final countAtMax = countKeyRequests('@bob:x.com');
         await Future.delayed(Duration(milliseconds: 2100));
-
-        // User 1's retry should have stopped (received keys)
-        expect(
-          countKeyRequestsFor(user1),
-          countUser1AfterKeys,
-          reason: 'User 1 retry should stop after receiving keys.',
-        );
-
-        // User 2's retry should continue (no keys received)
-        expect(
-          countKeyRequestsFor(user2),
-          greaterThan(countUser2AfterKeys),
-          reason: 'User 2 retry should continue since no keys were received.',
-        );
+        expect(countKeyRequests('@bob:x.com'), countAtMax);
 
         await backend.dispose(groupCall);
       },
+      timeout: Timeout(Duration(seconds: 20)),
     );
   });
 }
