@@ -1217,8 +1217,23 @@ class CallSession {
           }
         }
       };
-    } catch (e) {
-      Logs().v('[VOIP] prepareMediaStream error => ${e.toString()}');
+    } catch (e, s) {
+      Logs().e(
+        '[VOIP] preparePeerConnection => Failed to create peer connection object',
+        e,
+        s,
+      );
+      fireCallEvent(CallStateChange.kError);
+      await terminate(
+        CallParty.kLocal,
+        CallErrorCode.createPeerConnectionFailed,
+        true,
+      );
+      throw CallError(
+        CallErrorCode.createPeerConnectionFailed,
+        'Failed to create peer connection object ',
+        e,
+      );
     }
   }
 

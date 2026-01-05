@@ -614,6 +614,26 @@ void main() {
       );
     });
 
+    test('Call fails when peer connection creation fails', () async {
+      final mockDelegate = MockWebRTCDelegate()
+        ..throwOnCreatePeerConnection = true;
+      voip = VoIP(matrix, mockDelegate);
+      VoIP.customTxid = '1234';
+
+      try {
+        await voip.inviteToCall(
+          room,
+          CallType.kVoice,
+          userId: '@alice:testing.com',
+        );
+        fail('Expected call to fail');
+      } catch (e) {
+        expect(e, isA<CallError>());
+        expect((e as CallError).code, CallErrorCode.createPeerConnectionFailed);
+        expect(voip.currentCID, null);
+      }
+    });
+
     test('getFamedlyCallEvents sort order', () {
       room.setState(
         Event(
