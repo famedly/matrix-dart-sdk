@@ -50,6 +50,11 @@ enum CallErrorCode {
   /// the hardware isn't plugged in, or the user has explicitly denied access.
   userMediaFailed('user_media_failed'),
 
+  /// An error code when there is no local display to screenshare. This may be
+  /// because the hardware isn't plugged in, or the user has explicitly denied
+  /// access.
+  displayMediaFailed('display_media_failed'),
+
   /// Error code used when a call event failed to send
   /// because unknown devices were present in the room
   unknownDevice('unknown_device'),

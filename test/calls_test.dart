@@ -634,6 +634,32 @@ void main() {
       }
     });
 
+    test('Call continues when getDisplayMedia fails', () async {
+      final mockDelegate = MockWebRTCDelegate();
+      mockDelegate.mediaDevices.throwOnGetDisplayMedia = true;
+      voip = VoIP(matrix, mockDelegate);
+      VoIP.customTxid = '1234';
+
+      final call = await voip.inviteToCall(
+        room,
+        CallType.kVoice,
+        userId: '@alice:testing.com',
+      );
+
+      // Attempt to share screen - should not throw or terminate call
+      try {
+        await call.setScreensharingEnabled(true);
+      } catch (e) {
+        fail('Screen sharing failure should be handled internally');
+      }
+
+      expect(call.onCallEventChanged.value, CallStateChange.kError);
+      expect(call.state, isNot(CallState.kEnded));
+      expect(voip.currentCID, isNotNull);
+
+      await call.hangup(reason: CallErrorCode.userHangup);
+    });
+
     test('getFamedlyCallEvents sort order', () {
       room.setState(
         Event(
