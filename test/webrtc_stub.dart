@@ -5,6 +5,8 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 import 'package:matrix/matrix.dart';
 
 class MockWebRTCDelegate implements WebRTCDelegate {
+  bool throwOnCreatePeerConnection = false;
+
   @override
   bool get canHandleNewCall => true;
 
@@ -12,8 +14,12 @@ class MockWebRTCDelegate implements WebRTCDelegate {
   Future<RTCPeerConnection> createPeerConnection(
     Map<String, dynamic> configuration, [
     Map<String, dynamic> constraints = const {},
-  ]) async =>
-      MockRTCPeerConnection();
+  ]) async {
+    if (throwOnCreatePeerConnection) {
+      throw Exception('mock exception while creating peer connection');
+    }
+    return MockRTCPeerConnection();
+  }
 
   @override
   Future<void> registerListeners(CallSession session) async {
