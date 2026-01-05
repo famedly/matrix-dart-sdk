@@ -54,8 +54,10 @@ class MockWebRTCDelegate implements WebRTCDelegate {
   @override
   bool get isWeb => false;
 
+  final _mockMediaDevices = MockMediaDevices();
+
   @override
-  MediaDevices get mediaDevices => MockMediaDevices();
+  MockMediaDevices get mediaDevices => _mockMediaDevices;
 
   @override
   Future<void> playRingtone() async {
@@ -111,6 +113,8 @@ class MockMediaDeviceInfo implements MediaDeviceInfo {
 }
 
 class MockMediaDevices implements MediaDevices {
+  bool throwOnGetDisplayMedia = false;
+
   @override
   Function(dynamic event)? ondevicechange;
 
@@ -134,6 +138,9 @@ class MockMediaDevices implements MediaDevices {
   Future<MediaStream> getDisplayMedia(
     Map<String, dynamic> mediaConstraints,
   ) async {
+    if (throwOnGetDisplayMedia) {
+      throw Exception('mock exception while getting display media');
+    }
     return MockMediaStream('', '');
   }
 
