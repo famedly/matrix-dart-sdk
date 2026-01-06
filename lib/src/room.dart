@@ -2121,6 +2121,20 @@ class Room {
         fallbackPowerLevel;
   }
 
+  /// Returns the number of admins that are still active members of the room
+  int numberOfActiveAdmins() {
+    final users =
+        getState(EventTypes.RoomPowerLevels)?.content.tryGetMap('users');
+    if (users == null) {
+      throw 'RoomPowerLevels.content[\'users\'] is null or not a Map';
+    }
+    final adminUsers =
+        Map.fromEntries(users.entries.where((user) => user.value >= 100));
+    final activeAdminUsers =
+        getParticipants().where((user) => adminUsers.containsKey(user.id));
+    return activeAdminUsers.length;
+  }
+
   /// Returns the user's own power level.
   int get ownPowerLevel => getPowerLevelByUserId(client.userID!);
 
