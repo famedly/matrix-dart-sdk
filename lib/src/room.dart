@@ -2121,6 +2121,28 @@ class Room {
         fallbackPowerLevel;
   }
 
+  /// Returns true if the user with userId or own user if userId isn't provided is
+  /// the only active admin.
+  /// Returns false if the user either isn't admin or the room has other active
+  /// admins.
+  bool isLastActiveAdmin({String? userId}) {
+    userId = userId ?? client.userID;
+    if (userId == null || getPowerLevelByUserId(userId) < 100) return false;
+    final users =
+        getState(EventTypes.RoomPowerLevels)?.content.tryGetMap('users');
+    if (users == null) {
+      throw 'RoomPowerLevels.content[\'users\'] is null or not a Map';
+    }
+    final adminUsers =
+        Map.fromEntries(users.entries.where((user) => user.value >= 100));
+    final activeAdminUsers =
+        getParticipants().where((user) => adminUsers.containsKey(user.id));
+    if (activeAdminUsers.length > 1) {
+      return false;
+    }
+    return true;
+  }
+
   /// Returns the user's own power level.
   int get ownPowerLevel => getPowerLevelByUserId(client.userID!);
 
