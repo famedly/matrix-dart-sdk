@@ -19,6 +19,7 @@ dependencies:
   http: ">=0.13.0 <2.0.0"
   image: ^4.0.15
   markdown: ^7.1.1
+  meta: ^1.17.0
   mime: ">=1.0.0 <3.0.0"
   path: ^1.9.1
   random_string: ^2.3.1

@@ -154,6 +154,7 @@ class GroupCallSession {
   }
 
   Future<void> leave() async {
+    setState(GroupCallState.leaving);
     await removeMemberStateEvent();
     await backend.dispose(this);
     setState(GroupCallState.localCallFeedUninitialized);
@@ -305,6 +306,31 @@ class GroupCallSession {
             .add(ParticipantsJoinEvent(participants: anyJoined.toList()));
       }
       if (anyLeft.isNotEmpty) {
+        if (anyLeft.contains(localParticipant) &&
+            state == GroupCallState.entered) {
+          // hm we did not leave but got a leave event? probably delayed
+          // event did not restart, let's just send our member event again.
+          // if we clicked the leave button our state would have been `leaving`
+          Logs().w(
+            '[onMemberStateChanged] server says that we left the call but looks like we are still in it, will force join again',
+          );
+
+          // also clear delayed event state so that they can be started again
+          final canceller =
+              voip.delayedEventCancellers['$groupCallId|$application|$scope'];
+          if (canceller != null) {
+            canceller.restartTimer.cancel();
+
+            // because the server said you left, you don't actually have to cancel
+            // the delayed event, the server already thinks it's cancelled
+
+            voip.delayedEventCancellers
+                .remove('$groupCallId|$application|$scope');
+          }
+
+          await sendMemberStateEvent();
+        }
+
         final nonLocalAnyLeft = Set<CallParticipant>.from(anyLeft)
           ..remove(localParticipant);
         if (nonLocalAnyLeft.isNotEmpty && state == GroupCallState.entered) {
