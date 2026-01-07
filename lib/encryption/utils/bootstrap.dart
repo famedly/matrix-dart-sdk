@@ -204,13 +204,13 @@ class Bootstrap {
     }
   }
 
-  void useExistingSsss(bool use) {
+  void useExistingSsss(bool use, {String? keyIdentifier}) {
     if (state != BootstrapState.askUseExistingSsss) {
       throw BootstrapBadStateException('Wrong State');
     }
     if (use) {
       try {
-        newSsssKey = encryption.ssss.open(encryption.ssss.defaultKeyId);
+        newSsssKey = encryption.ssss.open(keyIdentifier);
         state = BootstrapState.openExistingSsss;
       } catch (e, s) {
         Logs().e('[Bootstrapping] Error open SSSS', e, s);
@@ -258,14 +258,14 @@ class Bootstrap {
     state = BootstrapState.askNewSsss;
   }
 
-  Future<void> newSsss([String? passphrase]) async {
+  Future<void> newSsss([String? passphrase, String? name]) async {
     if (state != BootstrapState.askNewSsss) {
       throw BootstrapBadStateException('Wrong State');
     }
     state = BootstrapState.loading;
     try {
       Logs().v('Create key...');
-      newSsssKey = await encryption.ssss.createKey(passphrase);
+      newSsssKey = await encryption.ssss.createKey(passphrase, name);
       if (oldSsssKeys != null) {
         // alright, we have to re-encrypt old secrets with the new key
         final secrets = analyzeSecrets();

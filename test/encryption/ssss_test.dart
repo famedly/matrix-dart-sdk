@@ -501,11 +501,13 @@ void main() {
 
       test('createKey', () async {
         // with passphrase
-        var newKey = await client.encryption!.ssss.createKey('test');
+        var newKey =
+            await client.encryption!.ssss.createKey('test', 'key_name');
         expect(client.encryption!.ssss.isKeyValid(newKey.keyId), true);
         var testKey = client.encryption!.ssss.open(newKey.keyId);
         await testKey.unlock(passphrase: 'test');
         await testKey.setPrivateKey(newKey.privateKey!);
+        expect(testKey.keyData.name, 'key_name');
 
         // without passphrase
         newKey = await client.encryption!.ssss.createKey();
