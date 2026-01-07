@@ -120,6 +120,7 @@ enum GroupCallState {
   localCallFeedInitialized,
   entering,
   entered,
+  leaving,
   ended
 }
 

@@ -3,10 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 
 import 'package:matrix/matrix.dart';
-
-String? _delayedLeaveEventId;
-
-Timer? _restartDelayedLeaveEventTimer;
+import 'package:matrix/src/voip/models/delayed_event_canceller.dart';
 
 extension FamedlyCallMemberEventsExtension on Room {
   /// a map of every users famedly call event, holds the memberships list
@@ -162,13 +159,24 @@ extension FamedlyCallMemberEventsExtension on Room {
       scope: scope,
     );
 
-    _restartDelayedLeaveEventTimer?.cancel();
-    if (_delayedLeaveEventId != null) {
+    final canceller =
+        voip.delayedEventCancellers['$groupCallId|$application|$scope'];
+    if (canceller == null) return;
+    canceller.restartTimer.cancel();
+
+    try {
       await client.manageDelayedEvent(
-        _delayedLeaveEventId!,
+        canceller.delayedEventId,
         DelayedEventAction.cancel,
       );
-      _delayedLeaveEventId = null;
+    } catch (e, s) {
+      Logs().w(
+        '[removeFamedlyCallMemberEvent] failed to cancel delayed restart event',
+        e,
+        s,
+      );
+
+      voip.delayedEventCancellers.remove('$groupCallId|$application|$scope');
     }
   }
 
@@ -192,8 +200,11 @@ extension FamedlyCallMemberEventsExtension on Room {
               .unstableFeatures?['org.matrix.msc4140'] ??
           false;
 
+      final canceller =
+          voip.delayedEventCancellers['$groupCallId|$application|$scope'];
+
       /// can use delayed events and haven't used it yet
-      if (useDelayedEvents && _delayedLeaveEventId == null) {
+      if (useDelayedEvents && canceller == null) {
         // get existing ones and cancel them
         final List<ScheduledDelayedEvent> alreadyScheduledEvents = [];
         String? nextBatch;
@@ -246,7 +257,7 @@ extension FamedlyCallMemberEventsExtension on Room {
           };
         }
 
-        _delayedLeaveEventId = await client.setRoomStateWithKeyWithDelay(
+        final delayedLeaveEventId = await client.setRoomStateWithKeyWithDelay(
           id,
           EventTypes.GroupCallMember,
           stateKey,
@@ -254,16 +265,22 @@ extension FamedlyCallMemberEventsExtension on Room {
           newContent,
         );
 
-        _restartDelayedLeaveEventTimer = Timer.periodic(
+        final restartDelayedLeaveEventTimer = Timer.periodic(
           voip.timeouts!.delayedEventRestart,
           ((timer) async {
             Logs()
                 .v('[_restartDelayedLeaveEventTimer] heartbeat delayed event');
             await client.manageDelayedEvent(
-              _delayedLeaveEventId!,
+              delayedLeaveEventId,
               DelayedEventAction.restart,
             );
           }),
+        );
+
+        voip.delayedEventCancellers['$groupCallId|$application|$scope'] =
+            DelayedEventCanceller(
+          delayedEventId: delayedLeaveEventId,
+          restartTimer: restartDelayedLeaveEventTimer,
         );
       }
 
