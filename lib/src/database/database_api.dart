@@ -360,4 +360,9 @@ abstract class DatabaseApi {
   /// Deletes the whole database. The database needs to be created again after
   /// this.
   Future<void> delete();
+
+  Future<void> storeLatestReceiptState(
+    String roomId,
+    LatestReceiptState receiptState,
+  );
 }
