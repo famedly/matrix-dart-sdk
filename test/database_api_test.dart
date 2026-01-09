@@ -714,6 +714,16 @@ void main() {
           true,
         );
       });
+      test('storeUserDeviceKeysInfo', () async {
+        var cache = await database.getCustomCacheObject('test');
+        expect(cache, null);
+        await database.cacheCustomObject(
+          'test',
+          {'foo': 'bar', 'num': 42},
+        );
+        cache = await database.getCustomCacheObject('test');
+        expect(cache!.content, {'foo': 'bar', 'num': 42});
+      });
       test('storeUserDeviceKey', () async {
         await database.storeUserDeviceKey(
           '@alice:example.com',
