@@ -228,7 +228,7 @@ class SSSS {
 
   /// Creates a new secret storage key, optional encrypts it with [passphrase]
   /// and stores it in the user's `accountData`.
-  Future<OpenSSSS> createKey([String? passphrase]) async {
+  Future<OpenSSSS> createKey([String? passphrase, String? name]) async {
     Uint8List privateKey;
     final content = SecretStorageKeyContent();
     if (passphrase != null) {
@@ -256,6 +256,7 @@ class SSSS {
     content.iv = encrypted.iv;
     content.mac = encrypted.mac;
     content.algorithm = AlgorithmTypes.secretStorageV1AesHmcSha2;
+    content.name = name;
 
     const keyidByteLength = 24;
 

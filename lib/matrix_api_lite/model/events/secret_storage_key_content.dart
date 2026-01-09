@@ -34,6 +34,7 @@ class SecretStorageKeyContent {
   String? iv;
   String? mac;
   String? algorithm;
+  String? name;
 
   SecretStorageKeyContent();
 
@@ -43,7 +44,8 @@ class SecretStorageKeyContent {
             : null)(json.tryGet('passphrase')),
         iv = json.tryGet('iv'),
         mac = json.tryGet('mac'),
-        algorithm = json.tryGet('algorithm');
+        algorithm = json.tryGet('algorithm'),
+        name = json.tryGet('name');
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};
@@ -51,6 +53,7 @@ class SecretStorageKeyContent {
     if (iv != null) data['iv'] = iv;
     if (mac != null) data['mac'] = mac;
     if (algorithm != null) data['algorithm'] = algorithm;
+    if (name != null) data['name'] = name;
     return data;
   }
 }
