@@ -1,3 +1,15 @@
+## [5.0.0] 12th Jan 2026
+- feat: Implement MSC2964 dynamic client registration (Christian Kußowski)
+- feat: Implement MSC2964 OIDC login flow (Christian Kußowski)
+- feat: MSC4075 - MatrixRTC notification event (call ringing) (Karthikeyan S)
+- feat: send MSC4075 notification event for group calls (Karthikeyan S)
+- fix: override server sent group call leave if we know we are still in a group call (td)
+- fix: unescaped property keys in push rule evaluator + tests (Karthikeyan S)
+- refactor: (BREAKING) Event info map (Christian Kußowski)
+- refactor: Add name property to ssss key and pass through keyId for opening (Christian Kußowski)
+- refactor: Store read receipts in own box instead of room account data (Christian Kußowski)
+- test: \[Room].isDirectChat functionality (Karthikeyan S)
+
 ## [4.1.0] 20th December 2025
 - refactor: Deprecated Client.customRefreshTokenLifetime in favor of method parameter (Christian Kußowski)
 
