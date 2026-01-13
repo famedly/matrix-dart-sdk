@@ -175,12 +175,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       [
-        dart,
-        general,
         e2ee_test,
-        coverage_without_olm,
-        coverage,
-        merge_coverage,
         dart_web_compatible,
         database_web_tests,
         pub-dev-dry-run,
