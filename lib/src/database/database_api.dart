@@ -42,6 +42,7 @@ abstract class DatabaseApi {
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
+    String? oidcClientId,
   );
 
   Future insertClient(
@@ -55,6 +56,7 @@ abstract class DatabaseApi {
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
+    String? oidcClientId,
   );
 
   Future<List<Room>> getRoomList(Client client);
