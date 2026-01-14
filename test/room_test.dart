@@ -759,6 +759,7 @@ void main() {
       expect(room.canSendEvent('m.room.name'), true);
       expect(room.canSendEvent('m.room.power_levels'), true);
       expect(room.canSendEvent('m.room.member'), true);
+      expect(room.numberOfActiveAdmins(), 1);
       room.setState(
         Event(
           senderId: '@test:example.com',
