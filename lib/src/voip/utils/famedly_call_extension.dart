@@ -196,7 +196,7 @@ extension FamedlyCallMemberEventsExtension on Room {
               ? '${client.userID!}_${client.deviceID!}'
               : client.userID!;
 
-      final useDelayedEvents = (await client.versionsResponse)
+      final useDelayedEvents = (await client.getVersions())
               .unstableFeatures?['org.matrix.msc4140'] ??
           false;
 
