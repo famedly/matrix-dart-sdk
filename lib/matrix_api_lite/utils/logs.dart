@@ -1,17 +1,17 @@
 /* MIT License
-* 
+*
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
 * in the Software without restriction, including without limitation the rights
 * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 * copies of the Software, and to permit persons to whom the Software is
 * furnished to do so, subject to the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included in all
 * copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -33,6 +33,8 @@ enum Level {
   verbose,
 }
 
+typedef LogCallback = void Function(LogEvent event);
+
 class Logs {
   static final Logs _singleton = Logs._internal();
 
@@ -49,10 +51,18 @@ class Logs {
 
   final List<LogEvent> outputEvents = [];
 
+  /// Callback to receive log events for external logging (e.g., Sentry).
+  /// Called before console output on all platforms including web.
+  LogCallback? onLog;
+
   Logs._internal();
 
   void addLogEvent(LogEvent logEvent) {
     outputEvents.add(logEvent);
+
+    // Call external logger callback if set
+    onLog?.call(logEvent);
+
     if (logEvent.level.index <= level.index) {
       logEvent.printOut();
     }
@@ -132,4 +142,28 @@ class LogEvent {
     this.stackTrace,
     this.level = Level.debug,
   });
+
+  /// Returns a formatted string representation of this log event.
+  /// Useful for sending to external logging systems.
+  String toFormattedString() {
+    var logsStr = title;
+    if (exception != null) {
+      logsStr += ' - ${exception.toString()}';
+    }
+    if (stackTrace != null) {
+      logsStr += '\n${stackTrace.toString()}';
+    }
+    return logsStr;
+  }
+
+  /// Returns a map representation of this log event.
+  /// Useful for structured logging systems.
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'level': level.name,
+      if (exception != null) 'exception': exception.toString(),
+      if (stackTrace != null) 'stackTrace': stackTrace.toString(),
+    };
+  }
 }
