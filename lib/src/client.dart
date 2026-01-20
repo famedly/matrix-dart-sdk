@@ -1101,11 +1101,20 @@ class Client extends MatrixApi {
           super.getUserProfile(userId).timeout(timeout));
     } catch (e) {
       Logs().d('Unable to fetch profile from server', e);
-      if (cachedProfile == null) rethrow;
-      return cachedProfile;
-    } finally {
-      unawaited(_userProfileRequests.remove(userId));
+      if (cachedProfile != null) return cachedProfile;
+      if (e is MatrixException) {
+        final retryAfterMs = e.retryAfterMs;
+        if (retryAfterMs != null) {
+          await Future.delayed(Duration(milliseconds: retryAfterMs));
+          unawaited(_userProfileRequests.remove(userId));
+        }
+      } else {
+        // We assume this was a network error and try again later:
+        unawaited(_userProfileRequests.remove(userId));
+      }
+      rethrow;
     }
+    unawaited(_userProfileRequests.remove(userId));
 
     final newCachedProfile = CachedProfileInformation.fromProfile(
       profile,
