@@ -2827,6 +2827,107 @@ class Room {
     );
   }
 
+  Future<Room> upgradeRoom({
+    required String version,
+    bool? setNewRoomRestrictedJoin,
+    List<String>? additionalCreators,
+  }) async {
+    await postLoad();
+    if (!canChangeStateEvent(EventTypes.RoomTombstone)) {
+      throw Exception('You do not have the required power level!');
+    }
+    additionalCreators ??= getState(EventTypes.RoomCreate)
+        ?.content
+        .tryGetList<String>('additional_creators');
+    final oldRoomJoinRules = joinRules;
+    setNewRoomRestrictedJoin ??= oldRoomJoinRules != JoinRules.public;
+
+    final oldJoinRuleContent =
+        getState(EventTypes.RoomJoinRules)?.content.copy() ??
+            {'join_rule': JoinRules.invite.text};
+
+    final newRoomId = await client.upgradeRoom(
+      id,
+      version,
+      additionalCreators: additionalCreators,
+    );
+
+    var newRoom = client.getRoomById(newRoomId);
+    while (newRoom == null) {
+      await client.onSync.stream.first;
+      newRoom = client.getRoomById(newRoomId);
+    }
+
+    if (!setNewRoomRestrictedJoin) return newRoom;
+
+    switch (oldRoomJoinRules) {
+      case JoinRules.knock:
+        await newRoom.setJoinRules(
+          JoinRules.knockRestricted,
+          allowConditionRoomIds: [id],
+        );
+        break;
+      case JoinRules.invite:
+      case JoinRules.private:
+        await newRoom.setJoinRules(
+          JoinRules.restricted,
+          allowConditionRoomIds: [id],
+        );
+        break;
+      case JoinRules.restricted:
+      case JoinRules.knockRestricted:
+        final newAllowRestriction = {
+          'room_id': id,
+          'type': 'm.room_membership',
+        };
+        oldJoinRuleContent['allow'] ??= [];
+        (oldJoinRuleContent['allow'] as List).add(newAllowRestriction);
+
+        await client.setRoomStateWithKey(
+          id,
+          EventTypes.RoomJoinRules,
+          '',
+          oldJoinRuleContent,
+        );
+        await newRoom.setJoinRules(
+          oldRoomJoinRules ?? JoinRules.restricted,
+          allowConditionRoomIds: [id],
+        );
+      case JoinRules.public:
+      case null:
+        break;
+    }
+    return newRoom;
+  }
+
+  Future<void> enterUpgradedRoom({List<String>? via}) async {
+    final tombstoneContent =
+        getState(EventTypes.RoomTombstone)?.parsedTombstoneContent;
+    if (tombstoneContent == null) {
+      throw Exception('Room has no tombstone event');
+    }
+
+    if (via == null) {
+      final users = await requestParticipants(
+        [
+          Membership.join,
+          Membership.leave,
+        ],
+        true,
+        false,
+      );
+      users.sort((a, b) => a.powerLevel.compareTo(b.powerLevel));
+      via = users
+          .map((user) => user.id.domain)
+          .whereType<String>()
+          .toSet()
+          .take(10)
+          .toList();
+    }
+
+    await client.joinRoom(tombstoneContent.replacementRoom, via: via);
+  }
+
   @override
   bool operator ==(Object other) => (other is Room && other.id == id);
 
