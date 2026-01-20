@@ -2653,9 +2653,17 @@ class Room {
       if (order != null) 'order': order,
       if (suggested != null) 'suggested': suggested,
     });
-    await client.setRoomStateWithKey(roomId, EventTypes.SpaceParent, id, {
-      'via': via,
-    });
+    try {
+      await client.setRoomStateWithKey(roomId, EventTypes.SpaceParent, id, {
+        'via': via,
+      });
+    } catch (e) {
+      if (e is MatrixException && e.error == MatrixError.M_FORBIDDEN) {
+        Logs().i('Added room to space. Could not set parent event in room.');
+        return;
+      }
+      rethrow;
+    }
     return;
   }
 
