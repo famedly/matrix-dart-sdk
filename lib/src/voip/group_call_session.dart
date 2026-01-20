@@ -345,7 +345,10 @@ class GroupCallSession {
                 .remove('$groupCallId|$application|$scope');
           }
 
+          // rejoin the call and share the key with the existing participants
+          anyLeft.remove(localParticipant);
           await sendMemberStateEvent();
+          await backend.preShareKey(this);
         }
 
         final nonLocalAnyLeft = Set<CallParticipant>.from(anyLeft)
