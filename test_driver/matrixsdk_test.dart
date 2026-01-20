@@ -21,6 +21,7 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
+import 'package:matrix/encryption/utils/crypto_setup_extension.dart';
 import 'package:matrix/matrix.dart';
 import '../test/fake_database.dart';
 import 'test_config.dart';
@@ -458,8 +459,31 @@ void main() => group(
               "++++ (Bob) Received decrypted message: '${inviteRoom.lastEvent!.body}' ++++",
             );
 
-            await room.leave();
-            await room.forget();
+            Logs().i('++++ (Alice) Init crypto identity ++++');
+            if (Platform.environment['HOMESERVER_IMPLEMENTATION'] !=
+                'conduit') {
+              const passphrase = 'aliceSecurePassphrase100%';
+              await testClientA.initCryptoIdentity(passphrase: passphrase);
+              await testClientA.logout();
+              await testClientA.checkHomeserver(homeserverUri);
+              await testClientA.login(
+                LoginType.mLoginPassword,
+                identifier:
+                    AuthenticationUserIdentifier(user: Users.user1.name),
+                password: Users.user1.password,
+              );
+              await testClientA.oneShotSync();
+              await testClientA.restoreCryptoIdentity(passphrase);
+              final newSessionRoomA = testClientA.getRoomById(roomId)!;
+              await newSessionRoomA.lastEvent?.requestKey();
+              expect(newSessionRoomA.lastEvent!.body, testMessage6);
+              await newSessionRoomA.leave();
+              await newSessionRoomA.forget();
+            } else {
+              await room.leave();
+              await room.forget();
+            }
+
             await inviteRoom.leave();
             await inviteRoom.forget();
             await Future.delayed(Duration(seconds: 1));

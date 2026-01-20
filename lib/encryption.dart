@@ -24,3 +24,4 @@ export 'encryption/key_manager.dart';
 export 'encryption/ssss.dart';
 export 'encryption/utils/key_verification.dart';
 export 'encryption/utils/bootstrap.dart';
+export 'encryption/utils/crypto_setup_extension.dart';
