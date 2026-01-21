@@ -1,3 +1,10 @@
+## [6.0.0] 21st Jan 2026
+
+- feat: add an option to intercept log events (#2233) (Yash Garg)
+- feat: Simplified bootstrap with crypto identity extension (Christian Kußowski)
+- fix: don't remove local participant on group call reconnection (Karthikeyan S)
+- refactor: (BREAKING) Use unified requestAndCache method (Christian Kußowski)
+
 ## [5.0.0] 12th Jan 2026
 - feat: Implement MSC2964 dynamic client registration (Christian Kußowski)
 - feat: Implement MSC2964 OIDC login flow (Christian Kußowski)
