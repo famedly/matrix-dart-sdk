@@ -203,6 +203,7 @@ void main() {
           'deviceName',
           'prevBatch',
           'olmAccount',
+          'abcd1234',
         );
 
         final client = await database.getClient('name');
@@ -223,6 +224,7 @@ void main() {
           'deviceName',
           'prevBatch',
           'olmAccount',
+          'abcd1234',
         );
         final client = await database.getClient('name');
         expect(client?['token'], 'token_different');
