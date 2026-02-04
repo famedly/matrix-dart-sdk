@@ -1565,7 +1565,7 @@ void main() async {
         },
         room,
       );
-      expect(event2.body, 'm.room.message');
+      expect(event2.body, 'Unknown message format of type "${event2.type}"');
     });
 
     group('unlocalized body reply stripping', () {
@@ -1637,8 +1637,7 @@ void main() async {
         editHtml: false,
       );
       testUnlocalizedBody(
-        // not sure we actually want m.room.message here and not an empty string
-        expectation: 'm.room.message',
+        expectation: 'Unknown message format of type "${EventTypes.Message}"',
         plaintextBody: false,
         body: '',
         formattedBody: '<b>formatted body</b>',
@@ -1649,7 +1648,7 @@ void main() async {
         editHtml: false,
       );
       testUnlocalizedBody(
-        expectation: 'm.room.message',
+        expectation: 'Unknown message format of type "${EventTypes.Message}"',
         plaintextBody: false,
         body: null,
         formattedBody: '<b>formatted body</b>',
@@ -1660,7 +1659,7 @@ void main() async {
         editHtml: false,
       );
       testUnlocalizedBody(
-        expectation: 'm.room.message',
+        expectation: 'Unknown message format of type "${EventTypes.Message}"',
         plaintextBody: false,
         body: 5,
         formattedBody: '<b>formatted body</b>',
