@@ -325,7 +325,7 @@ class Event extends MatrixEvent {
   String get body {
     if (redacted) return 'Redacted';
     if (text != '') return text;
-    return type;
+    return 'Unknown message format of type "$type"';
   }
 
   /// Use this to get a plain-text representation of the event, stripping things
