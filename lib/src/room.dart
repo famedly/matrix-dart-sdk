@@ -2773,12 +2773,12 @@ class Room {
       do {
         databaseEvents = await client.database
             .getEventList(this, start: start, limit: limit);
+        start += limit;
+        foundEvents.addAll(databaseEvents.where(searchFunc));
         if (databaseEvents.lastOrNull?.type == EventTypes.RoomCreate) {
           timelineComplete = true;
           break;
         }
-        start += limit;
-        foundEvents.addAll(databaseEvents.where(searchFunc));
       } while (databaseEvents.isNotEmpty);
 
       if (timelineComplete) {
