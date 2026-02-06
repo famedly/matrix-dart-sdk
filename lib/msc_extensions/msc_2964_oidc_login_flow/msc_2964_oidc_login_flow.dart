@@ -99,15 +99,89 @@ extension Msc2964OidcLoginFlow on Client {
       );
     }
     final responseString = utf8.decode(response.bodyBytes);
-    final json = jsonDecode(responseString);
+    final oidcAuthResponse =
+        OidcAuthResponse.fromJson(jsonDecode(responseString));
+    final expiresIn = oidcAuthResponse.expiresIn;
     await init(
       newHomeserver: homeserver,
-      newToken: json['access_token'],
-      newRefreshToken: json['refresh_token'],
-      newTokenExpiresAt:
-          DateTime.now().add(Duration(milliseconds: json['expires_in'] as int)),
+      newToken: oidcAuthResponse.accessToken,
+      newRefreshToken: oidcAuthResponse.refreshToken,
+      newTokenExpiresAt: expiresIn == null
+          ? null
+          : DateTime.now().add(Duration(milliseconds: expiresIn)),
+      newOidcClientId: session.oidcClientData.clientId,
     );
   }
+
+  Future<OidcAuthResponse> oidcRefresh(
+    String oidcClientId,
+    String refreshToken,
+  ) async {
+    final authMetadata = await getAuthMetadata();
+    final response = await httpClient.post(
+      authMetadata.tokenEndpoint,
+      body: <String, String>{
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken,
+        'client_id': oidcClientId,
+      },
+      headers: {'content-type': 'application/x-www-form-urlencoded'},
+    );
+    if (response.statusCode != 200) {
+      unexpectedResponse(
+        response,
+        response.bodyBytes,
+      );
+    }
+    final responseString = utf8.decode(response.bodyBytes);
+    return OidcAuthResponse.fromJson(jsonDecode(responseString));
+  }
+
+  Future<void> revokeOidcToken(
+    String oidcClientId,
+    String token,
+    String tokenType,
+  ) async {
+    final authMetadata = await getAuthMetadata();
+    final response = await httpClient.post(
+      authMetadata.revocationEndpoint,
+      body: <String, String>{
+        'token': token,
+        'token_type': tokenType,
+        'client_id': oidcClientId,
+      },
+      headers: {'content-type': 'application/x-www-form-urlencoded'},
+    );
+    if (response.statusCode != 200) {
+      unexpectedResponse(
+        response,
+        response.bodyBytes,
+      );
+    }
+  }
+}
+
+class OidcAuthResponse {
+  final String accessToken, tokenType;
+  final String? refreshToken, scope;
+  final int? expiresIn;
+
+  OidcAuthResponse({
+    required this.accessToken,
+    required this.tokenType,
+    required this.refreshToken,
+    required this.scope,
+    required this.expiresIn,
+  });
+
+  factory OidcAuthResponse.fromJson(Map<String, Object?> json) =>
+      OidcAuthResponse(
+        accessToken: json['access_token'] as String,
+        tokenType: json['token_type'] as String,
+        refreshToken: json['refresh_token'] as String?,
+        scope: json['scope'] as String?,
+        expiresIn: json['expires_in'] as int?,
+      );
 }
 
 class OidcLoginSession {
