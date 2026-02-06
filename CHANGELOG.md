@@ -1,3 +1,14 @@
+## [7.0.0] 6th Feb 2026
+
+- build: Update vodozemac to 0.5.0 (Christian Kußowski)
+- chore: Add tests for OIDC refresh and logout (Christian Kußowski)
+- chore: better default body for unknown message format in calcUnlocalizedBody (Karthikeyan S)
+- chore: Store oidc client id (Christian Kußowski)
+- feat: Logout with oidc (Christian Kußowski)
+- feat: Refresh token with matrix native oidc (Christian Kußowski)
+- fix: Room.searchEvents() returns empty list if all events are cached in db (Christian Kußowski)
+- refactor: Always try deserialize error as matrixexception (Christian Kußowski)
+
 ## [6.0.0] 21st Jan 2026
 
 - feat: add an option to intercept log events (#2233) (Yash Garg)
