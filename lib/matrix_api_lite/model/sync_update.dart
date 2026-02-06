@@ -22,6 +22,7 @@
 */
 
 import 'package:matrix/matrix_api_lite.dart';
+import 'package:matrix/msc_extensions/msc_4354_sticky_events/models.dart';
 
 class SyncUpdate {
   String nextBatch;
@@ -192,7 +193,10 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
             ?.map((i) => MatrixEvent.fromJson(i as Map<String, Object?>))
             .toList(),
         timeline = json.tryGetFromJson('timeline', TimelineUpdate.fromJson),
-        sticky = json.tryGetFromJson('sticky', StickyEventsUpdate.fromJson),
+        sticky = json.tryGetFromJson(
+          MSC4354ExtensionKeys.syncJoinedRoomSticky,
+          StickyEventsUpdate.fromJson,
+        ),
         ephemeral = json
             .tryGetMap<String, List<Object?>>('ephemeral')?['events']
             ?.map((i) => BasicEvent.fromJson(i as Map<String, Object?>))
@@ -220,7 +224,7 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
       data['timeline'] = timeline!.toJson();
     }
     if (sticky != null) {
-      data['sticky'] = sticky!.toJson();
+      data[MSC4354ExtensionKeys.syncJoinedRoomSticky] = sticky!.toJson();
     }
     if (ephemeral != null) {
       data['ephemeral'] = {
@@ -404,77 +408,6 @@ class DeviceListsUpdate {
     if (left != null) {
       data['left'] = left;
     }
-    return data;
-  }
-}
-
-class StickyEventsUpdate {
-  final List<StickyEvent> events;
-
-  StickyEventsUpdate({
-    required this.events,
-  });
-
-  /// Creates a [StickyEventsUpdate] from JSON.
-  StickyEventsUpdate.fromJson(Map<String, Object?> json)
-      : events = (json['events'] as List?)
-                ?.map((v) => StickyEvent.fromJson(v as Map<String, Object?>))
-                .toList() ??
-            [];
-
-  /// Serializes this [StickyEventsUpdate] to JSON.
-  Map<String, Object?> toJson() {
-    final data = <String, Object?>{};
-    data['events'] = events.map((i) => i.toJson()).toList();
-    return data;
-  }
-}
-
-class StickyEvent extends MatrixEvent {
-  final StickyEventDuration sticky;
-
-  StickyEvent({
-    required this.sticky,
-    required super.type,
-    required super.content,
-    required super.senderId,
-    super.stateKey,
-    required super.eventId,
-    super.roomId,
-    required super.originServerTs,
-    super.unsigned,
-    super.prevContent,
-    super.redacts,
-  });
-
-  StickyEvent.fromJson(super.json)
-      : sticky = StickyEventDuration.fromJson(
-          json['sticky'] as Map<String, Object?>? ?? {},
-        ),
-        super.fromJson();
-
-  @override
-  Map<String, Object?> toJson() {
-    final data = super.toJson();
-    data['sticky'] = sticky.toJson();
-    return data;
-  }
-}
-
-class StickyEventDuration {
-  final int durationMs;
-
-  StickyEventDuration({
-    required this.durationMs,
-  });
-
-  /// Creates a [StickyEventDuration] from JSON.
-  StickyEventDuration.fromJson(Map<String, Object?> json)
-      : durationMs = json['duration_ms'] as int? ?? 0;
-
-  Map<String, Object?> toJson() {
-    final data = <String, Object?>{};
-    data['duration_ms'] = durationMs;
     return data;
   }
 }
