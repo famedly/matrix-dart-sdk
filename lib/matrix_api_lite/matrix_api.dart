@@ -52,7 +52,13 @@ class MatrixApi extends Api {
       matrixException =
           MatrixException.fromJson(json.decode(utf8.decode(body)));
     } catch (_) {} // Is not a MatrixException!
-    if (matrixException != null && matrixException.raw.containsKey('errcode')) {
+
+    // Throw MatrixException if response contains 'errcode' (error) or
+    // 'session'/'flows' (UIA challenge).
+    if (matrixException != null &&
+        (matrixException.raw.containsKey('errcode') ||
+            matrixException.raw.containsKey('session') ||
+            matrixException.raw.containsKey('flows'))) {
       throw matrixException;
     }
 
