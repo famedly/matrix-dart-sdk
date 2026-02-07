@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -36,15 +37,17 @@ const String testMessage6 = 'Hello mars';
 void main() => group(
       'Integration tests',
       () {
+        setUpAll(() async {
+          await vod.init(
+            wasmPath: './pkg/',
+            libraryPath: './rust/target/debug/',
+          );
+        });
+
         test('E2EE', () async {
           Client? testClientA, testClientB;
 
           try {
-            await vod.init(
-              wasmPath: './pkg/',
-              libraryPath: './rust/target/debug/',
-            );
-
             final homeserverUri = Uri.parse(homeserver);
             Logs().i('++++ Using homeserver $homeserverUri ++++');
 
@@ -596,6 +599,177 @@ void main() => group(
               await testClientA!.logoutAll();
             }
             if (testClientA?.isLogged() ?? false) {
+              await testClientB!.logoutAll();
+            }
+            await testClientA?.dispose(closeDatabase: false);
+            await testClientB?.dispose(closeDatabase: false);
+            testClientA = null;
+            testClientB = null;
+          }
+          return;
+        });
+
+        test('Dehydrated devices', () async {
+          // Dehydrated devices are only supported on Synapse
+          if (Platform.environment['HOMESERVER_IMPLEMENTATION'] != 'synapse') {
+            Logs()
+                .i('++++ Skipping dehydrated devices test (not Synapse) ++++');
+            return;
+          }
+
+          Client? testClientA, testClientB;
+          StreamSubscription<UiaRequest>? uiaSubscription;
+
+          try {
+            final homeserverUri = Uri.parse(homeserver);
+            Logs().i('++++ Using homeserver $homeserverUri ++++');
+
+            Logs().i('++++ Login Alice with dehydrated devices enabled ++++');
+            testClientA = Client(
+              'TestClientA',
+              database: await getDatabase(),
+              enableDehydratedDevices: true,
+            );
+            await testClientA.checkHomeserver(homeserverUri);
+            await testClientA.login(
+              LoginType.mLoginPassword,
+              identifier: AuthenticationUserIdentifier(user: Users.user1.name),
+              password: Users.user1.password,
+            );
+            expect(testClientA.encryptionEnabled, true);
+
+            // Set up UIA handler for cross-signing setup
+            final handledUiaRequests = <int>{};
+            uiaSubscription =
+                testClientA.onUiaRequest.stream.listen((uiaRequest) async {
+              // Prevent duplicate handling of the same request
+              if (handledUiaRequests.contains(uiaRequest.hashCode)) return;
+              handledUiaRequests.add(uiaRequest.hashCode);
+
+              if (uiaRequest.nextStages
+                  .contains(AuthenticationTypes.password)) {
+                try {
+                  await uiaRequest.completeStage(
+                    AuthenticationPassword(
+                      session: uiaRequest.session,
+                      password: Users.user1.password,
+                      identifier: AuthenticationUserIdentifier(
+                        user: Users.user1.name,
+                      ),
+                    ),
+                  );
+                } catch (e) {
+                  Logs().e('UIA password stage failed', e);
+                }
+              }
+            });
+            testClientA.backgroundSync = true;
+
+            Logs().i('++++ Login Bob ++++');
+            testClientB = Client('TestClientB', database: await getDatabase());
+            await testClientB.checkHomeserver(homeserverUri);
+            await testClientB.login(
+              LoginType.mLoginPassword,
+              identifier: AuthenticationUserIdentifier(user: Users.user2.name),
+              password: Users.user2.password,
+            );
+            expect(testClientB.encryptionEnabled, true);
+            testClientB.backgroundSync = true;
+
+            Logs().i('++++ Alice and Bob background sync active ++++');
+
+            Logs().i(
+              '++++ (Alice) Set up cross-signing (required for dehydrated devices) ++++',
+            );
+            const passphrase = 'aliceSecurePassphrase100%';
+            await testClientA.initCryptoIdentity(passphrase: passphrase);
+            Logs().i('++++ (Alice) Crypto identity initialized ++++');
+
+            Logs().i('++++ (Alice) Create encrypted DM room with Bob ++++');
+            final roomId = await testClientA.startDirectChat(
+              testClientB.userID!,
+              enableEncryption: true,
+            );
+            await Future.delayed(Duration(seconds: 2));
+            final room = testClientA.getRoomById(roomId)!;
+            expect(room.encrypted, isTrue);
+
+            Logs().i('++++ (Bob) Join room ++++');
+            if (testClientB.getRoomById(roomId) == null) {
+              await testClientB.waitForRoomInSync(roomId, invite: true);
+            }
+            final bobRoom = testClientB.getRoomById(roomId)!;
+            if (bobRoom.membership == Membership.invite) {
+              await bobRoom.join();
+            }
+            await Future.delayed(Duration(seconds: 1));
+            expect(bobRoom.membership, Membership.join);
+
+            Logs().i(
+              '++++ (Alice) Now logout (dehydrated device remains on server) ++++',
+            );
+            await testClientA.logout();
+            await testClientA.dispose(closeDatabase: false);
+            testClientA = null;
+
+            Logs().i(
+              '++++ (Bob) Send encrypted message while Alice is offline ++++',
+            );
+            const offlineMessage = 'Secret message while you were away';
+            await bobRoom.sendTextEvent(offlineMessage);
+            await Future.delayed(Duration(seconds: 5));
+
+            Logs().i('++++ (Alice) Login again on new device ++++');
+            testClientA = Client(
+              'TestClientA2',
+              database: await getDatabase(),
+              enableDehydratedDevices: true,
+            );
+            await testClientA.checkHomeserver(homeserverUri);
+            await testClientA.login(
+              LoginType.mLoginPassword,
+              identifier: AuthenticationUserIdentifier(user: Users.user1.name),
+              password: Users.user1.password,
+            );
+            testClientA.backgroundSync = true;
+            await testClientA.onSync.stream.first;
+
+            Logs().i(
+              '++++ (Alice) Restore crypto identity (this fetches dehydrated device events) ++++',
+            );
+            await testClientA.restoreCryptoIdentity(passphrase);
+            await Future.delayed(Duration(seconds: 5));
+
+            Logs().i('++++ (Alice) Verify message can be decrypted ++++');
+            final newRoom = testClientA.getRoomById(roomId)!;
+            // Request key if needed
+            if (newRoom.lastEvent?.body != offlineMessage) {
+              await newRoom.lastEvent?.requestKey();
+              await Future.delayed(Duration(seconds: 5));
+            }
+            expect(
+              newRoom.lastEvent!.body,
+              offlineMessage,
+              reason: 'Dehydrated device should have received the room key',
+            );
+            Logs().i(
+              "++++ SUCCESS: Decrypted message '${newRoom.lastEvent!.body}' ++++",
+            );
+
+            await newRoom.leave();
+            await newRoom.forget();
+            await bobRoom.leave();
+            await bobRoom.forget();
+          } catch (e, s) {
+            Logs().e('Test failed', e, s);
+            rethrow;
+          } finally {
+            Logs().i('++++ Logout Alice and Bob ++++');
+            await uiaSubscription?.cancel();
+            if (testClientA?.isLogged() ?? false) {
+              await testClientA!.logoutAll();
+            }
+            if (testClientB?.isLogged() ?? false) {
               await testClientB!.logoutAll();
             }
             await testClientA?.dispose(closeDatabase: false);
