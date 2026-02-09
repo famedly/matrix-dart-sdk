@@ -541,6 +541,31 @@ void main() {
       await client.dispose();
     });
 
+    test('init() with waitUntilLoadCompletedLoaded does not hang', () async {
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        database: await getDatabase(),
+      );
+      await client
+          .init(
+            newToken: 'abcd',
+            newUserID: '@test:fakeServer.notExisting',
+            newHomeserver: Uri.parse('https://fakeserver.notexisting'),
+            newDeviceName: 'Test Client',
+            newDeviceID: 'TESTDEVICE',
+            waitUntilLoadCompletedLoaded: true,
+            waitForFirstSync: false,
+          )
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () =>
+                throw StateError('init() timed out - likely stuck'),
+          );
+      expect(client.isLogged(), true);
+      await client.dispose();
+    });
+
     test('Login', () async {
       matrix = Client(
         'testclient',
