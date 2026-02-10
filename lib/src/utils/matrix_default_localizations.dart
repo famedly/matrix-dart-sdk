@@ -327,4 +327,8 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String get pollHasBeenEnded => 'Poll has been ended';
+
+  @override
+  String userCanNowReadAlong(List<String> userIds, List<String>? devices) =>
+      '${userIds.join(', ')} can now read along${devices == null ? '' : ' on ${devices.length} new device(s)'}';
 }
