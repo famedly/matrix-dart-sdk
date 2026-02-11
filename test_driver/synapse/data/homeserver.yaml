@@ -20,6 +20,12 @@ modules:
   #- module: my_other_super_module.SomeClass
   #  config: {}
 
+## Experimental Features ##
+
+experimental_features:
+  msc3814_enabled: true
+  msc2697_enabled: false
+
 ## Server ##
 
 # The public-facing domain of the server
