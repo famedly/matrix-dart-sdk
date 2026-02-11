@@ -1,3 +1,7 @@
+## [6.1.1] 7th Feb 2026
+
+- fix: handle UIA case for unexpectedResponse during exception + tests
+
 ## [6.1.0] 6th Feb 2026
 
 - build: Update vodozemac to 0.5.0 (Christian Kußowski)

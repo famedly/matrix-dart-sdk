@@ -2235,6 +2235,7 @@ class Client extends MatrixApi {
         _accountData = data;
         _updatePushrules();
       });
+
       // ignore: deprecated_member_use_from_same_package
       presences.clear();
       if (waitUntilLoadCompletedLoaded) {
@@ -2242,7 +2243,6 @@ class Client extends MatrixApi {
         await userDeviceKeysLoading;
         await roomsLoading;
         await _accountDataLoading;
-        await _discoveryDataLoading;
       }
 
       _initLock = false;
@@ -3246,12 +3246,9 @@ class Client extends MatrixApi {
   Future? userDeviceKeysLoading;
   Future? roomsLoading;
   Future? _accountDataLoading;
-  Future? _discoveryDataLoading;
   Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
-
-  Future? get wellKnownLoading => _discoveryDataLoading;
 
   /// A map of known device keys per user.
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
