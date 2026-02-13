@@ -406,6 +406,11 @@ class CrossSigningKey extends SignableKey {
   String? get publicKey => identifier;
   late List<String> usage;
 
+  /// Trust On First Use has been (automatically) enabled since this DateTime.
+  String? lastSeenPublicKey;
+
+  bool get tofuVerified => publicKey != null && lastSeenPublicKey == publicKey;
+
   bool get isValid =>
       userId.isNotEmpty &&
       publicKey != null &&
@@ -418,8 +423,22 @@ class CrossSigningKey extends SignableKey {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database
-        .setVerifiedUserCrossSigningKey(newVerified, userId, publicKey!);
+    await client.database.setVerifiedUserCrossSigningKey(
+      newVerified,
+      userId,
+      publicKey!,
+      lastSeenPublicKey: lastSeenPublicKey,
+    );
+  }
+
+  Future<void> updateLastSeenPublicKey() async {
+    lastSeenPublicKey = publicKey;
+    await client.database.setVerifiedUserCrossSigningKey(
+      verified,
+      userId,
+      publicKey!,
+      lastSeenPublicKey: publicKey,
+    );
   }
 
   @override
@@ -439,6 +458,7 @@ class CrossSigningKey extends SignableKey {
     final json = toJson();
     identifier = key.publicKey;
     usage = json['usage'].cast<String>();
+    lastSeenPublicKey = json['last_seen_public_key'] as String?;
   }
 
   CrossSigningKey.fromDbJson(Map<String, dynamic> dbEntry, Client client)
@@ -448,6 +468,7 @@ class CrossSigningKey extends SignableKey {
     usage = json['usage'].cast<String>();
     _verified = dbEntry['verified'];
     _blocked = dbEntry['blocked'];
+    lastSeenPublicKey = dbEntry['last_seen_public_key'] as String?;
   }
 
   CrossSigningKey.fromJson(Map<String, dynamic> json, Client client)
@@ -457,6 +478,7 @@ class CrossSigningKey extends SignableKey {
     if (keys.isNotEmpty) {
       identifier = keys.values.first;
     }
+    lastSeenPublicKey = ['last_seen_public_key'] as String?;
   }
 }
 
