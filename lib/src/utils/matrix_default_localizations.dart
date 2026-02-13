@@ -327,4 +327,8 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String get pollHasBeenEnded => 'Poll has been ended';
+
+  @override
+  String usersHaveChangedTheirKeys(List<String> users) =>
+      '${users.join(', ')} has/have reset their encryption keys';
 }

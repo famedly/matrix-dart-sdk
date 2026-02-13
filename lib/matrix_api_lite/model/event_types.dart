@@ -119,4 +119,7 @@ abstract class EventTypes {
   static const String GroupCallMemberAssertedIdentity =
       '$GroupCallMember.asserted_identity';
   static const GroupCallMemberReaction = 'com.famedly.call.member.reaction';
+
+  // Internal
+  static const String TofuNotification = 'sdk.matrix.dart.tofu_notification';
 }
