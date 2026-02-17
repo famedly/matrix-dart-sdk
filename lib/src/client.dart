@@ -3227,6 +3227,8 @@ class Client extends MatrixApi {
           return a.membership == Membership.invite ? -1 : 1;
         } else if (a.isFavourite != b.isFavourite) {
           return a.isFavourite ? -1 : 1;
+        } else if (a.isLowPriority != b.isLowPriority) {
+          return a.isLowPriority ? 1 : -1;
         } else if (pinUnreadRooms &&
             a.notificationCount != b.notificationCount) {
           return b.notificationCount.compareTo(a.notificationCount);

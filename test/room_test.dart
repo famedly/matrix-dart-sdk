@@ -1450,14 +1450,17 @@ void main() {
           'tags': {
             'm.favourite': {'order': 0.1},
             'm.wrong': {'order': 0.2},
+            'm.lowpriority': {'order': 0.2},
           },
         },
         'type': 'm.tag',
       });
-      expect(room.tags.length, 1);
+      expect(room.tags.length, 2);
       expect(room.tags[TagType.favourite]?.order, 0.1);
       expect(room.isFavourite, true);
+      expect(room.isLowPriority, true);
       await room.setFavourite(false);
+      await room.setLowPriority(false);
     });
 
     test('Test marked unread room', () async {

@@ -684,9 +684,17 @@ class Room {
   /// Returns true if this room has a m.favourite tag.
   bool get isFavourite => tags[TagType.favourite] != null;
 
+  /// Returns true if this room has a m.favourite tag.
+  bool get isLowPriority => tags[TagType.lowPriority] != null;
+
   /// Sets the m.favourite tag for this room.
   Future<void> setFavourite(bool favourite) =>
       favourite ? addTag(TagType.favourite) : removeTag(TagType.favourite);
+
+  /// Sets the m.low_priority tag for this room.
+  Future<void> setLowPriority(bool lowPriority) => lowPriority
+      ? addTag(TagType.lowPriority)
+      : removeTag(TagType.lowPriority);
 
   /// Call the Matrix API to change the pinned events of this room.
   Future<String> setPinnedEvents(List<String> pinnedEventIds) =>
