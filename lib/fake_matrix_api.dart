@@ -2754,6 +2754,8 @@ class FakeMatrixApi extends BaseClient {
               },
       '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.favourite':
           (var req) => {},
+      '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.lowpriority':
+          (var req) => {},
       '/client/v3/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags/testtag':
           (var req) => {},
       '/client/v3/user/%40alice%3Aexample.com/account_data/test.account.data':
@@ -2835,6 +2837,8 @@ class FakeMatrixApi extends BaseClient {
       '/client/v3/pushrules/global/override/!localpart%3Aserver.abc':
           (var req) => {},
       '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.favourite':
+          (var req) => {},
+      '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.lowpriority':
           (var req) => {},
       '/client/v3/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags/testtag':
           (var req) => {},
