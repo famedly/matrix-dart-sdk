@@ -1373,12 +1373,6 @@ class Room {
   Future<void> forget() async {
     await client.database.forgetRoom(id);
     await client.forgetRoom(id);
-    // Update archived rooms, otherwise an archived room may still be in the
-    // list after a forget room call
-    final roomIndex = client.archivedRooms.indexWhere((r) => r.room.id == id);
-    if (roomIndex != -1) {
-      client.archivedRooms.removeAt(roomIndex);
-    }
     return;
   }
 
@@ -1673,17 +1667,6 @@ class Room {
           limit: limit,
         );
       });
-    } else {
-      final archive = client.getArchiveRoomFromCache(id);
-      events = archive?.timeline.events.toList() ?? [];
-      for (var i = 0; i < events.length; i++) {
-        // Try to decrypt encrypted events but don't update the database.
-        if (encrypted && client.encryptionEnabled) {
-          if (events[i].type == EventTypes.Encrypted) {
-            events[i] = await client.encryption!.decryptRoomEvent(events[i]);
-          }
-        }
-      }
     }
 
     var chunk = TimelineChunk(events: events);

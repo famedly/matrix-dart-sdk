@@ -1754,11 +1754,6 @@ void main() {
         reason:
             'Count of invited+joined before loadArchive() rooms does not match',
       );
-      expect(
-        client.archivedRooms.length,
-        0,
-        reason: 'Count of archived rooms before loadArchive() does not match',
-      );
 
       await client.loadArchive();
 
@@ -1766,28 +1761,6 @@ void main() {
         client.rooms.length,
         3,
         reason: 'Count of invited+joined rooms does not match',
-      );
-      expect(
-        client.archivedRooms.length,
-        2,
-        reason: 'Count of archived rooms does not match',
-      );
-
-      expect(
-        client.archivedRooms.firstWhereOrNull(
-              (r) => r.room.id == '!5345234234:example.com',
-            ) !=
-            null,
-        true,
-        reason: '!5345234234:example.com not found as archived room',
-      );
-      expect(
-        client.archivedRooms.firstWhereOrNull(
-              (r) => r.room.id == '!5345234235:example.com',
-            ) !=
-            null,
-        true,
-        reason: '!5345234235:example.com not found as archived room',
       );
 
       await client.dispose();
