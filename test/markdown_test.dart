@@ -225,6 +225,15 @@ void main() {
         'Test &lt;m&gt; <em>unescaped</em>',
       );
     });
+    test('Math', () {
+      expect(
+        markdown('\$\$ a+b=c'),
+        '<div data-mx-maths="a+b=c"><pre><code>a+b=c</code></pre></div>',
+      );
+      const unescapedAsciiChars =
+          '! #\$%*+,-./0123456789:;=?`ABCDEFGHIJKLMNOPQRSTUVWXYZ[~]^_@abcdefghijklmnopqrstuvwxyz{¬}| ÜÖÄüöäß§´²³';
+      expect(markdown(unescapedAsciiChars), unescapedAsciiChars);
+    });
     test('Checkboxes', () {
       expect(
         markdown(
