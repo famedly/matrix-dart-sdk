@@ -151,7 +151,7 @@ jobs:
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
           sdk: ${{ env.dart_version }}
-      - uses: browser-actions/setup-chrome@v1
+      - uses: browser-actions/setup-chrome@v2
       - name: Run tests
         run: |
           dart pub get
