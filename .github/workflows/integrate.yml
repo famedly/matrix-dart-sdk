@@ -37,7 +37,7 @@ jobs:
       # since the dendrite job is optional, actually run all tests to the end instead of failing on first error.
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -60,7 +60,7 @@ jobs:
     env:
       NO_OLM: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -106,7 +106,7 @@ jobs:
     timeout-minutes: 30
     needs: [coverage, coverage_without_olm]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/download-artifact@v4
       - name: Merge lcov files
         run: |
@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -146,7 +146,7 @@ jobs:
     env:
       NO_OLM: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -160,7 +160,7 @@ jobs:
   pub-dev-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
