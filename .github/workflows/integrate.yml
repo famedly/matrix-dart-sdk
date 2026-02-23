@@ -115,7 +115,7 @@ jobs:
           genhtml merged.info -o merged
           echo $(lcov --summary merged.info | grep 'lines......:') >> $GITHUB_STEP_SUMMARY
       - name: Codecov - Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           files: ./merged.info, ./coverage/lcov.info, ./coverage_without_olm/lcov.info
