@@ -5,6 +5,7 @@ import 'package:path/path.dart';
 
 import 'package:matrix/matrix.dart';
 
+// ignore: unused-code
 mixin DatabaseFileStorage {
   bool get supportsFileStoring => fileStorageLocation != null;
 

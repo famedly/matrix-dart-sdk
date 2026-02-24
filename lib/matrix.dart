@@ -76,6 +76,7 @@ export 'src/utils/uri_extension.dart';
 export 'src/models/login_type.dart';
 
 export 'msc_extensions/extension_recent_emoji/recent_emoji.dart';
+export 'msc_extensions/extension_audio_events/audio_events.dart';
 export 'msc_extensions/msc_3935_cute_events/msc_3935_cute_events.dart';
 export 'msc_extensions/msc_1236_widgets/msc_1236_widgets.dart';
 export 'msc_extensions/msc_2835_uia_login/msc_2835_uia_login.dart';

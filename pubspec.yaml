@@ -37,6 +37,11 @@ dev_dependencies:
   coverage: ">=0.15.0 <2.0.0"
   file: ">=6.1.1 <8.0.0"
   import_sorter: ^4.6.0
-  lints: ^6.0.0
+  dart_code_linter: any
+  famedly_dart_lints:
+    git:
+      url: https://github.com/famedly/frontend-ci-templates.git
+      path: lints/dart
+  lints: any
   sqflite_common_ffi: ^2.3.4+4 # sqflite_common_ffi aggressively requires newer dart versions
   test: ^1.27.0
