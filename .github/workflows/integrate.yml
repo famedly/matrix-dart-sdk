@@ -107,7 +107,7 @@ jobs:
     needs: [coverage, coverage_without_olm]
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
       - name: Merge lcov files
         run: |
           sudo apt-get -y install lcov
