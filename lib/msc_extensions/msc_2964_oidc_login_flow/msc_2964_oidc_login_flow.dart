@@ -106,9 +106,8 @@ extension Msc2964OidcLoginFlow on Client {
       newHomeserver: homeserver,
       newToken: oidcAuthResponse.accessToken,
       newRefreshToken: oidcAuthResponse.refreshToken,
-      newTokenExpiresAt: expiresIn == null
-          ? null
-          : DateTime.now().add(Duration(milliseconds: expiresIn)),
+      newTokenExpiresAt:
+          expiresIn == null ? null : DateTime.now().add(expiresIn),
       newOidcClientId: session.oidcClientData.clientId,
     );
   }
@@ -164,7 +163,7 @@ extension Msc2964OidcLoginFlow on Client {
 class OidcAuthResponse {
   final String accessToken, tokenType;
   final String? refreshToken, scope;
-  final int? expiresIn;
+  final Duration? expiresIn;
 
   OidcAuthResponse({
     required this.accessToken,
@@ -180,7 +179,9 @@ class OidcAuthResponse {
         tokenType: json['token_type'] as String,
         refreshToken: json['refresh_token'] as String?,
         scope: json['scope'] as String?,
-        expiresIn: json['expires_in'] as int?,
+        expiresIn: json['expires_in'] is int
+            ? Duration(seconds: json['expires_in'] as int)
+            : null,
       );
 }
 
