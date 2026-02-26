@@ -72,7 +72,8 @@ extension PollEventExtension on Event {
         //creator or user with permission to redact other's messages in the
         //room, the event must be ignored by clients due to being invalid.
         if (event.senderId == senderId ||
-            event.senderFromMemoryOrFallback.powerLevel >= redactPowerLevel) {
+            event.senderFromMemoryOrFallback.powerLevel >=
+                PowerLevel(redactPowerLevel)) {
           return true;
         }
         Logs().w(

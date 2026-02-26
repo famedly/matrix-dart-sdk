@@ -2101,14 +2101,11 @@ class Room {
   /// level of 100, and all other users have a power level of 0.
   /// For room version 12 and above the room creator always has maximum
   /// power level.
-  int getPowerLevelByUserId(String userId) {
+  PowerLevel getPowerLevelByUserId(String userId) {
     // Room creator has maximum power level:
     if (creatorUserIds.contains(userId) &&
         !((int.tryParse(roomVersion ?? '') ?? 0) < 12)) {
-      // 2^53 - 1 from https://spec.matrix.org/v1.15/appendices/#canonical-json
-      const maxInteger = 9007199254740991;
-
-      return maxInteger;
+      return PowerLevel.owner;
     }
 
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
@@ -2119,15 +2116,18 @@ class Room {
     final defaultUserPowerLevel = powerLevelMap?.tryGet<int>('users_default');
 
     final fallbackPowerLevel =
-        getState(EventTypes.RoomCreate)?.senderId == userId ? 100 : 0;
+        getState(EventTypes.RoomCreate)?.senderId == userId
+            ? PowerLevel.admin
+            : PowerLevel.user;
 
-    return userSpecificPowerLevel ??
+    final level = userSpecificPowerLevel ??
         defaultUserPowerLevel ??
-        fallbackPowerLevel;
+        fallbackPowerLevel.level;
+    return PowerLevel(level);
   }
 
   /// Returns the user's own power level.
-  int get ownPowerLevel => getPowerLevelByUserId(client.userID!);
+  PowerLevel get ownPowerLevel => getPowerLevelByUserId(client.userID!);
 
   /// Returns the power levels from all users for this room or null if not given.
   @Deprecated('Use `getPowerLevelByUserId(String userId)` instead')
@@ -2159,8 +2159,10 @@ class Room {
   /// The level required to ban a user.
   bool get canBan {
     if (membership != Membership.join) return false;
-    return (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('ban') ??
-            50) <=
+    return PowerLevel(
+          getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('ban') ??
+              PowerLevel.moderator.level,
+        ) <=
         ownPowerLevel;
   }
 
@@ -2177,14 +2179,15 @@ class Room {
   /// If there is no state_default in the m.room.power_levels event, the
   /// state_default is 50. If the room contains no m.room.power_levels event,
   /// the state_default is 0.
-  int powerForChangingStateEvent(String action) {
+  PowerLevel powerForChangingStateEvent(String action) {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
-    if (powerLevelMap == null) return 0;
-    return powerLevelMap
+    if (powerLevelMap == null) return PowerLevel.user;
+    final level = powerLevelMap
             .tryGetMap<String, Object?>('events')
             ?.tryGet<int>(action) ??
         powerLevelMap.tryGet<int>('state_default') ??
-        50;
+        PowerLevel.moderator.level;
+    return PowerLevel(level);
   }
 
   /// if returned value is not null `EventTypes.GroupCallMember` is present
@@ -2208,7 +2211,8 @@ class Room {
       final eventsMap = newPowerLevelMap.tryGetMap<String, Object?>('events') ??
           <String, Object?>{};
       eventsMap.addAll({
-        EventTypes.GroupCallMember: getDefaultPowerLevel(currentPowerLevelsMap),
+        EventTypes.GroupCallMember:
+            getDefaultPowerLevel(currentPowerLevelsMap).level,
       });
       newPowerLevelMap.addAll({'events': eventsMap});
       await client.setRoomStateWithKey(
@@ -2221,8 +2225,10 @@ class Room {
   }
 
   /// Takes in `[m.room.power_levels].content` and returns the default power level
-  int getDefaultPowerLevel(Map<String, dynamic> powerLevelMap) {
-    return powerLevelMap.tryGet('users_default') ?? 0;
+  PowerLevel getDefaultPowerLevel(Map<String, dynamic> powerLevelMap) {
+    final level =
+        powerLevelMap.tryGet<int>('users_default') ?? PowerLevel.user.level;
+    return PowerLevel(level);
   }
 
   /// The default level required to send message events. This checks if the
@@ -2242,39 +2248,43 @@ class Room {
   /// The level required to invite a user.
   bool get canInvite {
     if (membership != Membership.join) return false;
-    return (getState(EventTypes.RoomPowerLevels)
-                ?.content
-                .tryGet<int>('invite') ??
-            0) <=
+    return PowerLevel(
+          getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('invite') ??
+              0,
+        ) <=
         ownPowerLevel;
   }
 
   /// The level required to kick a user.
   bool get canKick {
     if (membership != Membership.join) return false;
-    return (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('kick') ??
-            50) <=
+    return PowerLevel(
+          getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('kick') ??
+              PowerLevel.moderator.level,
+        ) <=
         ownPowerLevel;
   }
 
   /// The level required to redact an event.
   bool get canRedact {
     if (membership != Membership.join) return false;
-    return (getState(EventTypes.RoomPowerLevels)
-                ?.content
-                .tryGet<int>('redact') ??
-            50) <=
+    return PowerLevel(
+          getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('redact') ??
+              PowerLevel.moderator.level,
+        ) <=
         ownPowerLevel;
   }
 
   ///  	The default level required to send state events. Can be overridden by the events key.
   bool get canSendDefaultStates {
     final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
-    if (powerLevelsMap == null) return 0 <= ownPowerLevel;
-    return (getState(EventTypes.RoomPowerLevels)
-                ?.content
-                .tryGet<int>('state_default') ??
-            50) <=
+    if (powerLevelsMap == null) return UserPowerLevel() <= ownPowerLevel;
+    return PowerLevel(
+          getState(EventTypes.RoomPowerLevels)
+                  ?.content
+                  .tryGet<int>('state_default') ??
+              PowerLevel.moderator.level,
+        ) <=
         ownPowerLevel;
   }
 
@@ -2287,11 +2297,13 @@ class Room {
     if (membership != Membership.join) return false;
     final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
 
-    final pl = powerLevelsMap
-            ?.tryGetMap<String, Object?>('events')
-            ?.tryGet<int>(eventType) ??
-        powerLevelsMap?.tryGet<int>('events_default') ??
-        0;
+    final pl = PowerLevel(
+      powerLevelsMap
+              ?.tryGetMap<String, Object?>('events')
+              ?.tryGet<int>(eventType) ??
+          powerLevelsMap?.tryGet<int>('events_default') ??
+          PowerLevel.user.level,
+    );
 
     return ownPowerLevel >= pl;
   }
@@ -2299,11 +2311,13 @@ class Room {
   /// The power level requirements for specific notification types.
   bool canSendNotification(String userid, {String notificationType = 'room'}) {
     final userLevel = getPowerLevelByUserId(userid);
-    final notificationLevel = getState(EventTypes.RoomPowerLevels)
-            ?.content
-            .tryGetMap<String, Object?>('notifications')
-            ?.tryGet<int>(notificationType) ??
-        50;
+    final notificationLevel = PowerLevel(
+      getState(EventTypes.RoomPowerLevels)
+              ?.content
+              .tryGetMap<String, Object?>('notifications')
+              ?.tryGet<int>(notificationType) ??
+          PowerLevel.moderator.level,
+    );
 
     return userLevel >= notificationLevel;
   }
@@ -2671,7 +2685,7 @@ class Room {
     final currentPowerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
 
     final temp = List<User>.from(users);
-    temp.removeWhere((user) => user.powerLevel < 50);
+    temp.removeWhere((user) => user.powerLevel < PowerLevel.moderator);
     if (currentPowerLevelsMap != null) {
       // just for weird rooms
       temp.removeWhere(
