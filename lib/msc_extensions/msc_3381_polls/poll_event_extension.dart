@@ -54,11 +54,11 @@ extension PollEventExtension on Event {
         timeline.aggregatedEvents[eventId]?[RelationshipTypes.reference];
     if (aggregatedEvents == null || aggregatedEvents.isEmpty) return null;
 
-    final redactPowerLevel = (room
+    final redactPowerLevel = room
             .getState(EventTypes.RoomPowerLevels)
             ?.content
             .tryGet<int>('redact') ??
-        50);
+        50;
 
     return aggregatedEvents.firstWhereOrNull(
       (event) {
@@ -72,7 +72,8 @@ extension PollEventExtension on Event {
         //creator or user with permission to redact other's messages in the
         //room, the event must be ignored by clients due to being invalid.
         if (event.senderId == senderId ||
-            event.senderFromMemoryOrFallback.powerLevel >= redactPowerLevel) {
+            event.senderFromMemoryOrFallback.powerLevel.level >=
+                redactPowerLevel) {
           return true;
         }
         Logs().w(
