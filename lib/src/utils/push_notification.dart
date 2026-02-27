@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:matrix/matrix_api_lite.dart';
+
 /// Push Notification object from https://spec.matrix.org/v1.2/push-gateway-api/
 class PushNotification {
   final Map<String, Object?>? content;
@@ -7,7 +9,7 @@ class PushNotification {
   final List<PushNotificationDevice>? devices;
   final String? eventId;
   final String? prio;
-  final String? roomAlias;
+  final RoomAlias? roomAlias;
   final String? roomId;
   final String? roomName;
   final String? sender;
@@ -57,7 +59,7 @@ class PushNotification {
                 : null,
         eventId: json['event_id'] as String?,
         prio: json['prio'] as String?,
-        roomAlias: json['room_alias'] as String?,
+        roomAlias: json['room_alias'] as RoomAlias?,
         roomId: json['room_id'] as String?,
         roomName: json['room_name'] as String?,
         sender: json['sender'] as String?,

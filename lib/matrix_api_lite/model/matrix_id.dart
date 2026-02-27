@@ -59,12 +59,13 @@ extension on String {
   }
 }
 
-extension type UserId._(String string) {
-  UserId(this.string) {
-    string._validate(sigil);
+extension type UserId._(String matrixId) {
+  UserId(this.matrixId) {
+    matrixId._validate(sigil);
   }
 
-  UserId.from(String localpart, String domain) : string = '@$localpart:$domain';
+  UserId.from(String localpart, String domain)
+      : matrixId = '@$localpart:$domain';
 
   static const String sigil = '@';
 
@@ -76,8 +77,9 @@ extension type UserId._(String string) {
     }
   }
 
-  String get localpart => string._localpart;
-  String get domain => string._domain!;
+  void validate() => matrixId._validate(sigil);
+  String get localpart => matrixId._localpart;
+  String get domain => matrixId._domain!;
 }
 
 extension type RoomId._(String matrixId) {
@@ -98,6 +100,7 @@ extension type RoomId._(String matrixId) {
     }
   }
 
+  void validate() => matrixId._validate(sigil);
   String get localpart => matrixId._localpart;
   String? get domain => matrixId._domain;
 }
@@ -120,6 +123,7 @@ extension type RoomAlias._(String matrixId) {
     }
   }
 
+  void validate() => matrixId._validate(sigil);
   String get localpart => matrixId._localpart;
   String get domain => matrixId._domain!;
 }
@@ -142,6 +146,7 @@ extension type EventId._(String matrixId) {
     }
   }
 
+  void validate() => matrixId._validate(sigil);
   String get localpart => matrixId._localpart;
   String? get domain => matrixId._domain;
 }
