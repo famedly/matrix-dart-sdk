@@ -78,7 +78,7 @@ class User extends StrippedStateEvent {
           : prevContent?.tryGet<String>('displayname'));
 
   /// Returns the power level of this user.
-  int get powerLevel => room.getPowerLevelByUserId(id);
+  PowerLevel get powerLevel => room.getPowerLevelByUserId(id);
 
   /// The membership status of the user. One of:
   /// join
