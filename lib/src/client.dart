@@ -297,7 +297,9 @@ class Client extends MatrixApi {
             accessToken: legacyFormat.accessToken,
             tokenType: 'Bearer',
             refreshToken: legacyFormat.refreshToken,
-            expiresIn: legacyFormat.expiresInMs,
+            expiresIn: legacyFormat.expiresInMs == null
+                ? null
+                : Duration(milliseconds: legacyFormat.expiresInMs!),
             scope: null,
           ),
         ),
@@ -307,10 +309,9 @@ class Client extends MatrixApi {
     };
 
     accessToken = tokenResponse.accessToken;
-    final expiresInMs = tokenResponse.expiresIn;
-    final tokenExpiresAt = expiresInMs == null
-        ? null
-        : DateTime.now().add(Duration(milliseconds: expiresInMs));
+    final expiresIn = tokenResponse.expiresIn;
+    final tokenExpiresAt =
+        expiresIn == null ? null : DateTime.now().add(expiresIn);
     _accessTokenExpiresAt = tokenExpiresAt;
     await database.updateClient(
       homeserverUrl,
