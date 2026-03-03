@@ -299,7 +299,7 @@ void main() {
 
       expect(
         matrix.getRoomByAlias(
-          "#famedlyContactDiscovery:${matrix.userID!.split(":")[1]}",
+          RoomAlias.from('famedlyContactDiscovery', matrix.userID!.domain!),
         ),
         null,
       );
@@ -1707,7 +1707,7 @@ void main() {
             'msgtype': 'm.text',
             'body': 'Hello world',
           },
-          roomAlias: '#testalias:blaaa',
+          roomAlias: RoomAlias('#testalias:blaaa'),
           roomName: 'TestRoomName',
           sender: '@alicyy:example.com',
           senderDisplayName: 'AlicE',
