@@ -30,8 +30,11 @@ import 'package:matrix/matrix_api_lite/model/auth/authentication_data.dart';
 class AuthenticationThreePidCreds extends AuthenticationData {
   late ThreepidCreds threepidCreds;
 
-  AuthenticationThreePidCreds(
-      {super.session, required String super.type, required this.threepidCreds});
+  AuthenticationThreePidCreds({
+    super.session,
+    required String super.type,
+    required this.threepidCreds,
+  });
 
   AuthenticationThreePidCreds.fromJson(Map<String, Object?> json)
       : super.fromJson(json) {
@@ -55,11 +58,12 @@ class ThreepidCreds {
   String? idServer;
   String? idAccessToken;
 
-  ThreepidCreds(
-      {required this.sid,
-      required this.clientSecret,
-      this.idServer,
-      this.idAccessToken});
+  ThreepidCreds({
+    required this.sid,
+    required this.clientSecret,
+    this.idServer,
+    this.idAccessToken,
+  });
 
   ThreepidCreds.fromJson(Map<String, Object?> json)
       : sid = json['sid'] as String,

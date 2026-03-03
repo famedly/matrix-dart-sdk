@@ -42,8 +42,10 @@ void main() {
         {'example_key': 'foobar'},
       );
       expect(matrixException.completedAuthenticationFlows.length, 1);
-      expect(matrixException.completedAuthenticationFlows.first,
-          'example.type.foo');
+      expect(
+        matrixException.completedAuthenticationFlows.first,
+        'example.type.foo',
+      );
       expect(matrixException.session, 'xxxxxxyz');
     });
     test('Unknown Exception', () async {

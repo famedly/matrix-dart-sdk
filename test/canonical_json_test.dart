@@ -38,17 +38,19 @@ void main() {
             'display_name': 'John Doe',
             'three_pids': [
               {'medium': 'email', 'address': 'john.doe@example.org'},
-              {'medium': 'msisdn', 'address': '123456789'}
-            ]
-          }
-        }
+              {'medium': 'msisdn', 'address': '123456789'},
+            ],
+          },
+        },
       },
       '{"a":null}': {'a': null},
     };
     for (final entry in textMap.entries) {
       test(entry.key, () async {
         expect(
-            entry.key, String.fromCharCodes(canonicalJson.encode(entry.value)));
+          entry.key,
+          String.fromCharCodes(canonicalJson.encode(entry.value)),
+        );
       });
     }
   });

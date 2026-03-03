@@ -68,16 +68,21 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
 
   /// fetch events sent to a dehydrated device.
   /// https://github.com/matrix-org/matrix-spec-proposals/pull/3814
-  Future<DehydratedDeviceEvents> getDehydratedDeviceEvents(String deviceId,
-      {String? nextBatch, int limit = 100}) async {
-    final response = await request(RequestType.POST,
-        '/client/unstable/org.matrix.msc3814.v1/dehydrated_device/$deviceId/events',
-        query: {
-          'limit': limit.toString(),
-        },
-        data: {
-          if (nextBatch != null) 'next_batch': nextBatch,
-        });
+  Future<DehydratedDeviceEvents> getDehydratedDeviceEvents(
+    String deviceId, {
+    String? nextBatch,
+    int limit = 100,
+  }) async {
+    final response = await request(
+      RequestType.POST,
+      '/client/unstable/org.matrix.msc3814.v1/dehydrated_device/$deviceId/events',
+      query: {
+        'limit': limit.toString(),
+      },
+      data: {
+        if (nextBatch != null) 'next_batch': nextBatch,
+      },
+    );
     return DehydratedDeviceEvents.fromJson(response);
   }
 }

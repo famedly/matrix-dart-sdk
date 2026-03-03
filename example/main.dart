@@ -7,18 +7,18 @@ import 'package:sqflite/sqflite.dart' as sqlite;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Build the database
+  final dbDirectory = await getApplicationSupportDirectory();
+
   final client = Client(
     'Matrix Example Chat',
-    databaseBuilder: (_) async {
-      final dir = await getApplicationSupportDirectory();
-      final db = MatrixSdkDatabase(
-        c.name,
-        await sqlite.openDatabase(dir.toString() + '/database.sqlite'),
-      );
-      await db.open();
-      return db;
-    },
+    database: await MatrixSdkDatabase.init(
+      c.name,
+      database:
+          await sqlite.openDatabase(directory.toString() + '/database.sqlite'),
+    ),
   );
+
   await client.init();
   runApp(MatrixExampleChat(client: client));
 }

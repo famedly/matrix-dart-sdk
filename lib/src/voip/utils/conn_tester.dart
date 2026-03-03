@@ -17,19 +17,19 @@ class ConnectionTester {
       'iceServers': iceServers,
       'sdpSemantics': 'unified-plan',
       'iceCandidatePoolSize': 1,
-      'iceTransportPolicy': 'relay'
+      'iceTransportPolicy': 'relay',
     };
     pc1 = await delegate.createPeerConnection(configuration);
     pc2 = await delegate.createPeerConnection(configuration);
 
     pc1!.onIceCandidate = (candidate) {
       if (candidate.candidate!.contains('relay')) {
-        pc2!.addCandidate(candidate);
+        unawaited(pc2!.addCandidate(candidate));
       }
     };
     pc2!.onIceCandidate = (candidate) {
       if (candidate.candidate!.contains('relay')) {
-        pc1!.addCandidate(candidate);
+        unawaited(pc1!.addCandidate(candidate));
       }
     };
 
@@ -78,9 +78,11 @@ class ConnectionTester {
     return connected;
   }
 
-  Future<int> waitUntilAsync(Future<bool> Function() test,
-      {final int maxIterations = 1000,
-      final Duration step = const Duration(milliseconds: 10)}) async {
+  Future<int> waitUntilAsync(
+    Future<bool> Function() test, {
+    final int maxIterations = 1000,
+    final Duration step = const Duration(milliseconds: 10),
+  }) async {
     int iterations = 0;
     for (; iterations < maxIterations; iterations++) {
       await Future.delayed(step);
@@ -90,7 +92,8 @@ class ConnectionTester {
     }
     if (iterations >= maxIterations) {
       throw TimeoutException(
-          'Condition not reached within ${iterations * step.inMilliseconds}ms');
+        'Condition not reached within ${iterations * step.inMilliseconds}ms',
+      );
     }
     return iterations;
   }
@@ -112,7 +115,7 @@ class ConnectionTester {
       {
         'username': _turnServerCredentials!.username,
         'credential': _turnServerCredentials!.password,
-        'url': _turnServerCredentials!.uris[0]
+        'url': _turnServerCredentials!.uris[0],
       }
     ];
   }

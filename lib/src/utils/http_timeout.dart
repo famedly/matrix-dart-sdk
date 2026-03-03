@@ -21,7 +21,9 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 
 http.StreamedResponse replaceStream(
-        http.StreamedResponse base, Stream<List<int>> stream) =>
+  http.StreamedResponse base,
+  Stream<List<int>> stream,
+) =>
     http.StreamedResponse(
       http.ByteStream(stream),
       base.statusCode,

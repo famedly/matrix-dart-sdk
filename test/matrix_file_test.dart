@@ -22,10 +22,14 @@ import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
+import 'fake_client.dart';
 
 void main() {
   /// All Tests related to device keys
   group('Matrix File', tags: 'olm', () {
+    setUpAll(() async {
+      await getClient(); // To trigger vodozemac init
+    });
     Logs().level = Level.error;
     test('Decrypt', () async {
       final text = 'hello world';
@@ -39,8 +43,11 @@ void main() {
     });
 
     test('Shrink', () async {
-      final resp = await http.get(Uri.parse(
-          'https://upload.wikimedia.org/wikipedia/commons/5/5f/Salagou_Lake%2C_Celles_cf01.jpg'));
+      final resp = await http.get(
+        Uri.parse(
+          'https://upload.wikimedia.org/wikipedia/commons/5/5f/Salagou_Lake%2C_Celles_cf01.jpg',
+        ),
+      );
 
       if (resp.statusCode == 200) {
         final file = MatrixImageFile(

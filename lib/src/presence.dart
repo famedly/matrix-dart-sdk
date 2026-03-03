@@ -31,7 +31,8 @@ class CachedPresence {
             .singleWhere((type) => type.name == json['presence']),
         lastActiveTimestamp: json['last_active_timestamp'] != null
             ? DateTime.fromMillisecondsSinceEpoch(
-                json['last_active_timestamp'] as int)
+                json['last_active_timestamp'] as int,
+              )
             : null,
         statusMsg: json['status_msg'] as String?,
         currentlyActive: json['currently_active'] as bool?,
@@ -55,8 +56,13 @@ class CachedPresence {
     this.currentlyActive,
   });
 
-  CachedPresence(this.presence, int? lastActiveAgo, this.statusMsg,
-      this.currentlyActive, this.userid) {
+  CachedPresence(
+    this.presence,
+    int? lastActiveAgo,
+    this.statusMsg,
+    this.currentlyActive,
+    this.userid,
+  ) {
     if (lastActiveAgo != null) {
       lastActiveTimestamp =
           DateTime.now().subtract(Duration(milliseconds: lastActiveAgo));
@@ -65,15 +71,21 @@ class CachedPresence {
 
   CachedPresence.fromMatrixEvent(Presence event)
       : this(
-            event.presence.presence,
-            event.presence.lastActiveAgo,
-            event.presence.statusMsg,
-            event.presence.currentlyActive,
-            event.senderId);
+          event.presence.presence,
+          event.presence.lastActiveAgo,
+          event.presence.statusMsg,
+          event.presence.currentlyActive,
+          event.senderId,
+        );
 
   CachedPresence.fromPresenceResponse(GetPresenceResponse event, String userid)
-      : this(event.presence, event.lastActiveAgo, event.statusMsg,
-            event.currentlyActive, userid);
+      : this(
+          event.presence,
+          event.lastActiveAgo,
+          event.statusMsg,
+          event.currentlyActive,
+          userid,
+        );
 
   CachedPresence.neverSeen(this.userid) : presence = PresenceType.offline;
 
@@ -91,7 +103,7 @@ class CachedPresence {
     final json = {
       'content': content,
       'sender': '@example:localhost',
-      'type': 'm.presence'
+      'type': 'm.presence',
     };
 
     return Presence.fromJson(json);

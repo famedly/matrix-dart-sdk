@@ -6,21 +6,41 @@ In your `pubspec.yaml` file add the following dependencies:
 
 ```yaml
   matrix: <latest-version>
-  # If you plan to use the SDK in a Flutter application on IO:
+  # (Optional) If you plan to use the SDK in a Flutter application on IO
+  # you need sqflite or sqflite_ffi:
   sqflite: <latest-version>
-  # For end to end encryption:
-  flutter_olm: <latest-version>
-  flutter_openssl_crypto: <latest-version>
+  # (Optional) For end to end encryption, please head on the
+  # encryption guide and add these dependencies:
+  flutter_vodozemac: <latest-version>
 ```
 
 ## Step 2: Create the client
 
 ```dart
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:matrix/matrix.dart';
+
 final client = Client(
-    '<Your Client Name>',
-    databaseBuilder: (client) => MatrixSdkDatabase(
+    '<Client Name>',
+    database: await MatrixSdkDatabase.init(
         '<Database Name>',
-        database: await openDatabase('<path-to-store-database>'),
+        database: await databaseFactoryFfi.openDatabase(':memory:'),
+        sqfliteFactory: databaseFactoryFfi,
+    ),
+);
+```
+
+### Alternative: Create a persistent database with SQFlite:
+
+```dart
+import 'package:sqflite/sqflite.dart';
+import 'package:matrix/matrix.dart';
+
+final client = Client(
+    '<Client Name>',
+    database: await MatrixSdkDatabase.init(
+        '<Database Name>',
+        database: await openDatabase('/path/to/database.sqlite'),
     ),
 );
 ```

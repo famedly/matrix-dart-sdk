@@ -31,8 +31,9 @@ class PresenceContent {
 
   PresenceContent.fromJson(Map<String, Object?> json)
       : presence = PresenceType.values.firstWhere(
-            (p) => p.toString().split('.').last == json['presence'],
-            orElse: () => PresenceType.offline),
+          (p) => p.toString().split('.').last == json['presence'],
+          orElse: () => PresenceType.offline,
+        ),
         lastActiveAgo = json.tryGet<int>('last_active_ago'),
         statusMsg = json.tryGet<String>('status_msg'),
         currentlyActive = json.tryGet<bool>('currently_active');

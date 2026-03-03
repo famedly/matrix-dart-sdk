@@ -151,11 +151,13 @@ class BlockLatexSyntax extends BlockSyntax {
 
   @override
   Node parse(BlockParser parser) {
-    final childLines = parseChildLines(parser);
+    final childLines = parseChildLines(parser)
+        .map((line) => line?.content)
+        .whereType<String>();
     // we use .substring(2) as childLines will *always* contain the first two '$$'
     final latex = childLines.join('\n').trim().substring(2).trim();
     final element = Element('div', [
-      Element('pre', [Element.text('code', htmlEscape.convert(latex))])
+      Element('pre', [Element.text('code', htmlEscape.convert(latex))]),
     ]);
     element.attributes['data-mx-maths'] = htmlAttrEscape.convert(latex);
     return element;
@@ -165,7 +167,8 @@ class BlockLatexSyntax extends BlockSyntax {
 class PillSyntax extends InlineSyntax {
   PillSyntax()
       : super(
-            r'([@#!][^\s:]*:(?:[^\s]+\.\w+|[\d\.]+|\[[a-fA-F0-9:]+\])(?::\d+)?)');
+          r'([@#!][^\s:]*:(?:[^\s]+\.\w+|[\d\.]+|\[[a-fA-F0-9:]+\])(?::\d+)?)',
+        );
 
   @override
   bool onMatch(InlineParser parser, Match match) {
@@ -211,8 +214,14 @@ String markdown(
   bool convertLinebreaks = true,
 }) {
   var ret = markdownToHtml(
-    text,
-    extensionSet: ExtensionSet.commonMark,
+    text
+        .replaceAllMapped(
+          // Replace HTML tags
+          RegExp(r'<([^>]*)>'),
+          (match) => '&lt;${match.group(1)}&gt;',
+        )
+        .replaceNewlines(),
+    extensionSet: ExtensionSet.gitHubFlavored,
     blockSyntaxes: [
       BlockLatexSyntax(),
     ],
@@ -269,8 +278,23 @@ String markdown(
 }
 
 extension on String {
-  String convertLinebreaksToBr(String tagName,
-      {bool exclude = false, String replaceWith = '<br/>'}) {
+  String replaceNewlines() {
+    // RegEx for at least 3 following \n
+    final regExp = RegExp(r'(\n{3,})');
+
+    return replaceAllMapped(regExp, (match) {
+      final newLineGroup = match.group(0)!;
+      return newLineGroup
+          .replaceAll('\n', '<br/>')
+          .replaceFirst('<br/><br/>', '\n\n');
+    });
+  }
+
+  String convertLinebreaksToBr(
+    String tagName, {
+    bool exclude = false,
+    String replaceWith = '<br/>',
+  }) {
     final parts = split('$tagName>');
     var convertLinebreaks = exclude;
     for (var i = 0; i < parts.length; i++) {

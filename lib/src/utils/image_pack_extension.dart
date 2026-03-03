@@ -44,13 +44,14 @@ extension ImagePackRoomExtension on Room {
         }
         packs
             .putIfAbsent(
-                finalSlug,
-                () => ImagePackContent.fromJson({})
-                  ..pack.displayName = imagePack.pack.displayName ??
-                      room?.getLocalizedDisplayname() ??
-                      finalSlug
-                  ..pack.avatarUrl = imagePack.pack.avatarUrl ?? room?.avatar
-                  ..pack.attribution = imagePack.pack.attribution)
+              finalSlug,
+              () => ImagePackContent.fromJson({})
+                ..pack.displayName = imagePack.pack.displayName ??
+                    room?.getLocalizedDisplayname() ??
+                    finalSlug
+                ..pack.avatarUrl = imagePack.pack.avatarUrl ?? room?.avatar
+                ..pack.attribution = imagePack.pack.attribution,
+            )
             .images[entry.key] = image;
         allMxcs.add(image.url);
       }
@@ -71,8 +72,11 @@ extension ImagePackRoomExtension on Room {
             final stateKey = stateKeyEntry.key;
             final fallbackSlug =
                 '${room.getLocalizedDisplayname()}-${stateKey.isNotEmpty ? '$stateKey-' : ''}${room.id}';
-            addImagePack(room.getState('im.ponies.room_emotes', stateKey),
-                room: room, slug: fallbackSlug);
+            addImagePack(
+              room.getState('im.ponies.room_emotes', stateKey),
+              room: room,
+              slug: fallbackSlug,
+            );
           }
         }
       }
@@ -81,11 +85,13 @@ extension ImagePackRoomExtension on Room {
     final allRoomEmotes = states['im.ponies.room_emotes'];
     if (allRoomEmotes != null) {
       for (final entry in allRoomEmotes.entries) {
-        addImagePack(entry.value,
-            room: this,
-            slug: (entry.value.stateKey?.isNotEmpty == true)
-                ? entry.value.stateKey
-                : 'room');
+        addImagePack(
+          entry.value,
+          room: this,
+          slug: (entry.value.stateKey?.isNotEmpty == true)
+              ? entry.value.stateKey
+              : 'room',
+        );
       }
     }
     return packs;
@@ -94,6 +100,8 @@ extension ImagePackRoomExtension on Room {
   /// Get a flat view of all the image packs of a specified [usage], that is a map of all
   /// slugs to a map of the image code to their mxc url
   Map<String, Map<String, String>> getImagePacksFlat([ImagePackUsage? usage]) =>
-      getImagePacks(usage).map((k, v) =>
-          MapEntry(k, v.images.map((k, v) => MapEntry(k, v.url.toString()))));
+      getImagePacks(usage).map(
+        (k, v) =>
+            MapEntry(k, v.images.map((k, v) => MapEntry(k, v.url.toString()))),
+      );
 }

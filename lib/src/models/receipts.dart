@@ -115,7 +115,9 @@ class ReceiptEventContent {
 
           if (userId is! String ||
               !userId.isValidMatrixId ||
-              receiptContent is! Map) continue;
+              receiptContent is! Map) {
+            continue;
+          }
 
           final ts = receiptContent['ts'];
           final threadId = receiptContent['thread_id'];
@@ -167,10 +169,11 @@ class LatestReceiptStateForTimeline {
 
   factory LatestReceiptStateForTimeline.empty() =>
       LatestReceiptStateForTimeline(
-          ownPrivate: null,
-          ownPublic: null,
-          latestOwnReceipt: null,
-          otherUsers: {});
+        ownPrivate: null,
+        ownPublic: null,
+        latestOwnReceipt: null,
+        otherUsers: {},
+      );
 
   factory LatestReceiptStateForTimeline.fromJson(Map<String, dynamic> json) {
     final private = json['private'];
@@ -202,6 +205,7 @@ class LatestReceiptStateForTimeline {
 }
 
 class LatestReceiptState {
+  @Deprecated('Now stored in their own database box.')
   static const eventType = 'com.famedly.receipts_state';
 
   /// Receipts for no specific thread
@@ -219,6 +223,8 @@ class LatestReceiptState {
     this.byThread = const {},
   });
 
+  factory LatestReceiptState.empty() => LatestReceiptState.fromJson({});
+
   factory LatestReceiptState.fromJson(Map<String, dynamic> json) {
     final global = json['global'] ?? <String, dynamic>{};
     final Map<String, dynamic> main = json['main'] ?? <String, dynamic>{};
@@ -229,7 +235,8 @@ class LatestReceiptState {
       mainThread:
           main.isNotEmpty ? LatestReceiptStateForTimeline.fromJson(main) : null,
       byThread: byThread.map(
-          (k, v) => MapEntry(k, LatestReceiptStateForTimeline.fromJson(v))),
+        (k, v) => MapEntry(k, LatestReceiptStateForTimeline.fromJson(v)),
+      ),
     );
   }
 
@@ -280,7 +287,7 @@ class LatestReceiptState {
     // set the latest receipt to the one furthest down in the timeline, or if we don't know that, the newest ts.
     if (updatedTimelines.isEmpty) return;
 
-    final eventOrder = await room.client.database?.getEventIdList(room) ?? [];
+    final eventOrder = await room.client.database.getEventIdList(room);
 
     for (final timeline in updatedTimelines) {
       if (timeline.ownPrivate?.eventId == timeline.ownPublic?.eventId) {

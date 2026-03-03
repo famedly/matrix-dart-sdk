@@ -34,11 +34,12 @@ class RoomKeyContent {
   String sessionId;
   String sessionKey;
 
-  RoomKeyContent(
-      {required this.algorithm,
-      required this.roomId,
-      required this.sessionId,
-      required this.sessionKey});
+  RoomKeyContent({
+    required this.algorithm,
+    required this.roomId,
+    required this.sessionId,
+    required this.sessionKey,
+  });
 
   RoomKeyContent.fromJson(Map<String, Object?> json)
       : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',

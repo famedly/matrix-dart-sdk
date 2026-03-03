@@ -1,39 +1,66 @@
-name: "All the sdk specific jobs"
+name: Continuous Integration
 
 on:
-  workflow_call:
+  push:
+    branches:
+      - main
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  dart:
+    permissions:
+      contents: read
+    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@main
+    with:
+      env_file: ".github/workflows/versions.env"
+    secrets:
+      ssh_key: "${{ secrets.CI_SSH_PRIVATE_KEY }}"
+
+  general:
+    permissions:
+      contents: read
+    uses: famedly/frontend-ci-templates/.github/workflows/general.yml@main
+
   e2ee_test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         homeserver: [synapse, dendrite, conduit]
       # since the dendrite job is optional, actually run all tests to the end instead of failing on first error.
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
           sdk: ${{ env.dart_version }}
+      - uses: famedly/backend-build-workflows/.github/actions/rust-prepare@v4
       - name: Run tests
         run: |
           export HOMESERVER_IMPLEMENTATION=${{matrix.homeserver}}
           export HOMESERVER="localhost:80"
           scripts/integration-server-${{matrix.homeserver}}.sh 2>&1 > /dev/null &
-          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y libolm3 libssl3 
           source scripts/integration-create-environment-variables.sh
           scripts/integration-prepare-homeserver.sh
-          scripts/prepare.sh
-          scripts/test_driver.sh
+          dart pub get
+          scripts/prepare_vodozemac.sh
+          dart --define=HOMESERVER=$HOMESERVER --define=USER1_NAME=$USER1_NAME --define=USER2_NAME=$USER2_NAME --define=USER3_NAME=$USER3_NAME --define=USER1_PW=$USER1_PW --define=USER2_PW=$USER2_PW --define=USER3_PW=$USER3_PW test test_driver/matrixsdk_test.dart -p vm
 
   coverage_without_olm:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       NO_OLM: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -42,7 +69,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev
           ./scripts/test.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: coverage_without_olm
@@ -52,63 +79,61 @@ jobs:
   coverage:
     #runs-on: arm-ubuntu-latest-16core
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
           sdk: ${{ env.dart_version }}
           #architecture: "arm64"
+      - uses: famedly/backend-build-workflows/.github/actions/rust-prepare@v4
       - name: Run tests
         run: |
-          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev libolm3 libssl3
+          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev libssl3
+          ./scripts/prepare_vodozemac.sh
           ./scripts/test.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: coverage
           path: coverage_dir/
           retention-days: 1
 
-  merge_converage:
+  merge_coverage:
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [coverage, coverage_without_olm]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
       - name: Merge lcov files
         run: |
           sudo apt-get -y install lcov
           lcov -a coverage/lcov.info -a coverage_without_olm/lcov.info -o merged.info
           genhtml merged.info -o merged
           echo $(lcov --summary merged.info | grep 'lines......:') >> $GITHUB_STEP_SUMMARY
-      - uses: actions/upload-artifact@v4
+      - name: Codecov - Upload coverage
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          files: ./merged.info, ./coverage/lcov.info, ./coverage_without_olm/lcov.info
+      - uses: actions/upload-artifact@v7
         with:
           name: merged
           path: merged/
           retention-days: 1
 
-  review_app_coverage:
-    if: github.event_name == 'pull_request'
-    needs: [merge_converage]
-    secrets: inherit
-    uses: famedly/frontend-ci-templates/.github/workflows/review-app.yml@main
-    with:
-      projectname: "matrix-dart-sdk-coverage"
-      pr: ${{ github.event.pull_request.number }}
-      environment: "review"
-      artifact-name: "merged"
-
   dart_web_compatible:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
-      - uses: subosito/flutter-action@48cafc24713cca54bbe03cdc3a423187d413aafa
+      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
-          flutter-version: ${{ env.flutter_version }}
-          cache: true
+          sdk: ${{ env.dart_version }}
       - name: Ensure SDK compiles on web
         run: |
           pushd web_test
@@ -117,10 +142,11 @@ jobs:
 
   database_web_tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       NO_OLM: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -134,7 +160,7 @@ jobs:
   pub-dev-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -143,3 +169,18 @@ jobs:
         run: |
           dart pub get
           dart pub publish --dry-run
+
+  # Call the publish workflow only when all tests pass and this is a tag push
+  call_publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      [
+        e2ee_test,
+        dart_web_compatible,
+        database_web_tests,
+        pub-dev-dry-run,
+      ]
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/publish.yml

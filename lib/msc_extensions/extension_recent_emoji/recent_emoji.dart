@@ -56,6 +56,9 @@ extension RecentEmojiExtension on Client {
     if (userID == null) return;
     final content = List.from(data.entries.map((e) => [e.key, e.value]));
     return setAccountData(
-        userID!, 'io.element.recent_emoji', {'recent_emoji': content});
+      userID!,
+      'io.element.recent_emoji',
+      {'recent_emoji': content},
+    );
   }
 }

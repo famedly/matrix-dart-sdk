@@ -60,11 +60,12 @@ class RequestedKeyInfo {
   String sessionId;
   String senderKey;
 
-  RequestedKeyInfo(
-      {required this.algorithm,
-      required this.roomId,
-      required this.sessionId,
-      required this.senderKey});
+  RequestedKeyInfo({
+    required this.algorithm,
+    required this.roomId,
+    required this.sessionId,
+    required this.senderKey,
+  });
 
   RequestedKeyInfo.fromJson(Map<String, Object?> json)
       : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',

@@ -16,8 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
@@ -33,8 +33,11 @@ void main() {
     final now = DateTime.now();
 
     setUpAll(() async {
-      await olm.init();
-      olm.get_library_version();
+      await vod.init(
+        wasmPath: './pkg/',
+        libraryPath: './rust/target/debug/',
+      );
+
       client = await getClient();
       room = client.getRoomById(roomId)!;
     });
@@ -61,7 +64,7 @@ void main() {
         senderId: client.userID!,
       );
       final decryptedEvent =
-          await client.encryption!.decryptRoomEvent(roomId, encryptedEvent);
+          await client.encryption!.decryptRoomEvent(encryptedEvent);
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
@@ -80,7 +83,7 @@ void main() {
         senderId: client.userID!,
       );
       final decryptedEvent =
-          await client.encryption!.decryptRoomEvent(roomId, encryptedEvent);
+          await client.encryption!.decryptRoomEvent(encryptedEvent);
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
@@ -98,12 +101,11 @@ void main() {
         senderId: '@alice:example.com',
       );
       final decryptedEvent =
-          await client.encryption!.decryptRoomEvent(roomId, encryptedEvent);
+          await client.encryption!.decryptRoomEvent(encryptedEvent);
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
-      await client.encryption!
-          .decryptRoomEvent(roomId, encryptedEvent, store: true);
+      await client.encryption!.decryptRoomEvent(encryptedEvent, store: true);
     });
 
     test('dispose client', () async {

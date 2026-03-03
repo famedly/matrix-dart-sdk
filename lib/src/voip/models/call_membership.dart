@@ -9,14 +9,19 @@ class FamedlyCallMemberEvent {
     return {'memberships': memberships.map((e) => e.toJson()).toList()};
   }
 
-  factory FamedlyCallMemberEvent.fromJson(Event event) {
+  factory FamedlyCallMemberEvent.fromJson(Event event, VoIP voip) {
     final List<CallMembership> callMemberships = [];
     final memberships = event.content.tryGetList('memberships');
     if (memberships != null && memberships.isNotEmpty) {
       for (final mem in memberships) {
         if (isValidMemEvent(mem)) {
-          final callMem =
-              CallMembership.fromJson(mem, event.senderId, event.room.id);
+          final callMem = CallMembership.fromJson(
+            mem,
+            event.senderId,
+            event.room.id,
+            event.eventId,
+            voip,
+          );
           if (callMem != null) callMemberships.add(callMem);
         }
       }
@@ -25,6 +30,31 @@ class FamedlyCallMemberEvent {
   }
 }
 
+/// userId - The userId of the member
+///
+/// callId - The callId the member is a part of, usually an empty string
+///
+/// application, scope - something you can narrow down the calls with, might be
+/// removed soon
+///
+/// backend - The CallBackend, either mesh or livekit
+///
+/// deviceId - The deviceId of the member
+///
+/// eventId - The eventId in matrix for this call membership
+/// not always present because we do not have it when we are just sending
+/// the event
+///
+/// expiresTs - Timestamp at which this membership event will be considered expired
+///
+/// membershipId - A cachebuster for state events, usually is reset every time a client
+/// loads
+///
+/// feeds - Feeds from mesh calls, is not used for livekit calls
+///
+/// voip - The voip parent class for using timeouts probably
+///
+/// roomId - The roomId for the call
 class CallMembership {
   final String userId;
   final String callId;
@@ -32,10 +62,11 @@ class CallMembership {
   final String? scope;
   final CallBackend backend;
   final String deviceId;
+  final String? eventId;
   final int expiresTs;
   final String membershipId;
   final List? feeds;
-
+  final VoIP voip;
   final String roomId;
 
   CallMembership({
@@ -43,9 +74,11 @@ class CallMembership {
     required this.callId,
     required this.backend,
     required this.deviceId,
+    this.eventId,
     required this.expiresTs,
     required this.roomId,
     required this.membershipId,
+    required this.voip,
     this.application = 'm.call',
     this.scope = 'm.room',
     this.feeds,
@@ -59,13 +92,18 @@ class CallMembership {
       'foci_active': [backend.toJson()],
       'device_id': deviceId,
       'expires_ts': expiresTs,
-      'expires': 7200000, // element compatibiltiy remove asap
       'membershipID': membershipId, // sessionId
       if (feeds != null) 'feeds': feeds,
     };
   }
 
-  static CallMembership? fromJson(Map json, String userId, String roomId) {
+  static CallMembership? fromJson(
+    Map json,
+    String userId,
+    String roomId,
+    String? eventId,
+    VoIP voip,
+  ) {
     try {
       return CallMembership(
         userId: userId,
@@ -77,10 +115,12 @@ class CallMembership {
             .map((e) => CallBackend.fromJson(e))
             .first,
         deviceId: json['device_id'],
+        eventId: eventId,
         expiresTs: json['expires_ts'],
         membershipId:
             json['membershipID'] ?? 'someone_forgot_to_set_the_membershipID',
         feeds: json['feeds'],
+        voip: voip,
       );
     } catch (e, s) {
       Logs().e('[VOIP] call membership parsing failed. $json', e, s);
@@ -100,6 +140,7 @@ class CallMembership {
           scope == other.scope &&
           backend.type == other.backend.type &&
           deviceId == other.deviceId &&
+          eventId == other.eventId &&
           membershipId == other.membershipId;
 
   @override
@@ -111,6 +152,7 @@ class CallMembership {
         scope.hashCode,
         backend.type.hashCode,
         deviceId.hashCode,
+        eventId.hashCode,
         membershipId.hashCode,
       );
 
@@ -120,6 +162,11 @@ class CallMembership {
   bool get isExpired =>
       expiresTs <
       DateTime.now()
-          .subtract(CallTimeouts.expireTsBumpDuration)
+          .subtract(voip.timeouts!.expireTsBumpDuration)
           .millisecondsSinceEpoch;
+
+  @override
+  String toString() {
+    return 'CallMembership(userId: $userId, callId: $callId, application: $application, scope: $scope, backend: $backend, deviceId: $deviceId, eventId: $eventId, expiresTs: $expiresTs, membershipId: $membershipId, feeds: $feeds, voip: $voip, roomId: $roomId)';
+  }
 }

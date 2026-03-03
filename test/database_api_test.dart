@@ -36,11 +36,7 @@ String createLargeString(String character, int desiredSize) {
 }
 
 void main() {
-  final databaseBuilders = {
-    'Matrix SDK Database': getMatrixSdkDatabase,
-    'Hive Database': getHiveDatabase,
-    'Hive Collections Database': getHiveCollectionsDatabase,
-  };
+  final databaseBuilders = {'Matrix SDK Database': getMatrixSdkDatabase};
 
   for (final databaseBuilder in databaseBuilders.entries) {
     group('Test ${databaseBuilder.key}', tags: 'olm', () {
@@ -48,7 +44,7 @@ void main() {
       late int toDeviceQueueIndex;
 
       test('Setup', () async {
-        database = await databaseBuilder.value(null);
+        database = await databaseBuilder.value();
       });
       test('transaction', () async {
         var counter = 0;
@@ -78,11 +74,21 @@ void main() {
         final toDeviceQueue = await database.getToDeviceEventQueue();
         expect(toDeviceQueue.isEmpty, true);
       });
-      test('storeFile', () async {
+      test('storeFile and deleteFile', () async {
         await database.storeFile(
-            Uri.parse('mxc://test'), Uint8List.fromList([0]), 0);
+          Uri.parse('mxc://test'),
+          Uint8List.fromList([0]),
+          0,
+        );
         final file = await database.getFile(Uri.parse('mxc://test'));
         expect(file != null, database.supportsFileStoring);
+
+        final result = await database.deleteFile(Uri.parse('mxc://test'));
+        expect(result, database.supportsFileStoring);
+        if (result) {
+          final file = await database.getFile(Uri.parse('mxc://test'));
+          expect(file, null);
+        }
       });
       test('getFile', () async {
         await database.getFile(Uri.parse('mxc://test'));
@@ -99,29 +105,86 @@ void main() {
           'limited_timeline': false,
           'membership': Membership.join,
         });
-        final client = Client('testclient');
+        final client = Client(
+          'testclient',
+          database: await getMatrixSdkDatabase(),
+        );
         await database.storeRoomUpdate('!testroom', roomUpdate, null, client);
         final rooms = await database.getRoomList(client);
         expect(rooms.single.id, '!testroom');
       });
-      test('getRoomList', () async {
-        final room =
-            await database.getSingleRoom(Client('testclient'), '!testroom');
+      test('getSingleRoom', () async {
+        final room = await database.getSingleRoom(
+          Client(
+            'testclient',
+            database: await getMatrixSdkDatabase(),
+          ),
+          '!testroom',
+        );
         expect(room?.id, '!testroom');
       });
+      test('storeLatestReceiptState', () async {
+        await database.storeLatestReceiptState(
+          '!testroom',
+          LatestReceiptState(
+            global: LatestReceiptStateForTimeline(
+              latestOwnReceipt: LatestReceiptStateData(
+                '\$1234',
+                DateTime.now().millisecondsSinceEpoch,
+              ),
+              ownPrivate: null,
+              ownPublic: null,
+              otherUsers: {},
+            ),
+          ),
+        );
+        final room = await database.getSingleRoom(
+          Client(
+            'testclient',
+            database: await getMatrixSdkDatabase(),
+          ),
+          '!testroom',
+        );
+        expect(room?.id, '!testroom');
+        expect(room!.receiptState.global.latestOwnReceipt!.eventId, '\$1234');
+        final rooms = await database.getRoomList(
+          Client(
+            'testclient',
+            database: await getMatrixSdkDatabase(),
+          ),
+        );
+        expect(rooms.single.id, '!testroom');
+        expect(
+          rooms.single.receiptState.global.latestOwnReceipt!.eventId,
+          '\$1234',
+        );
+      });
       test('getRoomList', () async {
-        final list = await database.getRoomList(Client('testclient'));
+        final list = await database.getRoomList(
+          Client(
+            'testclient',
+            database: await getMatrixSdkDatabase(),
+          ),
+        );
         expect(list.single.id, '!testroom');
       });
       test('setRoomPrevBatch', () async {
-        final client = Client('testclient');
+        final client = Client(
+          'testclient',
+          database: await getMatrixSdkDatabase(),
+        );
         await database.setRoomPrevBatch('1234', '!testroom', client);
         final rooms = await database.getRoomList(client);
         expect(rooms.single.prev_batch, '1234');
       });
       test('forgetRoom', () async {
         await database.forgetRoom('!testroom');
-        final rooms = await database.getRoomList(Client('testclient'));
+        final rooms = await database.getRoomList(
+          Client(
+            'testclient',
+            database: await getMatrixSdkDatabase(),
+          ),
+        );
         expect(rooms.isEmpty, true);
       });
       test('getClient', () async {
@@ -140,6 +203,7 @@ void main() {
           'deviceName',
           'prevBatch',
           'olmAccount',
+          'abcd1234',
         );
 
         final client = await database.getClient('name');
@@ -160,6 +224,7 @@ void main() {
           'deviceName',
           'prevBatch',
           'olmAccount',
+          'abcd1234',
         );
         final client = await database.getClient('name');
         expect(client?['token'], 'token_different');
@@ -182,21 +247,23 @@ void main() {
         await database.getAccountData();
       });
       test('storeAccountData', () async {
-        await database.storeAccountData('m.test', '{"foo":"bar"}');
+        await database.storeAccountData('m.test', {'foo': 'bar'});
         final events = await database.getAccountData();
         expect(events.values.single.type, 'm.test');
 
-        await database.storeAccountData('m.abc+de', '{"foo":"bar"}');
+        await database.storeAccountData('m.abc+de', {'foo': 'bar'});
         final events2 = await database.getAccountData();
         expect(
-            events2.values.any((element) => element.type == 'm.abc+de'), true);
+          events2.values.any((element) => element.type == 'm.abc+de'),
+          true,
+        );
       });
       test('Database can write and read 5MB data', () async {
-        final hugeDataObject = {'foo': createLargeString('A', 5 * 1024 * 1024)};
+        final hugeDataObject = {'foo': createLargeString('A', 5 * 1000 * 1000)};
 
         await database.storeAccountData(
           'm.huge_data_test',
-          jsonEncode(hugeDataObject),
+          hugeDataObject,
         );
 
         final events = await database.getAccountData();
@@ -208,32 +275,40 @@ void main() {
       });
       test('storeEventUpdate', () async {
         await database.storeEventUpdate(
-            EventUpdate(
-              roomID: '!testroom:example.com',
-              type: EventUpdateType.timeline,
-              content: {
-                'type': EventTypes.Message,
-                'content': {
-                  'body': '* edit 3',
+          '!testroom:example.com',
+          MatrixEvent.fromJson(
+            {
+              'type': EventTypes.Message,
+              'content': {
+                'body': '* edit 3',
+                'msgtype': 'm.text',
+                'm.new_content': {
+                  'body': 'edit 3',
                   'msgtype': 'm.text',
-                  'm.new_content': {
-                    'body': 'edit 3',
-                    'msgtype': 'm.text',
-                  },
-                  'm.relates_to': {
-                    'event_id': '\$source',
-                    'rel_type': RelationshipTypes.edit,
-                  },
                 },
-                'event_id': '\$event:example.com',
-                'sender': '@bob:example.org',
+                'm.relates_to': {
+                  'event_id': '\$source',
+                  'rel_type': RelationshipTypes.edit,
+                },
               },
-            ),
-            Client('testclient'));
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+              'event_id': '\$event:example.com',
+              'sender': '@bob:example.org',
+            },
+          ),
+          EventUpdateType.timeline,
+          Client(
+            'testclient',
+            database: await getMatrixSdkDatabase(),
+          ),
+        );
       });
       test('storeEventUpdate (state)', () async {
         final roomid = '!testrooma:example.com';
-        final client = Client('testclient');
+        final client = Client(
+          'testclient',
+          database: await getMatrixSdkDatabase(),
+        );
 
         await database.storeRoomUpdate(
           roomid,
@@ -242,11 +317,18 @@ void main() {
           client,
         );
 
+        await database.storeRoomAccountData(
+          roomid,
+          BasicEvent(
+            content: {'foo': 'bar'},
+            type: 'm.test',
+          ),
+        );
+
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.timeline,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'start',
@@ -254,8 +336,10 @@ void main() {
               'event_id': '\$eventstart:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.timeline,
           client,
         );
 
@@ -265,11 +349,12 @@ void main() {
 
         expect(room?.name, 'start');
 
+        expect(room?.roomAccountData['m.test']?.content, {'foo': 'bar'});
+
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.timeline,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update',
@@ -277,8 +362,10 @@ void main() {
               'event_id': '\$eventupdate:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.timeline,
           client,
         );
 
@@ -287,10 +374,9 @@ void main() {
         expect(room?.name, 'update');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.state,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update2',
@@ -298,8 +384,10 @@ void main() {
               'event_id': '\$eventupdate2:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.state,
           client,
         );
 
@@ -308,10 +396,9 @@ void main() {
         expect(room?.name, 'update2');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.inviteState,
-            content: {
+          roomid,
+          StrippedStateEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'update3',
@@ -321,6 +408,7 @@ void main() {
               'state_key': '',
             },
           ),
+          EventUpdateType.inviteState,
           client,
         );
 
@@ -329,10 +417,9 @@ void main() {
         expect(room?.name, 'update3');
 
         await database.storeEventUpdate(
-          EventUpdate(
-            roomID: roomid,
-            type: EventUpdateType.history,
-            content: {
+          roomid,
+          MatrixEvent.fromJson(
+            {
               'type': EventTypes.RoomName,
               'content': {
                 'name': 'notupdate',
@@ -340,8 +427,10 @@ void main() {
               'event_id': '\$eventnotupdate:example.com',
               'sender': '@bob:example.org',
               'state_key': '',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             },
           ),
+          EventUpdateType.history,
           client,
         );
 
@@ -350,31 +439,70 @@ void main() {
         expect(room?.name, 'update3');
       });
       test('getEventById', () async {
-        final event = await database.getEventById('\$event:example.com',
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+        final event = await database.getEventById(
+          '\$event:example.com',
+          Room(
+            id: '!testroom:example.com',
+            client: Client(
+              'testclient',
+              database: await getMatrixSdkDatabase(),
+            ),
+          ),
+        );
         expect(event?.type, EventTypes.Message);
       });
       test('getEventList', () async {
         final events = await database.getEventList(
-          Room(id: '!testroom:example.com', client: Client('testclient')),
+          Room(
+            id: '!testroom:example.com',
+            client: Client(
+              'testclient',
+              database: await getMatrixSdkDatabase(),
+            ),
+          ),
         );
         expect(events.single.type, EventTypes.Message);
       });
       test('getUser', () async {
-        final user = await database.getUser('@bob:example.org',
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+        final user = await database.getUser(
+          '@bob:example.org',
+          Room(
+            id: '!testroom:example.com',
+            client: Client(
+              'testclient',
+              database: await getMatrixSdkDatabase(),
+            ),
+          ),
+        );
         expect(user, null);
       });
       test('getUsers', () async {
         final users = await database.getUsers(
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+          Room(
+            id: '!testroom:example.com',
+            client: Client(
+              'testclient',
+              database: await getMatrixSdkDatabase(),
+            ),
+          ),
+        );
         expect(users.isEmpty, true);
       });
       test('removeEvent', () async {
         await database.removeEvent(
-            '\$event:example.com', '!testroom:example.com');
-        final event = await database.getEventById('\$event:example.com',
-            Room(id: '!testroom:example.com', client: Client('testclient')));
+          '\$event:example.com',
+          '!testroom:example.com',
+        );
+        final event = await database.getEventById(
+          '\$event:example.com',
+          Room(
+            id: '!testroom:example.com',
+            client: Client(
+              'testclient',
+              database: await getMatrixSdkDatabase(),
+            ),
+          ),
+        );
         expect(event, null);
       });
       test('getAllInboundGroupSessions', () async {
@@ -383,7 +511,9 @@ void main() {
       });
       test('getInboundGroupSession', () async {
         await database.getInboundGroupSession(
-            '!testroom:example.com', 'sessionId');
+          '!testroom:example.com',
+          'sessionId',
+        );
       });
       test('getInboundGroupSessionsToUpload', () async {
         await database.getInboundGroupSessionsToUpload();
@@ -407,7 +537,9 @@ void main() {
       });
       test('markInboundGroupSessionAsUploaded', () async {
         await database.markInboundGroupSessionAsUploaded(
-            '!testroom:example.com', 'sessionId');
+          '!testroom:example.com',
+          'sessionId',
+        );
       });
       test('markInboundGroupSessionsAsNeedingUpload', () async {
         await database.markInboundGroupSessionsAsNeedingUpload();
@@ -469,15 +601,15 @@ void main() {
                 'identity_key': 'identityKey',
                 'pickle': 'pickle',
                 'session_id': 'sessionId',
-                'last_received': 0
+                'last_received': 0,
               },
               'sessionId2': {
                 'identity_key': 'identityKey',
                 'pickle': 'pickle',
                 'session_id': 'sessionId2',
-                'last_received': 0
-              }
-            }
+                'last_received': 0,
+              },
+            },
           },
         );
       });
@@ -531,12 +663,23 @@ void main() {
       test('getUnimportantRoomEventStatesForRoom', () async {
         final events = await database.getUnimportantRoomEventStatesForRoom(
           ['events'],
-          Room(id: '!mep', client: Client('testclient')),
+          Room(
+            id: '!mep',
+            client: Client(
+              'testclient',
+              database: await getMatrixSdkDatabase(),
+            ),
+          ),
         );
         expect(events.isEmpty, true);
       });
       test('getUserDeviceKeys', () async {
-        await database.getUserDeviceKeys(Client('testclient'));
+        await database.getUserDeviceKeys(
+          Client(
+            'testclient',
+            database: await getMatrixSdkDatabase(),
+          ),
+        );
       });
       test('storeUserCrossSigningKey', () async {
         await database.storeUserCrossSigningKey(
@@ -572,6 +715,20 @@ void main() {
           '@alice:example.com',
           true,
         );
+      });
+      test('storeUserDeviceKeysInfo', () async {
+        var cache = await database.getCustomCacheObject('test');
+        expect(cache, null);
+        await database.cacheCustomObject(
+          'test',
+          {'foo': 'bar', 'num': 42},
+        );
+        cache = await database.getCustomCacheObject('test');
+        expect(cache!.content, {'foo': 'bar', 'num': 42});
+
+        await database.clearCache();
+        cache = await database.getCustomCacheObject('test');
+        expect(cache, null);
       });
       test('storeUserDeviceKey', () async {
         await database.storeUserDeviceKey(
@@ -626,26 +783,21 @@ void main() {
             '@alice:example.com',
             CachedProfileInformation.fromProfile(
               ProfileInformation(
-                  avatarUrl: Uri.parse('mxc://test'), displayname: 'Alice M'),
+                avatarUrl: Uri.parse('mxc://test'),
+                displayname: 'Alice M',
+              ),
               outdated: false,
               updated: DateTime.now(),
             ),
           );
-          // ignore: deprecated_member_use_from_same_package
-          if (database is! HiveCollectionsDatabase &&
-              // ignore: deprecated_member_use_from_same_package
-              database is! FamedlySdkHiveDatabase) {
-            final profile2 =
-                await database.getUserProfile('@alice:example.com');
-            expect(profile2?.displayname, 'Alice M');
-            expect(profile2?.outdated, false);
-            await database.markUserProfileAsOutdated('@alice:example.com');
+          final profile2 = await database.getUserProfile('@alice:example.com');
+          expect(profile2?.displayname, 'Alice M');
+          expect(profile2?.outdated, false);
+          await database.markUserProfileAsOutdated('@alice:example.com');
 
-            final profile3 =
-                await database.getUserProfile('@alice:example.com');
-            expect(profile3?.displayname, 'Alice M');
-            expect(profile3?.outdated, true);
-          }
+          final profile3 = await database.getUserProfile('@alice:example.com');
+          expect(profile3?.displayname, 'Alice M');
+          expect(profile3?.outdated, true);
         },
       );
 
@@ -663,15 +815,15 @@ void main() {
         await database.close();
       });
       test('Delete', () async {
-        final database = await getMatrixSdkDatabase(null);
+        final database = await getMatrixSdkDatabase();
         await database.storeAccountData(
           'm.test.data',
-          jsonEncode({'foo': 'bar'}),
+          {'foo': 'bar'},
         );
         await database.delete();
 
         // Check if previously stored data is gone:
-        final reopenedDatabase = await getMatrixSdkDatabase(null);
+        final reopenedDatabase = await getMatrixSdkDatabase();
         final dump = await reopenedDatabase.getAccountData();
         expect(dump.isEmpty, true);
       });

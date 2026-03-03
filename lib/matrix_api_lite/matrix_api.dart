@@ -47,12 +47,21 @@ class MatrixApi extends Api {
 
   @override
   Never unexpectedResponse(http.BaseResponse response, Uint8List body) {
-    if (response.statusCode >= 400 && response.statusCode < 500) {
-      final resp = json.decode(utf8.decode(body));
-      if (resp is Map<String, Object?>) {
-        throw MatrixException.fromJson(resp);
-      }
+    MatrixException? matrixException;
+    try {
+      matrixException =
+          MatrixException.fromJson(json.decode(utf8.decode(body)));
+    } catch (_) {} // Is not a MatrixException!
+
+    // Throw MatrixException if response contains 'errcode' (error) or
+    // 'session'/'flows' (UIA challenge).
+    if (matrixException != null &&
+        (matrixException.raw.containsKey('errcode') ||
+            matrixException.raw.containsKey('session') ||
+            matrixException.raw.containsKey('flows'))) {
+      throw matrixException;
     }
+
     super.unexpectedResponse(response, body);
   }
 
@@ -184,6 +193,17 @@ class MatrixApi extends Api {
     return;
   }
 
+  /// Variant of updateDevice operation that deletes the device displayname by
+  /// setting `display_name: null`.
+  Future<void> deleteDeviceDisplayName(String deviceId) async {
+    await request(
+      RequestType.PUT,
+      '/client/v3/devices/${Uri.encodeComponent(deviceId)}',
+      data: {'display_name': null},
+    );
+    return;
+  }
+
   /// This API provides credentials for the client to use when initiating
   /// calls.
   @override
@@ -202,19 +222,29 @@ class MatrixApi extends Api {
 
   @Deprecated('Use [deleteRoomKeyBySessionId] instead')
   Future<RoomKeysUpdateResponse> deleteRoomKeysBySessionId(
-      String roomId, String sessionId, String version) async {
+    String roomId,
+    String sessionId,
+    String version,
+  ) async {
     return deleteRoomKeyBySessionId(roomId, sessionId, version);
   }
 
   @Deprecated('Use [deleteRoomKeyBySessionId] instead')
-  Future<RoomKeysUpdateResponse> putRoomKeysBySessionId(String roomId,
-      String sessionId, String version, KeyBackupData data) async {
+  Future<RoomKeysUpdateResponse> putRoomKeysBySessionId(
+    String roomId,
+    String sessionId,
+    String version,
+    KeyBackupData data,
+  ) async {
     return putRoomKeyBySessionId(roomId, sessionId, version, data);
   }
 
   @Deprecated('Use [getRoomKeyBySessionId] instead')
   Future<KeyBackupData> getRoomKeysBySessionId(
-      String roomId, String sessionId, String version) async {
+    String roomId,
+    String sessionId,
+    String version,
+  ) async {
     return getRoomKeyBySessionId(roomId, sessionId, version);
   }
 }
@@ -223,3 +253,9 @@ class EventTooLarge implements Exception {
   int maxSize, actualSize;
   EventTooLarge(this.maxSize, this.actualSize);
 }
+
+@Deprecated('Use PublishedRoomsChunk instead')
+typedef PublicRoomsChunk = PublishedRoomsChunk;
+
+@Deprecated('Use SpaceRoomsChunk\$1 or SpaceRoomsChunk\$2 instead')
+typedef SpaceRoomsChunk = SpaceRoomsChunk$2;

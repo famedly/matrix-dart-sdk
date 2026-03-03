@@ -40,7 +40,9 @@ class ForwardedRoomKeyContent extends RoomKeyContent {
         senderClaimedEd25519Key =
             json.tryGet('sender_claimed_ed25519_key', TryGet.required) ?? '',
         forwardingCurve25519KeyChain = json.tryGetList(
-                'forwarding_curve25519_key_chain', TryGet.required) ??
+              'forwarding_curve25519_key_chain',
+              TryGet.required,
+            ) ??
             [],
         super.fromJson();
 

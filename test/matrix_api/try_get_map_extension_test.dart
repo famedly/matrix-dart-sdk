@@ -35,12 +35,18 @@ void main() {
       expect(data.tryGet<int>('str'), null);
       expect(data.tryGet<int>('int'), 42);
       expect(data.tryGet<List>('list'), [2, 3, 4]);
-      expect(data.tryGet<Map<String, dynamic>>('map')?.tryGet<String>('beep'),
-          'boop');
-      expect(data.tryGet<Map<String, dynamic>>('map')?.tryGet<String>('meep'),
-          null);
-      expect(data.tryGet<Map<String, dynamic>>('pam')?.tryGet<String>('beep'),
-          null);
+      expect(
+        data.tryGet<Map<String, dynamic>>('map')?.tryGet<String>('beep'),
+        'boop',
+      );
+      expect(
+        data.tryGet<Map<String, dynamic>>('map')?.tryGet<String>('meep'),
+        null,
+      );
+      expect(
+        data.tryGet<Map<String, dynamic>>('pam')?.tryGet<String>('beep'),
+        null,
+      );
     });
   });
 }

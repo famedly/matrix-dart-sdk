@@ -10,7 +10,10 @@ enum E2EEKeyMode {
 
 abstract class EncryptionKeyProvider {
   Future<void> onSetEncryptionKey(
-      CallParticipant participant, Uint8List key, int index);
+    CallParticipant participant,
+    Uint8List key,
+    int index,
+  );
 
   Future<Uint8List> onRatchetKey(CallParticipant participant, int index);
 
@@ -42,11 +45,13 @@ class EncryptionKeysEventContent {
 
   factory EncryptionKeysEventContent.fromJson(Map<String, dynamic> json) =>
       EncryptionKeysEventContent(
-          (json['keys'] as List<dynamic>)
-              .map(
-                  (e) => EncryptionKeyEntry.fromJson(e as Map<String, dynamic>))
-              .toList(),
-          json['call_id'] as String);
+        (json['keys'] as List<dynamic>)
+            .map(
+              (e) => EncryptionKeyEntry.fromJson(e as Map<String, dynamic>),
+            )
+            .toList(),
+        json['call_id'] as String,
+      );
 
   Map<String, dynamic> toJson() => {
         'keys': keys.map((e) => e.toJson()).toList(),

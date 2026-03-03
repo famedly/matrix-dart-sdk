@@ -6,10 +6,12 @@ import 'package:matrix/matrix.dart';
 abstract class WebRTCDelegate {
   MediaDevices get mediaDevices;
   Future<RTCPeerConnection> createPeerConnection(
-      Map<String, dynamic> configuration,
-      [Map<String, dynamic> constraints = const {}]);
+    Map<String, dynamic> configuration, [
+    Map<String, dynamic> constraints = const {},
+  ]);
   Future<void> playRingtone();
   Future<void> stopRingtone();
+  Future<void> registerListeners(CallSession session);
   Future<void> handleNewCall(CallSession session);
   Future<void> handleCallEnded(CallSession session);
   Future<void> handleMissedCall(CallSession session);

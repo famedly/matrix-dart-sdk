@@ -115,8 +115,10 @@ class MatrixException implements Exception {
       ?.whereType<Map<String, Object?>>()
       .map((flow) => flow['stages'])
       .whereType<List<Object?>>()
-      .map((stages) =>
-          AuthenticationFlow(List<String>.from(stages.whereType<String>())))
+      .map(
+        (stages) =>
+            AuthenticationFlow(List<String>.from(stages.whereType<String>())),
+      )
       .toList();
 
   /// This section contains any information that the client will need to know in order to use a given type

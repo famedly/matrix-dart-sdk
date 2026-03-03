@@ -21,8 +21,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
-import 'package:olm/olm.dart' as olm;
 import 'package:typed_data/typed_data.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
@@ -145,7 +145,9 @@ List<String> _intersect(List<String>? a, List<dynamic>? b) =>
     (b == null || a == null) ? [] : a.where(b.contains).toList();
 
 List<String> _calculatePossibleMethods(
-    List<String> knownMethods, List<dynamic> payloadMethods) {
+  List<String> knownMethods,
+  List<dynamic> payloadMethods,
+) {
   final output = <String>[];
   final copyKnownMethods = List<String>.from(knownMethods);
   final copyPayloadMethods = List.from(payloadMethods);
@@ -193,7 +195,9 @@ List<int> _bytesToInt(Uint8List bytes, int totalBits) {
 }
 
 _KeyVerificationMethod _makeVerificationMethod(
-    String type, KeyVerification request) {
+  String type,
+  KeyVerification request,
+) {
   if (type == EventTypes.Sas) {
     return _KeyVerificationMethodSas(request: request);
   }
@@ -237,13 +241,13 @@ class KeyVerification {
   QRCode? qrCode;
   String? randomSharedSecretForQRCode;
   SignableKey? keyToVerify;
-  KeyVerification(
-      {required this.encryption,
-      this.room,
-      required this.userId,
-      String? deviceId,
-      this.onUpdate})
-      : _deviceId = deviceId,
+  KeyVerification({
+    required this.encryption,
+    this.room,
+    required this.userId,
+    String? deviceId,
+    this.onUpdate,
+  })  : _deviceId = deviceId,
         lastActivity = DateTime.now();
 
   void dispose() {
@@ -287,8 +291,10 @@ class KeyVerification {
   /// Once you get a ready event, i.e both sides are in a `askChoice` state,
   /// send either `m.reciprocate.v1` or `m.sas.v1` here. If you continue with
   /// qr, send the qrData you just scanned
-  Future<void> continueVerification(String type,
-      {Uint8List? qrDataRawBytes}) async {
+  Future<void> continueVerification(
+    String type, {
+    Uint8List? qrDataRawBytes,
+  }) async {
     bool qrChecksOut = false;
     if (possibleMethods.contains(type)) {
       if (qrDataRawBytes != null) {
@@ -307,7 +313,8 @@ class KeyVerification {
       }
     } else {
       Logs().e(
-          '[KeyVerification] tried to continue verification with a unknown method');
+        '[KeyVerification] tried to continue verification with a unknown method',
+      );
       await cancel('m.unknown_method');
     }
   }
@@ -356,8 +363,11 @@ class KeyVerification {
     return mode;
   }
 
-  Future<void> handlePayload(String type, Map<String, dynamic> payload,
-      [String? eventId]) async {
+  Future<void> handlePayload(
+    String type,
+    Map<String, dynamic> payload, [
+    String? eventId,
+  ]) async {
     if (isDone) {
       return; // no need to do anything with already canceled requests
     }
@@ -380,8 +390,10 @@ class KeyVerification {
               now.add(Duration(minutes: 5)).isBefore(verifyTime)) {
             // if the request is more than 20min in the past we just silently fail it
             // to not generate too many cancels
-            await cancel('m.timeout',
-                now.subtract(Duration(minutes: 20)).isAfter(verifyTime));
+            await cancel(
+              'm.timeout',
+              now.subtract(Duration(minutes: 20)).isAfter(verifyTime),
+            );
             return;
           }
 
@@ -397,7 +409,9 @@ class KeyVerification {
           oppositePossibleMethods = List<String>.from(payload['methods']);
           // verify it has a method we can use
           possibleMethods = _calculatePossibleMethods(
-              knownVerificationMethods, payload['methods']);
+            knownVerificationMethods,
+            payload['methods'],
+          );
           if (possibleMethods.isEmpty) {
             // reject it outright
             await cancel('m.unknown_method');
@@ -412,17 +426,22 @@ class KeyVerification {
             transactionId ??= eventId ?? payload['transaction_id'];
             // and broadcast the cancel to the other devices
             final devices = List<DeviceKeys>.from(
-                client.userDeviceKeys[userId]?.deviceKeys.values ??
-                    Iterable.empty());
+              client.userDeviceKeys[userId]?.deviceKeys.values ??
+                  Iterable.empty(),
+            );
             devices.removeWhere(
-                (d) => {deviceId, client.deviceID}.contains(d.deviceId));
+              (d) => {deviceId, client.deviceID}.contains(d.deviceId),
+            );
             final cancelPayload = <String, dynamic>{
               'reason': 'Another device accepted the request',
               'code': 'm.accepted',
             };
             makePayload(cancelPayload);
             await client.sendToDeviceEncrypted(
-                devices, EventTypes.KeyVerificationCancel, cancelPayload);
+              devices,
+              EventTypes.KeyVerificationCancel,
+              cancelPayload,
+            );
           }
           _deviceId ??= payload['from_device'];
 
@@ -437,7 +456,9 @@ class KeyVerification {
 
           oppositePossibleMethods = List<String>.from(payload['methods']);
           possibleMethods = _calculatePossibleMethods(
-              knownVerificationMethods, payload['methods']);
+            knownVerificationMethods,
+            payload['methods'],
+          );
           if (possibleMethods.isEmpty) {
             // reject it outright
             await cancel('m.unknown_method');
@@ -577,11 +598,12 @@ class KeyVerification {
     setState(KeyVerificationState.error);
   }
 
-  Future<void> openSSSS(
-      {String? passphrase,
-      String? recoveryKey,
-      String? keyOrPassphrase,
-      bool skip = false}) async {
+  Future<void> openSSSS({
+    String? passphrase,
+    String? recoveryKey,
+    String? keyOrPassphrase,
+    bool skip = false,
+  }) async {
     Future<void> next() async {
       if (_nextAction == 'request') {
         await sendRequest();
@@ -600,9 +622,10 @@ class KeyVerification {
     }
     final handle = encryption.ssss.open(EventTypes.CrossSigningUserSigning);
     await handle.unlock(
-        passphrase: passphrase,
-        recoveryKey: recoveryKey,
-        keyOrPassphrase: keyOrPassphrase);
+      passphrase: passphrase,
+      recoveryKey: recoveryKey,
+      keyOrPassphrase: keyOrPassphrase,
+    );
     await handle.maybeCacheAll();
     await next();
   }
@@ -611,7 +634,7 @@ class KeyVerification {
   Future<void> acceptVerification() async {
     if (!(await verifyLastStep([
       EventTypes.KeyVerificationRequest,
-      EventTypes.KeyVerificationStart
+      EventTypes.KeyVerificationStart,
     ]))) {
       return;
     }
@@ -633,7 +656,9 @@ class KeyVerification {
           // we are removing stuff only using the old possibleMethods should be ok here.
           final copyPossibleMethods = List<String>.from(possibleMethods);
           possibleMethods = _calculatePossibleMethods(
-              copyKnownVerificationMethods, copyPossibleMethods);
+            copyKnownVerificationMethods,
+            copyPossibleMethods,
+          );
         }
       }
       // we need to send a ready event
@@ -657,7 +682,7 @@ class KeyVerification {
     }
     if (!(await verifyLastStep([
       EventTypes.KeyVerificationRequest,
-      EventTypes.KeyVerificationStart
+      EventTypes.KeyVerificationStart,
     ]))) {
       return;
     }
@@ -722,18 +747,23 @@ class KeyVerification {
       // no need to request cache, we already have it
       return;
     }
-    // ignore: unawaited_futures
-    encryption.ssss
-        .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList());
+    unawaited(
+      encryption.ssss
+          .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList()),
+    );
     if (requestInterval.length <= i) {
       return;
     }
-    Timer(Duration(seconds: requestInterval[i]),
-        () => maybeRequestSSSSSecrets(i + 1));
+    Timer(
+      Duration(seconds: requestInterval[i]),
+      () => maybeRequestSSSSSecrets(i + 1),
+    );
   }
 
-  Future<void> verifyKeysSAS(Map<String, String> keys,
-      Future<bool> Function(String, SignableKey) verifier) async {
+  Future<void> verifyKeysSAS(
+    Map<String, String> keys,
+    Future<bool> Function(String, SignableKey) verifier,
+  ) async {
     _verifiedDevices = <SignableKey>[];
 
     final userDeviceKey = client.userDeviceKeys[userId];
@@ -759,7 +789,9 @@ class KeyVerification {
     final wasUnknownSession = client.isUnknownSession;
     for (final key in _verifiedDevices) {
       await key.setVerified(
-          true, false); // we don't want to sign the keys juuuust yet
+        true,
+        false,
+      ); // we don't want to sign the keys juuuust yet
       if (key is CrossSigningKey && key.usage.contains('master')) {
         verifiedMasterKey = true;
       }
@@ -859,7 +891,8 @@ class KeyVerification {
       return true;
     }
     Logs().e(
-        '[KeyVerificaton] lastStep mismatch cancelling, expected from ${checkLastStep.toString()} was ${lastStep.toString()}');
+      '[KeyVerificaton] lastStep mismatch cancelling, expected from ${checkLastStep.toString()} was ${lastStep.toString()}',
+    );
     await cancel('m.unexpected_message');
     return false;
   }
@@ -917,9 +950,12 @@ class KeyVerification {
           EventTypes.KeyVerificationRequest,
           EventTypes.KeyVerificationCancel,
         }.contains(type)) {
-          final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys.values
-              .where((deviceKey) => deviceKey.hasValidSignatureChain(
-                  verifiedByTheirMasterKey: true));
+          final deviceKeys =
+              client.userDeviceKeys[userId]?.deviceKeys.values.where(
+            (deviceKey) => deviceKey.hasValidSignatureChain(
+              verifiedByTheirMasterKey: true,
+            ),
+          );
 
           if (deviceKeys != null) {
             await client.sendToDeviceEncrypted(
@@ -930,14 +966,16 @@ class KeyVerification {
           }
         } else {
           Logs().e(
-              '[Key Verification] Tried to broadcast and un-broadcastable type: $type');
+            '[Key Verification] Tried to broadcast and un-broadcastable type: $type',
+          );
         }
       } else {
         if (client.userDeviceKeys[userId]?.deviceKeys[deviceId] != null) {
           await client.sendToDeviceEncrypted(
-              [client.userDeviceKeys[userId]!.deviceKeys[deviceId]!],
-              type,
-              payload);
+            [client.userDeviceKeys[userId]!.deviceKeys[deviceId]!],
+            type,
+            payload,
+          );
         } else {
           Logs().e('[Key Verification] Unknown device');
         }
@@ -982,7 +1020,8 @@ class KeyVerification {
     final otherUserMasterKey = otherUserKeys?.masterKey;
 
     final secondKey = encodeBase64Unpadded(
-        data.sublist(10 + encodedTxnLen + 32, 10 + encodedTxnLen + 32 + 32));
+      data.sublist(10 + encodedTxnLen + 32, 10 + encodedTxnLen + 32 + 32),
+    );
     final randomSharedSecret =
         encodeBase64Unpadded(data.sublist(10 + encodedTxnLen + 32 + 32));
 
@@ -991,7 +1030,8 @@ class KeyVerification {
         .contains(remoteQrMode)) {
       if (!(ownMasterKey?.verified ?? false)) {
         Logs().e(
-            '[KeyVerification] verifyQrData because you were in mode 0/2 and had untrusted msk');
+          '[KeyVerification] verifyQrData because you were in mode 0/2 and had untrusted msk',
+        );
         return false;
       }
     }
@@ -1199,7 +1239,10 @@ class QRCode {
 
 const knownKeyAgreementProtocols = ['curve25519-hkdf-sha256', 'curve25519'];
 const knownHashes = ['sha256'];
-const knownHashesAuthentificationCodes = ['hkdf-hmac-sha256'];
+const knownHashesAuthentificationCodes = [
+  'hkdf-hmac-sha256.v2',
+  'hkdf-hmac-sha256',
+];
 
 class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   _KeyVerificationMethodSas({required super.request});
@@ -1216,12 +1259,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   String? commitment;
   late String theirPublicKey;
   Map<String, dynamic>? macPayload;
-  olm.SAS? sas;
-
-  @override
-  void dispose() {
-    sas?.free();
-  }
+  vod.Sas? sas;
+  vod.EstablishedSas? establishedSas;
 
   List<String> get knownAuthentificationTypes {
     final types = <String>[];
@@ -1244,7 +1283,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
           if (!(await request.verifyLastStep([
             EventTypes.KeyVerificationReady,
             EventTypes.KeyVerificationRequest,
-            EventTypes.KeyVerificationStart
+            EventTypes.KeyVerificationStart,
           ]))) {
             return; // abort
           }
@@ -1257,7 +1296,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
         case EventTypes.KeyVerificationAccept:
           if (!(await request.verifyLastStep([
             EventTypes.KeyVerificationReady,
-            EventTypes.KeyVerificationRequest
+            EventTypes.KeyVerificationRequest,
           ]))) {
             return;
           }
@@ -1270,7 +1309,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
         case 'm.key.verification.key':
           if (!(await request.verifyLastStep([
             EventTypes.KeyVerificationAccept,
-            EventTypes.KeyVerificationStart
+            EventTypes.KeyVerificationStart,
           ]))) {
             return;
           }
@@ -1280,7 +1319,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
             await _sendKey();
           } else {
             // we already sent our key, time to verify the commitment being valid
-            if (!_validateCommitment()) {
+            if (await _validateCommitment() == false) {
               await request.cancel('m.mismatched_commitment');
               return;
             }
@@ -1338,7 +1377,9 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       return false;
     }
     final possibleKeyAgreementProtocols = _intersect(
-        knownKeyAgreementProtocols, payload['key_agreement_protocols']);
+      knownKeyAgreementProtocols,
+      payload['key_agreement_protocols'],
+    );
     if (possibleKeyAgreementProtocols.isEmpty) {
       return false;
     }
@@ -1349,14 +1390,19 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     }
     hash = possibleHashes.first;
     final possibleMessageAuthenticationCodes = _intersect(
-        knownHashesAuthentificationCodes,
-        payload['message_authentication_codes']);
+      knownHashesAuthentificationCodes,
+      payload['message_authentication_codes'],
+    );
     if (possibleMessageAuthenticationCodes.isEmpty) {
       return false;
     }
+
+    // intersect should make sure we choose v2 over the dep'd one
     messageAuthenticationCode = possibleMessageAuthenticationCodes.first;
     final possibleAuthenticationTypes = _intersect(
-        knownAuthentificationTypes, payload['short_authentication_string']);
+      knownAuthentificationTypes,
+      payload['short_authentication_string'],
+    );
     if (possibleAuthenticationTypes.isEmpty) {
       return false;
     }
@@ -1366,8 +1412,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   Future<void> _sendAccept() async {
-    final sas = this.sas = olm.SAS();
-    commitment = _makeCommitment(sas.get_pubkey(), startCanonicalJson);
+    final sas = this.sas = vod.Sas();
+    commitment = await _makeCommitment(sas.publicKey, startCanonicalJson);
     await request.send(EventTypes.KeyVerificationAccept, {
       'method': type,
       'key_agreement_protocol': keyAgreementProtocol,
@@ -1394,37 +1440,43 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     }
     messageAuthenticationCode = payload['message_authentication_code'];
     final possibleAuthenticationTypes = _intersect(
-        knownAuthentificationTypes, payload['short_authentication_string']);
+      knownAuthentificationTypes,
+      payload['short_authentication_string'],
+    );
     if (possibleAuthenticationTypes.isEmpty) {
       return false;
     }
     authenticationTypes = possibleAuthenticationTypes;
     commitment = payload['commitment'];
-    sas = olm.SAS();
+    sas = vod.Sas();
     return true;
   }
 
   Future<void> _sendKey() async {
     await request.send('m.key.verification.key', {
-      'key': sas!.get_pubkey(),
+      'key': sas!.publicKey,
     });
   }
 
   void _handleKey(Map<String, dynamic> payload) {
     theirPublicKey = payload['key'];
-    sas!.set_their_key(payload['key']);
+    final sas = this.sas;
+    if (sas == null || sas.disposed) {
+      throw Exception('SAS object is disposed');
+    }
+    establishedSas = sas.establishSasSecret(payload['key']);
   }
 
-  bool _validateCommitment() {
-    final checkCommitment = _makeCommitment(theirPublicKey, startCanonicalJson);
+  Future<bool> _validateCommitment() async {
+    final checkCommitment =
+        await _makeCommitment(theirPublicKey, startCanonicalJson);
     return commitment == checkCommitment;
   }
 
   Uint8List makeSas(int bytes) {
     var sasInfo = '';
     if (keyAgreementProtocol == 'curve25519-hkdf-sha256') {
-      final ourInfo =
-          '${client.userID}|${client.deviceID}|${sas!.get_pubkey()}|';
+      final ourInfo = '${client.userID}|${client.deviceID}|${sas!.publicKey}|';
       final theirInfo =
           '${request.userId}|${request.deviceId}|$theirPublicKey|';
       sasInfo =
@@ -1437,7 +1489,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     } else {
       throw Exception('Unknown key agreement protocol');
     }
-    return sas!.generate_bytes(sasInfo, bytes);
+    return establishedSas!.generateBytes(sasInfo, bytes);
   }
 
   Future<void> _sendMac() async {
@@ -1497,23 +1549,26 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     await request.verifyKeysSAS(mac, (String mac, SignableKey key) async {
       return mac ==
           _calculateMac(
-              key.ed25519Key!, '${baseInfo}ed25519:${key.identifier!}');
+            key.ed25519Key!,
+            '${baseInfo}ed25519:${key.identifier!}',
+          );
     });
   }
 
-  String _makeCommitment(String pubKey, String canonicalJson) {
+  Future<String> _makeCommitment(String pubKey, String canonicalJson) async {
     if (hash == 'sha256') {
-      final olmutil = olm.Utility();
-      final ret = olmutil.sha256(pubKey + canonicalJson);
-      olmutil.free();
-      return ret;
+      final bytes = utf8.encoder.convert(pubKey + canonicalJson);
+      final digest = vod.CryptoUtils.sha256(input: bytes);
+      return encodeBase64Unpadded(digest);
     }
     throw Exception('Unknown hash method');
   }
 
   String _calculateMac(String input, String info) {
-    if (messageAuthenticationCode == 'hkdf-hmac-sha256') {
-      return sas!.calculate_mac(input, info);
+    if (messageAuthenticationCode == 'hkdf-hmac-sha256.v2') {
+      return establishedSas!.calculateMac(input, info);
+    } else if (messageAuthenticationCode == 'hkdf-hmac-sha256') {
+      return establishedSas!.calculateMacDeprecated(input, info);
     } else {
       throw Exception('Unknown message authentification code');
     }

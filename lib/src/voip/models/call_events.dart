@@ -105,10 +105,11 @@ class SDPStreamPurpose {
   bool audio_muted;
   bool video_muted;
 
-  SDPStreamPurpose(
-      {required this.purpose,
-      this.audio_muted = false,
-      this.video_muted = false});
+  SDPStreamPurpose({
+    required this.purpose,
+    this.audio_muted = false,
+    this.video_muted = false,
+  });
   factory SDPStreamPurpose.fromJson(Map<String, dynamic> json) =>
       SDPStreamPurpose(
         audio_muted: json['audio_muted'] as bool? ?? false,
@@ -133,8 +134,11 @@ class SDPStreamMetadata {
   SDPStreamMetadata(this.sdpStreamMetadatas);
 
   factory SDPStreamMetadata.fromJson(Map<String, dynamic> json) =>
-      SDPStreamMetadata(json.map(
-          (key, value) => MapEntry(key, SDPStreamPurpose.fromJson(value))));
+      SDPStreamMetadata(
+        json.map(
+          (key, value) => MapEntry(key, SDPStreamPurpose.fromJson(value)),
+        ),
+      );
   Map<String, dynamic> toJson() =>
       sdpStreamMetadatas.map((key, value) => MapEntry(key, value.toJson()));
 }

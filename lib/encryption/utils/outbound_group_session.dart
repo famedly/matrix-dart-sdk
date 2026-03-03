@@ -18,8 +18,9 @@
 
 import 'dart:convert';
 
-import 'package:olm/olm.dart' as olm;
+import 'package:vodozemac/vodozemac.dart' as vod;
 
+import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/matrix.dart';
 
 class OutboundGroupSession {
@@ -30,16 +31,17 @@ class OutboundGroupSession {
   Map<String, Map<String, bool>> devices = {};
   // Default to a date, that would get this session rotated in any case to make handling easier
   DateTime creationTime = DateTime.fromMillisecondsSinceEpoch(0);
-  olm.OutboundGroupSession? outboundGroupSession;
-  int? get sentMessages => outboundGroupSession?.message_index();
+  vod.GroupSession? outboundGroupSession;
+  int? get sentMessages => outboundGroupSession?.messageIndex;
   bool get isValid => outboundGroupSession != null;
   final String key;
 
-  OutboundGroupSession(
-      {required this.devices,
-      required this.creationTime,
-      required this.outboundGroupSession,
-      required this.key});
+  OutboundGroupSession({
+    required this.devices,
+    required this.creationTime,
+    required this.outboundGroupSession,
+    required this.key,
+  });
 
   OutboundGroupSession.fromJson(Map<String, dynamic> dbEntry, this.key) {
     try {
@@ -49,22 +51,28 @@ class OutboundGroupSession {
     } catch (e) {
       // devices is bad (old data), so just not use this session
       Logs().i(
-          '[OutboundGroupSession] Session in database is old, not using it. $e');
+        '[OutboundGroupSession] Session in database is old, not using it. $e',
+      );
       return;
     }
-    outboundGroupSession = olm.OutboundGroupSession();
-    try {
-      outboundGroupSession!.unpickle(key, dbEntry['pickle']);
-      creationTime =
-          DateTime.fromMillisecondsSinceEpoch(dbEntry['creation_time']);
-    } catch (e, s) {
-      dispose();
-      Logs().e('[LibOlm] Unable to unpickle outboundGroupSession', e, s);
-    }
-  }
 
-  void dispose() {
-    outboundGroupSession?.free();
-    outboundGroupSession = null;
+    creationTime =
+        DateTime.fromMillisecondsSinceEpoch(dbEntry['creation_time']);
+
+    try {
+      outboundGroupSession = vod.GroupSession.fromPickleEncrypted(
+        pickleKey: key.toPickleKey(),
+        pickle: dbEntry['pickle'],
+      );
+    } catch (e, s) {
+      try {
+        outboundGroupSession = vod.GroupSession.fromOlmPickleEncrypted(
+          pickleKey: utf8.encode(key),
+          pickle: dbEntry['pickle'],
+        );
+      } catch (_) {
+        Logs().e('[Vodozemac] Unable to unpickle outboundGroupSession', e, s);
+      }
+    }
   }
 }

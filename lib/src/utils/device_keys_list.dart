@@ -20,7 +20,7 @@ import 'dart:convert';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart' show IterableExtension;
-import 'package:olm/olm.dart' as olm;
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
@@ -77,15 +77,42 @@ class DeviceKeysList {
     }
     if (userId != client.userID) {
       // in-room verification with someone else
-      final roomId = await client.startDirectChat(
-        userId,
-        enableEncryption: newDirectChatEnableEncryption,
-        initialState: newDirectChatInitialState,
-        waitForSync: false,
-      );
+      Room? room;
+      // we check if there's already a direct chat with the user
+      for (final directChatRoomId in client.directChats[userId] ?? []) {
+        final tempRoom = client.getRoomById(directChatRoomId);
+        if (tempRoom != null &&
+            // check if the room is a direct chat and has less than 2 members
+            // (including the invited users)
+            (tempRoom.summary.mInvitedMemberCount ?? 0) +
+                    (tempRoom.summary.mJoinedMemberCount ?? 1) <=
+                2) {
+          // Now we check if the users in the room are none other than the current
+          // user and the user we want to verify
+          final members = tempRoom.getParticipants([
+            Membership.invite,
+            Membership.join,
+          ]);
+          if (members.every((m) => {userId, client.userID}.contains(m.id))) {
+            // if so, we use that room
+            room = tempRoom;
+            break;
+          }
+        }
+      }
+      // if there's no direct chat that satisfies the conditions, we create a new one
+      if (room == null) {
+        final newRoomId = await client.startDirectChat(
+          userId,
+          enableEncryption: newDirectChatEnableEncryption,
+          initialState: newDirectChatInitialState,
+          waitForSync: false,
+          skipExistingChat: true, // to create a new room directly
+        );
+        room = client.getRoomById(newRoomId) ??
+            Room(id: newRoomId, client: client);
+      }
 
-      final room =
-          client.getRoomById(roomId) ?? Room(id: roomId, client: client);
       final request =
           KeyVerification(encryption: encryption, room: room, userId: userId);
       await request.start();
@@ -95,7 +122,10 @@ class DeviceKeysList {
     } else {
       // start verification with verified devices
       final request = KeyVerification(
-          encryption: encryption, userId: userId, deviceId: '*');
+        encryption: encryption,
+        userId: userId,
+        deviceId: '*',
+      );
       await request.start();
       encryption.keyVerificationManager.addRequest(request);
       return request;
@@ -103,11 +133,11 @@ class DeviceKeysList {
   }
 
   DeviceKeysList.fromDbJson(
-      Map<String, dynamic> dbEntry,
-      List<Map<String, dynamic>> childEntries,
-      List<Map<String, dynamic>> crossSigningEntries,
-      this.client)
-      : userId = dbEntry['user_id'] ?? '' {
+    Map<String, dynamic> dbEntry,
+    List<Map<String, dynamic>> childEntries,
+    List<Map<String, dynamic>> crossSigningEntries,
+    this.client,
+  ) : userId = dbEntry['user_id'] ?? '' {
     outdated = dbEntry['outdated'];
     deviceKeys = {};
     for (final childEntry in childEntries) {
@@ -160,7 +190,17 @@ abstract class SignableKey extends MatrixSignableKey {
 
     if (identifier == null || ed25519Key == null) return false;
 
-    return client.shareKeysWithUnverifiedDevices || verified;
+    switch (client.shareKeysWith) {
+      case ShareKeysWith.all:
+        return true;
+      case ShareKeysWith.crossVerifiedIfEnabled:
+        if (client.userDeviceKeys[userId]?.masterKey == null) return true;
+        return hasValidSignatureChain(verifiedByTheirMasterKey: true);
+      case ShareKeysWith.crossVerified:
+        return hasValidSignatureChain(verifiedByTheirMasterKey: true);
+      case ShareKeysWith.directlyVerifiedOnly:
+        return directVerified;
+    }
   }
 
   void setDirectVerified(bool isVerified) {
@@ -195,26 +235,22 @@ abstract class SignableKey extends MatrixSignableKey {
     return String.fromCharCodes(canonicalJson.encode(data));
   }
 
-  bool _verifySignature(String pubKey, String signature,
-      {bool isSignatureWithoutLibolmValid = false}) {
-    olm.Utility olmutil;
-    try {
-      olmutil = olm.Utility();
-    } catch (e) {
-      // if no libolm is present we land in this catch block, and return the default
-      // set if no libolm is there. Some signatures should be assumed-valid while others
-      // should be assumed-invalid
-      return isSignatureWithoutLibolmValid;
-    }
+  bool _verifySignature(
+    String pubKey,
+    String signature, {
+    bool isSignatureWithoutLibolmValid = false,
+  }) {
     var valid = false;
     try {
-      olmutil.ed25519_verify(pubKey, signingContent, signature);
+      vod.Ed25519PublicKey.fromBase64(pubKey).verify(
+        message: signingContent,
+        signature: vod.Ed25519Signature.fromBase64(signature),
+      );
       valid = true;
-    } catch (_) {
+    } catch (e) {
+      Logs().d('Invalid Ed25519 signature', e);
       // bad signature
       valid = false;
-    } finally {
-      olmutil.free();
     }
     return valid;
   }
@@ -313,10 +349,11 @@ abstract class SignableKey extends MatrixSignableKey {
         }
         // or else we just recurse into that key and check if it works out
         final haveChain = key.hasValidSignatureChain(
-            verifiedOnly: verifiedOnly,
-            visited: visited_,
-            onlyValidateUserIds: onlyValidateUserIds,
-            verifiedByTheirMasterKey: verifiedByTheirMasterKey);
+          verifiedOnly: verifiedOnly,
+          visited: visited_,
+          onlyValidateUserIds: onlyValidateUserIds,
+          verifiedByTheirMasterKey: verifiedByTheirMasterKey,
+        );
         if (haveChain) {
           return true;
         }
@@ -382,7 +419,7 @@ class CrossSigningKey extends SignableKey {
     }
     await super.setVerified(newVerified, sign);
     await client.database
-        ?.setVerifiedUserCrossSigningKey(newVerified, userId, publicKey!);
+        .setVerifiedUserCrossSigningKey(newVerified, userId, publicKey!);
   }
 
   @override
@@ -392,12 +429,13 @@ class CrossSigningKey extends SignableKey {
     }
     _blocked = newBlocked;
     await client.database
-        ?.setBlockedUserCrossSigningKey(newBlocked, userId, publicKey!);
+        .setBlockedUserCrossSigningKey(newBlocked, userId, publicKey!);
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(
-      MatrixCrossSigningKey key, Client client)
-      : super.fromJson(key.toJson().copy(), client) {
+    MatrixCrossSigningKey key,
+    Client client,
+  ) : super.fromJson(key.toJson().copy(), client) {
     final json = toJson();
     identifier = key.publicKey;
     usage = json['usage'].cast<String>();
@@ -445,8 +483,10 @@ class DeviceKeys extends SignableKey {
           // without libolm we still want to be able to add devices. In that case we ofc just can't
           // verify the signature
           _verifySignature(
-              ed25519Key!, signatures![userId]!['ed25519:$deviceId']!,
-              isSignatureWithoutLibolmValid: true));
+            ed25519Key!,
+            signatures![userId]!['ed25519:$deviceId']!,
+            isSignatureWithoutLibolmValid: true,
+          ));
 
   @override
   bool get blocked => super.blocked || !selfSigned;
@@ -466,7 +506,7 @@ class DeviceKeys extends SignableKey {
     }
     await super.setVerified(newVerified, sign);
     await client.database
-        ?.setVerifiedUserDeviceKey(newVerified, userId, deviceId!);
+        .setVerifiedUserDeviceKey(newVerified, userId, deviceId!);
   }
 
   @override
@@ -477,12 +517,14 @@ class DeviceKeys extends SignableKey {
     }
     _blocked = newBlocked;
     await client.database
-        ?.setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
+        .setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
   }
 
-  DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys keys, Client client,
-      [DateTime? lastActiveTs])
-      : super.fromJson(keys.toJson().copy(), client) {
+  DeviceKeys.fromMatrixDeviceKeys(
+    MatrixDeviceKeys keys,
+    Client client, [
+    DateTime? lastActiveTs,
+  ]) : super.fromJson(keys.toJson().copy(), client) {
     final json = toJson();
     identifier = keys.deviceId;
     algorithms = json['algorithms'].cast<String>();
@@ -518,7 +560,10 @@ class DeviceKeys extends SignableKey {
     }
 
     final request = KeyVerification(
-        encryption: encryption, userId: userId, deviceId: deviceId!);
+      encryption: encryption,
+      userId: userId,
+      deviceId: deviceId!,
+    );
 
     await request.start();
     encryption.keyVerificationManager.addRequest(request);

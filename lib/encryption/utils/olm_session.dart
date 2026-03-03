@@ -16,17 +16,20 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:olm/olm.dart' as olm;
+import 'dart:convert';
 
+import 'package:vodozemac/vodozemac.dart' as vod;
+
+import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/matrix.dart';
 
 class OlmSession {
   String identityKey;
   String? sessionId;
-  olm.Session? session;
+  vod.Session? session;
   DateTime? lastReceived;
   final String key;
-  String? get pickledSession => session?.pickle(key);
+  String? get pickledSession => session?.toPickleEncrypted(key.toPickleKey());
 
   bool get isValid => session != null;
 
@@ -38,23 +41,28 @@ class OlmSession {
     required this.lastReceived,
   });
 
-  OlmSession.fromJson(Map<String, dynamic> dbEntry, this.key)
-      : identityKey = dbEntry['identity_key'] ?? '' {
-    session = olm.Session();
+  OlmSession.fromJson(Map<String, Object?> dbEntry, this.key)
+      : identityKey = dbEntry.tryGet<String>('identity_key') ?? '' {
     try {
-      session!.unpickle(key, dbEntry['pickle']);
-      sessionId = dbEntry['session_id'];
-      lastReceived =
-          DateTime.fromMillisecondsSinceEpoch(dbEntry['last_received'] ?? 0);
-      assert(sessionId == session!.session_id());
+      try {
+        session = vod.Session.fromPickleEncrypted(
+          pickleKey: key.toPickleKey(),
+          pickle: dbEntry['pickle'] as String,
+        );
+      } catch (_) {
+        Logs().d('Unable to unpickle Olm session. Try LibOlm format.');
+        session = vod.Session.fromOlmPickleEncrypted(
+          pickleKey: utf8.encode(key),
+          pickle: dbEntry['pickle'] as String,
+        );
+      }
+      sessionId = dbEntry['session_id'] as String;
+      lastReceived = DateTime.fromMillisecondsSinceEpoch(
+        dbEntry.tryGet<int>('last_received') ?? 0,
+      );
+      assert(sessionId == session!.sessionId);
     } catch (e, s) {
-      Logs().e('[LibOlm] Could not unpickle olm session', e, s);
-      dispose();
+      Logs().e('[Vodozemac] Could not unpickle olm session', e, s);
     }
-  }
-
-  void dispose() {
-    session?.free();
-    session = null;
   }
 }

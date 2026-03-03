@@ -23,7 +23,7 @@ import 'dart:typed_data';
 
 import 'package:base58check/base58.dart';
 import 'package:collection/collection.dart';
-import 'package:crypto/crypto.dart';
+import 'package:vodozemac/vodozemac.dart';
 
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
@@ -68,27 +68,33 @@ class SSSS {
 
   // for testing
   Future<void> clearCache() async {
-    await client.database?.clearSSSSCache();
+    await client.database.clearSSSSCache();
     _cache.clear();
   }
 
   static DerivedKeys deriveKeys(Uint8List key, String name) {
     final zerosalt = Uint8List(8);
-    final prk = Hmac(sha256, zerosalt).convert(key);
+    final prk = CryptoUtils.hmac(key: zerosalt, input: key);
     final b = Uint8List(1);
     b[0] = 1;
-    final aesKey = Hmac(sha256, prk.bytes).convert(utf8.encode(name) + b);
+    final aesKey = CryptoUtils.hmac(key: prk, input: utf8.encode(name) + b);
     b[0] = 2;
-    final hmacKey =
-        Hmac(sha256, prk.bytes).convert(aesKey.bytes + utf8.encode(name) + b);
+    final hmacKey = CryptoUtils.hmac(
+      key: prk,
+      input: aesKey + utf8.encode(name) + b,
+    );
     return DerivedKeys(
-        aesKey: Uint8List.fromList(aesKey.bytes),
-        hmacKey: Uint8List.fromList(hmacKey.bytes));
+      aesKey: Uint8List.fromList(aesKey),
+      hmacKey: Uint8List.fromList(hmacKey),
+    );
   }
 
   static Future<EncryptedContent> encryptAes(
-      String data, Uint8List key, String name,
-      [String? ivStr]) async {
+    String data,
+    Uint8List key,
+    String name, [
+    String? ivStr,
+  ]) async {
     Uint8List iv;
     if (ivStr != null) {
       iv = base64decodeUnpadded(ivStr);
@@ -101,28 +107,36 @@ class SSSS {
     final keys = deriveKeys(key, name);
 
     final plain = Uint8List.fromList(utf8.encode(data));
-    final ciphertext = await uc.aesCtr.encrypt(plain, keys.aesKey, iv);
+    final ciphertext =
+        CryptoUtils.aesCtr(input: plain, key: keys.aesKey, iv: iv);
 
-    final hmac = Hmac(sha256, keys.hmacKey).convert(ciphertext);
+    final hmac = CryptoUtils.hmac(key: keys.hmacKey, input: ciphertext);
 
     return EncryptedContent(
-        iv: base64.encode(iv),
-        ciphertext: base64.encode(ciphertext),
-        mac: base64.encode(hmac.bytes));
+      iv: base64.encode(iv),
+      ciphertext: base64.encode(ciphertext),
+      mac: base64.encode(hmac),
+    );
   }
 
   static Future<String> decryptAes(
-      EncryptedContent data, Uint8List key, String name) async {
+    EncryptedContent data,
+    Uint8List key,
+    String name,
+  ) async {
     final keys = deriveKeys(key, name);
     final cipher = base64decodeUnpadded(data.ciphertext);
     final hmac = base64
-        .encode(Hmac(sha256, keys.hmacKey).convert(cipher).bytes)
+        .encode(CryptoUtils.hmac(key: keys.hmacKey, input: cipher))
         .replaceAll(RegExp(r'=+$'), '');
     if (hmac != data.mac.replaceAll(RegExp(r'=+$'), '')) {
       throw Exception('Bad MAC');
     }
-    final decipher = await uc.aesCtr
-        .encrypt(cipher, keys.aesKey, base64decodeUnpadded(data.iv));
+    final decipher = CryptoUtils.aesCtr(
+      input: cipher,
+      key: keys.aesKey,
+      iv: base64decodeUnpadded(data.iv),
+    );
     return String.fromCharCodes(decipher);
   }
 
@@ -144,8 +158,12 @@ class SSSS {
       throw InvalidPassphraseException('Incorrect length');
     }
 
-    return Uint8List.fromList(result.sublist(olmRecoveryKeyPrefix.length,
-        olmRecoveryKeyPrefix.length + ssssKeyLength));
+    return Uint8List.fromList(
+      result.sublist(
+        olmRecoveryKeyPrefix.length,
+        olmRecoveryKeyPrefix.length + ssssKeyLength,
+      ),
+    );
   }
 
   static String encodeRecoveryKey(Uint8List recoveryKey) {
@@ -160,7 +178,9 @@ class SSSS {
   }
 
   static Future<Uint8List> keyFromPassphrase(
-      String passphrase, PassphraseInfo info) async {
+    String passphrase,
+    PassphraseInfo info,
+  ) async {
     if (info.algorithm != AlgorithmTypes.pbkdf2) {
       throw InvalidPassphraseException('Unknown algorithm');
     }
@@ -170,12 +190,11 @@ class SSSS {
     if (info.salt == null) {
       throw InvalidPassphraseException('Passphrase info without salt');
     }
-    return await uc.pbkdf2(
-        Uint8List.fromList(utf8.encode(passphrase)),
-        Uint8List.fromList(utf8.encode(info.salt!)),
-        uc.sha512,
-        info.iterations!,
-        info.bits ?? 256);
+    return CryptoUtils.pbkdf2(
+      passphrase: Uint8List.fromList(utf8.encode(passphrase)),
+      salt: Uint8List.fromList(utf8.encode(info.salt!)),
+      iterations: info.iterations!,
+    );
   }
 
   void setValidator(String type, FutureOr<bool> Function(String) validator) {
@@ -209,7 +228,7 @@ class SSSS {
 
   /// Creates a new secret storage key, optional encrypts it with [passphrase]
   /// and stores it in the user's `accountData`.
-  Future<OpenSSSS> createKey([String? passphrase]) async {
+  Future<OpenSSSS> createKey([String? passphrase, String? name]) async {
     Uint8List privateKey;
     final content = SecretStorageKeyContent();
     if (passphrase != null) {
@@ -237,6 +256,7 @@ class SSSS {
     content.iv = encrypted.iv;
     content.mac = encrypted.mac;
     content.algorithm = AlgorithmTypes.secretStorageV1AesHmcSha2;
+    content.name = name;
 
     const keyidByteLength = 24;
 
@@ -252,7 +272,10 @@ class SSSS {
     // noooow we set the account data
 
     await client.setAccountData(
-        client.userID!, accountDataTypeKeyId, content.toJson());
+      client.userID!,
+      accountDataTypeKeyId,
+      content.toJson(),
+    );
 
     while (!client.accountData.containsKey(accountDataTypeKeyId)) {
       Logs().v('Waiting accountData to have $accountDataTypeKeyId');
@@ -283,10 +306,6 @@ class SSSS {
       client.accountData[type]?.content['encrypted'] is Map;
 
   Future<String?> getCached(String type) async {
-    if (client.database == null) {
-      return null;
-    }
-    // check if it is still valid
     final keys = keyIdsFromType(type);
     if (keys == null) {
       return null;
@@ -305,7 +324,7 @@ class SSSS {
     if (fromCache != null && isValid(fromCache)) {
       return fromCache.content;
     }
-    final ret = await client.database?.getSSSSCache(type);
+    final ret = await client.database.getSSSSCache(type);
     if (ret == null) {
       return null;
     }
@@ -343,7 +362,7 @@ class SSSS {
     );
     final decrypted = await decryptAes(encryptInfo, key, type);
     final db = client.database;
-    if (cacheTypes.contains(type) && db != null) {
+    if (cacheTypes.contains(type)) {
       // cache the thing
       await db.storeSSSSCache(type, keyId, ciphertext, decrypted);
       onSecretStored.add(keyId);
@@ -354,8 +373,13 @@ class SSSS {
     return decrypted;
   }
 
-  Future<void> store(String type, String secret, String keyId, Uint8List key,
-      {bool add = false}) async {
+  Future<void> store(
+    String type,
+    String secret,
+    String keyId,
+    Uint8List key, {
+    bool add = false,
+  }) async {
     final encrypted = await encryptAes(secret, key, type);
     Map<String, dynamic>? content;
     if (add && client.accountData[type] != null) {
@@ -375,7 +399,7 @@ class SSSS {
     // store the thing in your account data
     await client.setAccountData(client.userID!, type, content);
     final db = client.database;
-    if (cacheTypes.contains(type) && db != null) {
+    if (cacheTypes.contains(type)) {
       // cache the thing
       await db.storeSSSSCache(type, keyId, encrypted.ciphertext, secret);
       onSecretStored.add(keyId);
@@ -386,7 +410,11 @@ class SSSS {
   }
 
   Future<void> validateAndStripOtherKeys(
-      String type, String secret, String keyId, Uint8List key) async {
+    String type,
+    String secret,
+    String keyId,
+    Uint8List key,
+  ) async {
     if (await getStored(type, keyId, key) != secret) {
       throw Exception('Secrets do not match up!');
     }
@@ -417,7 +445,7 @@ class SSSS {
       if (ciphertext == null) {
         throw Exception('Wrong type for ciphertext!');
       }
-      await client.database?.storeSSSSCache(type, keyId, ciphertext, secret);
+      await client.database.storeSSSSCache(type, keyId, ciphertext, secret);
       onSecretStored.add(keyId);
     }
   }
@@ -457,11 +485,13 @@ class SSSS {
       devices =
           client.userDeviceKeys[client.userID]!.deviceKeys.values.toList();
     }
-    devices.removeWhere((DeviceKeys d) =>
-        d.userId != client.userID ||
-        !d.verified ||
-        d.blocked ||
-        d.deviceId == client.deviceID);
+    devices.removeWhere(
+      (DeviceKeys d) =>
+          d.userId != client.userID ||
+          !d.verified ||
+          d.blocked ||
+          d.deviceId == client.deviceID,
+    );
     if (devices.isEmpty) {
       Logs().w('[SSSS] No devices');
       return;
@@ -555,9 +585,11 @@ class SSSS {
       }
       final request = pendingShareRequests[event.content['request_id']]!;
       // alright, as we received a known request id, let's check if the sender is valid
-      final device = request.devices.firstWhereOrNull((d) =>
-          d.userId == event.sender &&
-          d.curve25519Key == encryptedContent['sender_key']);
+      final device = request.devices.firstWhereOrNull(
+        (d) =>
+            d.userId == event.sender &&
+            d.curve25519Key == encryptedContent['sender_key'],
+      );
       if (device == null) {
         Logs().i('[SSSS] Someone else replied?');
         return; // someone replied whom we didn't send the share request to
@@ -580,23 +612,21 @@ class SSSS {
       }
       Logs().i('[SSSS] Secret for type ${request.type} is ok, storing it');
       final db = client.database;
-      if (db != null) {
-        final keyId = keyIdFromType(request.type);
-        if (keyId != null) {
-          final ciphertext = (client.accountData[request.type]!.content
-                  .tryGetMap<String, Object?>('encrypted'))
-              ?.tryGetMap<String, Object?>(keyId)
-              ?.tryGet<String>('ciphertext');
-          if (ciphertext == null) {
-            Logs().i('[SSSS] Ciphertext is empty or not a String');
-            return;
-          }
-          await db.storeSSSSCache(request.type, keyId, ciphertext, secret);
-          if (_cacheCallbacks.containsKey(request.type)) {
-            _cacheCallbacks[request.type]!(secret);
-          }
-          onSecretStored.add(keyId);
+      final keyId = keyIdFromType(request.type);
+      if (keyId != null) {
+        final ciphertext = (client.accountData[request.type]!.content
+                .tryGetMap<String, Object?>('encrypted'))
+            ?.tryGetMap<String, Object?>(keyId)
+            ?.tryGet<String>('ciphertext');
+        if (ciphertext == null) {
+          Logs().i('[SSSS] Ciphertext is empty or not a String');
+          return;
         }
+        await db.storeSSSSCache(request.type, keyId, ciphertext, secret);
+        if (_cacheCallbacks.containsKey(request.type)) {
+          _cacheCallbacks[request.type]!(secret);
+        }
+        onSecretStored.add(keyId);
       }
     }
   }
@@ -645,9 +675,11 @@ class _ShareRequest {
   final List<DeviceKeys> devices;
   final DateTime start;
 
-  _ShareRequest(
-      {required this.requestId, required this.type, required this.devices})
-      : start = DateTime.now();
+  _ShareRequest({
+    required this.requestId,
+    required this.type,
+    required this.devices,
+  }) : start = DateTime.now();
 }
 
 class EncryptedContent {
@@ -655,8 +687,11 @@ class EncryptedContent {
   final String ciphertext;
   final String mac;
 
-  EncryptedContent(
-      {required this.iv, required this.ciphertext, required this.mac});
+  EncryptedContent({
+    required this.iv,
+    required this.ciphertext,
+    required this.mac,
+  });
 }
 
 class DerivedKeys {
@@ -682,11 +717,12 @@ class OpenSSSS {
   String? get recoveryKey =>
       isUnlocked ? SSSS.encodeRecoveryKey(privateKey!) : null;
 
-  Future<void> unlock(
-      {String? passphrase,
-      String? recoveryKey,
-      String? keyOrPassphrase,
-      bool postUnlock = true}) async {
+  Future<void> unlock({
+    String? passphrase,
+    String? recoveryKey,
+    String? keyOrPassphrase,
+    bool postUnlock = true,
+  }) async {
     if (keyOrPassphrase != null) {
       try {
         await unlock(recoveryKey: keyOrPassphrase, postUnlock: postUnlock);
@@ -701,7 +737,8 @@ class OpenSSSS {
     } else if (passphrase != null) {
       if (!hasPassphrase) {
         throw InvalidPassphraseException(
-            'Tried to unlock with passphrase while key does not have a passphrase');
+          'Tried to unlock with passphrase while key does not have a passphrase',
+        );
       }
       privateKey = await Future.value(
         ssss.client.nativeImplementations.keyFromPassphrase(
@@ -710,7 +747,7 @@ class OpenSSSS {
             info: keyData.passphrase!,
           ),
         ),
-      ).timeout(Duration(seconds: 10));
+      ).timeout(Duration(minutes: 2));
     } else if (recoveryKey != null) {
       privateKey = SSSS.decodeRecoveryKey(recoveryKey);
     } else {

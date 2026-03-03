@@ -25,9 +25,7 @@ export 'fake_matrix_api.dart' show FakeMatrixApi;
 
 export 'src/client.dart';
 export 'src/database/database_api.dart';
-export 'src/database/hive_database.dart';
 export 'src/database/matrix_sdk_database.dart';
-export 'src/database/hive_collections_database.dart';
 export 'src/database/sqflite_encryption_helper.dart';
 export 'src/event.dart';
 export 'src/presence.dart';
@@ -43,6 +41,7 @@ export 'src/voip/models/webrtc_delegate.dart';
 export 'src/voip/models/call_participant.dart';
 export 'src/voip/models/key_provider.dart';
 export 'src/voip/models/matrixrtc_call_event.dart';
+export 'src/voip/models/call_membership.dart';
 export 'src/voip/utils/conn_tester.dart';
 export 'src/voip/utils/voip_constants.dart';
 export 'src/voip/utils/rtc_candidate_extension.dart';
@@ -58,6 +57,7 @@ export 'src/utils/crypto/encrypted_file.dart';
 export 'src/utils/device_keys_list.dart';
 export 'src/utils/event_update.dart';
 export 'src/utils/http_timeout.dart';
+export 'src/utils/event_localizations.dart';
 export 'src/utils/image_pack_extension.dart';
 export 'src/utils/matrix_default_localizations.dart';
 export 'src/utils/matrix_file.dart';
@@ -80,9 +80,17 @@ export 'msc_extensions/msc_3935_cute_events/msc_3935_cute_events.dart';
 export 'msc_extensions/msc_1236_widgets/msc_1236_widgets.dart';
 export 'msc_extensions/msc_2835_uia_login/msc_2835_uia_login.dart';
 export 'msc_extensions/msc_3814_dehydrated_devices/msc_3814_dehydrated_devices.dart';
+export 'msc_extensions/extension_timeline_export/timeline_export.dart';
+export 'msc_extensions/msc_4140_delayed_events/api.dart';
+export 'msc_extensions/msc_3381_polls/models/poll_event_content.dart';
+export 'msc_extensions/msc_3381_polls/poll_event_extension.dart';
+export 'msc_extensions/msc_3381_polls/poll_room_extension.dart';
+export 'msc_extensions/msc_2966_oidc_dynamic_client_registration/msc_2966_oidc_dynamic_client_registration.dart';
+export 'msc_extensions/msc_2964_oidc_login_flow/msc_2964_oidc_login_flow.dart';
+export 'msc_extensions/msc_4075_rtc_notification/api.dart';
 
 export 'src/utils/web_worker/web_worker_stub.dart'
-    if (dart.library.html) 'src/utils/web_worker/web_worker.dart';
+    if (dart.library.js_interop) 'src/utils/web_worker/web_worker.dart';
 
 export 'src/utils/web_worker/native_implementations_web_worker_stub.dart'
-    if (dart.library.html) 'src/utils/web_worker/native_implementations_web_worker.dart';
+    if (dart.library.js_interop) 'src/utils/web_worker/native_implementations_web_worker.dart';

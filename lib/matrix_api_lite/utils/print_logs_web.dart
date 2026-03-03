@@ -1,4 +1,6 @@
-import 'dart:html';
+import 'dart:js_interop';
+
+import 'package:web/web.dart';
 
 import 'package:matrix/matrix_api_lite.dart';
 
@@ -13,22 +15,22 @@ extension PrintLogs on LogEvent {
     }
     switch (level) {
       case Level.wtf:
-        window.console.error('!!!CRITICAL!!! $logsStr');
+        console.error('!!!CRITICAL!!! $logsStr'.toJS);
         break;
       case Level.error:
-        window.console.error(logsStr);
+        console.error(logsStr.toJS);
         break;
       case Level.warning:
-        window.console.warn(logsStr);
+        console.warn(logsStr.toJS);
         break;
       case Level.info:
-        window.console.info(logsStr);
+        console.info(logsStr.toJS);
         break;
       case Level.debug:
-        window.console.debug(logsStr);
+        console.debug(logsStr.toJS);
         break;
       case Level.verbose:
-        window.console.log(logsStr);
+        console.log(logsStr.toJS);
         break;
     }
   }

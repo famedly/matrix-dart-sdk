@@ -49,7 +49,8 @@ class MatrixEvent extends StrippedStateEvent {
       : eventId = json['event_id'] as String,
         roomId = json['room_id'] as String?,
         originServerTs = DateTime.fromMillisecondsSinceEpoch(
-            json['origin_server_ts'] as int),
+          json['origin_server_ts'] as int,
+        ),
         unsigned = (json['unsigned'] as Map<String, Object?>?)?.copy(),
         prevContent = (json['prev_content'] as Map<String, Object?>?)?.copy(),
         redacts = json['redacts'] as String?,

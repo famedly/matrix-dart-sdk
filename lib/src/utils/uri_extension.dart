@@ -59,11 +59,13 @@ extension MxcUriExtension on Uri {
   ///
   /// Important! To use this link you have to set a http header like this:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
-  Future<Uri> getThumbnailUri(Client client,
-      {num? width,
-      num? height,
-      ThumbnailMethod? method = ThumbnailMethod.crop,
-      bool? animated = false}) async {
+  Future<Uri> getThumbnailUri(
+    Client client, {
+    num? width,
+    num? height,
+    ThumbnailMethod? method = ThumbnailMethod.crop,
+    bool? animated = false,
+  }) async {
     if (!isScheme('mxc')) return Uri();
     final homeserver = client.homeserver;
     if (homeserver == null) {
@@ -97,7 +99,8 @@ extension MxcUriExtension on Uri {
   Uri getDownloadLink(Client matrix) => isScheme('mxc')
       ? matrix.homeserver != null
           ? matrix.homeserver?.resolve(
-                  '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path') ??
+                '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path',
+              ) ??
               Uri()
           : Uri()
       : Uri();
@@ -108,11 +111,13 @@ extension MxcUriExtension on Uri {
   /// If `animated` (default false) is set to true, an animated thumbnail is requested
   /// as per MSC2705. Thumbnails only animate if the media repository supports that.
   @Deprecated('Use `getThumbnailUri()` instead')
-  Uri getThumbnail(Client matrix,
-      {num? width,
-      num? height,
-      ThumbnailMethod? method = ThumbnailMethod.crop,
-      bool? animated = false}) {
+  Uri getThumbnail(
+    Client matrix, {
+    num? width,
+    num? height,
+    ThumbnailMethod? method = ThumbnailMethod.crop,
+    bool? animated = false,
+  }) {
     if (!isScheme('mxc')) return Uri();
     final homeserver = matrix.homeserver;
     if (homeserver == null) {

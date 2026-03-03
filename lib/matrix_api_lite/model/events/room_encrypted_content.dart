@@ -45,8 +45,12 @@ class RoomEncryptedContent {
         // filter out invalid/incomplete CiphertextInfos
         ciphertextOlm = json
             .tryGet<Map<String, Object?>>('ciphertext', TryGet.silent)
-            ?.catchMap((k, v) => MapEntry(
-                k, CiphertextInfo.fromJson(v as Map<String, Object?>)));
+            ?.catchMap(
+              (k, v) => MapEntry(
+                k,
+                CiphertextInfo.fromJson(v as Map<String, Object?>),
+              ),
+            );
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};
@@ -66,7 +70,8 @@ class RoomEncryptedContent {
           ciphertextOlm!.map((k, v) => MapEntry(k, v.toJson()));
       if (ciphertextMegolm != null) {
         Logs().wtf(
-            'ciphertextOlm and ciphertextMegolm are both set, which should never happen!');
+          'ciphertextOlm and ciphertextMegolm are both set, which should never happen!',
+        );
       }
     }
     return data;

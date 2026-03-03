@@ -25,36 +25,49 @@ void main() {
   group('Matrix Localizations', () {
     test('Matrix Localizations', () {
       expect(
-          HistoryVisibility.invited
-              .getLocalizedString(MatrixDefaultLocalizations()),
-          'From the invitation');
+        HistoryVisibility.invited
+            .getLocalizedString(MatrixDefaultLocalizations()),
+        'From the invitation',
+      );
       expect(
-          HistoryVisibility.joined
-              .getLocalizedString(MatrixDefaultLocalizations()),
-          'From joining');
+        HistoryVisibility.joined
+            .getLocalizedString(MatrixDefaultLocalizations()),
+        'From joining',
+      );
       expect(
-          HistoryVisibility.shared
-              .getLocalizedString(MatrixDefaultLocalizations()),
-          'Visible for all participants');
+        HistoryVisibility.shared
+            .getLocalizedString(MatrixDefaultLocalizations()),
+        'Visible for all participants',
+      );
       expect(
-          HistoryVisibility.worldReadable
-              .getLocalizedString(MatrixDefaultLocalizations()),
-          'Visible for everyone');
+        HistoryVisibility.worldReadable
+            .getLocalizedString(MatrixDefaultLocalizations()),
+        'Visible for everyone',
+      );
       expect(
-          GuestAccess.canJoin.getLocalizedString(MatrixDefaultLocalizations()),
-          'Guests can join');
+        GuestAccess.canJoin.getLocalizedString(MatrixDefaultLocalizations()),
+        'Guests can join',
+      );
       expect(
-          GuestAccess.forbidden
-              .getLocalizedString(MatrixDefaultLocalizations()),
-          'Guests are forbidden');
-      expect(JoinRules.invite.getLocalizedString(MatrixDefaultLocalizations()),
-          'Invited users only');
-      expect(JoinRules.public.getLocalizedString(MatrixDefaultLocalizations()),
-          'Anyone can join');
-      expect(JoinRules.private.getLocalizedString(MatrixDefaultLocalizations()),
-          'private');
-      expect(JoinRules.knock.getLocalizedString(MatrixDefaultLocalizations()),
-          'knock');
+        GuestAccess.forbidden.getLocalizedString(MatrixDefaultLocalizations()),
+        'Guests are forbidden',
+      );
+      expect(
+        JoinRules.invite.getLocalizedString(MatrixDefaultLocalizations()),
+        'Invited users only',
+      );
+      expect(
+        JoinRules.public.getLocalizedString(MatrixDefaultLocalizations()),
+        'Anyone can join',
+      );
+      expect(
+        JoinRules.private.getLocalizedString(MatrixDefaultLocalizations()),
+        'private',
+      );
+      expect(
+        JoinRules.knock.getLocalizedString(MatrixDefaultLocalizations()),
+        'knock',
+      );
     });
   });
 }

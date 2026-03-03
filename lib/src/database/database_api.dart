@@ -26,7 +26,7 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 
 abstract class DatabaseApi {
-  int get maxFileSize => 1 * 1024 * 1024;
+  int get maxFileSize => 1 * 1000 * 1000;
 
   bool get supportsFileStoring => false;
 
@@ -42,6 +42,7 @@ abstract class DatabaseApi {
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
+    String? oidcClientId,
   );
 
   Future insertClient(
@@ -55,12 +56,16 @@ abstract class DatabaseApi {
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
+    String? oidcClientId,
   );
 
   Future<List<Room>> getRoomList(Client client);
 
-  Future<Room?> getSingleRoom(Client client, String roomId,
-      {bool loadImportantStates = true});
+  Future<Room?> getSingleRoom(
+    Client client,
+    String roomId, {
+    bool loadImportantStates = true,
+  });
 
   Future<Map<String, BasicEvent>> getAccountData();
 
@@ -77,7 +82,12 @@ abstract class DatabaseApi {
 
   /// Stores an EventUpdate object in the database. Must be called inside of
   /// [transaction].
-  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client);
+  Future<void> storeEventUpdate(
+    String roomId,
+    StrippedStateEvent event,
+    EventUpdateType type,
+    Client client,
+  );
 
   Future<Event?> getEventById(String eventId, Room room);
 
@@ -86,7 +96,9 @@ abstract class DatabaseApi {
   Future<CachedProfileInformation?> getUserProfile(String userId);
 
   Future<void> storeUserProfile(
-      String userId, CachedProfileInformation profile);
+    String userId,
+    CachedProfileInformation profile,
+  );
 
   Future<void> markUserProfileAsOutdated(String userId);
 
@@ -116,11 +128,15 @@ abstract class DatabaseApi {
 
   Future storeFile(Uri mxcUri, Uint8List bytes, int time);
 
+  Future<bool> deleteFile(Uri mxcUri);
+
   Future storeSyncFilterId(
     String syncFilterId,
   );
 
-  Future storeAccountData(String type, String content);
+  Future storeAccountData(String type, Map<String, Object?> content);
+
+  Future storeRoomAccountData(String roomId, BasicEvent event);
 
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client);
 
@@ -316,11 +332,14 @@ abstract class DatabaseApi {
   Future<List<StoredInboundGroupSession>> getInboundGroupSessionsToUpload();
 
   Future<void> addSeenDeviceId(
-      String userId, String deviceId, String publicKeys);
+    String userId,
+    String deviceId,
+    String publicKeys,
+  );
 
   Future<void> addSeenPublicKey(String publicKey, String deviceId);
 
-  Future<String?> deviceIdSeen(userId, deviceId);
+  Future<String?> deviceIdSeen(String userId, String deviceId);
 
   Future<String?> publicKeySeen(String publicKey);
 
@@ -336,11 +355,17 @@ abstract class DatabaseApi {
 
   Future<CachedPresence?> getPresence(String userId);
 
-  Future<void> storeWellKnown(DiscoveryInformation? discoveryInformation);
+  Future<void> cacheCustomObject(String cacheKey, Map<String, Object?> object);
 
-  Future<DiscoveryInformation?> getWellKnown();
+  Future<({Map<String, Object?> content, DateTime savedAt})?>
+      getCustomCacheObject(String cacheKey);
 
   /// Deletes the whole database. The database needs to be created again after
   /// this.
   Future<void> delete();
+
+  Future<void> storeLatestReceiptState(
+    String roomId,
+    LatestReceiptState receiptState,
+  );
 }

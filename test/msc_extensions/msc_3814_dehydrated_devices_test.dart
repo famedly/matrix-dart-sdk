@@ -34,18 +34,23 @@ void main() {
       final client = await getClient();
 
       final ret = await client.uploadDehydratedDevice(
-          deviceId: 'DEHYDDEV',
-          initialDeviceDisplayName: 'DehydratedDevice',
-          deviceData: {'algorithm': 'some.famedly.proprietary.algorith'});
+        deviceId: 'DEHYDDEV',
+        initialDeviceDisplayName: 'DehydratedDevice',
+        deviceData: {'algorithm': 'some.famedly.proprietary.algorith'},
+      );
       expect(
-          FakeMatrixApi.calledEndpoints.containsKey(
-              '/client/unstable/org.matrix.msc3814.v1/dehydrated_device'),
-          true);
+        FakeMatrixApi.calledEndpoints.containsKey(
+          '/client/unstable/org.matrix.msc3814.v1/dehydrated_device',
+        ),
+        true,
+      );
       expect(ret.isNotEmpty, true);
       final device = await client.getDehydratedDevice();
       expect(device.deviceId, 'DEHYDDEV');
-      expect(device.deviceData?['algorithm'],
-          'some.famedly.proprietary.algorithm');
+      expect(
+        device.deviceData?['algorithm'],
+        'some.famedly.proprietary.algorithm',
+      );
 
       final events = await client.getDehydratedDeviceEvents(device.deviceId);
       expect(events.events?.length, 1);

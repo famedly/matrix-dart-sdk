@@ -26,7 +26,6 @@ linter:
     throw_in_finally: true
     unawaited_futures: true
     unnecessary_statements: true
-    unsafe_html: true
 
     # Readability & Style
     # These are opinionated choices, where Dart gives us 2 ways to express the same thing.
@@ -36,6 +35,7 @@ linter:
     prefer_single_quotes: true
     sort_child_properties_last: true
     sort_pub_dependencies: true
+    require_trailing_commas: true
 
     # Be nice to our users and allow them to configure what gets logged.
     avoid_print: true

@@ -11,7 +11,7 @@ void main() {
     const json = <String, dynamic>{
       'content': {
         'body': "I'm floating in a most peculiar way.",
-        'msgtype': 'm.text'
+        'msgtype': 'm.text',
       },
       'counts': {'missed_calls': 1, 'unread': 2},
       'devices': [
@@ -20,7 +20,7 @@ void main() {
           'data': {},
           'pushkey': 'V2h5IG9uIGVhcnRoIGRpZCB5b3UgZGVjb2RlIHRoaXM/',
           'pushkey_ts': 12345678,
-          'tweaks': {'sound': 'bing'}
+          'tweaks': {'sound': 'bing'},
         }
       ],
       'event_id': '\$3957tyerfgewrf384',
@@ -30,7 +30,7 @@ void main() {
       'room_name': 'Mission Control',
       'sender': '@exampleuser:matrix.org',
       'sender_display_name': 'Major Tom',
-      'type': 'm.room.message'
+      'type': 'm.room.message',
     };
 
     test('fromJson and toJson', () async {

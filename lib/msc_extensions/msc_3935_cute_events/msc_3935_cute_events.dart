@@ -6,12 +6,12 @@ abstract class CuteEventContent {
   static Map<String, dynamic> get googlyEyes => {
         'msgtype': CuteEventContent.eventType,
         'cute_type': 'googly_eyes',
-        'body': '👀'
+        'body': '👀',
       };
   static Map<String, dynamic> get cuddle => {
         'msgtype': CuteEventContent.eventType,
         'cute_type': 'cuddle',
-        'body': '😊'
+        'body': '😊',
       };
   static Map<String, dynamic> get hug => {
         'msgtype': CuteEventContent.eventType,

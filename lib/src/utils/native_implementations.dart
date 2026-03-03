@@ -133,21 +133,18 @@ class NativeImplementationsDummy extends NativeImplementations {
 class NativeImplementationsIsolate extends NativeImplementations {
   /// pass by Flutter's compute function here
   final ComputeCallback compute;
+  final Future<void> Function()? vodozemacInit;
 
-  NativeImplementationsIsolate(this.compute);
-
-  /// creates a [NativeImplementationsIsolate] based on a [ComputeRunner] as
-  // ignore: deprecated_member_use_from_same_package
-  /// known from [Client.runInBackground]
-  factory NativeImplementationsIsolate.fromRunInBackground(
-      ComputeRunner runInBackground) {
-    return NativeImplementationsIsolate(
-      computeCallbackFromRunInBackground(runInBackground),
-    );
-  }
+  NativeImplementationsIsolate(
+    this.compute, {
+    /// To generate upload keys, vodozemac needs to be initialized in the isolate.
+    this.vodozemacInit,
+  });
 
   Future<T> runInBackground<T, U>(
-      FutureOr<T> Function(U arg) function, U arg) async {
+    FutureOr<T> Function(U arg) function,
+    U arg,
+  ) async {
     final compute = this.compute;
     return await compute(function, arg);
   }
@@ -158,7 +155,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
     bool retryInDummy = true,
   }) {
     return runInBackground<Uint8List?, EncryptedFile>(
-      NativeImplementations.dummy.decryptFile,
+      (EncryptedFile args) async {
+        await vodozemacInit?.call();
+        return NativeImplementations.dummy.decryptFile(args);
+      },
       file,
     );
   }
@@ -169,7 +169,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
     bool retryInDummy = true,
   }) async {
     return runInBackground<RoomKeys, GenerateUploadKeysArgs>(
-      NativeImplementations.dummy.generateUploadKeys,
+      (GenerateUploadKeysArgs args) async {
+        await vodozemacInit?.call();
+        return NativeImplementations.dummy.generateUploadKeys(args);
+      },
       args,
     );
   }
@@ -180,7 +183,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
     bool retryInDummy = true,
   }) {
     return runInBackground<Uint8List, KeyFromPassphraseArgs>(
-      NativeImplementations.dummy.keyFromPassphrase,
+      (KeyFromPassphraseArgs args) async {
+        await vodozemacInit?.call();
+        return NativeImplementations.dummy.keyFromPassphrase(args);
+      },
       args,
     );
   }
