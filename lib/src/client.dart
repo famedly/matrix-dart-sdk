@@ -2633,11 +2633,11 @@ class Client extends MatrixApi {
     final List<ToDeviceEvent> callToDeviceEvents = [];
     for (final event in events) {
       var toDeviceEvent = ToDeviceEvent.fromJson(event.toJson());
-      Logs().v('Got to_device event of type ${toDeviceEvent.type}');
+      Logs().v('Got to_device event ${toDeviceEvent.toJson()} ');
       if (encryptionEnabled) {
         if (toDeviceEvent.type == EventTypes.Encrypted) {
           toDeviceEvent = await encryption!.decryptToDeviceEvent(toDeviceEvent);
-          Logs().v('Decrypted type is: ${toDeviceEvent.type}');
+          Logs().v('Decrypted to_device event is: ${toDeviceEvent.toJson()}');
 
           /// collect new keys so that we can find those events in the decryption queue
           if (toDeviceEvent.type == EventTypes.ForwardedRoomKey ||
