@@ -1338,7 +1338,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     Client client,
   ) async {
     // Leave room if membership is leave
-    if (roomUpdate is LeftRoomUpdate) {
+    if (roomUpdate is LeftRoomUpdate &&
+        client.syncFilter.room?.includeLeave != true) {
       await forgetRoom(roomId);
       return;
     }
