@@ -189,7 +189,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     Uri? fileStorageLocation,
     Duration? deleteFilesAfterDuration,
   }) async {
-    final matrixSdkDatabase = MatrixSdkDatabase._(
+    final matrixSdkDatabase = MatrixSdkDatabase.buildWithoutOpen(
       name,
       database: database,
       idbFactory: idbFactory,
@@ -202,7 +202,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     return matrixSdkDatabase;
   }
 
-  MatrixSdkDatabase._(
+  /// Creates a new instance but does not open the database so you need to
+  /// call `await MatrixSdkDatabase.open();` afterwards.
+  /// Should only used to extend the class or for tests.
+  MatrixSdkDatabase.buildWithoutOpen(
     this.name, {
     this.database,
     this.idbFactory,
