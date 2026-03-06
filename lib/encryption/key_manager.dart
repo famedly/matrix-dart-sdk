@@ -1251,8 +1251,7 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
       };
       // encrypt the content
       final encrypted = enc.encrypt(json.encode(payload));
-      // fetch the device, if available...
-      //final device = args.client.getUserDeviceKeysByCurve25519Key(sess.senderKey);
+
       // aaaand finally add the session key to our payload
       final (ciphertext, mac, ephemeral) = encrypted.toBase64();
       roomKeyBackup.sessions[sess.sessionId] = KeyBackupData(

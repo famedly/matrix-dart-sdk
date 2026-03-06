@@ -243,13 +243,6 @@ class CallSession {
               Logs().d(
                 '[glare] nice, lex of newer call $callId is smaller auto accept this here',
               );
-
-              /// These fixes do not work all the time because sometimes the code
-              /// is at an unrecoverable stage (invite already sent when we were
-              /// checking if we want to send a invite), so commented out answering
-              /// automatically to prevent unknown cases
-              // await answer();
-              // return;
             }
           } else {
             Logs().d(
@@ -666,7 +659,6 @@ class CallSession {
   }
 
   Future<void> _addRemoteStream(MediaStream stream) async {
-    //final userId = remoteUser.id;
     final metadata = _remoteSDPStreamMetadata?.sdpStreamMetadatas[stream.id];
     if (metadata == null) {
       Logs().i(

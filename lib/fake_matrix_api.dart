@@ -126,8 +126,6 @@ class FakeMatrixApi extends BaseClient {
     dynamic res = {};
     var statusCode = 200;
 
-    //print('\$method request to $action with Data: $data');
-
     if (!servers.contains(request.url.origin)) {
       return Response(
         '<html><head></head><body>Not found ${request.url.origin}...</body></html>',

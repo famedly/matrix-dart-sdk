@@ -366,9 +366,6 @@ class VoIP {
       case EventTypes.GroupCallMemberNegotiate:
         await onCallNegotiate(room, content);
         break;
-      // case EventTypes.CallReplaces:
-      //   await onCallReplaces(room, content);
-      //   break;
       case EventTypes.CallSelectAnswer:
       case EventTypes.GroupCallMemberSelectAnswer:
         await onCallSelectAnswer(room, content);
@@ -506,8 +503,6 @@ class VoIP {
     newCall.remoteDeviceId = remoteDeviceId;
     newCall.remotePartyId = content['party_id'];
     newCall.remoteSessionId = content['sender_session_id'];
-
-    // newCall.remoteSessionId = remoteParticipant.sessionId;
 
     if (!delegate.canHandleNewCall &&
         (confId == null ||
