@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
-      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+      - uses: dart-lang/setup-dart@e51d8e571e22473a2ddebf0ef8a2123f0ab2c02c
         with:
           sdk: ${{ env.dart_version }}
       - uses: famedly/backend-build-workflows/.github/actions/rust-prepare@v5
@@ -62,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
-      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+      - uses: dart-lang/setup-dart@e51d8e571e22473a2ddebf0ef8a2123f0ab2c02c
         with:
           sdk: ${{ env.dart_version }}
       - name: Run tests
@@ -83,7 +83,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
-      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+      - uses: dart-lang/setup-dart@e51d8e571e22473a2ddebf0ef8a2123f0ab2c02c
         with:
           sdk: ${{ env.dart_version }}
           #architecture: "arm64"
@@ -131,7 +131,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
-      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+      - uses: dart-lang/setup-dart@e51d8e571e22473a2ddebf0ef8a2123f0ab2c02c
         with:
           sdk: ${{ env.dart_version }}
       - name: Ensure SDK compiles on web
@@ -148,7 +148,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
-      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+      - uses: dart-lang/setup-dart@e51d8e571e22473a2ddebf0ef8a2123f0ab2c02c
         with:
           sdk: ${{ env.dart_version }}
       - uses: browser-actions/setup-chrome@v1
@@ -162,7 +162,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
-      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+      - uses: dart-lang/setup-dart@e51d8e571e22473a2ddebf0ef8a2123f0ab2c02c
         with:
           sdk: ${{ env.dart_version }}
       - name: pub.dev publish dry run
