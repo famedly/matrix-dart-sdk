@@ -1,3 +1,11 @@
+## [6.1.2] 3rd Mar 2026
+- chore: improve to_device log lines (td)
+- chore: remove _discoveryDataLoading dead code (Karthikeyan S)
+- fix: expiresIn from OIDC is in seconds not milliseconds (Christian Kußowski)
+- fix: Katex markdown syntax (Christian Kußowski)
+- test: check if init() with waitUntilLoadCompletedLoaded hangs (Karthikeyan S)
+- test: dehydrated devices logic in synapse (Karthikeyan S)
+
 ## [6.1.1] 7th Feb 2026
 
 - fix: handle UIA case for unexpectedResponse during exception + tests
