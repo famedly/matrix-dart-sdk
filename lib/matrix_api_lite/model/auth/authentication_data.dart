@@ -26,17 +26,22 @@ class AuthenticationData {
   // https://github.com/matrix-org/matrix-doc/issues/3370
   String? type;
   String? session;
+  Map<String, Object?>? additionalFields;
 
-  AuthenticationData({this.type, this.session});
+  AuthenticationData({this.type, this.session, this.additionalFields});
 
   AuthenticationData.fromJson(Map<String, Object?> json)
       : type = json['type'] as String?,
-        session = json['session'] as String?;
+        session = json['session'] as String?,
+        additionalFields = json;
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};
     if (type != null) data['type'] = type;
     if (session != null) data['session'] = session;
+    if (additionalFields != null) {
+      data.addAll(additionalFields!);
+    }
     return data;
   }
 }
