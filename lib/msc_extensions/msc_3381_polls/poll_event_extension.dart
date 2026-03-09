@@ -48,6 +48,18 @@ extension PollEventExtension on Event {
     );
   }
 
+  /// Fetches poll response events from the server for fragmented timelines
+  /// where responses may not be in the current timeline chunk.
+  /// After fetching, the existing sync [getPollResponses] method will
+  /// return the correct data from [timeline.aggregatedEvents].
+  Future<void> fetchPollResponses(Timeline timeline) async {
+    assert(type == PollEventContent.startType);
+    await timeline.fetchAggregatedEvents(
+      eventId,
+      RelationshipTypes.reference,
+    );
+  }
+
   Event? _getEndPollEvent(Timeline timeline) {
     assert(type == PollEventContent.startType);
     final aggregatedEvents =

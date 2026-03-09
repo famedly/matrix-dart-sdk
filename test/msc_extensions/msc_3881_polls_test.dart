@@ -1,7 +1,7 @@
-import 'package:test/test.dart';
-
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
+import 'package:test/test.dart';
+
 import '../fake_client.dart';
 
 void main() {
@@ -118,6 +118,101 @@ void main() {
         txid: '1234',
       );
       expect(respondeEventId, '1234');
+    });
+
+    test('fetchPollResponses on fragmented timeline', () async {
+      final room = client.getRoomById(roomId)!;
+      final pollEventContent = PollEventContent(
+        mText: 'FragmentedPoll',
+        pollStartContent: PollStartContent(
+          maxSelections: 1,
+          question: PollQuestion(mText: 'Favorite drink?'),
+          answers: [
+            PollAnswer(id: 'pepsi', mText: 'Pepsi'),
+            PollAnswer(id: 'coca', mText: 'Coca Cola'),
+          ],
+        ),
+      );
+      final pollEvent = Event(
+        content: pollEventContent.toJson(),
+        type: PollEventContent.startType,
+        eventId: 'poll_frag_1',
+        senderId: client.userID!,
+        originServerTs: DateTime.now().subtract(const Duration(hours: 1)),
+        room: room,
+      );
+
+      // Create a fragmented timeline (nextBatch != '')
+      final timeline = Timeline(
+        room: room,
+        chunk: TimelineChunk(
+          events: [pollEvent],
+          nextBatch: 'frag_next',
+          prevBatch: 'frag_prev',
+        ),
+      );
+
+      expect(timeline.isFragmentedTimeline, true);
+      // No poll responses in the chunk
+      expect(pollEvent.getPollResponses(timeline), {});
+
+      // Set up mock /relations endpoint to return poll response events
+      final responseTs = DateTime.now().subtract(const Duration(minutes: 30));
+      final relationsPath =
+          '/client/v1/rooms/${Uri.encodeComponent(roomId)}/relations/poll_frag_1/m.reference?limit=50';
+      (FakeMatrixApi.currentApi!.api['GET'] ??= {})[relationsPath] =
+          (dynamic data) => {
+                'chunk': [
+                  {
+                    'event_id': '\$response_1',
+                    'type': PollEventContent.responseType,
+                    'sender': '@alice:example.com',
+                    'origin_server_ts': responseTs.millisecondsSinceEpoch,
+                    'content': {
+                      'm.relates_to': {
+                        'rel_type': RelationshipTypes.reference,
+                        'event_id': 'poll_frag_1',
+                      },
+                      PollEventContent.responseType: {
+                        'answers': ['pepsi'],
+                      },
+                    },
+                  },
+                  {
+                    'event_id': '\$response_2',
+                    'type': PollEventContent.responseType,
+                    'sender': '@bob:example.com',
+                    'origin_server_ts': responseTs
+                        .add(const Duration(minutes: 5))
+                        .millisecondsSinceEpoch,
+                    'content': {
+                      'm.relates_to': {
+                        'rel_type': RelationshipTypes.reference,
+                        'event_id': 'poll_frag_1',
+                      },
+                      PollEventContent.responseType: {
+                        'answers': ['coca'],
+                      },
+                    },
+                  },
+                ],
+              };
+
+      // Fetch poll responses from the server
+      await pollEvent.fetchPollResponses(timeline);
+
+      // Now getPollResponses should return the fetched data
+      final responses = pollEvent.getPollResponses(timeline);
+      expect(responses.length, 2);
+      expect(responses['@alice:example.com'], {'pepsi'});
+      expect(responses['@bob:example.com'], {'coca'});
+
+      // Calling again should be a no-op (cached)
+      await pollEvent.fetchPollResponses(timeline);
+      expect(pollEvent.getPollResponses(timeline).length, 2);
+
+      // Clean up mock
+      FakeMatrixApi.currentApi!.api['GET']!.remove(relationsPath);
     });
   });
 }
