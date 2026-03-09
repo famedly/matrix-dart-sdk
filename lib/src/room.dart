@@ -834,9 +834,6 @@ class Room {
     return sendEvent(event, txid: txid);
   }
 
-  final Map<String, MatrixFile> sendingFilePlaceholders = {};
-  final Map<String, MatrixImageFile> sendingFileThumbnails = {};
-
   /// Sends a [file] to this room after uploading it. Returns the mxc uri of
   /// the uploaded file. If [waitUntilSent] is true, the future will wait until
   /// the message event has received the server. Otherwise the future will only
@@ -866,9 +863,17 @@ class Room {
     bool displayPendingEvent = true,
   }) async {
     txid ??= client.generateUniqueTransactionId();
-    sendingFilePlaceholders[txid] = file;
+    await client.database.storeFile(
+      Uri(scheme: 'cache', host: 'file', path: txid),
+      file.bytes,
+      DateTime.now().millisecondsSinceEpoch,
+    );
     if (thumbnail != null) {
-      sendingFileThumbnails[txid] = thumbnail;
+      await client.database.storeFile(
+        Uri(scheme: 'cache', host: 'thumbnail', path: txid),
+        thumbnail.bytes,
+        DateTime.now().millisecondsSinceEpoch,
+      );
     }
 
     // Create a fake Event object as a placeholder for the uploading file:
@@ -1063,8 +1068,14 @@ class Room {
       threadLastEventId: threadLastEventId,
       displayPendingEvent: displayPendingEvent,
     );
-    sendingFilePlaceholders.remove(txid);
-    sendingFileThumbnails.remove(txid);
+    await client.database.deleteFile(
+      Uri(scheme: 'cache', host: 'file', path: txid),
+    );
+    if (thumbnail != null) {
+      await client.database.deleteFile(
+        Uri(scheme: 'cache', host: 'thumbnail', path: txid),
+      );
+    }
     return eventId;
   }
 

@@ -54,7 +54,9 @@ void main() {
   group('Room', () {
     Logs().level = Level.error;
     test('Login', () async {
-      matrix = await getClient();
+      matrix = await getClient(
+        sendTimelineEventTimeout: const Duration(seconds: 10),
+      );
       await matrix.abortSync();
     });
 
@@ -1383,18 +1385,43 @@ void main() {
       });
     });
 
-    // Not working because there is no real file to test it...
-    /*test('sendImageEvent', () async {
-      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
-      final dynamic resp =
-          await room.sendImageEvent(testFile, txid: "testtxid");
-      expect(resp, "42");
-    });*/
-
     test('sendFileEvent', () async {
-      final testFile = MatrixFile(bytes: Uint8List(0), name: 'file.jpeg');
+      var testFile = MatrixFile(bytes: Uint8List(0), name: 'file.jpeg');
       final resp = await room.sendFileEvent(testFile, txid: 'testtxid');
       expect(resp.toString(), '\$event12');
+      expect(
+        await room.client.database.getFile(
+          Uri(
+            scheme: 'cache',
+            host: 'file',
+            path: 'testtxid',
+          ),
+        ),
+        null, // It is sent so shouldn't be in cache anymore
+      );
+
+      const txnid = 'test_send_file_txnid';
+      testFile = MatrixFile(bytes: Uint8List(0), name: 'crash.jpeg');
+      FakeMatrixApi
+          .currentApi!.api['POST']!['/media/v3/upload?filename=crash.jpeg'] = {
+        'errcode': 'M_UNKNOWN',
+        'error': 'Boom!',
+      };
+
+      try {
+        await room.sendFileEvent(testFile, txid: 'test_send_file_txnid');
+      } catch (_) {}
+
+      expect(
+        await room.client.database.getFile(
+          Uri(
+            scheme: 'cache',
+            host: 'file',
+            path: txnid,
+          ),
+        ),
+        testFile.bytes,
+      );
     });
 
     test('pushRuleState', () async {
@@ -1972,7 +1999,7 @@ void main() {
                 'start': 't47429-4392820_219380_26003_2265',
               };
       final searchResult = await room.searchEvents(searchFunc: (_) => true);
-      expect(searchResult.events.length, 18);
+      expect(searchResult.events.length, 19);
       expect(searchResult.nextBatch, 't47409-4357353_219380_26003_2265');
       expect(searchResult.searchedUntil!.millisecondsSinceEpoch, 1432735824653);
       expect(

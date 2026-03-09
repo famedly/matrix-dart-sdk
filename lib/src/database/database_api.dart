@@ -124,6 +124,10 @@ abstract class DatabaseApi {
     int? limit,
   });
 
+  /// Get a file from the app's file cache which is usually an mxcUri. This is
+  /// also used for caching not-yet-sent files. Those are cached under an Uri
+  /// with this format:
+  /// `cache://file/<TRANSACTION_ID>` or `cache://thumbnail/<TRANSACTION_ID>`
   Future<Uint8List?> getFile(Uri mxcUri);
 
   Future storeFile(Uri mxcUri, Uint8List bytes, int time);
