@@ -746,10 +746,10 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.ownPowerLevel, 100);
+      expect(room.ownPowerLevel.level, 100);
       expect(room.getPowerLevelByUserId(matrix.userID!), room.ownPowerLevel);
-      expect(room.getPowerLevelByUserId('@nouser:example.com'), 10);
-      expect(room.ownPowerLevel, 100);
+      expect(room.getPowerLevelByUserId('@nouser:example.com').level, 10);
+      expect(room.ownPowerLevel.level, 100);
       expect(room.canBan, true);
       expect(room.canInvite, true);
       expect(room.canKick, true);
@@ -784,9 +784,9 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.powerForChangingStateEvent('m.room.name'), 60);
-      expect(room.powerForChangingStateEvent('m.room.power_levels'), 100);
-      expect(room.powerForChangingStateEvent('m.room.nonExisting'), 60);
+      expect(room.powerForChangingStateEvent('m.room.name').level, 60);
+      expect(room.powerForChangingStateEvent('m.room.power_levels').level, 100);
+      expect(room.powerForChangingStateEvent('m.room.nonExisting').level, 60);
 
       room.setState(
         Event(
@@ -810,7 +810,7 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.ownPowerLevel, 0);
+      expect(room.ownPowerLevel.level, 0);
       expect(room.canBan, false);
       expect(room.canInvite, false);
       expect(room.canKick, false);
@@ -826,12 +826,12 @@ void main() {
 
       // Creator has max power level from room version 12 on:
       expect(room.creatorUserIds.contains('@example:example.org'), true);
-      expect(room.getPowerLevelByUserId('@example:example.org'), 0);
+      expect(room.getPowerLevelByUserId('@example:example.org').level, 0);
       expect(room.roomVersion, '11');
       room.states[EventTypes.RoomCreate]!['']!.content['room_version'] = '12';
       expect(room.roomVersion, '12');
       expect(
-        room.getPowerLevelByUserId('@example:example.org'),
+        room.getPowerLevelByUserId('@example:example.org').level,
         9007199254740991,
       );
     });
