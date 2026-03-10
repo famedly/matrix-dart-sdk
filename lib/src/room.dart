@@ -246,7 +246,7 @@ class Room {
   ]) {
     if (name.isNotEmpty) return name;
 
-    final canonicalAlias = this.canonicalAlias.localpart;
+    final canonicalAlias = this.canonicalAlias?.localpart;
     if (canonicalAlias != null && canonicalAlias.isNotEmpty) {
       return canonicalAlias;
     }
@@ -322,17 +322,20 @@ class Room {
   }
 
   /// The address in the format: #roomname:homeserver.org.
-  String get canonicalAlias {
-    final alias = getState(EventTypes.RoomCanonicalAlias)?.content['alias'];
-    return (alias is String) ? alias : '';
+  RoomAlias? get canonicalAlias {
+    final alias = getState(EventTypes.RoomCanonicalAlias)
+        ?.content
+        .tryGet<String>('alias');
+    if (alias == null) return null;
+    return RoomAlias.tryParse(alias);
   }
 
   /// Sets the canonical alias. If the [canonicalAlias] is not yet an alias of
   /// this room, it will create one.
-  Future<void> setCanonicalAlias(String canonicalAlias) async {
+  Future<void> setCanonicalAlias(RoomAlias canonicalAlias) async {
     final aliases = await client.getLocalAliases(id);
-    if (!aliases.contains(canonicalAlias)) {
-      await client.setRoomAlias(canonicalAlias, id);
+    if (!aliases.contains(canonicalAlias.matrixId)) {
+      await client.setRoomAlias(canonicalAlias.matrixId, id);
     }
     await client.setRoomStateWithKey(id, EventTypes.RoomCanonicalAlias, '', {
       'alias': canonicalAlias,
@@ -2669,9 +2672,10 @@ class Room {
 
   /// Generates a matrix.to link with appropriate routing info to share the room
   Future<Uri> matrixToInviteLink() async {
-    if (canonicalAlias.isNotEmpty) {
+    final canonicalAlias = this.canonicalAlias;
+    if (canonicalAlias != null) {
       return Uri.parse(
-        'https://matrix.to/#/${Uri.encodeComponent(canonicalAlias)}',
+        'https://matrix.to/#/${Uri.encodeComponent(canonicalAlias.matrixId)}',
       );
     }
     final List queryParameters = [];
