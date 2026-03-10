@@ -458,9 +458,14 @@ class CallSession {
         await pc!.setLocalDescription(answer);
       }
     } catch (e, s) {
-      Logs().e('[VOIP] onNegotiateReceived => ', e, s);
-      await _getLocalOfferFailed(e);
-      return;
+      Logs().e('[VOIP] onNegotiateReceived => Failed to get local offer', e, s);
+      fireCallEvent(CallStateChange.kError);
+      await terminate(CallParty.kLocal, CallErrorCode.localOfferFailed, true);
+      throw CallError(
+        CallErrorCode.localOfferFailed,
+        'Failed to get local offer',
+        e,
+      );
     }
 
     final newLocalOnHold = await isLocalOnHold();
@@ -585,7 +590,6 @@ class CallSession {
         await addLocalStream(stream, SDPStreamMetadataPurpose.Screenshare);
         return true;
       } catch (err) {
-        fireCallEvent(CallStateChange.kError);
         return false;
       }
     } else {
@@ -1139,9 +1143,15 @@ class CallSession {
       await Future.delayed(voip.timeouts!.delayBeforeOffer);
       final offer = await pc!.createOffer({});
       await _gotLocalOffer(offer);
-    } catch (e) {
-      await _getLocalOfferFailed(e);
-      return;
+    } catch (e, s) {
+      Logs().e('[VOIP] onNegotiationNeeded => Failed to get local offer', e, s);
+      fireCallEvent(CallStateChange.kError);
+      await terminate(CallParty.kLocal, CallErrorCode.localOfferFailed, true);
+      throw CallError(
+        CallErrorCode.localOfferFailed,
+        'Failed to get local offer',
+        e,
+      );
     } finally {
       _makingOffer = false;
     }
@@ -1209,8 +1219,23 @@ class CallSession {
           }
         }
       };
-    } catch (e) {
-      Logs().v('[VOIP] prepareMediaStream error => ${e.toString()}');
+    } catch (e, s) {
+      Logs().e(
+        '[VOIP] preparePeerConnection => Failed to create peer connection object',
+        e,
+        s,
+      );
+      fireCallEvent(CallStateChange.kError);
+      await terminate(
+        CallParty.kLocal,
+        CallErrorCode.createPeerConnectionFailed,
+        true,
+      );
+      throw CallError(
+        CallErrorCode.createPeerConnectionFailed,
+        'Failed to create peer connection object ',
+        e,
+      );
     }
   }
 
@@ -1303,9 +1328,15 @@ class CallSession {
     };
     try {
       return await voip.delegate.mediaDevices.getUserMedia(mediaConstraints);
-    } catch (e) {
-      await _getUserMediaFailed(e);
-      rethrow;
+    } catch (e, s) {
+      Logs().w('Failed to get user media - ending call', e, s);
+      fireCallEvent(CallStateChange.kError);
+      await terminate(CallParty.kLocal, CallErrorCode.userMediaFailed, true);
+      throw CallError(
+        CallErrorCode.userMediaFailed,
+        'Failed to get user media',
+        e,
+      );
     }
   }
 
@@ -1313,10 +1344,17 @@ class CallSession {
     try {
       return await voip.delegate.mediaDevices
           .getDisplayMedia(UserMediaConstraints.screenMediaConstraints);
-    } catch (e) {
-      await _getUserMediaFailed(e);
+    } catch (e, s) {
+      Logs().w('Failed to get display media', e, s);
+      fireCallEvent(CallStateChange.kError);
+      // We don't terminate the call here because the user might still want to stay
+      // on the call and try again later.
+      throw CallError(
+        CallErrorCode.displayMediaFailed,
+        'Failed to get display media',
+        e,
+      );
     }
-    return null;
   }
 
   Future<RTCPeerConnection> _createPeerConnection() async {
@@ -1444,19 +1482,6 @@ class CallSession {
       case CallStateChange.kAssertedIdentityChanged:
         break;
     }
-  }
-
-  Future<void> _getLocalOfferFailed(dynamic err) async {
-    Logs().e('Failed to get local offer ${err.toString()}');
-    fireCallEvent(CallStateChange.kError);
-
-    await terminate(CallParty.kLocal, CallErrorCode.localOfferFailed, true);
-  }
-
-  Future<void> _getUserMediaFailed(dynamic err) async {
-    Logs().w('Failed to get user media - ending call ${err.toString()}');
-    fireCallEvent(CallStateChange.kError);
-    await terminate(CallParty.kLocal, CallErrorCode.userMediaFailed, true);
   }
 
   Future<void> onSelectAnswerReceived(String? selectedPartyId) async {
