@@ -323,6 +323,50 @@ class KeyManager {
       return true;
     }
 
+    // next check if the devices in the room changed
+    final devicesToReceive = <DeviceKeys>[];
+    final newDeviceKeys = await room.getUserDeviceKeys();
+    final newDeviceKeyIds = _getDeviceKeyIdMap(newDeviceKeys);
+    // first check for user differences
+    final oldUserIds = sess.devices.keys.toSet();
+    final newUserIds = newDeviceKeyIds.keys.toSet();
+
+    // Update TOFU states:
+    final onTofuEvent = client.onTofuEvent;
+    if (onTofuEvent != null) {
+      final nonTofuMasterKeys = newUserIds
+          .where((userId) => userId != client.userID)
+          .map((userId) => client.userDeviceKeys[userId]?.masterKey)
+          .whereType<CrossSigningKey>()
+          .where((key) => !key.tofuVerified && !key.verified);
+      if (nonTofuMasterKeys.isNotEmpty) {
+        // Inform about changed keys:
+        final userIdsWithChangedMasterKeys = nonTofuMasterKeys
+            .where((key) => key.lastSeenPublicKey != null)
+            .map((key) => key.userId)
+            .toSet();
+        if (userIdsWithChangedMasterKeys.isNotEmpty) {
+          onTofuEvent(room, userIdsWithChangedMasterKeys);
+        }
+
+        // Update last seen public key for each master key:
+        for (final masterKey in nonTofuMasterKeys) {
+          if (masterKey.lastSeenPublicKey == null) {
+            Logs().d(
+              'Trust On First Use for ${masterKey.userId} master key',
+              masterKey.publicKey,
+            );
+          } else {
+            Logs().d(
+              '${masterKey.userId} has a new master key',
+              masterKey.publicKey,
+            );
+          }
+          await masterKey.updateLastSeenPublicKey();
+        }
+      }
+    }
+
     if (!wipe) {
       // first check if it needs to be rotated
       final encryptionContent =
@@ -349,13 +393,6 @@ class KeyManager {
     }
 
     if (!wipe) {
-      // next check if the devices in the room changed
-      final devicesToReceive = <DeviceKeys>[];
-      final newDeviceKeys = await room.getUserDeviceKeys();
-      final newDeviceKeyIds = _getDeviceKeyIdMap(newDeviceKeys);
-      // first check for user differences
-      final oldUserIds = sess.devices.keys.toSet();
-      final newUserIds = newDeviceKeyIds.keys.toSet();
       if (oldUserIds.difference(newUserIds).isNotEmpty) {
         // a user left the room, we must wipe the session
         wipe = true;

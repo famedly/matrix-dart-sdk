@@ -1088,14 +1088,18 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<void> setVerifiedUserCrossSigningKey(
     bool verified,
     String userId,
-    String publicKey,
-  ) async {
+    String publicKey, {
+    String? lastSeenPublicKey,
+  }) async {
     final raw = copyMap(
       (await _userCrossSigningKeysBox
               .get(TupleKey(userId, publicKey).toString())) ??
           {},
     );
     raw['verified'] = verified;
+    if (lastSeenPublicKey != null) {
+      raw['last_seen_public_key'] = lastSeenPublicKey;
+    }
     await _userCrossSigningKeysBox.put(
       TupleKey(userId, publicKey).toString(),
       raw,
@@ -1439,6 +1443,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String content,
     bool verified,
     bool blocked,
+    String? lastSeenPublicKey,
   ) async {
     await _userCrossSigningKeysBox.put(
       TupleKey(userId, publicKey).toString(),
@@ -1448,6 +1453,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         'content': content,
         'verified': verified,
         'blocked': blocked,
+        if (lastSeenPublicKey != null)
+          'last_seen_public_key': lastSeenPublicKey,
       },
     );
   }
