@@ -438,7 +438,76 @@ class Event extends MatrixEvent {
     room.client.onCancelSendEvent.add(eventId);
   }
 
+  Future<MatrixFile?> _getCachedFile({bool getThumbnail = false}) async {
+    if (transactionId == null) return null;
+
+    final filename = content.tryGet<String>('filename')!;
+
+    if (getThumbnail) {
+      final thumbnailBytes = await room.client.database.getFile(
+        Uri(
+          scheme: 'cache',
+          host: 'thumbnail',
+          path: transactionId,
+        ),
+      );
+      if (thumbnailBytes != null) {
+        return MatrixImageFile(
+          bytes: thumbnailBytes,
+          name: filename,
+          mimeType: thumbnailMimetype,
+          width: thumbnailInfoMap.tryGet<int>('w'),
+          height: thumbnailInfoMap.tryGet<int>('h'),
+        );
+      }
+    }
+
+    final fileBytes = await room.client.database.getFile(
+      Uri(
+        scheme: 'cache',
+        host: 'file',
+        path: transactionId,
+      ),
+    );
+    if (fileBytes == null) {
+      await cancelSend();
+      throw Exception('Can not try to send again. File is no longer cached.');
+    }
+    return switch (messageType) {
+      MessageTypes.Video => MatrixVideoFile(
+          bytes: fileBytes,
+          name: filename,
+          mimeType: attachmentMimetype,
+          duration: infoMap.tryGet<int>('duration'),
+          width: infoMap.tryGet<int>('w'),
+          height: infoMap.tryGet<int>('h'),
+        ),
+      MessageTypes.Audio => MatrixAudioFile(
+          bytes: fileBytes,
+          name: filename,
+          mimeType: attachmentMimetype,
+          duration: infoMap.tryGet<int>('duration'),
+        ),
+      MessageTypes.Image => MatrixImageFile(
+          bytes: fileBytes,
+          name: filename,
+          mimeType: attachmentMimetype,
+          width: infoMap.tryGet<int>('w'),
+          height: infoMap.tryGet<int>('h'),
+          blurhash: infoMap.tryGet<String>('xyz.amorgan.blurhash'),
+        ),
+      MessageTypes.File || _ => MatrixFile(
+          bytes: fileBytes,
+          name: filename,
+          mimeType: attachmentMimetype,
+        ),
+    };
+  }
+
   /// Try to send this event again. Only works with events of status -1.
+  /// If this is a file event and the file was not uploaded yet and the file is
+  /// not found in the cache locally, this throws a
+  /// `FileNoLongerInCacheException`.
   Future<String?> sendAgain({String? txid}) async {
     if (!status.isError) return null;
 
@@ -449,12 +518,10 @@ class Event extends MatrixEvent {
       MessageTypes.Audio,
       MessageTypes.File,
     }.contains(messageType)) {
-      final file = room.sendingFilePlaceholders[eventId];
-      if (file == null) {
-        await cancelSend();
-        throw Exception('Can not try to send again. File is no longer cached.');
-      }
-      final thumbnail = room.sendingFileThumbnails[eventId];
+      final file = await _getCachedFile();
+      final thumbnail = await _getCachedFile(getThumbnail: true);
+      if (file == null) throw FileNoLongerInCacheException();
+
       final credentials = FileSendRequestCredentials.fromJson(unsigned ?? {});
       final inReplyTo = credentials.inReplyTo == null
           ? null
@@ -462,7 +529,7 @@ class Event extends MatrixEvent {
       return await room.sendFileEvent(
         file,
         txid: txid ?? transactionId,
-        thumbnail: thumbnail,
+        thumbnail: thumbnail as MatrixImageFile,
         inReplyTo: inReplyTo,
         editEventId: credentials.editEventId,
         shrinkImageMaxDimension: credentials.shrinkImageMaxDimension,
@@ -754,8 +821,8 @@ class Event extends MatrixEvent {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
-    if (status.isSending) {
-      final localFile = room.sendingFilePlaceholders[eventId];
+    if (!status.isSent) {
+      final localFile = await _getCachedFile(getThumbnail: getThumbnail);
       if (localFile != null) return localFile;
     }
     final database = room.client.database;
@@ -1213,3 +1280,5 @@ enum FileSendingStatus {
   encrypting,
   uploading,
 }
+
+class FileNoLongerInCacheException implements Exception {}
