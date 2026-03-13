@@ -47,7 +47,7 @@ class NativeImplementationsWebWorker extends NativeImplementations {
       final origin = data['origin'];
       final completer = _completers[origin];
 
-      final error = data['error']!;
+      final error = data['error'];
 
       final stackTrace = await onStackTrace.call(data['stacktrace'] as String);
       completer?.completeError(

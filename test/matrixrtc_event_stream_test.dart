@@ -117,7 +117,7 @@ void main() {
               ],
             },
             senderId: matrix.userID!,
-            stateKey: matrix.userID!,
+            stateKey: matrix.userID,
           ),
         );
 
@@ -293,7 +293,7 @@ void main() {
               ],
             },
             senderId: matrix.userID!,
-            stateKey: matrix.userID!,
+            stateKey: matrix.userID,
           ),
         );
 
@@ -378,7 +378,7 @@ void main() {
               ],
             },
             senderId: matrix.userID!,
-            stateKey: matrix.userID!,
+            stateKey: matrix.userID,
           ),
         );
 
@@ -483,7 +483,7 @@ void main() {
               ],
             },
             senderId: matrix.userID!,
-            stateKey: matrix.userID!,
+            stateKey: matrix.userID,
           ),
         );
 
@@ -667,7 +667,7 @@ void main() {
             originServerTs: DateTime.now(),
             type: EventTypes.GroupCallMember,
             senderId: room.client.userID!,
-            stateKey: room.client.userID!,
+            stateKey: room.client.userID,
             content: {
               'memberships': [
                 CallMembership(

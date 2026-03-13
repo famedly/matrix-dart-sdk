@@ -540,7 +540,7 @@ class LiveKitBackend extends CallBackend {
   Future<void> dispose(GroupCallSession groupCall) async {
     // only remove our own, to save requesting if we join again, yes the other side
     // will send it anyway but welp
-    _encryptionKeysMap.remove(groupCall.localParticipant!);
+    _encryptionKeysMap.remove(groupCall.localParticipant);
     _currentLocalKeyIndex = 0;
     _latestLocalKeyIndex = 0;
     _memberLeaveEncKeyRotateDebounceTimer?.cancel();

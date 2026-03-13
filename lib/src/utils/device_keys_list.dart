@@ -560,7 +560,7 @@ class DeviceKeys extends SignableKey {
     final request = KeyVerification(
       encryption: encryption,
       userId: userId,
-      deviceId: deviceId!,
+      deviceId: deviceId,
     );
 
     await request.start();

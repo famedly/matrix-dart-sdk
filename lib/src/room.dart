@@ -2690,14 +2690,14 @@ class Room {
     if (temp.isNotEmpty) {
       temp.sort((a, b) => a.powerLevel.compareTo(b.powerLevel));
       if (temp.last.id.domain != null) {
-        queryParameters.add(temp.last.id.domain!);
+        queryParameters.add(temp.last.id.domain);
       }
     }
 
     final servers = <String, int>{};
     for (final user in users) {
       if (user.id.domain != null) {
-        if (servers.containsKey(user.id.domain!)) {
+        if (servers.containsKey(user.id.domain)) {
           servers[user.id.domain!] = servers[user.id.domain!]! + 1;
         } else {
           servers[user.id.domain!] = 1;

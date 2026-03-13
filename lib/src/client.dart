@@ -4051,7 +4051,7 @@ class Client extends MatrixApi {
       for (final identityKey in olmSessions.keys) {
         final sessions = olmSessions[identityKey]!;
         for (final sessionId in sessions.keys) {
-          final session = sessions[sessionId]!;
+          final session = sessions[sessionId];
           await database.storeOlmSession(
             identityKey,
             session['session_id'] as String,
