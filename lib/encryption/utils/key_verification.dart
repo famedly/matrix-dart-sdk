@@ -295,7 +295,7 @@ class KeyVerification {
     String type, {
     Uint8List? qrDataRawBytes,
   }) async {
-    bool qrChecksOut = false;
+    var qrChecksOut = false;
     if (possibleMethods.contains(type)) {
       if (qrDataRawBytes != null) {
         qrChecksOut = await verifyQrData(qrDataRawBytes);
@@ -349,7 +349,7 @@ class KeyVerification {
   bool _handlePayloadLock = false;
 
   QRMode getOurQRMode() {
-    QRMode mode = QRMode.verifyOtherUser;
+    var mode = QRMode.verifyOtherUser;
     if (client.userID == userId) {
       if (client.encryption != null &&
           client.encryption!.enabled &&
@@ -731,7 +731,7 @@ class KeyVerification {
     if (_method is _KeyVerificationMethodSas) {
       final numbers =
           _bytesToInt((_method as _KeyVerificationMethodSas).makeSas(6), 6);
-      return numbers.map((n) => KeyVerificationEmoji(n)).toList().sublist(0, 7);
+      return numbers.map(KeyVerificationEmoji.new).toList().sublist(0, 7);
     }
     return [];
   }
@@ -891,7 +891,7 @@ class KeyVerification {
       return true;
     }
     Logs().e(
-      '[KeyVerificaton] lastStep mismatch cancelling, expected from ${checkLastStep.toString()} was ${lastStep.toString()}',
+      '[KeyVerificaton] lastStep mismatch cancelling, expected from $checkLastStep was $lastStep',
     );
     await cancel('m.unexpected_message');
     return false;

@@ -45,15 +45,15 @@ void main() {
     Logs().level = Level.error;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final id = '!4fsdfjisjf:server.abc';
-    final senderID = '@alice:server.abc';
-    final type = 'm.room.message';
-    final msgtype = 'm.text';
-    final body = 'Hello fox';
-    final formatted_body = '<b>Hello</b> fox';
+    const id = '!4fsdfjisjf:server.abc';
+    const senderID = '@alice:server.abc';
+    const type = 'm.room.message';
+    const msgtype = 'm.text';
+    const body = 'Hello fox';
+    const formattedBody = '<b>Hello</b> fox';
 
-    final contentJson =
-        '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body","m.relates_to":{"m.in_reply_to":{"event_id":"\$1234:example.com"}}}';
+    const contentJson =
+        '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formattedBody","m.relates_to":{"m.in_reply_to":{"event_id":"\$1234:example.com"}}}';
 
     final jsonObj = <String, dynamic>{
       'event_id': id,

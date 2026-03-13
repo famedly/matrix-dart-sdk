@@ -1945,7 +1945,7 @@ class Room {
     // Is user already in cache?
 
     // If not in cache, try the database
-    User? foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
+    var foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     // If the room is not postloaded, check the database
     if (partial && foundUser == null) {
@@ -2624,7 +2624,7 @@ class Room {
   List<SpaceParent> get spaceParents =>
       states[EventTypes.SpaceParent]
           ?.values
-          .map((state) => SpaceParent.fromState(state))
+          .map(SpaceParent.fromState)
           .where((child) => child.via.isNotEmpty)
           .toList() ??
       [];
@@ -2637,7 +2637,7 @@ class Room {
       ? throw Exception('Room is not a space!')
       : (states[EventTypes.SpaceChild]
               ?.values
-              .map((state) => SpaceChild.fromState(state))
+              .map(SpaceChild.fromState)
               .where((child) => child.via.isNotEmpty)
               .toList() ??
           [])
@@ -2674,7 +2674,7 @@ class Room {
         'https://matrix.to/#/${Uri.encodeComponent(canonicalAlias)}',
       );
     }
-    final List queryParameters = [];
+    final queryParameters = [];
     final users = await requestParticipants([Membership.join]);
     final currentPowerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
 
@@ -2690,14 +2690,14 @@ class Room {
     if (temp.isNotEmpty) {
       temp.sort((a, b) => a.powerLevel.compareTo(b.powerLevel));
       if (temp.last.id.domain != null) {
-        queryParameters.add(temp.last.id.domain!);
+        queryParameters.add(temp.last.id.domain);
       }
     }
 
-    final Map<String, int> servers = {};
+    final servers = <String, int>{};
     for (final user in users) {
       if (user.id.domain != null) {
-        if (servers.containsKey(user.id.domain!)) {
+        if (servers.containsKey(user.id.domain)) {
           servers[user.id.domain!] = servers[user.id.domain!]! + 1;
         } else {
           servers[user.id.domain!] = 1;

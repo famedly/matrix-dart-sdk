@@ -84,10 +84,10 @@ void main() async {
       expect(user1.displayName, 'Alice M');
     });
     test('Create from json', () async {
-      final id = '@alice:server.abc';
-      final membership = Membership.join;
-      final displayName = 'Alice';
-      final avatarUrl = '';
+      const id = '@alice:server.abc';
+      const membership = Membership.join;
+      const displayName = 'Alice';
+      const avatarUrl = '';
 
       final jsonObj = {
         'content': {

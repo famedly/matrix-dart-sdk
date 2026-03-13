@@ -304,7 +304,7 @@ void main() {
         );
       });
       test('storeEventUpdate (state)', () async {
-        final roomid = '!testrooma:example.com';
+        const roomid = '!testrooma:example.com';
         final client = Client(
           'testclient',
           database: await getMatrixSdkDatabase(),

@@ -99,7 +99,7 @@ class CallError extends Error {
 
   @override
   String toString() {
-    return '[$code] $msg, err: ${err.toString()}';
+    return '[$code] $msg, err: $err';
   }
 }
 
@@ -161,7 +161,7 @@ class GroupCallError extends Error {
 
   @override
   String toString() {
-    return 'Group Call Error: [$code] $msg, err: ${err.toString()}';
+    return 'Group Call Error: [$code] $msg, err: $err';
   }
 }
 

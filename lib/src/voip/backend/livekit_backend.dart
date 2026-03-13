@@ -76,7 +76,7 @@ class LiveKitBackend extends CallBackend {
             .isAfter(DateTime.now()) &&
         !skipJoinDebounce) {
       Logs().d(
-        '_makeNewSenderKey using previous key because last created at ${_lastNewKeyTime.toString()}',
+        '_makeNewSenderKey using previous key because last created at $_lastNewKeyTime',
       );
       // still a fairly new key, just send that
       await _sendEncryptionKeysEvent(
@@ -125,7 +125,7 @@ class LiveKitBackend extends CallBackend {
 
     Uint8List? ratchetedKey;
 
-    int ratchetTryCounter = 0;
+    var ratchetTryCounter = 0;
 
     while (ratchetTryCounter <= 8 &&
         (ratchetedKey == null || ratchetedKey.isEmpty)) {
@@ -284,7 +284,7 @@ class LiveKitBackend extends CallBackend {
         [EncryptionKeyEntry(keyIndex, base64Encode(myLatestKey))],
         groupCall.groupCallId,
       );
-      final Map<String, Object> data = {
+      final data = <String, Object>{
         ...keyContent.toJson(),
         // used to find group call in groupCalls when ToDeviceEvent happens,
         // plays nicely with backwards compatibility for mesh calls
@@ -316,7 +316,7 @@ class LiveKitBackend extends CallBackend {
   ) async {
     if (remoteParticipants.isEmpty) return;
     Logs().v(
-      '[VOIP E2EE] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ',
+      '[VOIP E2EE] _sendToDeviceEvent: sending $data to ${remoteParticipants.map((e) => e.id)} ',
     );
     final txid =
         VoIP.customTxid ?? groupCall.client.generateUniqueTransactionId();
@@ -325,9 +325,8 @@ class LiveKitBackend extends CallBackend {
 
     // could just combine the two but do not want to rewrite the enc thingy
     // wrappers here again.
-    final List<DeviceKeys> mustEncryptkeysToSendTo = [];
-    final Map<String, Map<String, Map<String, Object>>> unencryptedDataToSend =
-        {};
+    final mustEncryptkeysToSendTo = <DeviceKeys>[];
+    final unencryptedDataToSend = <String, Map<String, Map<String, Object>>>{};
 
     for (final participant in remoteParticipants) {
       if (participant.deviceId == null) continue;
@@ -375,7 +374,7 @@ class LiveKitBackend extends CallBackend {
     GroupCallSession groupCall,
     List<CallParticipant> remoteParticipants,
   ) async {
-    final Map<String, Object> data = {
+    final data = <String, Object>{
       'conf_id': groupCall.groupCallId,
       'device_id': groupCall.client.deviceID!,
       'room_id': groupCall.room.id,
@@ -541,7 +540,7 @@ class LiveKitBackend extends CallBackend {
   Future<void> dispose(GroupCallSession groupCall) async {
     // only remove our own, to save requesting if we join again, yes the other side
     // will send it anyway but welp
-    _encryptionKeysMap.remove(groupCall.localParticipant!);
+    _encryptionKeysMap.remove(groupCall.localParticipant);
     _currentLocalKeyIndex = 0;
     _latestLocalKeyIndex = 0;
     _memberLeaveEncKeyRotateDebounceTimer?.cancel();

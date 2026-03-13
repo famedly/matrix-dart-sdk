@@ -3,13 +3,7 @@ include: package:famedly_dart_lints/analysis_options.yaml
 linter:
   rules:
     # TODO: Enable these lints one after another and fix them
-    omit_local_variable_types: false
-    prefer_const_declarations: false
-    unnecessary_lambdas: false
     non_constant_identifier_names: false
-    noop_primitive_operations: false
-    unnecessary_null_checks: false
-    avoid_void_async: false
     sort_pub_dependencies: false
 
 dart_code_linter:

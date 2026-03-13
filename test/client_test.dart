@@ -93,7 +93,7 @@ void main() {
         database: await getDatabase(),
       );
       expect(client.isLogged(), false);
-      final Set<InitState> initStates = {};
+      final initStates = <InitState>{};
       await client.init(onInitStateChanged: initStates.add);
       expect(client.isLogged(), false);
       expect(initStates, {InitState.initializing, InitState.finished});
@@ -392,7 +392,7 @@ void main() {
         'bla': 'blub',
       };
 
-      final key = 'abc def!/_-';
+      const key = 'abc def!/_-';
       await matrix.setAccountData(matrix.userID!, key, content);
       final dbContent = await matrix.database.getAccountData();
 
@@ -405,8 +405,8 @@ void main() {
         'bla': 'blub',
       };
 
-      final key = 'abc def!/_-';
-      final roomId = '!726s6s6q:example.com';
+      const key = 'abc def!/_-';
+      const roomId = '!726s6s6q:example.com';
       await matrix.setAccountDataPerRoom(matrix.userID!, roomId, key, content);
       final roomFromList = (await matrix.database.getRoomList(matrix))
           .firstWhere((room) => room.id == roomId);
@@ -612,7 +612,7 @@ void main() {
     });
 
     test('sync state event in-memory handling', () async {
-      final roomId = '!726s6s6q:example.com';
+      const roomId = '!726s6s6q:example.com';
       final room = matrix.getRoomById(roomId)!;
       // put an important state event in-memory
       await matrix.handleSync(
@@ -1040,7 +1040,7 @@ void main() {
       client.rooms.clear();
       await client.database.clearCache();
 
-      final roomId = '!inviteLeaveRoom:example.com';
+      const roomId = '!inviteLeaveRoom:example.com';
       await client.handleSync(
         SyncUpdate(
           nextBatch: 'ABCDEF',
@@ -1148,7 +1148,7 @@ void main() {
       for (var i = 0; i < 30; i++) {
         final account = vod.Account();
         final keys = account.identityKeys;
-        final userId = '@testuser:example.org';
+        const userId = '@testuser:example.org';
         final deviceId = 'DEVICE$i';
         final keyObj = {
           'user_id': userId,
@@ -1668,7 +1668,7 @@ void main() {
         database: await getDatabase(),
         legacyDatabaseBuilder: (_) => firstDatabase,
       );
-      final Set<InitState> initStates = {};
+      final initStates = <InitState>{};
       await newClient.init(onInitStateChanged: initStates.add);
       expect(initStates, {
         InitState.initializing,

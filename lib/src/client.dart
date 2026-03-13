@@ -559,10 +559,9 @@ class Client extends MatrixApi {
 
       // Check if server supports at least one supported version
       final versions = await getVersions();
-      if (!versions.versions
-          .any((version) => supportedVersions.contains(version))) {
+      if (!versions.versions.any(supportedVersions.contains)) {
         Logs().w(
-          'Server supports the versions: ${versions.toString()} but this application is only compatible with ${supportedVersions.toString()}.',
+          'Server supports the versions: $versions but this application is only compatible with $supportedVersions.',
         );
         assert(false);
       }
@@ -2249,7 +2248,7 @@ class Client extends MatrixApi {
       _initLock = false;
       onLoginStateChanged.add(LoginState.loggedIn);
       Logs().i(
-        'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
+        'Successfully connected as ${userID.localpart} with $homeserver',
       );
 
       /// Timeout of 0, so that we don't see a spinner for 30 seconds.
@@ -2431,7 +2430,7 @@ class Client extends MatrixApi {
         since: prevBatch,
         timeout: timeout?.inMilliseconds,
         setPresence: syncPresence,
-      ).then((v) => Future<SyncUpdate?>.value(v)).catchError((e) {
+      ).then(Future<SyncUpdate?>.value).catchError((e) {
         if (e is MatrixException) {
           syncError = e;
         } else {
@@ -2624,8 +2623,8 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleToDeviceEvents(List<BasicEventWithSender> events) async {
-    final Map<String, List<String>> roomsWithNewKeyToSessionId = {};
-    final List<ToDeviceEvent> callToDeviceEvents = [];
+    final roomsWithNewKeyToSessionId = <String, List<String>>{};
+    final callToDeviceEvents = <ToDeviceEvent>[];
     for (final event in events) {
       var toDeviceEvent = ToDeviceEvent.fromJson(event.toJson());
       Logs().v('Got to_device event ${toDeviceEvent.toJson()} ');
@@ -2843,7 +2842,7 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleEphemerals(Room room, List<BasicEvent> events) async {
-    final List<ReceiptEventContent> receipts = [];
+    final receipts = <ReceiptEventContent>[];
 
     for (final event in events) {
       room.setEphemeral(event);
@@ -3760,10 +3759,9 @@ class Client extends MatrixApi {
   /// Whether all push notifications are muted using the [.m.rule.master]
   /// rule of the push rules: https://matrix.org/docs/spec/client_server/r0.6.0#m-rule-master
   bool get allPushNotificationsMuted {
-    final Map<String, Object?>? globalPushRules =
-        _accountData[EventTypes.PushRules]
-            ?.content
-            .tryGetMap<String, Object?>('global');
+    final globalPushRules = _accountData[EventTypes.PushRules]
+        ?.content
+        .tryGetMap<String, Object?>('global');
     if (globalPushRules == null) return false;
 
     final globalPushRulesOverride = globalPushRules.tryGetList('override');
@@ -4053,7 +4051,7 @@ class Client extends MatrixApi {
       for (final identityKey in olmSessions.keys) {
         final sessions = olmSessions[identityKey]!;
         for (final sessionId in sessions.keys) {
-          final session = sessions[sessionId]!;
+          final session = sessions[sessionId];
           await database.storeOlmSession(
             identityKey,
             session['session_id'] as String,
@@ -4228,7 +4226,7 @@ class BadServerLoginTypesException implements Exception {
 
   @override
   String toString() =>
-      'Server supports the Login Types: ${serverLoginTypes.toString()} but this application is only compatible with ${supportedLoginTypes.toString()}.';
+      'Server supports the Login Types: $serverLoginTypes but this application is only compatible with $supportedLoginTypes.';
 }
 
 class FileTooBigMatrixException extends MatrixException {

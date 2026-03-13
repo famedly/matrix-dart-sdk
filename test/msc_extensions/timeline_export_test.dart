@@ -156,7 +156,7 @@ void main() {
         );
 
         // Verify events are in chronological order
-        for (int i = 1; i < complete.events.length; i++) {
+        for (var i = 1; i < complete.events.length; i++) {
           expect(
             complete.events[i].originServerTs
                     .isBefore(complete.events[i - 1].originServerTs) ||

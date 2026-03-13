@@ -2883,8 +2883,8 @@ class ThirdPartySigned {
   Map<String, Object?> toJson() => {
         'mxid': mxid,
         'sender': sender,
-        'signatures': signatures
-            .map((k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v)))),
+        'signatures':
+            signatures.map((k, v) => MapEntry(k, v.map(MapEntry.new))),
         'token': token,
       };
 
@@ -2982,9 +2982,9 @@ class ClaimKeysResponse {
   Map<String, Object?> toJson() {
     final failures = this.failures;
     return {
-      if (failures != null) 'failures': failures.map((k, v) => MapEntry(k, v)),
-      'one_time_keys': oneTimeKeys
-          .map((k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v)))),
+      if (failures != null) 'failures': failures.map(MapEntry.new),
+      'one_time_keys':
+          oneTimeKeys.map((k, v) => MapEntry(k, v.map(MapEntry.new))),
     };
   }
 
@@ -3083,7 +3083,7 @@ class QueryKeysResponse {
         'device_keys': deviceKeys.map(
           (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson()))),
         ),
-      if (failures != null) 'failures': failures.map((k, v) => MapEntry(k, v)),
+      if (failures != null) 'failures': failures.map(MapEntry.new),
       if (masterKeys != null)
         'master_keys': masterKeys.map((k, v) => MapEntry(k, v.toJson())),
       if (selfSigningKeys != null)
@@ -3626,9 +3626,7 @@ class PublicRoomQueryFilter {
       : genericSearchTerm = ((v) =>
             v != null ? v as String : null)(json['generic_search_term']),
         roomTypes = ((v) => v != null
-            ? (v as List)
-                .map((v) => ((v) => v != null ? v as String : null)(v))
-                .toList()
+            ? (v as List).map(((v) => v != null ? v as String : null)).toList()
             : null)(json['room_types']);
   Map<String, Object?> toJson() {
     final genericSearchTerm = this.genericSearchTerm;
@@ -7104,7 +7102,7 @@ class GetVersionsResponse {
     final unstableFeatures = this.unstableFeatures;
     return {
       if (unstableFeatures != null)
-        'unstable_features': unstableFeatures.map((k, v) => MapEntry(k, v)),
+        'unstable_features': unstableFeatures.map(MapEntry.new),
       'versions': versions.map((v) => v).toList(),
     };
   }
