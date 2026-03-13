@@ -28,7 +28,7 @@ import 'fake_client.dart';
 void main() {
   group('Timeline', tags: 'olm', () {
     Logs().level = Level.error;
-    final roomID = '!1234:example.com';
+    const roomID = '!1234:example.com';
     var testTimeStamp = 0;
     var updateCount = 0;
     final insertList = <int>[];
@@ -1255,8 +1255,8 @@ void main() {
     });
 
     test('make sure room prev_batch is set correctly when invited', () async {
-      final newRoomId1 = '!newroom:example.com';
-      final newRoomId2 = '!newroom2:example.com';
+      const newRoomId1 = '!newroom:example.com';
+      const newRoomId2 = '!newroom2:example.com';
 
       await client.handleSync(
         SyncUpdate(

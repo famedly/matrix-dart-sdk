@@ -27,7 +27,7 @@ void main() {
     Logs().level = Level.error;
 
     late Client client;
-    final roomId = '!726s6s6q:example.com';
+    const roomId = '!726s6s6q:example.com';
     late Room room;
     late Map<String, dynamic> payload;
     final now = DateTime.now();

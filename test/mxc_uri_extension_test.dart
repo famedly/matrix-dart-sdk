@@ -35,7 +35,7 @@ void main() {
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
       );
-      final mxc = 'mxc://exampleserver.abc/abcdefghijklmn';
+      const mxc = 'mxc://exampleserver.abc/abcdefghijklmn';
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
@@ -71,7 +71,7 @@ void main() {
         checkWellKnown: false,
       );
       client.homeserver = Uri.parse('https://fakeserver.notexisting:1337');
-      final mxc = 'mxc://exampleserver.abc/abcdefghijklmn';
+      const mxc = 'mxc://exampleserver.abc/abcdefghijklmn';
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
@@ -106,7 +106,7 @@ void main() {
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
       );
-      final mxc = 'mxc://exampleserver.abc:1234/abcdefghijklmn';
+      const mxc = 'mxc://exampleserver.abc:1234/abcdefghijklmn';
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
@@ -147,7 +147,7 @@ void main() {
       );
 
       expect(await client.authenticatedMediaSupported(), false);
-      final mxc = 'mxc://exampleserver.abc:1234/abcdefghijklmn';
+      const mxc = 'mxc://exampleserver.abc:1234/abcdefghijklmn';
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
