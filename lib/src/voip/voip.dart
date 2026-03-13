@@ -1078,7 +1078,7 @@ class VoIP {
       );
     }
 
-    GroupCallSession? groupCall = getGroupCallById(room.id, groupCallId);
+    var groupCall = getGroupCallById(room.id, groupCallId);
 
     groupCall ??= await _newGroupCall(
       groupCallId,

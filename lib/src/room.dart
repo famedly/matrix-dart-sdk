@@ -1945,7 +1945,7 @@ class Room {
     // Is user already in cache?
 
     // If not in cache, try the database
-    User? foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
+    var foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     // If the room is not postloaded, check the database
     if (partial && foundUser == null) {
@@ -2674,7 +2674,7 @@ class Room {
         'https://matrix.to/#/${Uri.encodeComponent(canonicalAlias)}',
       );
     }
-    final List queryParameters = [];
+    final queryParameters = [];
     final users = await requestParticipants([Membership.join]);
     final currentPowerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
 
@@ -2694,7 +2694,7 @@ class Room {
       }
     }
 
-    final Map<String, int> servers = {};
+    final servers = <String, int>{};
     for (final user in users) {
       if (user.id.domain != null) {
         if (servers.containsKey(user.id.domain!)) {

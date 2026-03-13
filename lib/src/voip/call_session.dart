@@ -1148,7 +1148,7 @@ class CallSession {
   }
 
   Future<void> _preparePeerConnection() async {
-    int iceRestartedCount = 0;
+    var iceRestartedCount = 0;
 
     try {
       pc = await _createPeerConnection();
@@ -1846,7 +1846,7 @@ class CallSession {
     // therefore only group calls use to-device messages for call events
     if (isGroupCall && remoteDeviceId != null) {
       final toDeviceSeq = _toDeviceSeq++;
-      final Map<String, Object> data = {
+      final data = <String, Object>{
         ...content,
         'seq': toDeviceSeq,
         if (remoteSessionId != null) 'dest_session_id': remoteSessionId!,

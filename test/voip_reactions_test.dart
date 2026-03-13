@@ -920,7 +920,7 @@ void main() {
       // Test different emoji reactions using first 5 emojis
       final emojis = testEmojis.take(5).toList();
 
-      for (int i = 0; i < emojis.length; i++) {
+      for (var i = 0; i < emojis.length; i++) {
         await matrix.handleSync(
           SyncUpdate(
             nextBatch: 'emoji_batch_$i',
@@ -969,7 +969,7 @@ void main() {
       );
 
       // Verify each emoji was processed correctly
-      for (int i = 0; i < emojis.length; i++) {
+      for (var i = 0; i < emojis.length; i++) {
         final event = reactionEvents[i] as CallReactionAddedEvent;
         expect(event.reactionKey, emojis[i]['emoji']);
         expect(event.participant.userId, '@alice:testing.com');

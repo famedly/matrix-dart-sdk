@@ -93,7 +93,7 @@ void main() {
         database: await getDatabase(),
       );
       expect(client.isLogged(), false);
-      final Set<InitState> initStates = {};
+      final initStates = <InitState>{};
       await client.init(onInitStateChanged: initStates.add);
       expect(client.isLogged(), false);
       expect(initStates, {InitState.initializing, InitState.finished});
@@ -1668,7 +1668,7 @@ void main() {
         database: await getDatabase(),
         legacyDatabaseBuilder: (_) => firstDatabase,
       );
-      final Set<InitState> initStates = {};
+      final initStates = <InitState>{};
       await newClient.init(onInitStateChanged: initStates.add);
       expect(initStates, {
         InitState.initializing,

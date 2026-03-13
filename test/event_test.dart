@@ -1569,7 +1569,7 @@ void main() async {
     });
 
     group('unlocalized body reply stripping', () {
-      int i = 0;
+      var i = 0;
 
       void testUnlocalizedBody({
         required Object? body,
