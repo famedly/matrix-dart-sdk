@@ -2624,8 +2624,8 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleToDeviceEvents(List<BasicEventWithSender> events) async {
-    final Map<String, List<String>> roomsWithNewKeyToSessionId = {};
-    final List<ToDeviceEvent> callToDeviceEvents = [];
+    final roomsWithNewKeyToSessionId = <String, List<String>>{};
+    final callToDeviceEvents = <ToDeviceEvent>[];
     for (final event in events) {
       var toDeviceEvent = ToDeviceEvent.fromJson(event.toJson());
       Logs().v('Got to_device event ${toDeviceEvent.toJson()} ');
@@ -2843,7 +2843,7 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleEphemerals(Room room, List<BasicEvent> events) async {
-    final List<ReceiptEventContent> receipts = [];
+    final receipts = <ReceiptEventContent>[];
 
     for (final event in events) {
       room.setEphemeral(event);
@@ -3760,10 +3760,9 @@ class Client extends MatrixApi {
   /// Whether all push notifications are muted using the [.m.rule.master]
   /// rule of the push rules: https://matrix.org/docs/spec/client_server/r0.6.0#m-rule-master
   bool get allPushNotificationsMuted {
-    final Map<String, Object?>? globalPushRules =
-        _accountData[EventTypes.PushRules]
-            ?.content
-            .tryGetMap<String, Object?>('global');
+    final globalPushRules = _accountData[EventTypes.PushRules]
+        ?.content
+        .tryGetMap<String, Object?>('global');
     if (globalPushRules == null) return false;
 
     final globalPushRulesOverride = globalPushRules.tryGetList('override');

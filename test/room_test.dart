@@ -972,8 +972,8 @@ void main() {
     });
 
     test('getUserByMXID', () async {
-      final List<String> called = [];
-      final List<String> called2 = [];
+      final called = <String>[];
+      final called2 = <String>[];
       // ignore: deprecated_member_use_from_same_package
       final subscription = room.onUpdate.stream.listen((i) {
         called.add(i);

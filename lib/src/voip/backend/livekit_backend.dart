@@ -125,7 +125,7 @@ class LiveKitBackend extends CallBackend {
 
     Uint8List? ratchetedKey;
 
-    int ratchetTryCounter = 0;
+    var ratchetTryCounter = 0;
 
     while (ratchetTryCounter <= 8 &&
         (ratchetedKey == null || ratchetedKey.isEmpty)) {
@@ -284,7 +284,7 @@ class LiveKitBackend extends CallBackend {
         [EncryptionKeyEntry(keyIndex, base64Encode(myLatestKey))],
         groupCall.groupCallId,
       );
-      final Map<String, Object> data = {
+      final data = <String, Object>{
         ...keyContent.toJson(),
         // used to find group call in groupCalls when ToDeviceEvent happens,
         // plays nicely with backwards compatibility for mesh calls
@@ -325,9 +325,8 @@ class LiveKitBackend extends CallBackend {
 
     // could just combine the two but do not want to rewrite the enc thingy
     // wrappers here again.
-    final List<DeviceKeys> mustEncryptkeysToSendTo = [];
-    final Map<String, Map<String, Map<String, Object>>> unencryptedDataToSend =
-        {};
+    final mustEncryptkeysToSendTo = <DeviceKeys>[];
+    final unencryptedDataToSend = <String, Map<String, Map<String, Object>>>{};
 
     for (final participant in remoteParticipants) {
       if (participant.deviceId == null) continue;
@@ -375,7 +374,7 @@ class LiveKitBackend extends CallBackend {
     GroupCallSession groupCall,
     List<CallParticipant> remoteParticipants,
   ) async {
-    final Map<String, Object> data = {
+    final data = <String, Object>{
       'conf_id': groupCall.groupCallId,
       'device_id': groupCall.client.deviceID!,
       'room_id': groupCall.room.id,

@@ -233,7 +233,7 @@ class Box<V> {
     }.toJS;
     getAllValuesRequest.onsuccess = (Event event) {
       final values = getAllValuesRequest.result.dartify() as List;
-      for (int i = 0; i < values.length; i++) {
+      for (var i = 0; i < values.length; i++) {
         map[keys[i]] = _fromValue(values[i]) as V;
       }
       getAllValuesCompleter.complete();

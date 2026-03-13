@@ -295,7 +295,7 @@ class KeyVerification {
     String type, {
     Uint8List? qrDataRawBytes,
   }) async {
-    bool qrChecksOut = false;
+    var qrChecksOut = false;
     if (possibleMethods.contains(type)) {
       if (qrDataRawBytes != null) {
         qrChecksOut = await verifyQrData(qrDataRawBytes);
@@ -349,7 +349,7 @@ class KeyVerification {
   bool _handlePayloadLock = false;
 
   QRMode getOurQRMode() {
-    QRMode mode = QRMode.verifyOtherUser;
+    var mode = QRMode.verifyOtherUser;
     if (client.userID == userId) {
       if (client.encryption != null &&
           client.encryption!.enabled &&

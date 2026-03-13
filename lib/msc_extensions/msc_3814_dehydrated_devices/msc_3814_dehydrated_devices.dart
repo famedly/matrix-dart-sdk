@@ -164,7 +164,7 @@ extension DehydratedDeviceHandler on Client {
           (_) => chars.codeUnitAt(rnd.nextInt(chars.length)),
         ),
       );
-      final String device = 'FAM$deviceIdSuffix';
+      final device = 'FAM$deviceIdSuffix';
 
       // Generate a new olm account for the dehydrated device.
       try {

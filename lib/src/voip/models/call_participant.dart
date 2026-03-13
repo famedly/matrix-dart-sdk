@@ -15,7 +15,7 @@ class CallParticipant {
       userId == voip.client.userID && deviceId == voip.client.deviceID;
 
   String get id {
-    String pid = userId;
+    var pid = userId;
     if (deviceId != null) {
       pid += ':$deviceId';
     }

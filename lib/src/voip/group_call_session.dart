@@ -132,7 +132,7 @@ class GroupCallSession {
       await backend.initLocalStream(this, stream: stream);
     }
 
-    bool shouldSendNotification = false;
+    var shouldSendNotification = false;
     if (!room.hasActiveGroupCall(voip)) {
       shouldSendNotification = true;
     }
@@ -201,7 +201,7 @@ class GroupCallSession {
     );
 
     // Store permanent reactions from the current member event if it exists
-    List<MatrixEvent> permanentReactions = [];
+    var permanentReactions = <MatrixEvent>[];
     final membershipExpired = currentMembership?.isExpired ?? false;
 
     if (currentMembership?.eventId != null && !membershipExpired) {
@@ -286,7 +286,7 @@ class GroupCallSession {
           element.roomId == room.id; // sanity checks
     }).toList();
 
-    final Set<CallParticipant> newP = {};
+    final newP = <CallParticipant>{};
 
     for (final mem in memsForCurrentGroupCall) {
       final rp = CallParticipant(

@@ -1209,7 +1209,7 @@ void main() {
       timeline.events.clear();
       timeline.room.prev_batch = null;
 
-      Timeline t = await room.getTimeline();
+      var t = await room.getTimeline();
       expect(t.events.length, 0);
       expect(t.room.prev_batch, null);
 
@@ -1292,11 +1292,11 @@ void main() {
         ),
       );
 
-      Room? newRoom1 = client.getRoomById(newRoomId1);
+      var newRoom1 = client.getRoomById(newRoomId1);
       expect(newRoom1?.membership, Membership.invite);
       expect(newRoom1?.prev_batch, null);
 
-      Room? newRoom2 = client.getRoomById(newRoomId2);
+      var newRoom2 = client.getRoomById(newRoomId2);
       expect(newRoom2?.membership, Membership.invite);
       expect(newRoom2?.prev_batch, null);
 
@@ -1383,7 +1383,7 @@ void main() {
         ),
       );
 
-      Timeline t = await room.getTimeline();
+      var t = await room.getTimeline();
 
       expect(t.events.length, 2);
       expect(

@@ -10,7 +10,7 @@ class FamedlyCallMemberEvent {
   }
 
   factory FamedlyCallMemberEvent.fromJson(Event event, VoIP voip) {
-    final List<CallMembership> callMemberships = [];
+    final callMemberships = <CallMembership>[];
     final memberships = event.content.tryGetList('memberships');
     if (memberships != null && memberships.isNotEmpty) {
       for (final mem in memberships) {
