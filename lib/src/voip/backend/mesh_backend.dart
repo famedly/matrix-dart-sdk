@@ -329,7 +329,7 @@ class MeshBackend extends CallBackend {
     return null;
   }
 
-  void _onActiveSpeakerLoop(GroupCallSession groupCall) async {
+  Future<void> _onActiveSpeakerLoop(GroupCallSession groupCall) async {
     CallParticipant? nextActiveSpeaker;
     // idc about screen sharing atm.
     final userMediaStreamsCopyList =

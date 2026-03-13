@@ -40,7 +40,7 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     return completer.future.timeout(timeout);
   }
 
-  void _handleIncomingMessage(MessageEvent event) async {
+  Future<void> _handleIncomingMessage(MessageEvent event) async {
     final data = event.data.dartify() as LinkedHashMap;
     // don't forget handling errors of our second thread...
     if (data['label'] == 'stacktrace') {
