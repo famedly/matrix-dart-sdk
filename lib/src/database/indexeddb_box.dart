@@ -29,10 +29,10 @@ class BoxCollection with ZoneTransactionMixin {
 
     request.onerror = (Event event) {
       Logs().e(
-        '[IndexedDBBox] Error loading database - ${request.error?.toString()}',
+        '[IndexedDBBox] Error loading database - ${request.error}',
       );
       dbOpenCompleter.completeError(
-        'Error loading database - ${request.error?.toString()}',
+        'Error loading database - ${request.error}',
       );
     }.toJS;
 
@@ -99,11 +99,10 @@ class BoxCollection with ZoneTransactionMixin {
 
         txn.onerror = (Event event) {
           Logs().e(
-            '[IndexedDBBox] [transaction] Error - ${txn.error?.toString()}',
+            '[IndexedDBBox] [transaction] Error - ${txn.error}',
           );
           transactionCompleter.completeError(
-            'Transaction not completed due to an error - ${txn.error?.toString()}'
-                .toJS,
+            'Transaction not completed due to an error - ${txn.error}'.toJS,
           );
         }.toJS;
 
@@ -121,10 +120,10 @@ class BoxCollection with ZoneTransactionMixin {
       final request = txn.objectStore(name).clear();
       request.onerror = (Event event) {
         Logs().e(
-          '[IndexedDBBox] [clear] Object store clear error - ${request.error?.toString()}',
+          '[IndexedDBBox] [clear] Object store clear error - ${request.error}',
         );
         objStoreClearCompleter.completeError(
-          'Object store clear not completed due to an error - ${request.error?.toString()}'
+          'Object store clear not completed due to an error - ${request.error}'
               .toJS,
         );
       }.toJS;
@@ -134,9 +133,9 @@ class BoxCollection with ZoneTransactionMixin {
       unawaited(objStoreClearCompleter.future);
     }
     txn.onerror = (Event event) {
-      Logs().e('[IndexedDBBox] [clear] Error - ${txn.error?.toString()}');
+      Logs().e('[IndexedDBBox] [clear] Error - ${txn.error}');
       transactionCompleter.completeError(
-        'DB clear transaction not completed due to an error - ${txn.error?.toString()}'
+        'DB clear transaction not completed due to an error - ${txn.error}'
             .toJS,
       );
     }.toJS;
@@ -159,10 +158,10 @@ class BoxCollection with ZoneTransactionMixin {
         ((factory ?? window.indexedDB) as IDBFactory).deleteDatabase(name);
     request.onerror = (Event event) {
       Logs().e(
-        '[IndexedDBBox] [deleteDatabase] Error - ${request.error?.toString()}',
+        '[IndexedDBBox] [deleteDatabase] Error - ${request.error}',
       );
       deleteDatabaseCompleter.completeError(
-        'Error deleting database - ${request.error?.toString()}'.toJS,
+        'Error deleting database - ${request.error}'.toJS,
       );
     }.toJS;
     request.onsuccess = (Event event) {
@@ -195,10 +194,10 @@ class Box<V> {
     final request = store.getAllKeys();
     request.onerror = (Event event) {
       Logs().e(
-        '[IndexedDBBox] [getAllKeys] Error - ${request.error?.toString()}',
+        '[IndexedDBBox] [getAllKeys] Error - ${request.error}',
       );
       getAllKeysCompleter.completeError(
-        '[IndexedDBBox] [getAllKeys] Error - ${request.error?.toString()}'.toJS,
+        '[IndexedDBBox] [getAllKeys] Error - ${request.error}'.toJS,
       );
     }.toJS;
     request.onsuccess = (Event event) {
@@ -224,10 +223,10 @@ class Box<V> {
     final getAllValuesRequest = store.getAll();
     getAllValuesRequest.onerror = (Event event) {
       Logs().e(
-        '[IndexedDBBox] [getAllValues] Error - ${getAllValuesRequest.error?.toString()}',
+        '[IndexedDBBox] [getAllValues] Error - ${getAllValuesRequest.error}',
       );
       getAllValuesCompleter.completeError(
-        '[IndexedDBBox] [getAllValues] Error - ${getAllValuesRequest.error?.toString()}'
+        '[IndexedDBBox] [getAllValues] Error - ${getAllValuesRequest.error}'
             .toJS,
       );
     }.toJS;
@@ -250,11 +249,10 @@ class Box<V> {
     final getObjectCompleter = Completer();
     getObjectRequest.onerror = (Event event) {
       Logs().e(
-        '[IndexedDBBox] [get] Error - ${getObjectRequest.error?.toString()}',
+        '[IndexedDBBox] [get] Error - ${getObjectRequest.error}',
       );
       getObjectCompleter.completeError(
-        '[IndexedDBBox] [get] Error - ${getObjectRequest.error?.toString()}'
-            .toJS,
+        '[IndexedDBBox] [get] Error - ${getObjectRequest.error}'.toJS,
       );
     }.toJS;
     getObjectRequest.onsuccess = (Event event) {
@@ -277,10 +275,10 @@ class Box<V> {
         final getObjectCompleter = Completer();
         getObjectRequest.onerror = (Event event) {
           Logs().e(
-            '[IndexedDBBox] [getAll] Error at key $key - ${getObjectRequest.error?.toString()}',
+            '[IndexedDBBox] [getAll] Error at key $key - ${getObjectRequest.error}',
           );
           getObjectCompleter.completeError(
-            '[IndexedDBBox] [getAll] Error at key $key - ${getObjectRequest.error?.toString()}'
+            '[IndexedDBBox] [getAll] Error at key $key - ${getObjectRequest.error}'
                 .toJS,
           );
         }.toJS;
@@ -311,10 +309,10 @@ class Box<V> {
     final putCompleter = Completer();
     putRequest.onerror = (Event event) {
       Logs().e(
-        '[IndexedDBBox] [put] Error - ${putRequest.error?.toString()}',
+        '[IndexedDBBox] [put] Error - ${putRequest.error}',
       );
       putCompleter.completeError(
-        '[IndexedDBBox] [put] Error - ${putRequest.error?.toString()}'.toJS,
+        '[IndexedDBBox] [put] Error - ${putRequest.error}'.toJS,
       );
     }.toJS;
     putRequest.onsuccess = (Event event) {
@@ -340,11 +338,10 @@ class Box<V> {
     final deleteCompleter = Completer();
     deleteRequest.onerror = (Event event) {
       Logs().e(
-        '[IndexedDBBox] [delete] Error - ${deleteRequest.error?.toString()}',
+        '[IndexedDBBox] [delete] Error - ${deleteRequest.error}',
       );
       deleteCompleter.completeError(
-        '[IndexedDBBox] [delete] Error - ${deleteRequest.error?.toString()}'
-            .toJS,
+        '[IndexedDBBox] [delete] Error - ${deleteRequest.error}'.toJS,
       );
     }.toJS;
     deleteRequest.onsuccess = (Event event) {
@@ -376,10 +373,10 @@ class Box<V> {
       final deleteCompleter = Completer();
       deleteRequest.onerror = (Event event) {
         Logs().e(
-          '[IndexedDBBox] [deleteAll] Error at key $key - ${deleteRequest.error?.toString()}',
+          '[IndexedDBBox] [deleteAll] Error at key $key - ${deleteRequest.error}',
         );
         deleteCompleter.completeError(
-          '[IndexedDBBox] [deleteAll] Error at key $key - ${deleteRequest.error?.toString()}'
+          '[IndexedDBBox] [deleteAll] Error at key $key - ${deleteRequest.error}'
               .toJS,
         );
       }.toJS;
@@ -408,11 +405,10 @@ class Box<V> {
       final clearCompleter = Completer();
       clearRequest.onerror = (Event event) {
         Logs().e(
-          '[IndexedDBBox] [clear] Error - ${clearRequest.error?.toString()}',
+          '[IndexedDBBox] [clear] Error - ${clearRequest.error}',
         );
         clearCompleter.completeError(
-          '[IndexedDBBox] [clear] Error - ${clearRequest.error?.toString()}'
-              .toJS,
+          '[IndexedDBBox] [clear] Error - ${clearRequest.error}'.toJS,
         );
       }.toJS;
       clearRequest.onsuccess = (Event event) {

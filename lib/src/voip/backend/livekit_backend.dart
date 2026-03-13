@@ -76,7 +76,7 @@ class LiveKitBackend extends CallBackend {
             .isAfter(DateTime.now()) &&
         !skipJoinDebounce) {
       Logs().d(
-        '_makeNewSenderKey using previous key because last created at ${_lastNewKeyTime.toString()}',
+        '_makeNewSenderKey using previous key because last created at $_lastNewKeyTime',
       );
       // still a fairly new key, just send that
       await _sendEncryptionKeysEvent(
@@ -316,7 +316,7 @@ class LiveKitBackend extends CallBackend {
   ) async {
     if (remoteParticipants.isEmpty) return;
     Logs().v(
-      '[VOIP E2EE] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ',
+      '[VOIP E2EE] _sendToDeviceEvent: sending $data to ${remoteParticipants.map((e) => e.id)} ',
     );
     final txid =
         VoIP.customTxid ?? groupCall.client.generateUniqueTransactionId();

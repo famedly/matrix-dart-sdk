@@ -91,7 +91,7 @@ class CachedPresence {
 
   Presence toPresence() {
     final content = <String, dynamic>{
-      'presence': presence.name.toString(),
+      'presence': presence.name,
     };
     if (currentlyActive != null) content['currently_active'] = currentlyActive;
     if (lastActiveTimestamp != null) {

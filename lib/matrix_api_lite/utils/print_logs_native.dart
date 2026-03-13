@@ -4,10 +4,10 @@ extension PrintLogs on LogEvent {
   void printOut() {
     var logsStr = title;
     if (exception != null) {
-      logsStr += ' - ${exception.toString()}';
+      logsStr += ' - $exception';
     }
     if (stackTrace != null) {
-      logsStr += '\n${stackTrace.toString()}';
+      logsStr += '\n$stackTrace';
     }
     if (Logs().nativeColors) {
       switch (level) {

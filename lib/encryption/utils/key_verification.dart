@@ -891,7 +891,7 @@ class KeyVerification {
       return true;
     }
     Logs().e(
-      '[KeyVerificaton] lastStep mismatch cancelling, expected from ${checkLastStep.toString()} was ${lastStep.toString()}',
+      '[KeyVerificaton] lastStep mismatch cancelling, expected from $checkLastStep was $lastStep',
     );
     await cancel('m.unexpected_message');
     return false;

@@ -132,7 +132,7 @@ extension DehydratedDeviceHandler on Client {
         await encryption.dispose();
       }
     } catch (e) {
-      Logs().w('Exception while handling dehydrated devices: ${e.toString()}');
+      Logs().w('Exception while handling dehydrated devices: $e');
       return;
     }
   }
