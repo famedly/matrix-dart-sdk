@@ -8,6 +8,7 @@ import 'package:web/web.dart';
 
 import 'package:matrix/matrix.dart';
 
+// ignore: unused-code
 class NativeImplementationsWebWorker extends NativeImplementations {
   final Worker worker;
   final Duration timeout;

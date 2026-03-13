@@ -34,6 +34,7 @@ DedicatedWorkerGlobalScope get _workerScope =>
     (globalContext as DedicatedWorkerGlobalScope).self
         as DedicatedWorkerGlobalScope;
 
+// ignore: unused-code
 @pragma('dart2js:tryInline')
 Future<void> startWebWorker() async {
   Logs().i('[native implementations worker]: Starting...');

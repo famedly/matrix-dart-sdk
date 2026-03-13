@@ -7,6 +7,7 @@ typedef ComputeCallback = Future<R> Function<Q, R>(
 });
 
 // keep types in sync with [computeCallbackFromRunInBackground]
+// ignore: unused-code
 typedef ComputeRunner = Future<T> Function<T, U>(
   FutureOr<T> Function(U arg) function,
   U arg,

@@ -7,6 +7,7 @@ import 'package:sqlite3/open.dart';
 
 import 'package:matrix/matrix.dart';
 
+// ignore: unused-code
 /// A helper utility for SQfLite related encryption operations
 ///
 /// * helps loading the required dynamic libraries - even on cursed systems
