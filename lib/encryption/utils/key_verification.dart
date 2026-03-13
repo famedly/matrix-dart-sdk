@@ -731,7 +731,7 @@ class KeyVerification {
     if (_method is _KeyVerificationMethodSas) {
       final numbers =
           _bytesToInt((_method as _KeyVerificationMethodSas).makeSas(6), 6);
-      return numbers.map((n) => KeyVerificationEmoji(n)).toList().sublist(0, 7);
+      return numbers.map(KeyVerificationEmoji.new).toList().sublist(0, 7);
     }
     return [];
   }

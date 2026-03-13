@@ -975,9 +975,7 @@ void main() {
       final called = <String>[];
       final called2 = <String>[];
       // ignore: deprecated_member_use_from_same_package
-      final subscription = room.onUpdate.stream.listen((i) {
-        called.add(i);
-      });
+      final subscription = room.onUpdate.stream.listen(called.add);
       final subscription2 = room.client.onRoomState.stream.listen((i) {
         called2.add(i.roomId);
       });

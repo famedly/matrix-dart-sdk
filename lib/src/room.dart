@@ -2624,7 +2624,7 @@ class Room {
   List<SpaceParent> get spaceParents =>
       states[EventTypes.SpaceParent]
           ?.values
-          .map((state) => SpaceParent.fromState(state))
+          .map(SpaceParent.fromState)
           .where((child) => child.via.isNotEmpty)
           .toList() ??
       [];
@@ -2637,7 +2637,7 @@ class Room {
       ? throw Exception('Room is not a space!')
       : (states[EventTypes.SpaceChild]
               ?.values
-              .map((state) => SpaceChild.fromState(state))
+              .map(SpaceChild.fromState)
               .where((child) => child.via.isNotEmpty)
               .toList() ??
           [])

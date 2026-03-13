@@ -758,7 +758,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       copiedRaw['content'] = jsonDecode(copiedRaw['content'] as String);
       return copiedRaw;
     }).toList();
-    return copiedRaws.map((raw) => QueuedToDeviceEvent.fromJson(raw)).toList();
+    return copiedRaws.map(QueuedToDeviceEvent.fromJson).toList();
   }
 
   @override

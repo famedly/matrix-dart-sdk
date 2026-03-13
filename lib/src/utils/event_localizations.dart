@@ -291,10 +291,8 @@ abstract class EventLocalizations {
     EventTypes.CallCandidates: (event, i18n, body) => i18n.sentCallInformations(
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
         ),
-    EventTypes.Encrypted: (event, i18n, body) =>
-        _localizedBodyNormalMessage(event, i18n, body),
-    EventTypes.Message: (event, i18n, body) =>
-        _localizedBodyNormalMessage(event, i18n, body),
+    EventTypes.Encrypted: _localizedBodyNormalMessage,
+    EventTypes.Message: _localizedBodyNormalMessage,
     EventTypes.Reaction: (event, i18n, body) => i18n.sentReaction(
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
           event.content

@@ -132,9 +132,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -317,9 +315,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -463,9 +459,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -502,9 +496,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -608,9 +600,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -683,9 +673,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -786,9 +774,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -851,9 +837,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -924,9 +908,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
