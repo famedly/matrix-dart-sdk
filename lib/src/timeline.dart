@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:async/async.dart';
 import 'package:collection/collection.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
@@ -59,7 +60,7 @@ class Timeline {
   final Set<String> _fetchedRelations = {};
 
   /// Deduplicates concurrent in-flight relation fetches.
-  final Map<String, Future<void>> _inFlightRelationFetches = {};
+  final Map<String, AsyncCache<void>> _inflightRelationRequests = {};
 
   TimelineChunk chunk;
 
@@ -320,6 +321,12 @@ class Timeline {
       }
     }
 
+    for (final event in newEvents) {
+      if (event.type == PollEventContent.startType) {
+        await fetchAggregatedEvents(event.eventId, RelationshipTypes.reference);
+      }
+    }
+
     if (onUpdate != null) {
       onUpdate!();
     }
@@ -551,26 +558,23 @@ class Timeline {
 
     if (_fetchedRelations.contains(key)) return;
 
-    // Coalesce concurrent requests for the same key
-    if (_inFlightRelationFetches.containsKey(key)) {
-      return _inFlightRelationFetches[key];
-    }
-
-    _inFlightRelationFetches[key] = _fetchAggregatedEventsInner(
-      eventId,
-      relType,
-      eventType: eventType,
-      key: key,
-    );
-
+    final futureCache =
+        _inflightRelationRequests[key] ??= AsyncCache.ephemeral();
     try {
-      await _inFlightRelationFetches[key];
+      await futureCache.fetch(
+        () => _doFetchAggregatedEvents(
+          eventId,
+          relType,
+          eventType: eventType,
+          key: key,
+        ),
+      );
     } finally {
-      await _inFlightRelationFetches.remove(key);
+      _inflightRelationRequests.remove(key);
     }
   }
 
-  Future<void> _fetchAggregatedEventsInner(
+  Future<void> _doFetchAggregatedEvents(
     String eventId,
     String relType, {
     String? eventType,

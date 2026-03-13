@@ -1713,6 +1713,19 @@ class Room {
       onUpdate: onUpdate,
     );
 
+    // Fetch poll responses for fragmented timelines so they are
+    // available before the timeline is returned to the caller.
+    if (eventContextId != null) {
+      for (final event in chunk.events) {
+        if (event.type == PollEventContent.startType) {
+          await timeline.fetchAggregatedEvents(
+            event.eventId,
+            RelationshipTypes.reference,
+          );
+        }
+      }
+    }
+
     // Fetch all users from database we have got here.
     if (eventContextId == null) {
       final userIds = events.map((event) => event.senderId).toSet();

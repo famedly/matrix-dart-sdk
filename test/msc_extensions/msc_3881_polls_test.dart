@@ -214,5 +214,110 @@ void main() {
       // Clean up mock
       FakeMatrixApi.currentApi!.api['GET']!.remove(relationsPath);
     });
+
+    test('auto-fetches poll responses via getTimeline with eventContextId',
+        () async {
+      final room = client.getRoomById(roomId)!;
+      final responseTs = DateTime.now().subtract(const Duration(minutes: 30));
+
+      // Mock /context endpoint to return a poll start event in a fragmented chunk
+      final contextPath =
+          '/client/v3/rooms/${Uri.encodeComponent(roomId)}/context/poll_ctx_1?limit=${Room.defaultHistoryCount}';
+      (FakeMatrixApi.currentApi!.api['GET'] ??= {})[contextPath] =
+          (dynamic data) => {
+                'start': 'ctx_start_token',
+                'end': 'ctx_end_token',
+                'event': {
+                  'event_id': 'poll_ctx_1',
+                  'type': PollEventContent.startType,
+                  'sender': client.userID!,
+                  'origin_server_ts': DateTime.now()
+                      .subtract(const Duration(hours: 1))
+                      .millisecondsSinceEpoch,
+                  'room_id': roomId,
+                  'content': PollEventContent(
+                    mText: 'AutoFetchPoll',
+                    pollStartContent: PollStartContent(
+                      maxSelections: 1,
+                      question: PollQuestion(mText: 'Best language?'),
+                      answers: [
+                        PollAnswer(id: 'dart', mText: 'Dart'),
+                        PollAnswer(id: 'rust', mText: 'Rust'),
+                      ],
+                    ),
+                  ).toJson(),
+                },
+                'events_before': <Map<String, Object?>>[],
+                'events_after': <Map<String, Object?>>[],
+                'state': <Map<String, Object?>>[],
+              };
+
+      // Mock /relations endpoint to return poll response events
+      final relationsPath =
+          '/client/v1/rooms/${Uri.encodeComponent(roomId)}/relations/poll_ctx_1/m.reference?limit=50';
+      (FakeMatrixApi.currentApi!.api['GET'] ??= {})[relationsPath] =
+          (dynamic data) => {
+                'chunk': [
+                  {
+                    'event_id': '\$auto_response_1',
+                    'type': PollEventContent.responseType,
+                    'sender': '@alice:example.com',
+                    'origin_server_ts': responseTs.millisecondsSinceEpoch,
+                    'content': {
+                      'm.relates_to': {
+                        'rel_type': RelationshipTypes.reference,
+                        'event_id': 'poll_ctx_1',
+                      },
+                      PollEventContent.responseType: {
+                        'answers': ['dart'],
+                      },
+                    },
+                  },
+                  {
+                    'event_id': '\$auto_response_2',
+                    'type': PollEventContent.responseType,
+                    'sender': '@bob:example.com',
+                    'origin_server_ts': responseTs
+                        .add(const Duration(minutes: 5))
+                        .millisecondsSinceEpoch,
+                    'content': {
+                      'm.relates_to': {
+                        'rel_type': RelationshipTypes.reference,
+                        'event_id': 'poll_ctx_1',
+                      },
+                      PollEventContent.responseType: {
+                        'answers': ['rust'],
+                      },
+                    },
+                  },
+                ],
+              };
+
+      // Call getTimeline with eventContextId — this exercises the full
+      // production path: getEventContext → fragmented TimelineChunk →
+      // auto-fetch poll responses via fetchAggregatedEvents
+      final timeline =
+          await room.getTimeline(eventContextId: 'poll_ctx_1');
+
+      expect(timeline.isFragmentedTimeline, true);
+
+      // Find the poll event in the returned timeline
+      final pollEvent = timeline.events
+          .firstWhere((e) => e.eventId == 'poll_ctx_1');
+
+      // Poll responses should already be fetched automatically
+      final responses = pollEvent.getPollResponses(timeline);
+      expect(responses.length, 2);
+      expect(responses['@alice:example.com'], {'dart'});
+      expect(responses['@bob:example.com'], {'rust'});
+
+      // Calling fetchPollResponses again should be a no-op (cached)
+      await pollEvent.fetchPollResponses(timeline);
+      expect(pollEvent.getPollResponses(timeline).length, 2);
+
+      // Clean up mocks
+      FakeMatrixApi.currentApi!.api['GET']!.remove(contextPath);
+      FakeMatrixApi.currentApi!.api['GET']!.remove(relationsPath);
+    });
   });
 }
