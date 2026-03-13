@@ -40,7 +40,10 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     return completer.future.timeout(timeout);
   }
 
-  Future<void> _handleIncomingMessage(MessageEvent event) async {
+  // toJS is not working with Future<void> so we need to ignore avoid_void_async
+  // lint here:
+  // ignore: avoid_void_async
+  void _handleIncomingMessage(MessageEvent event) async {
     final data = event.data.dartify() as LinkedHashMap;
     // don't forget handling errors of our second thread...
     if (data['label'] == 'stacktrace') {
