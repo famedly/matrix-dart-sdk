@@ -59,10 +59,10 @@ void main() {
     });
 
     test('Create from json', () async {
-      final id = '!localpart:server.abc';
-      final membership = Membership.join;
-      final notificationCount = 2;
-      final highlightCount = 1;
+      const id = '!localpart:server.abc';
+      const membership = Membership.join;
+      const notificationCount = 2;
+      const highlightCount = 1;
       final heroes = [
         '@alice:matrix.org',
         '@bob:example.com',
@@ -1369,8 +1369,8 @@ void main() {
     test('send location', () async {
       FakeMatrixApi.calledEndpoints.clear();
 
-      final body = 'Middle of the ocean';
-      final geoUri = 'geo:0.0,0.0';
+      const body = 'Middle of the ocean';
+      const geoUri = 'geo:0.0,0.0';
       final dynamic resp =
           await room.sendLocation(body, geoUri, txid: 'testtxid');
       expect(resp?.startsWith('\$event'), true);

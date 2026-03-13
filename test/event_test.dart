@@ -40,15 +40,15 @@ void main() async {
     Logs().level = Level.error;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final id = '!4fsdfjisjf:server.abc';
-    final senderID = '@alice:server.abc';
-    final type = 'm.room.message';
-    final msgtype = 'm.text';
-    final body = 'Hello World';
-    final formatted_body = '<b>Hello</b> World';
+    const id = '!4fsdfjisjf:server.abc';
+    const senderID = '@alice:server.abc';
+    const type = 'm.room.message';
+    const msgtype = 'm.text';
+    const body = 'Hello World';
+    const formattedBody = '<b>Hello</b> World';
 
-    final contentJson =
-        '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body","m.relates_to":{"m.in_reply_to":{"event_id":"\$1234:example.com"}}}';
+    const contentJson =
+        '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formattedBody","m.relates_to":{"m.in_reply_to":{"event_id":"\$1234:example.com"}}}';
 
     final jsonObj = <String, dynamic>{
       'event_id': id,
@@ -76,7 +76,7 @@ void main() async {
       expect(event.senderId, senderID);
       expect(event.status, EventStatus.synced);
       expect(event.text, body);
-      expect(event.formattedText, formatted_body);
+      expect(event.formattedText, formattedBody);
       expect(event.body, body);
       expect(event.type, EventTypes.Message);
       expect(event.inReplyToEventId(), '\$1234:example.com');

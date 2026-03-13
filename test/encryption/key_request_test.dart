@@ -48,8 +48,8 @@ void main() {
       );
     });
 
-    final validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
-    final validSenderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
+    const validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+    const validSenderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
     test('Create Request', () async {
       final matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com')!;

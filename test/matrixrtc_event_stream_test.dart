@@ -22,7 +22,7 @@ void main() {
       await matrix.abortSync();
 
       voip = VoIP(matrix, MockWebRTCDelegate());
-      final id = '!calls:example.com';
+      const id = '!calls:example.com';
       room = matrix.getRoomById(id)!;
       backend = MeshBackend();
     });
@@ -712,8 +712,8 @@ void main() {
           ),
         );
 
-        final remoteUserId = '@zach:example.com';
-        final remoteDeviceId = 'ZACHDEVICE';
+        const remoteUserId = '@zach:example.com';
+        const remoteDeviceId = 'ZACHDEVICE';
 
         room.setState(
           Event(

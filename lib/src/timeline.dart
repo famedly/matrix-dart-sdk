@@ -178,7 +178,7 @@ class Timeline {
         } else {
           events.insertAll(0, eventsFromStore);
           final startIndex = eventsFromStore.length;
-          final endIndex = 0;
+          const endIndex = 0;
           for (var i = startIndex; i > endIndex; i--) {
             onInsert?.call(i);
           }

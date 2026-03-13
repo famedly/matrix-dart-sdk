@@ -30,9 +30,9 @@ void main() {
 
     late Client client;
 
-    final roomId = '!726s6s6q:example.com';
-    final sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
-    final senderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
+    const roomId = '!726s6s6q:example.com';
+    const sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+    const senderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
 
     setUpAll(() async {
       await vod.init(
@@ -93,7 +93,7 @@ void main() {
       final inbound = vod.InboundGroupSession(session.sessionKey);
 
       final senderKey = client.identityKey;
-      final roomId = '!someroom:example.org';
+      const roomId = '!someroom:example.org';
       final sessionId = inbound.sessionId;
       // set a payload...
       final sessionPayload = <String, dynamic>{

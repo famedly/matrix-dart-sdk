@@ -32,7 +32,7 @@ void main() {
     });
     Logs().level = Level.error;
     test('Decrypt', () async {
-      final text = 'hello world';
+      const text = 'hello world';
       final file = MatrixFile(
         name: 'file.txt',
         bytes: Uint8List.fromList(text.codeUnits),

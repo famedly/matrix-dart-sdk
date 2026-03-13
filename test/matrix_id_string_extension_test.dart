@@ -24,7 +24,7 @@ void main() {
   /// All Tests related to the ChatTime
   group('Matrix ID String Extension', () {
     test('Matrix ID String Extension', () async {
-      final mxId = '@test:example.com';
+      const mxId = '@test:example.com';
       expect(mxId.isValidMatrixId, true);
       expect('#test:example.com'.isValidMatrixId, true);
       expect('!test:example.com'.isValidMatrixId, true);
