@@ -1,3 +1,18 @@
+## [6.2.0] 13th March 2026
+- chore: (BREAKING) Apply default soft logout handling (Christian Kußowski)
+- chore: Add exit 0 to tear down all in bootstrap test (Christian Kußowski)
+- chore: improve to_device log lines (td)
+- chore: remove _discoveryDataLoading dead code (Karthikeyan S)
+- feat(auth): add additionalFields support to AuthenticationData for UIA stages (arman)
+- feat: Add support for low priority room and sort rooms properly (Christian Kußowski)
+- fix: expiresIn from OIDC is in seconds not milliseconds (Christian Kußowski)
+- fix: Katex markdown syntax (Christian Kußowski)
+- fix: pass missing additional profile info to CachedProfileInformation (Christian Kußowski)
+- refactor: Make Matrix SDK Database extendable (Christian Kußowski)
+- refactor: Remove commented code (Christian Kußowski)
+- test: check if init() with waitUntilLoadCompletedLoaded hangs (Karthikeyan S)
+- test: dehydrated devices logic in synapse (Karthikeyan S)
+
 ## [6.1.1] 7th Feb 2026
 
 - fix: handle UIA case for unexpectedResponse during exception + tests
