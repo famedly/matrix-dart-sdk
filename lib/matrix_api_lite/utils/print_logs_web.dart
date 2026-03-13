@@ -9,10 +9,10 @@ extension PrintLogs on LogEvent {
   void printOut() {
     var logsStr = '[Matrix] $title';
     if (exception != null) {
-      logsStr += ' - ${exception.toString()}';
+      logsStr += ' - $exception';
     }
     if (stackTrace != null) {
-      logsStr += '\n${stackTrace.toString()}';
+      logsStr += '\n$stackTrace';
     }
     switch (level) {
       case Level.wtf:

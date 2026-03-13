@@ -148,10 +148,10 @@ class LogEvent {
   String toFormattedString() {
     var logsStr = title;
     if (exception != null) {
-      logsStr += ' - ${exception.toString()}';
+      logsStr += ' - $exception';
     }
     if (stackTrace != null) {
-      logsStr += '\n${stackTrace.toString()}';
+      logsStr += '\n$stackTrace';
     }
     return logsStr;
   }

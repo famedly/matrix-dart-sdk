@@ -426,7 +426,7 @@ class VoIP {
     Map<String, dynamic> content,
   ) async {
     Logs().v(
-      '[VOIP] onCallInvite $remoteUserId:$remoteDeviceId => ${client.userID}:${client.deviceID}, \ncontent => ${content.toString()}',
+      '[VOIP] onCallInvite $remoteUserId:$remoteDeviceId => ${client.userID}:${client.deviceID}, \ncontent => $content',
     );
 
     final String callId = content['call_id'];
@@ -568,7 +568,7 @@ class VoIP {
     String? remoteDeviceId,
     Map<String, dynamic> content,
   ) async {
-    Logs().v('[VOIP] onCallAnswer => ${content.toString()}');
+    Logs().v('[VOIP] onCallAnswer => $content');
     final String callId = content['call_id'];
 
     final call = calls[VoipId(roomId: room.id, callId: callId)];
@@ -625,7 +625,7 @@ class VoIP {
   }
 
   Future<void> onCallCandidates(Room room, Map<String, dynamic> content) async {
-    Logs().v('[VOIP] onCallCandidates => ${content.toString()}');
+    Logs().v('[VOIP] onCallCandidates => $content');
     final String callId = content['call_id'];
     final call = calls[VoipId(roomId: room.id, callId: callId)];
     if (call != null) {
@@ -638,7 +638,7 @@ class VoIP {
   Future<void> onCallHangup(Room room, Map<String, dynamic> content) async {
     // stop play ringtone, if this is an incoming call
     await delegate.stopRingtone();
-    Logs().v('[VOIP] onCallHangup => ${content.toString()}');
+    Logs().v('[VOIP] onCallHangup => $content');
     final String callId = content['call_id'];
 
     final call = calls[VoipId(roomId: room.id, callId: callId)];
@@ -935,7 +935,7 @@ class VoIP {
       try {
         _turnServerCredentials = await client.getTurnServer();
       } catch (e) {
-        Logs().v('[VOIP] getTurnServerCredentials error => ${e.toString()}');
+        Logs().v('[VOIP] getTurnServerCredentials error => $e');
       }
     }
 

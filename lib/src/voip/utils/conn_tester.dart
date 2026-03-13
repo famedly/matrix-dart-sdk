@@ -103,7 +103,7 @@ class ConnectionTester {
       try {
         _turnServerCredentials = await client.getTurnServer();
       } catch (e) {
-        Logs().v('[VOIP] getTurnServerCredentials error => ${e.toString()}');
+        Logs().v('[VOIP] getTurnServerCredentials error => $e');
       }
     }
 

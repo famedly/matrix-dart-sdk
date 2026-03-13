@@ -561,7 +561,7 @@ class Client extends MatrixApi {
       final versions = await getVersions();
       if (!versions.versions.any(supportedVersions.contains)) {
         Logs().w(
-          'Server supports the versions: ${versions.toString()} but this application is only compatible with ${supportedVersions.toString()}.',
+          'Server supports the versions: $versions but this application is only compatible with $supportedVersions.',
         );
         assert(false);
       }
@@ -2248,7 +2248,7 @@ class Client extends MatrixApi {
       _initLock = false;
       onLoginStateChanged.add(LoginState.loggedIn);
       Logs().i(
-        'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
+        'Successfully connected as ${userID.localpart} with $homeserver',
       );
 
       /// Timeout of 0, so that we don't see a spinner for 30 seconds.
@@ -4226,7 +4226,7 @@ class BadServerLoginTypesException implements Exception {
 
   @override
   String toString() =>
-      'Server supports the Login Types: ${serverLoginTypes.toString()} but this application is only compatible with ${supportedLoginTypes.toString()}.';
+      'Server supports the Login Types: $serverLoginTypes but this application is only compatible with $supportedLoginTypes.';
 }
 
 class FileTooBigMatrixException extends MatrixException {

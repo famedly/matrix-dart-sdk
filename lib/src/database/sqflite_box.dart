@@ -102,7 +102,7 @@ class Box<V> {
   Box(this.name, this.boxCollection) {
     if (!allowedValueTypes.any((type) => V == type)) {
       throw Exception(
-        'Illegal value type for Box: "${V.toString()}". Must be one of $allowedValueTypes',
+        'Illegal value type for Box: "$V". Must be one of $allowedValueTypes',
       );
     }
   }
