@@ -266,7 +266,7 @@ class Box<V> {
   }
 
   Future<List<V?>> getAll(List<String> keys, [IDBTransaction? txn]) async {
-    if (keys.every((key) => _quickAccessCache.containsKey(key))) {
+    if (keys.every(_quickAccessCache.containsKey)) {
       return keys.map((key) => _quickAccessCache[key]).toList();
     }
     txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
@@ -400,7 +400,7 @@ class Box<V> {
 
   Future<void> clear([IDBTransaction? txn]) async {
     if (boxCollection._txnCache != null) {
-      boxCollection._txnCache!.add((txn) => clear(txn));
+      boxCollection._txnCache!.add(clear);
     } else {
       txn ??= boxCollection._db.transaction(name.toJS, 'readwrite');
       final store = txn.objectStore(name);

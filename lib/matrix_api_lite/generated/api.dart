@@ -2383,8 +2383,8 @@ class Api {
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(
       jsonEncode({
-        'one_time_keys': oneTimeKeys
-            .map((k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v)))),
+        'one_time_keys':
+            oneTimeKeys.map((k, v) => MapEntry(k, v.map(MapEntry.new))),
         if (timeout != null) 'timeout': timeout,
       }),
     );
@@ -2513,7 +2513,7 @@ class Api {
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(
       jsonEncode(
-        body.map((k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v)))),
+        body.map((k, v) => MapEntry(k, v.map(MapEntry.new))),
       ),
     );
     final response = await httpClient.send(request);
@@ -5088,8 +5088,7 @@ class Api {
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(
       jsonEncode({
-        'messages': messages
-            .map((k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v)))),
+        'messages': messages.map((k, v) => MapEntry(k, v.map(MapEntry.new))),
       }),
     );
     final response = await httpClient.send(request);

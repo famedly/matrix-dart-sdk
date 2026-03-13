@@ -559,8 +559,7 @@ class Client extends MatrixApi {
 
       // Check if server supports at least one supported version
       final versions = await getVersions();
-      if (!versions.versions
-          .any((version) => supportedVersions.contains(version))) {
+      if (!versions.versions.any(supportedVersions.contains)) {
         Logs().w(
           'Server supports the versions: ${versions.toString()} but this application is only compatible with ${supportedVersions.toString()}.',
         );
@@ -2431,7 +2430,7 @@ class Client extends MatrixApi {
         since: prevBatch,
         timeout: timeout?.inMilliseconds,
         setPresence: syncPresence,
-      ).then((v) => Future<SyncUpdate?>.value(v)).catchError((e) {
+      ).then(Future<SyncUpdate?>.value).catchError((e) {
         if (e is MatrixException) {
           syncError = e;
         } else {
