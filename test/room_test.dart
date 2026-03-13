@@ -126,7 +126,7 @@ void main() {
           type: 'm.room.member',
           unsigned: {'age': 1234},
           content: {'membership': 'join', 'displayname': 'YOU'},
-          stateKey: matrix.userID!,
+          stateKey: matrix.userID,
         ),
       );
       room.setState(

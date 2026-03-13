@@ -5,7 +5,6 @@ linter:
     # TODO: Enable these lints one after another and fix them
     non_constant_identifier_names: false
     noop_primitive_operations: false
-    unnecessary_null_checks: false
     avoid_void_async: false
     sort_pub_dependencies: false
 

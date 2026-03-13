@@ -68,7 +68,7 @@ void main() async {
       client1 = await getClient();
       client2 = Client(
         'othertestclient',
-        httpClient: FakeMatrixApi.currentApi!,
+        httpClient: FakeMatrixApi.currentApi,
         database: await getDatabase(),
       );
       await client2.checkHomeserver(

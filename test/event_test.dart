@@ -393,7 +393,7 @@ void main() async {
     });
     test('canRedact', () async {
       final client = await getClient();
-      jsonObj['sender'] = client.userID!;
+      jsonObj['sender'] = client.userID;
       final event = Event.fromJson(
         jsonObj,
         Room(

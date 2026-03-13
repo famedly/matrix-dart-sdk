@@ -331,7 +331,7 @@ void main() async {
                     },
                     senderId: client.userID!,
                     eventId: 'eventId',
-                    stateKey: client.userID!,
+                    stateKey: client.userID,
                     originServerTs: DateTime.now(),
                   ),
                   MatrixEvent(
