@@ -922,22 +922,26 @@ class Room {
       syncUpdate.rooms!.join!.values.first.timeline!.events!.first
               .unsigned![fileSendingStatusKey] =
           FileSendingStatus.generatingThumbnail.name;
-      thumbnail ??= await file.generateThumbnail(
-        nativeImplementations: client.nativeImplementations,
-        customImageResizer: client.customImageResizer,
-      );
-      if (shrinkImageMaxDimension != null) {
-        file = await MatrixImageFile.shrink(
-          bytes: file.bytes,
-          name: file.name,
-          maxDimension: shrinkImageMaxDimension,
-          customImageResizer: client.customImageResizer,
+      try {
+        thumbnail ??= await file.generateThumbnail(
           nativeImplementations: client.nativeImplementations,
+          customImageResizer: client.customImageResizer,
         );
-      }
+        if (shrinkImageMaxDimension != null) {
+          file = await MatrixImageFile.shrink(
+            bytes: file.bytes,
+            name: file.name,
+            maxDimension: shrinkImageMaxDimension,
+            customImageResizer: client.customImageResizer,
+            nativeImplementations: client.nativeImplementations,
+          );
+        }
 
-      if (thumbnail != null && file.size < thumbnail.size) {
-        thumbnail = null; // in this case, the thumbnail is not usefull
+        if (thumbnail != null && file.size < thumbnail.size) {
+          thumbnail = null; // in this case, the thumbnail is not usefull
+        }
+      } catch (e, s) {
+        Logs().e('Unable to shrink image before sending!', e, s);
       }
     }
 
