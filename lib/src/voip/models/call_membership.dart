@@ -136,7 +136,6 @@ class CallMembership {
           userId == other.userId &&
           roomId == other.roomId &&
           callId == other.callId &&
-          application == other.application &&
           scope == other.scope &&
           backend.type == other.backend.type &&
           deviceId == other.deviceId &&

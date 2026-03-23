@@ -40,7 +40,7 @@ class GroupCallSession {
   final CallBackend backend;
 
   /// something like normal calls or thirdroom
-  final String? application;
+  String? application;
 
   /// either room scoped or user scoped calls
   final String? scope;
@@ -195,7 +195,6 @@ class GroupCallSession {
       (m) =>
           m.callId == groupCallId &&
           m.deviceId == client.deviceID! &&
-          m.application == application &&
           m.scope == scope &&
           m.roomId == room.id,
     );
@@ -281,7 +280,6 @@ class GroupCallSession {
     final memsForCurrentGroupCall = mems.where((element) {
       return element.callId == groupCallId &&
           !element.isExpired &&
-          element.application == application &&
           element.scope == scope &&
           element.roomId == room.id; // sanity checks
     }).toList();
@@ -395,7 +393,6 @@ class GroupCallSession {
           m.callId == groupCallId &&
           m.deviceId == client.deviceID! &&
           m.roomId == room.id &&
-          m.application == application &&
           m.scope == scope,
     );
 
@@ -462,7 +459,6 @@ class GroupCallSession {
         .where(
           (m) =>
               m.callId == groupCallId &&
-              m.application == application &&
               m.scope == scope &&
               m.roomId == room.id,
         )

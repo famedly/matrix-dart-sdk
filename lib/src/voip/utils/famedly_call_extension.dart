@@ -144,7 +144,6 @@ extension FamedlyCallMemberEventsExtension on Room {
       (mem) =>
           mem.callId == groupCallId &&
           mem.deviceId == client.deviceID! &&
-          mem.application == application &&
           mem.scope == scope,
     );
 
@@ -224,6 +223,19 @@ extension FamedlyCallMemberEventsExtension on Room {
         );
 
         for (final toCancelEvent in toCancelEvents) {
+          // stateKey is the same regardless of application/scope, so any
+          // existing local canceller (e.g. from a different application) must
+          // have its restart timer stopped and be removed from the map here.
+          final matchingEntry =
+              voip.delayedEventCancellers.entries.firstWhereOrNull(
+            (e) => e.value.delayedEventId == toCancelEvent.delayId,
+          );
+
+          if (matchingEntry != null) {
+            matchingEntry.value.restartTimer.cancel();
+            voip.delayedEventCancellers.remove(matchingEntry.key);
+          }
+
           await client.manageDelayedEvent(
             toCancelEvent.delayId,
             DelayedEventAction.cancel,
@@ -248,7 +260,6 @@ extension FamedlyCallMemberEventsExtension on Room {
             (mem) =>
                 mem.callId == groupCallId &&
                 mem.deviceId == client.deviceID! &&
-                mem.application == application &&
                 mem.scope == scope,
           );
 
