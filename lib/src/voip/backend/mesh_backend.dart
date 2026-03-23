@@ -329,7 +329,7 @@ class MeshBackend extends CallBackend {
     return null;
   }
 
-  void _onActiveSpeakerLoop(GroupCallSession groupCall) async {
+  Future<void> _onActiveSpeakerLoop(GroupCallSession groupCall) async {
     CallParticipant? nextActiveSpeaker;
     // idc about screen sharing atm.
     final userMediaStreamsCopyList =
@@ -339,7 +339,7 @@ class MeshBackend extends CallBackend {
         continue;
       }
 
-      final List<StatsReport> statsReport = await stream.pc!.getStats();
+      final statsReport = await stream.pc!.getStats();
       statsReport
           .removeWhere((element) => !element.values.containsKey('audioLevel'));
 
@@ -371,7 +371,7 @@ class MeshBackend extends CallBackend {
       }
     }
 
-    double maxAudioLevel = double.negativeInfinity;
+    var maxAudioLevel = double.negativeInfinity;
     // TODO: we probably want a threshold here?
     _audioLevelsMap.forEach((key, value) {
       if (value > maxAudioLevel) {

@@ -32,7 +32,7 @@ class MultiLock<T> {
     // we are trying to set. So, we await all the completers until they are all gone.
     // We can't just assume they are all gone after one go, due to rare race conditions
     // which could then result in a deadlock.
-    while (_completers.keys.any((k) => uniqueKeys.contains(k))) {
+    while (_completers.keys.any(uniqueKeys.contains)) {
       // Here we try to build all the futures to wait for single completers and then await
       // them at the same time, in parallel
       final futures = <Future<void>>[];

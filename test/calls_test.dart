@@ -19,7 +19,7 @@ void main() {
 
       voip = VoIP(matrix, MockWebRTCDelegate());
       VoIP.customTxid = '1234';
-      final id = '!calls:example.com';
+      const id = '!calls:example.com';
       room = matrix.getRoomById(id)!;
     });
 

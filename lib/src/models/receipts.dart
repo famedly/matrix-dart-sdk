@@ -94,7 +94,7 @@ class ReceiptEventContent {
     //   }
     // }
 
-    final Map<String, Map<ReceiptType, Map<String, ReceiptData>>> receipts = {};
+    final receipts = <String, Map<ReceiptType, Map<String, ReceiptData>>>{};
     for (final eventIdEntry in json.entries) {
       final eventId = eventIdEntry.key;
       final contentForEventId = eventIdEntry.value;
@@ -181,7 +181,7 @@ class LatestReceiptStateForTimeline {
     final latest = json['latest'];
     final Map<String, dynamic>? others = json['others'];
 
-    final Map<String, LatestReceiptStateData> byUser = others
+    final byUser = others
             ?.map((k, v) => MapEntry(k, LatestReceiptStateData.fromJson(v))) ??
         {};
 
@@ -251,7 +251,7 @@ class LatestReceiptState {
     ReceiptEventContent content,
     Room room,
   ) async {
-    final List<LatestReceiptStateForTimeline> updatedTimelines = [];
+    final updatedTimelines = <LatestReceiptStateForTimeline>[];
     final ownUserid = room.client.userID!;
 
     content.receipts.forEach((eventId, receiptsByType) {

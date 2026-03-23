@@ -40,6 +40,9 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     return completer.future.timeout(timeout);
   }
 
+  // toJS is not working with Future<void> so we need to ignore avoid_void_async
+  // lint here:
+  // ignore: avoid_void_async
   void _handleIncomingMessage(MessageEvent event) async {
     final data = event.data.dartify() as LinkedHashMap;
     // don't forget handling errors of our second thread...
@@ -47,7 +50,7 @@ class NativeImplementationsWebWorker extends NativeImplementations {
       final origin = data['origin'];
       final completer = _completers[origin];
 
-      final error = data['error']!;
+      final error = data['error'];
 
       final stackTrace = await onStackTrace.call(data['stacktrace'] as String);
       completer?.completeError(

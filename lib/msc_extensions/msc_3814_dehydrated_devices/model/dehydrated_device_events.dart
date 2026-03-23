@@ -36,7 +36,7 @@ class DehydratedDeviceEvents {
       : nextBatch = json['next_batch'] as String?,
         events = json
             .tryGetList<Map<String, dynamic>>('events')
-            ?.map((i) => ToDeviceEvent.fromJson(i))
+            ?.map(ToDeviceEvent.fromJson)
             .toList();
 
   Map<String, dynamic> toJson() {

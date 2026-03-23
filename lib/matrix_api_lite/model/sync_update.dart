@@ -332,7 +332,7 @@ class TimelineUpdate {
   TimelineUpdate.fromJson(Map<String, Object?> json)
       : events = json
             .tryGetList<Map<String, Object?>>('events')
-            ?.map((v) => MatrixEvent.fromJson(v))
+            ?.map(MatrixEvent.fromJson)
             .toList(),
         limited = json.tryGet<bool>('limited'),
         prevBatch = json.tryGet<String>('prev_batch');

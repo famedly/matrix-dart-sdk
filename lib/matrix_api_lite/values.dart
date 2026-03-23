@@ -4,16 +4,16 @@
 // for cases where other values are allowed too.
 
 class PushRuleAction {
-  static final notify = 'notify';
-  static final dontNotify = 'dont_notify';
-  static final coalesce = 'coalesce';
-  static final setTweak = 'set_tweak';
+  static const notify = 'notify';
+  static const dontNotify = 'dont_notify';
+  static const coalesce = 'coalesce';
+  static const setTweak = 'set_tweak';
 }
 
 class TagType {
-  static final favourite = 'm.favourite';
-  static final lowPriority = 'm.lowpriority';
-  static final serverNotice = 'm.server_notice';
+  static const favourite = 'm.favourite';
+  static const lowPriority = 'm.lowpriority';
+  static const serverNotice = 'm.server_notice';
 
   static bool isValid(String tag) =>
       !tag.startsWith('m.') ||

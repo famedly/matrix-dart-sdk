@@ -132,7 +132,7 @@ extension DehydratedDeviceHandler on Client {
         await encryption.dispose();
       }
     } catch (e) {
-      Logs().w('Exception while handling dehydrated devices: ${e.toString()}');
+      Logs().w('Exception while handling dehydrated devices: $e');
       return;
     }
   }
@@ -164,7 +164,7 @@ extension DehydratedDeviceHandler on Client {
           (_) => chars.codeUnitAt(rnd.nextInt(chars.length)),
         ),
       );
-      final String device = 'FAM$deviceIdSuffix';
+      final device = 'FAM$deviceIdSuffix';
 
       // Generate a new olm account for the dehydrated device.
       try {

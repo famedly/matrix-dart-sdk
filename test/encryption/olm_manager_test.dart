@@ -156,9 +156,9 @@ void main() {
     });
 
     test('replay to_device events', () async {
-      final userId = '@alice:example.com';
-      final deviceId = 'JLAFKJWSCS';
-      final senderKey = 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8';
+      const userId = '@alice:example.com';
+      const deviceId = 'JLAFKJWSCS';
+      const senderKey = 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8';
       FakeMatrixApi.calledEndpoints.clear();
       await client.database.setLastSentMessageUserDeviceKey(
         json.encode({

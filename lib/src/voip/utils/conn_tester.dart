@@ -56,7 +56,7 @@ class ConnectionTester {
       ]);
     }
 
-    bool connected = false;
+    var connected = false;
     try {
       await waitUntilAsync(() async {
         if (pc1!.connectionState ==
@@ -83,7 +83,7 @@ class ConnectionTester {
     final int maxIterations = 1000,
     final Duration step = const Duration(milliseconds: 10),
   }) async {
-    int iterations = 0;
+    var iterations = 0;
     for (; iterations < maxIterations; iterations++) {
       await Future.delayed(step);
       if (await test()) {
@@ -103,7 +103,7 @@ class ConnectionTester {
       try {
         _turnServerCredentials = await client.getTurnServer();
       } catch (e) {
-        Logs().v('[VOIP] getTurnServerCredentials error => ${e.toString()}');
+        Logs().v('[VOIP] getTurnServerCredentials error => $e');
       }
     }
 

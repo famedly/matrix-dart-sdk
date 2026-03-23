@@ -59,10 +59,10 @@ void main() {
     });
 
     test('Create from json', () async {
-      final id = '!localpart:server.abc';
-      final membership = Membership.join;
-      final notificationCount = 2;
-      final highlightCount = 1;
+      const id = '!localpart:server.abc';
+      const membership = Membership.join;
+      const notificationCount = 2;
+      const highlightCount = 1;
       final heroes = [
         '@alice:matrix.org',
         '@bob:example.com',
@@ -126,7 +126,7 @@ void main() {
           type: 'm.room.member',
           unsigned: {'age': 1234},
           content: {'membership': 'join', 'displayname': 'YOU'},
-          stateKey: matrix.userID!,
+          stateKey: matrix.userID,
         ),
       );
       room.setState(
@@ -972,12 +972,10 @@ void main() {
     });
 
     test('getUserByMXID', () async {
-      final List<String> called = [];
-      final List<String> called2 = [];
+      final called = <String>[];
+      final called2 = <String>[];
       // ignore: deprecated_member_use_from_same_package
-      final subscription = room.onUpdate.stream.listen((i) {
-        called.add(i);
-      });
+      final subscription = room.onUpdate.stream.listen(called.add);
       final subscription2 = room.client.onRoomState.stream.listen((i) {
         called2.add(i.roomId);
       });
@@ -1369,8 +1367,8 @@ void main() {
     test('send location', () async {
       FakeMatrixApi.calledEndpoints.clear();
 
-      final body = 'Middle of the ocean';
-      final geoUri = 'geo:0.0,0.0';
+      const body = 'Middle of the ocean';
+      const geoUri = 'geo:0.0,0.0';
       final dynamic resp =
           await room.sendLocation(body, geoUri, txid: 'testtxid');
       expect(resp?.startsWith('\$event'), true);

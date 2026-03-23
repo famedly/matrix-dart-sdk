@@ -22,7 +22,7 @@ void main() {
       await matrix.abortSync();
 
       voip = VoIP(matrix, MockWebRTCDelegate());
-      final id = '!calls:example.com';
+      const id = '!calls:example.com';
       room = matrix.getRoomById(id)!;
       backend = MeshBackend();
     });
@@ -55,9 +55,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is GroupCallStateChanged)
             .cast<GroupCallStateChanged>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         // Trigger state changes
         groupCall.setState(GroupCallState.initializingLocalCallFeed);
@@ -119,7 +117,7 @@ void main() {
               ],
             },
             senderId: matrix.userID!,
-            stateKey: matrix.userID!,
+            stateKey: matrix.userID,
           ),
         );
 
@@ -130,9 +128,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is ParticipantsJoinEvent)
             .cast<ParticipantsJoinEvent>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         room.setState(
           Event(
@@ -224,9 +220,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is ParticipantsLeftEvent)
             .cast<ParticipantsLeftEvent>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         // Remove the participant
         room.setState(
@@ -268,9 +262,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is CallAddedEvent)
             .cast<CallAddedEvent>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         await backend.initLocalStream(groupCall);
         groupCall.setState(GroupCallState.entered);
@@ -301,7 +293,7 @@ void main() {
               ],
             },
             senderId: matrix.userID!,
-            stateKey: matrix.userID!,
+            stateKey: matrix.userID,
           ),
         );
 
@@ -386,7 +378,7 @@ void main() {
               ],
             },
             senderId: matrix.userID!,
-            stateKey: matrix.userID!,
+            stateKey: matrix.userID,
           ),
         );
 
@@ -430,9 +422,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is CallRemovedEvent)
             .cast<CallRemovedEvent>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         final call = voip.calls.values.firstWhere(
           (c) =>
@@ -462,9 +452,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is CallReplacedEvent)
             .cast<CallReplacedEvent>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         await backend.initLocalStream(groupCall);
         groupCall.setState(GroupCallState.entered);
@@ -495,7 +483,7 @@ void main() {
               ],
             },
             senderId: matrix.userID!,
-            stateKey: matrix.userID!,
+            stateKey: matrix.userID,
           ),
         );
 
@@ -583,9 +571,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is GroupCallStreamAdded)
             .cast<GroupCallStreamAdded>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         await backend.initLocalStream(groupCall);
         await pumpEventQueue();
@@ -609,9 +595,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is GroupCallStreamAdded)
             .cast<GroupCallStreamAdded>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         await backend.initLocalStream(groupCall);
         groupCall.setState(GroupCallState.entered);
@@ -638,16 +622,12 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is GroupCallStreamAdded)
             .cast<GroupCallStreamAdded>()
-            .listen((event) {
-          addedEvents.add(event);
-        });
+            .listen(addedEvents.add);
 
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is GroupCallStreamRemoved)
             .cast<GroupCallStreamRemoved>()
-            .listen((event) {
-          removedEvents.add(event);
-        });
+            .listen(removedEvents.add);
 
         await backend.initLocalStream(groupCall);
         groupCall.setState(GroupCallState.entered);
@@ -678,9 +658,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is GroupCallActiveSpeakerChanged)
             .cast<GroupCallActiveSpeakerChanged>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         room.setState(
           Event(
@@ -689,7 +667,7 @@ void main() {
             originServerTs: DateTime.now(),
             type: EventTypes.GroupCallMember,
             senderId: room.client.userID!,
-            stateKey: room.client.userID!,
+            stateKey: room.client.userID,
             content: {
               'memberships': [
                 CallMembership(
@@ -712,8 +690,8 @@ void main() {
           ),
         );
 
-        final remoteUserId = '@zach:example.com';
-        final remoteDeviceId = 'ZACHDEVICE';
+        const remoteUserId = '@zach:example.com';
+        const remoteDeviceId = 'ZACHDEVICE';
 
         room.setState(
           Event(
@@ -803,9 +781,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is GroupCallLocalMutedChanged)
             .cast<GroupCallLocalMutedChanged>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         await backend.initLocalStream(groupCall);
         groupCall.setState(GroupCallState.entered);
@@ -890,9 +866,7 @@ void main() {
         groupCall.matrixRTCEventStream.stream
             .where((event) => event is GroupCallLocalScreenshareStateChanged)
             .cast<GroupCallLocalScreenshareStateChanged>()
-            .listen((event) {
-          events.add(event);
-        });
+            .listen(events.add);
 
         await backend.initLocalStream(groupCall);
         groupCall.setState(GroupCallState.entered);
@@ -923,9 +897,7 @@ void main() {
         );
 
         final allEvents = <MatrixRTCCallEvent>[];
-        groupCall.matrixRTCEventStream.stream.listen((event) {
-          allEvents.add(event);
-        });
+        groupCall.matrixRTCEventStream.stream.listen(allEvents.add);
 
         await backend.initLocalStream(groupCall);
         groupCall.setState(GroupCallState.entered);

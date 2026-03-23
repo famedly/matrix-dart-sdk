@@ -27,7 +27,7 @@ import 'fake_client.dart';
 void main() {
   group('Timeline context', tags: 'olm', () {
     Logs().level = Level.error;
-    final roomID = '!1234:example.com';
+    const roomID = '!1234:example.com';
     var testTimeStamp = 0;
     var updateCount = 0;
     final insertList = <int>[];
@@ -141,7 +141,7 @@ void main() {
         timeline.events.length,
       ); // expect no new events to have been added
 
-      final eventId = '1844295642248BcDkn:example.org';
+      const eventId = '1844295642248BcDkn:example.org';
       client.onTimelineEvent.add(
         Event.fromJson(
           {
