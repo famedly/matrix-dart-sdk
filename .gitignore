@@ -19,6 +19,7 @@ coverage_badge.svg
 coverage.xml
 TEST-report.*
 rust
+.tmp_files
 
 # IntelliJ related
 *.iml
