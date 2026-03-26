@@ -74,6 +74,7 @@ export 'src/utils/to_device_event.dart';
 export 'src/utils/uia_request.dart';
 export 'src/utils/uri_extension.dart';
 export 'src/models/login_type.dart';
+export 'src/models/power_level.dart';
 
 export 'msc_extensions/extension_recent_emoji/recent_emoji.dart';
 export 'msc_extensions/extension_audio_events/audio_events.dart';
