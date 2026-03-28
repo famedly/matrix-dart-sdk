@@ -305,5 +305,17 @@ abstract class EventLocalizations {
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
         ),
     PollEventContent.endType: (event, i18n, body) => i18n.pollHasBeenEnded,
+    EventTypes.TofuNotification: (event, i18n, _) =>
+        i18n.usersHaveChangedTheirKeys(
+          event.content
+                  .tryGetList<String>('users')
+                  ?.map(
+                    (userId) => event.room
+                        .unsafeGetUserFromMemoryOrFallback(userId)
+                        .calcDisplayname(i18n: i18n),
+                  )
+                  .toList() ??
+              <String>[],
+        ),
   };
 }

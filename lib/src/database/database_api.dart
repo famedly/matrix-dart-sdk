@@ -265,6 +265,7 @@ abstract class DatabaseApi {
     String content,
     bool verified,
     bool blocked,
+    String? lastSeenPublicKey,
   );
 
   Future deleteFromToDeviceQueue(int id);
@@ -280,8 +281,9 @@ abstract class DatabaseApi {
   Future setVerifiedUserCrossSigningKey(
     bool verified,
     String userId,
-    String publicKey,
-  );
+    String publicKey, {
+    String? lastSeenPublicKey,
+  });
 
   Future setBlockedUserCrossSigningKey(
     bool blocked,

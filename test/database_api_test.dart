@@ -688,6 +688,7 @@ void main() {
           '{}',
           false,
           false,
+          null,
         );
       });
       test('setVerifiedUserCrossSigningKey', () async {
