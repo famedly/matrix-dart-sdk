@@ -8,11 +8,13 @@ import 'fake_client.dart';
 import 'webrtc_stub.dart';
 
 void main() {
-  late Client matrix;
-  late Room room;
-  late VoIP voip;
   group('Call tests', () {
     Logs().level = Level.info;
+
+    late Client matrix;
+    late Room room;
+    late VoIP voip;
+
     setUp(() async {
       matrix = await getClient();
       await matrix.abortSync();
@@ -21,6 +23,10 @@ void main() {
       VoIP.customTxid = '1234';
       const id = '!calls:example.com';
       room = matrix.getRoomById(id)!;
+    });
+
+    tearDown(() async {
+      await matrix.dispose();
     });
 
     test('Test call methods', () async {

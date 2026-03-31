@@ -27,7 +27,7 @@ void main() {
 
     tearDown(() async {
       await client.logout();
-      await client.dispose(closeDatabase: true);
+      await client.dispose();
     });
 
     test('Event constructor correctly checks timeout from originServerTs',

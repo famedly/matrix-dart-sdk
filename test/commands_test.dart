@@ -20,7 +20,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
@@ -47,11 +46,7 @@ void main() {
       );
     }
 
-    test('setupClient', () async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
+    setUpAll(() async {
       client = await getClient();
       room = Room(id: '!1234:fakeServer.notExisting', client: client);
       room.setState(
@@ -76,6 +71,10 @@ void main() {
           senderId: '@fakeuser:fakeServer.notExisting',
         ),
       );
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
     });
 
     test('send', () async {
@@ -552,10 +551,6 @@ void main() {
       }
 
       expect(error is RoomCommandException, isTrue);
-    });
-
-    test('dispose client', () async {
-      await client.dispose(closeDatabase: true);
     });
   });
 }

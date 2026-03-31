@@ -17,38 +17,36 @@
  */
 
 import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 import '../fake_database.dart';
 
 void main() async {
-  final database = await getDatabase();
-
   group('Encrypt/Decrypt to-device messages', tags: 'olm', () {
     Logs().level = Level.error;
 
-    late Client client;
-    final otherClient = Client(
-      'othertestclient',
-      httpClient: FakeMatrixApi(),
-      database: database,
-    );
+    late Client client, otherClient;
     late DeviceKeys device;
     late Map<String, dynamic> payload;
 
     setUpAll(() async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
-
       client = await getClient();
+
+      final database = await getDatabase();
+      otherClient = Client(
+        'othertestclient',
+        httpClient: FakeMatrixApi(),
+        database: database,
+      );
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
+      await otherClient.dispose();
     });
 
     test('setupClient', () async {
-      client = await getClient();
       await client.abortSync();
       await otherClient.checkHomeserver(
         Uri.parse('https://fakeserver.notexisting'),
@@ -114,11 +112,6 @@ void main() async {
           await client.encryption!.decryptToDeviceEvent(encryptedEvent);
       expect(decryptedEvent.type, 'm.to_device');
       expect(decryptedEvent.content['hello'], 'superfoxies');
-    });
-
-    test('dispose client', () async {
-      await client.dispose(closeDatabase: true);
-      await otherClient.dispose(closeDatabase: true);
     });
   });
 }

@@ -17,7 +17,6 @@
  */
 
 import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
@@ -33,13 +32,12 @@ void main() {
     final now = DateTime.now();
 
     setUpAll(() async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
-
       client = await getClient();
       room = client.getRoomById(roomId)!;
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
     });
 
     test('encrypt payload', () async {
@@ -106,10 +104,6 @@ void main() {
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
       await client.encryption!.decryptRoomEvent(encryptedEvent, store: true);
-    });
-
-    test('dispose client', () async {
-      await client.dispose(closeDatabase: true);
     });
   });
 }

@@ -21,7 +21,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
@@ -56,13 +55,6 @@ void main() async {
 
     late Client client1;
     late Client client2;
-
-    setUpAll(() async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
-    });
 
     setUp(() async {
       client1 = await getClient();

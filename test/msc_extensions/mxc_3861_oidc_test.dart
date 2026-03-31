@@ -103,6 +103,8 @@ void main() {
         FakeMatrixApi.calledEndpoints.containsKey('/oauth2/revoke'),
         true,
       );
+
+      await client.dispose();
     });
   });
 }

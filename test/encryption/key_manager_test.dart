@@ -38,6 +38,10 @@ void main() {
       client = await getClient();
     });
 
+    tearDownAll(() async {
+      await client.dispose();
+    });
+
     test('handle new m.room_key', () async {
       const validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
       const validSenderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
@@ -620,10 +624,6 @@ void main() {
         client.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS'],
         null,
       );
-    });
-
-    test('dispose client', () async {
-      await client.dispose(closeDatabase: false);
     });
   });
 }

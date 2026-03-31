@@ -8,10 +8,15 @@ void main() {
   group('MSC 3881 Polls', () {
     late Client client;
     const roomId = '!696r7674:example.com';
+
     setUpAll(() async {
       client = await getClient();
     });
-    tearDownAll(() async => client.dispose());
+
+    tearDownAll(() async {
+      await client.dispose();
+    });
+
     test('Start poll', () async {
       final room = client.getRoomById(roomId)!;
       final eventId = await room.startPoll(

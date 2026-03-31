@@ -27,7 +27,7 @@ void main() {
     late Room room;
     late Room room2;
 
-    test('setupClient', () async {
+    setUpAll(() async {
       client = await getClient();
       room = Room(id: '!1234:fakeServer.notExisting', client: client);
       room2 = Room(id: '!abcd:fakeServer.notExisting', client: client);
@@ -77,6 +77,10 @@ void main() {
       );
       client.rooms.add(room);
       client.rooms.add(room2);
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
     });
 
     test('Single room', () async {
@@ -280,10 +284,6 @@ void main() {
           'other_fox': 'mxc://other_fox',
         },
       });
-    });
-
-    test('dispose client', () async {
-      await client.dispose(closeDatabase: true);
     });
   });
 }

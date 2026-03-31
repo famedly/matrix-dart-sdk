@@ -56,6 +56,10 @@ void main() {
       await clientOnPath.abortSync();
       expect(await File(dbPath).exists(), true, reason: '$dbPath should exist');
     });
+
+    tearDown(() async {
+      await clientOnPath.dispose();
+    });
     test('logout', () async {
       expect(await File(dbPath).exists(), true);
       await clientOnPath.logout();
@@ -84,6 +88,12 @@ void main() {
     /// Check if all Elements get created
     setUp(() async {
       matrix = await getClient();
+    });
+
+    tearDown(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+      await matrix.dispose();
     });
 
     test('barebones client login', () async {
@@ -133,6 +143,7 @@ void main() {
       await client.logout();
 
       expect(client.isLogged(), false);
+      await client.dispose();
     });
 
     test('Login', () async {
@@ -1515,6 +1526,8 @@ void main() {
 
       await client1.logout();
       await client2.logout();
+      await client1.dispose();
+      await client2.dispose();
     });
     test('changePassword', () async {
       await matrix.changePassword('1234', oldPassword: '123456');
@@ -1635,10 +1648,6 @@ void main() {
       await client.dispose();
     });
 
-    test('dispose', () async {
-      await matrix.dispose(closeDatabase: true);
-    });
-
     test('Database Migration', () async {
       final firstDatabase = await getDatabase();
       final firstClient = Client(
@@ -1742,6 +1751,7 @@ void main() {
       final storedEvent2 = await client.database
           .getEventById('143273582443PhrSn:example.org', event!.room);
       expect(storedEvent2?.eventId, event.eventId);
+      await client.dispose();
     });
 
     test('Rooms and archived rooms getter', () async {
@@ -1825,9 +1835,5 @@ void main() {
         await customClient.dispose(closeDatabase: true);
       },
     );
-
-    tearDown(() async {
-      await matrix.dispose(closeDatabase: true);
-    });
   });
 }

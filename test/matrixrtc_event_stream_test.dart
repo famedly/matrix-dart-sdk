@@ -8,7 +8,7 @@ import 'fake_client.dart';
 import 'webrtc_stub.dart';
 
 void main() {
-  late Client matrix;
+  late Client client;
   late Room room;
   late VoIP voip;
   late MeshBackend backend;
@@ -18,12 +18,12 @@ void main() {
     Logs().level = Level.info;
 
     setUp(() async {
-      matrix = await getClient();
-      await matrix.abortSync();
+      client = await getClient();
+      await client.abortSync();
 
-      voip = VoIP(matrix, MockWebRTCDelegate());
+      voip = VoIP(client, MockWebRTCDelegate());
       const id = '!calls:example.com';
-      room = matrix.getRoomById(id)!;
+      room = client.getRoomById(id)!;
       backend = MeshBackend();
     });
 
@@ -37,6 +37,7 @@ void main() {
           }
         }
       }
+      await client.dispose();
     });
 
     group('GroupCallStateChanged Events', () {
@@ -100,13 +101,13 @@ void main() {
             content: {
               'memberships': [
                 CallMembership(
-                  userId: matrix.userID!,
+                  userId: client.userID!,
                   roomId: room.id,
                   callId: groupCall.groupCallId,
                   application: groupCall.application,
                   scope: groupCall.scope,
                   backend: backend,
-                  deviceId: matrix.deviceID!,
+                  deviceId: client.deviceID!,
                   expiresTs: DateTime.now()
                       .add(Duration(hours: 1))
                       .millisecondsSinceEpoch,
@@ -116,8 +117,8 @@ void main() {
                 ).toJson(),
               ],
             },
-            senderId: matrix.userID!,
-            stateKey: matrix.userID,
+            senderId: client.userID!,
+            stateKey: client.userID,
           ),
         );
 
@@ -276,13 +277,13 @@ void main() {
             content: {
               'memberships': [
                 CallMembership(
-                  userId: matrix.userID!,
+                  userId: client.userID!,
                   roomId: room.id,
                   callId: groupCall.groupCallId,
                   application: groupCall.application,
                   scope: groupCall.scope,
                   backend: backend,
-                  deviceId: matrix.deviceID!,
+                  deviceId: client.deviceID!,
                   expiresTs: DateTime.now()
                       .add(Duration(hours: 1))
                       .millisecondsSinceEpoch,
@@ -292,8 +293,8 @@ void main() {
                 ).toJson(),
               ],
             },
-            senderId: matrix.userID!,
-            stateKey: matrix.userID,
+            senderId: client.userID!,
+            stateKey: client.userID,
           ),
         );
 
@@ -361,13 +362,13 @@ void main() {
             content: {
               'memberships': [
                 CallMembership(
-                  userId: matrix.userID!,
+                  userId: client.userID!,
                   roomId: room.id,
                   callId: groupCall.groupCallId,
                   application: groupCall.application,
                   scope: groupCall.scope,
                   backend: backend,
-                  deviceId: matrix.deviceID!,
+                  deviceId: client.deviceID!,
                   expiresTs: DateTime.now()
                       .add(Duration(hours: 1))
                       .millisecondsSinceEpoch,
@@ -377,8 +378,8 @@ void main() {
                 ).toJson(),
               ],
             },
-            senderId: matrix.userID!,
-            stateKey: matrix.userID,
+            senderId: client.userID!,
+            stateKey: client.userID,
           ),
         );
 
@@ -466,13 +467,13 @@ void main() {
             content: {
               'memberships': [
                 CallMembership(
-                  userId: matrix.userID!,
+                  userId: client.userID!,
                   roomId: room.id,
                   callId: groupCall.groupCallId,
                   application: groupCall.application,
                   scope: groupCall.scope,
                   backend: backend,
-                  deviceId: matrix.deviceID!,
+                  deviceId: client.deviceID!,
                   expiresTs: DateTime.now()
                       .add(Duration(hours: 1))
                       .millisecondsSinceEpoch,
@@ -482,8 +483,8 @@ void main() {
                 ).toJson(),
               ],
             },
-            senderId: matrix.userID!,
-            stateKey: matrix.userID,
+            senderId: client.userID!,
+            stateKey: client.userID,
           ),
         );
 

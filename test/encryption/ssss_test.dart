@@ -21,7 +21,6 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
@@ -57,12 +56,11 @@ void main() {
       late Client client;
 
       setUpAll(() async {
-        await vod.init(
-          wasmPath: './pkg/',
-          libraryPath: './rust/target/debug/',
-        );
-
         client = await getClient();
+      });
+
+      tearDownAll(() async {
+        await client.dispose();
       });
 
       test('basic things', () async {
@@ -514,10 +512,6 @@ void main() {
         expect(client.encryption!.ssss.isKeyValid(newKey.keyId), true);
         testKey = client.encryption!.ssss.open(newKey.keyId);
         await testKey.setPrivateKey(newKey.privateKey!);
-      });
-
-      test('dispose client', () async {
-        await client.dispose(closeDatabase: true);
       });
     },
     timeout: Timeout(const Duration(minutes: 2)),

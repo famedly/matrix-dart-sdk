@@ -55,6 +55,8 @@ void main() {
       final events = await client.getDehydratedDeviceEvents(device.deviceId);
       expect(events.events?.length, 1);
       expect(events.nextBatch, 'd1');
+
+      await client.dispose();
     });
   });
 }

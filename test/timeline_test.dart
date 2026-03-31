@@ -66,6 +66,7 @@ void main() {
     late Client client;
     late Room room;
     late Timeline timeline;
+
     setUp(() async {
       client = await getClient(
         sendTimelineEventTimeout: const Duration(seconds: 5),
@@ -111,7 +112,7 @@ void main() {
     });
 
     tearDown(
-      () async => client.dispose(closeDatabase: true).onError((e, s) {}),
+      () async => client.dispose().onError((e, s) {}),
     );
 
     test('Create', () async {
@@ -1456,9 +1457,6 @@ void main() {
       expect(t.room.prev_batch, 'room_preset_1234_after_limited');
       await t.requestHistory();
       expect(t.room.prev_batch, 't47409-4357353_219380_26003_2265');
-    });
-    test('logout', () async {
-      await client.logout();
     });
   });
 }

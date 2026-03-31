@@ -753,8 +753,5 @@ void main() {
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 4);
     });
-    test('logout', () async {
-      await client.logout();
-    });
   });
 }

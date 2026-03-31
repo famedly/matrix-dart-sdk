@@ -20,15 +20,18 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
-import 'fake_client.dart';
 
 void main() {
   /// All Tests related to device keys
   group('Matrix File', tags: 'olm', () {
     setUpAll(() async {
-      await getClient(); // To trigger vodozemac init
+      await vod.init(
+        wasmPath: './pkg/',
+        libraryPath: './rust/target/debug/',
+      );
     });
     Logs().level = Level.error;
     test('Decrypt', () async {

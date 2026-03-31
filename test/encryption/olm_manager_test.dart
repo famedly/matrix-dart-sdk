@@ -19,7 +19,6 @@
 import 'dart:convert';
 
 import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
 import 'package:matrix/matrix.dart';
@@ -32,12 +31,11 @@ void main() {
     late Client client;
 
     setUpAll(() async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
-
       client = await getClient();
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
     });
 
     test('signatures', () async {
@@ -267,10 +265,6 @@ void main() {
         ),
         false,
       );
-    });
-
-    test('dispose client', () async {
-      await client.dispose(closeDatabase: true);
     });
   });
 }

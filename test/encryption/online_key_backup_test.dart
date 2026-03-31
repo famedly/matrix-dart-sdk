@@ -35,12 +35,11 @@ void main() {
     const senderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
 
     setUpAll(() async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
-
       client = await getClient();
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
     });
 
     test('basic things', () async {
@@ -133,10 +132,6 @@ void main() {
       ret = client.encryption!.keyManager
           .getInboundGroupSession(roomId, sessionId);
       expect(ret != null, true);
-    });
-
-    test('dispose client', () async {
-      await client.dispose(closeDatabase: false);
     });
   });
 }

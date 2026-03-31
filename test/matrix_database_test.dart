@@ -23,17 +23,21 @@ import 'package:matrix/matrix.dart';
 import 'fake_database.dart';
 
 void main() {
-  group('Databse', () {
+  group('Database', () {
     Logs().level = Level.error;
-    late final Room room;
-    test('setupDatabase', () async {
-      final database = await getDatabase();
+    late DatabaseApi database;
+    late Client client;
+    late Room room;
+
+    setUpAll(() async {
+      database = await getDatabase();
+      client = Client(
+        'testclient',
+        database: database,
+      );
       room = Room(
         id: '!room:blubb',
-        client: Client(
-          'testclient',
-          database: database,
-        ),
+        client: client,
       );
       await database.insertClient(
         'testclient',
@@ -48,6 +52,10 @@ void main() {
         null,
         null,
       );
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
     });
 
     test('storeEventUpdate', () async {
@@ -203,6 +211,7 @@ void main() {
       expect(event?.status, EventStatus.synced);
       event = await database.getEventById('transaction-3', room);
       expect(event, null);
+      await client.dispose();
     });
   });
 }

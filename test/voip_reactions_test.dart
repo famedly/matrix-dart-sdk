@@ -7,7 +7,7 @@ import 'fake_client.dart';
 import 'webrtc_stub.dart';
 
 void main() {
-  late Client matrix;
+  late Client client;
   late Room room;
   late VoIP voip;
 
@@ -23,13 +23,17 @@ void main() {
     Logs().level = Level.info;
 
     setUp(() async {
-      matrix = await getClient();
-      await matrix.abortSync();
+      client = await getClient();
+      await client.abortSync();
 
-      voip = VoIP(matrix, MockWebRTCDelegate());
+      voip = VoIP(client, MockWebRTCDelegate());
       VoIP.customTxid = '1234';
       const id = '!calls:example.com';
-      room = matrix.getRoomById(id)!;
+      room = client.getRoomById(id)!;
+    });
+
+    tearDown(() async {
+      await client.dispose();
     });
 
     test('Test hand raise reaction receiving and state management', () async {
@@ -82,7 +86,7 @@ void main() {
       });
 
       // Simulate receiving a hand raise reaction event
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate(
           nextBatch: 'something',
           rooms: RoomsUpdate(
@@ -180,7 +184,7 @@ void main() {
       });
 
       // First, add a hand raise reaction
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate(
           nextBatch: 'something1',
           rooms: RoomsUpdate(
@@ -217,7 +221,7 @@ void main() {
       await Future.delayed(Duration(milliseconds: 50));
 
       // Now simulate a redaction event
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate(
           nextBatch: 'something2',
           rooms: RoomsUpdate(
@@ -343,7 +347,7 @@ void main() {
       });
 
       // Simulate multiple hand raise reactions
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate(
           nextBatch: 'something',
           rooms: RoomsUpdate(
@@ -417,10 +421,10 @@ void main() {
     test('Test current user own reaction events are processed', () async {
       // Set up a group call membership for the current user
       final membership = CallMembership(
-        userId: matrix.userID!,
+        userId: client.userID!,
         callId: 'test_call_own_reactions',
         backend: MeshBackend(),
-        deviceId: matrix.deviceID!,
+        deviceId: client.deviceID!,
         expiresTs:
             DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
         roomId: room.id,
@@ -437,10 +441,10 @@ void main() {
           },
           type: EventTypes.GroupCallMember,
           eventId: 'my_membership_event',
-          senderId: matrix.userID!,
+          senderId: client.userID!,
           originServerTs: DateTime.now(),
           room: room,
-          stateKey: matrix.userID,
+          stateKey: client.userID,
         ),
       );
 
@@ -465,7 +469,7 @@ void main() {
       });
 
       // Simulate the current user raising their hand
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate(
           nextBatch: 'something',
           rooms: RoomsUpdate(
@@ -480,13 +484,13 @@ void main() {
                         'name': 'hand raise',
                         'is_ephemeral': true,
                         'call_id': 'test_call_own_reactions',
-                        'device_id': matrix.deviceID,
+                        'device_id': client.deviceID,
                         'm.relates_to': {
                           'rel_type': RelationshipTypes.reference,
                           'event_id': 'my_membership_event',
                         },
                       },
-                      senderId: matrix.userID!,
+                      senderId: client.userID!,
                       eventId: 'my_hand_raise',
                       originServerTs: DateTime.now(),
                     ),
@@ -507,7 +511,7 @@ void main() {
 
       final addedEvent = reactionEvents.first as CallReactionAddedEvent;
       expect(addedEvent.reactionKey, '🖐️');
-      expect(addedEvent.participant.userId, matrix.userID);
+      expect(addedEvent.participant.userId, client.userID);
       expect(addedEvent.membershipEventId, 'my_membership_event');
 
       await subscription.cancel();
@@ -516,10 +520,10 @@ void main() {
     test('Test sending hand raise reaction through GroupCallSession', () async {
       // Set up a group call membership for the current user
       final membership = CallMembership(
-        userId: matrix.userID!,
+        userId: client.userID!,
         callId: 'test_call_send_reaction',
         backend: MeshBackend(),
-        deviceId: matrix.deviceID!,
+        deviceId: client.deviceID!,
         expiresTs:
             DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
         roomId: room.id,
@@ -536,10 +540,10 @@ void main() {
           },
           type: EventTypes.GroupCallMember,
           eventId: 'send_membership_event',
-          senderId: matrix.userID!,
+          senderId: client.userID!,
           originServerTs: DateTime.now(),
           room: room,
-          stateKey: matrix.userID,
+          stateKey: client.userID,
         ),
       );
 
@@ -570,10 +574,10 @@ void main() {
     test('Test getAllReactions includes current user reactions', () async {
       // Set up group call memberships for multiple users including current user
       final currentUserMembership = CallMembership(
-        userId: matrix.userID!,
+        userId: client.userID!,
         callId: 'test_call_get_all',
         backend: MeshBackend(),
-        deviceId: matrix.deviceID!,
+        deviceId: client.deviceID!,
         expiresTs:
             DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
         roomId: room.id,
@@ -603,10 +607,10 @@ void main() {
           },
           type: EventTypes.GroupCallMember,
           eventId: 'current_user_membership',
-          senderId: matrix.userID!,
+          senderId: client.userID!,
           originServerTs: DateTime.now(),
           room: room,
-          stateKey: matrix.userID,
+          stateKey: client.userID,
         ),
       );
 
@@ -696,7 +700,7 @@ void main() {
       });
 
       // Test invalid reaction events
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate(
           nextBatch: 'something',
           rooms: RoomsUpdate(
@@ -823,7 +827,7 @@ void main() {
       });
 
       // Test invalid redaction events
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate(
           nextBatch: 'something',
           rooms: RoomsUpdate(
@@ -921,7 +925,7 @@ void main() {
       final emojis = testEmojis.take(5).toList();
 
       for (var i = 0; i < emojis.length; i++) {
-        await matrix.handleSync(
+        await client.handleSync(
           SyncUpdate(
             nextBatch: 'emoji_batch_$i',
             rooms: RoomsUpdate(
@@ -1030,7 +1034,7 @@ void main() {
       });
 
       // Send both ephemeral and permanent reactions
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate(
           nextBatch: 'ephemeral_permanent_batch',
           rooms: RoomsUpdate(
@@ -1161,7 +1165,7 @@ void main() {
       // Create an old ephemeral reaction (older than timeout)
       final oldTimestamp = DateTime.now().subtract(Duration(minutes: 10));
 
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate(
           nextBatch: 'timeout_batch',
           rooms: RoomsUpdate(
@@ -1274,10 +1278,10 @@ void main() {
         () async {
       // Set up a group call membership for the current user
       final membership = CallMembership(
-        userId: matrix.userID!,
+        userId: client.userID!,
         callId: 'test_call_send_emojis',
         backend: MeshBackend(),
-        deviceId: matrix.deviceID!,
+        deviceId: client.deviceID!,
         expiresTs:
             DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
         roomId: room.id,
@@ -1294,10 +1298,10 @@ void main() {
           },
           type: EventTypes.GroupCallMember,
           eventId: 'send_emojis_membership_event',
-          senderId: matrix.userID!,
+          senderId: client.userID!,
           originServerTs: DateTime.now(),
           room: room,
-          stateKey: matrix.userID,
+          stateKey: client.userID,
         ),
       );
 

@@ -19,7 +19,6 @@
 import 'dart:convert';
 
 import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import './fake_client.dart';
@@ -30,17 +29,13 @@ void main() async {
     Logs().level = Level.error;
 
     late Client client;
-
-    Future? vodInit;
-
-    test('setupClient', () async {
-      vodInit ??= vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
-      await vodInit;
+    setUpAll(() async {
       client = await getClient();
       await client.abortSync();
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
     });
 
     test('fromJson', () async {
@@ -493,10 +488,6 @@ void main() async {
         FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.length,
         createRoomRequestCount + 3,
       );
-    });
-
-    test('dispose client', () async {
-      await client.dispose(closeDatabase: true);
     });
   });
 }

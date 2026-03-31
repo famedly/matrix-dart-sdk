@@ -72,6 +72,10 @@ void main() {
       room = Room(id: '!testroom:example.abc', client: client);
     });
 
+    tearDownAll(() async {
+      await client.dispose();
+    });
+
     test('event_match rule', () async {
       final event = Event.fromJson(jsonObj, room);
 

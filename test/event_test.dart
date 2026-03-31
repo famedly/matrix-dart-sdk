@@ -20,21 +20,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'fake_client.dart';
-import 'fake_database.dart';
 
 void main() async {
-  final client = Client(
-    'testclient',
-    httpClient: FakeMatrixApi(),
-    database: await getDatabase(),
-  );
-
   /// All Tests related to the Event
   group('Event', () {
     Logs().level = Level.error;
@@ -59,13 +51,23 @@ void main() async {
       'status': EventStatus.synced.intValue,
       'content': contentJson,
     };
-    final room = Room(id: '!testroom:example.abc', client: client);
-    final event = Event.fromJson(
-      jsonObj,
-      Room(id: '!testroom:example.abc', client: client),
-    );
 
-    tearDownAll(() async => client.dispose());
+    late Client client;
+    late Room room;
+    late Event event;
+
+    setUp(() async {
+      client = await getClient();
+      room = Room(id: '!testroom:example.abc', client: client);
+      event = Event.fromJson(
+        jsonObj,
+        Room(id: '!testroom:example.abc', client: client),
+      );
+    });
+
+    tearDown(() async {
+      await client.dispose();
+    });
 
     test('Create from json', () async {
       jsonObj['content'] = json.decode(contentJson);
@@ -244,10 +246,7 @@ void main() async {
         redactJsonObj['type'] = testType;
         final room = Room(
           id: '1234',
-          client: Client(
-            'testclient',
-            database: await getDatabase(),
-          ),
+          client: client,
         );
         final redactionEventJson = {
           'content': {'reason': 'Spamming'},
@@ -267,8 +266,6 @@ void main() async {
         expect(event.redactedBecause?.toJson(), redactedBecause.toJson());
         expect(event.content.isEmpty, true);
         expect(event.unsigned?['redacted_because'], redactionEventJson);
-
-        await client.dispose();
       }
     });
 
@@ -277,76 +274,30 @@ void main() async {
         jsonObj,
         Room(
           id: '1234',
-          client: Client(
-            'testclient',
-            database: await getDatabase(),
-          ),
+          client: client,
         ),
       );
       expect(() async => await event.cancelSend(), throwsException);
       event.status = EventStatus.sending;
       await event.cancelSend();
-
-      await room.client.dispose();
     });
 
     test('sendAgain', () async {
-      try {
-        vodInit ??= vod.init(
-          wasmPath: './pkg/',
-          libraryPath: './rust/target/debug/',
-        );
-        await vodInit;
-      } catch (_) {
-        Logs().d('Encryption via Vodozemac not enabled');
-      }
-      final matrix = Client(
-        'testclient',
-        httpClient: FakeMatrixApi(),
-        database: await getDatabase(),
-      );
-      await matrix.checkHomeserver(
-        Uri.parse('https://fakeserver.notexisting'),
-        checkWellKnown: false,
-      );
-      await matrix.login(
-        LoginType.mLoginPassword,
-        identifier: AuthenticationUserIdentifier(user: 'test'),
-        password: '1234',
-      );
-
       final event = Event.fromJson(
         jsonObj,
-        Room(id: '!1234:example.com', client: matrix),
+        Room(id: '!1234:example.com', client: client),
       );
       final resp1 = await event.sendAgain();
       event.status = EventStatus.error;
       final resp2 = await event.sendAgain(txid: '1234');
       expect(resp1, null);
       expect(resp2?.startsWith('\$event'), true);
-
-      await matrix.dispose(closeDatabase: true);
     });
 
     test('requestKey', tags: 'olm', () async {
-      final matrix = Client(
-        'testclient',
-        httpClient: FakeMatrixApi(),
-        database: await getDatabase(),
-      );
-      await matrix.checkHomeserver(
-        Uri.parse('https://fakeserver.notexisting'),
-        checkWellKnown: false,
-      );
-      await matrix.login(
-        LoginType.mLoginPassword,
-        identifier: AuthenticationUserIdentifier(user: 'test'),
-        password: '1234',
-      );
-
       final event = Event.fromJson(
         jsonObj,
-        Room(id: '!1234:example.com', client: matrix),
+        Room(id: '!1234:example.com', client: client),
       );
       String? exception;
       try {
@@ -375,15 +326,12 @@ void main() async {
             'session_id': 'X3lUlvLELLYxeTx4yOVu6UDpasGEVO0Jbu+QFnm0cKQ',
           }),
         },
-        Room(id: '!1234:example.com', client: matrix),
+        Room(id: '!1234:example.com', client: client),
       );
 
       await event2.requestKey();
-
-      await matrix.dispose(closeDatabase: true);
     });
     test('requestKey', tags: 'olm', () async {
-      final client = await getClient();
       jsonObj['state_key'] = '@alice:example.com';
       final event = Event.fromJson(
         jsonObj,
@@ -392,7 +340,6 @@ void main() async {
       expect(event.stateKeyUser?.id, '@alice:example.com');
     });
     test('canRedact', () async {
-      final client = await getClient();
       jsonObj['sender'] = client.userID;
       final event = Event.fromJson(
         jsonObj,
@@ -402,16 +349,10 @@ void main() async {
         ),
       );
       expect(event.canRedact, true);
-
-      await client.dispose();
     });
+
     test('getLocalizedBody, isEventKnown', () async {
-      final matrix = Client(
-        'testclient',
-        httpClient: FakeMatrixApi(),
-        database: await getDatabase(),
-      );
-      final room = Room(id: '!1234:example.com', client: matrix);
+      final room = Room(id: '!1234:example.com', client: client);
       var event = Event.fromJson(
         {
           'content': {
@@ -1217,17 +1158,10 @@ void main() async {
         'Unknown event unknown.event.type',
       );
       expect(event.isEventTypeKnown, false);
-
-      await matrix.dispose(closeDatabase: true);
     });
 
     test('getLocalizedBody, parameters', () async {
-      final matrix = Client(
-        'testclient',
-        httpClient: FakeMatrixApi(),
-        database: await getDatabase(),
-      );
-      final room = Room(id: '!1234:example.com', client: matrix);
+      final room = Room(id: '!1234:example.com', client: client);
       var event = Event.fromJson(
         {
           'content': {
@@ -1434,8 +1368,6 @@ void main() async {
         await event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example accepted key verification request',
       );
-
-      await matrix.dispose(closeDatabase: true);
     });
 
     test('aggregations', () {
@@ -2395,8 +2327,7 @@ void main() async {
           }[uri.path]!;
         }
 
-        final room =
-            Room(id: '!localpart:server.abc', client: await getClient());
+        final room = Room(id: '!localpart:server.abc', client: client);
         var event = Event.fromJson(
           {
             'type': EventTypes.Message,
@@ -2494,13 +2425,10 @@ void main() async {
           downloadCallback: downloadCallback,
         );
         expect(buffer.bytes, THUMB_BUFF_DEC);
-
-        await room.client.dispose(closeDatabase: true);
       },
     );
 
     test('downloadAndDecryptAttachment from server', () async {
-      final client = await getClient();
       final event = Event(
         room: client.rooms.first,
         eventId: 'test',
@@ -2519,7 +2447,6 @@ void main() async {
       await event.downloadAndDecryptAttachment(
         onDownloadProgress: progressList.add,
       );
-      await client.dispose();
       expect(progressList, [112]);
     });
     test('downloadAndDecryptAttachment store', tags: 'olm', () async {
@@ -2536,7 +2463,7 @@ void main() async {
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
       );
-      final room = Room(id: '!localpart:server.abc', client: await getClient());
+      final room = Room(id: '!localpart:server.abc', client: client);
       final event = Event.fromJson(
         {
           'type': EventTypes.Message,
@@ -2571,8 +2498,6 @@ void main() async {
         serverHits,
         event.room.client.database.supportsFileStoring ? 1 : 2,
       );
-
-      await room.client.dispose(closeDatabase: true);
     });
 
     test('downloadAndDecryptAttachment store only', tags: 'olm', () async {
@@ -2589,7 +2514,7 @@ void main() async {
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
       );
-      final room = Room(id: '!localpart:server.abc', client: await getClient());
+      final room = Room(id: '!localpart:server.abc', client: client);
       final event = Event.fromJson(
         {
           'type': EventTypes.Message,
@@ -2633,8 +2558,6 @@ void main() async {
         );
       }
       expect(serverHits, 1);
-
-      await room.client.dispose(closeDatabase: true);
     });
 
     test('downloadAndDecryptAttachment store only without file', tags: 'olm',
@@ -2652,7 +2575,7 @@ void main() async {
         Uri.parse('https://fakeserver.notexisting'),
         checkWellKnown: false,
       );
-      final room = Room(id: '!localpart:server.abc', client: await getClient());
+      final room = Room(id: '!localpart:server.abc', client: client);
       final event = Event.fromJson(
         {
           'type': EventTypes.Message,
@@ -2679,8 +2602,6 @@ void main() async {
       );
 
       expect(serverHits, 0);
-
-      await room.client.dispose(closeDatabase: true);
     });
 
     test('emote detection', () async {
@@ -2993,9 +2914,9 @@ void main() async {
         {
           'content': {
             'msgtype': 'text',
-            'body': 'Hello world @alice:matrix.org',
+            'body': 'Hello world @alice:client.org',
             'm.mentions': {
-              'user_ids': ['@alice:matrix.org'],
+              'user_ids': ['@alice:client.org'],
               'room': false,
             },
           },
@@ -3008,7 +2929,7 @@ void main() async {
         },
         room,
       );
-      expect(event.mentions.userIds, ['@alice:matrix.org']);
+      expect(event.mentions.userIds, ['@alice:client.org']);
       expect(event.mentions.room, false);
     });
   });

@@ -52,6 +52,8 @@ class FakeMatrixApi extends BaseClient {
     currentApi?._client = c;
   }
 
+  static sdk.Client? get client => currentApi?._client;
+
   static set failToDevice(bool fail) {
     currentApi?._failToDevice = fail;
   }

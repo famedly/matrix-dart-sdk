@@ -35,7 +35,6 @@ void main() async {
       client = await getClient(
         sendTimelineEventTimeout: const Duration(seconds: 5),
       );
-
       await client.abortSync();
       insertList.clear();
     });
@@ -199,10 +198,6 @@ void main() async {
       await client.loadArchiveWithTimeline();
       client.clearArchivesFromCache();
       expect(client.getArchiveRoomFromCache('!5345234234:example.com'), null);
-    });
-
-    test('logout', () async {
-      await client.logout();
     });
   });
 }

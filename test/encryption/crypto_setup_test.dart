@@ -17,7 +17,6 @@
  */
 
 import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/encryption/utils/crypto_setup_extension.dart';
@@ -28,22 +27,23 @@ void main() {
   group('Bootstrap', tags: 'olm', () {
     Logs().level = Level.error;
 
+    late Client client;
+
     setUpAll(() async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
+      client = await getClient();
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
     });
 
     test('getCryptoIdentityState', () async {
-      final client = await getClient();
       final state = await client.getCryptoIdentityState();
       expect(state.initialized, true);
       expect(state.connected, false);
     });
 
     test('initCryptoIdentity & restoreCryptoIdentity', () async {
-      final client = await getClient();
       var state = await client.getCryptoIdentityState();
       expect(state.initialized, true);
       expect(state.connected, false);
@@ -72,7 +72,6 @@ void main() {
     test(
       'initCryptoIdentity with passphrase',
       () async {
-        final client = await getClient();
         const passphrase = 'mySecretPassphrase42%';
         final recoveryKey =
             await client.initCryptoIdentity(passphrase: passphrase);
@@ -108,7 +107,6 @@ void main() {
     test(
       'Add a second recovery key',
       () async {
-        final client = await getClient();
         await client.encryption!.ssss.clearCache();
         var state = await client.getCryptoIdentityState();
         expect(state.initialized, true);

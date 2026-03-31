@@ -47,17 +47,22 @@ Future<void> updateLastEvent(Event event) {
 }
 
 void main() {
-  late Client matrix;
+  late Client client;
   late Room room;
 
   /// All Tests related to the Event
   group('Room', () {
     Logs().level = Level.error;
-    test('Login', () async {
-      matrix = await getClient(
+
+    setUpAll(() async {
+      client = await getClient(
         sendTimelineEventTimeout: const Duration(seconds: 10),
       );
-      await matrix.abortSync();
+      await client.abortSync();
+    });
+
+    tearDownAll(() async {
+      await client.dispose(closeDatabase: true);
     });
 
     test('Create from json', () async {
@@ -72,7 +77,7 @@ void main() {
       ];
 
       room = Room(
-        client: matrix,
+        client: client,
         id: id,
         membership: membership,
         highlightCount: highlightCount,
@@ -124,11 +129,11 @@ void main() {
           room: room,
           eventId: '143273582443PhrSnY:example.org',
           originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
-          senderId: matrix.userID!,
+          senderId: client.userID!,
           type: 'm.room.member',
           unsigned: {'age': 1234},
           content: {'membership': 'join', 'displayname': 'YOU'},
-          stateKey: matrix.userID,
+          stateKey: client.userID,
         ),
       );
       room.setState(
@@ -749,7 +754,7 @@ void main() {
         ),
       );
       expect(room.ownPowerLevel.level, 100);
-      expect(room.getPowerLevelByUserId(matrix.userID!), room.ownPowerLevel);
+      expect(room.getPowerLevelByUserId(client.userID!), room.ownPowerLevel);
       expect(room.getPowerLevelByUserId('@nouser:example.com').level, 10);
       expect(room.ownPowerLevel.level, 100);
       expect(room.canBan, true);
@@ -882,19 +887,19 @@ void main() {
 
     test('isDirectChat', () async {
       // Room !726s6s6q:example.com is in m.direct with @bob:example.com
-      final dmRoom = matrix.getRoomById('!726s6s6q:example.com');
+      final dmRoom = client.getRoomById('!726s6s6q:example.com');
       expect(dmRoom, isNotNull);
       expect(dmRoom!.isDirectChat, true);
       expect(dmRoom.directChatMatrixID, '@bob:example.com');
 
       // Room !calls:example.com is NOT in m.direct
-      final nonDmRoom = matrix.getRoomById('!calls:example.com');
+      final nonDmRoom = client.getRoomById('!calls:example.com');
       expect(nonDmRoom, isNotNull);
       expect(nonDmRoom!.isDirectChat, false);
       expect(nonDmRoom.directChatMatrixID, isNull);
 
       // Simulate m.direct update via sync - add nonDmRoom as direct chat
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate.fromJson(
           jsonDecode('''
           {
@@ -913,7 +918,7 @@ void main() {
       expect(nonDmRoom.directChatMatrixID, '@alice:example.com');
 
       // Simulate m.direct update - remove room from direct chats
-      await matrix.handleSync(
+      await client.handleSync(
         SyncUpdate.fromJson(
           jsonDecode('''
           {
@@ -1426,10 +1431,10 @@ void main() {
 
     test('pushRuleState', () async {
       expect(room.pushRuleState, PushRuleState.mentionsOnly);
-      ((matrix.accountData['m.push_rules']?.content['global']
+      ((client.accountData['m.push_rules']?.content['global']
               as Map<String, Object?>)['override'] as List)
           .add(
-        ((matrix.accountData['m.push_rules']?.content['global']
+        ((client.accountData['m.push_rules']?.content['global']
             as Map<String, Object?>)['room'] as List)[0],
       );
       expect(room.pushRuleState, PushRuleState.dontNotify);
@@ -1857,11 +1862,11 @@ void main() {
 
       // check if persisted in db
       final sentEventFromDB =
-          await matrix.database.getEventById('older_event', room);
+          await client.database.getEventById('older_event', room);
       expect(sentEventFromDB?.eventId, 'older_event');
       Room? roomFromDB;
 
-      roomFromDB = await matrix.database.getSingleRoom(matrix, room.id);
+      roomFromDB = await client.database.getSingleRoom(client, room.id);
       expect(roomFromDB?.lastEvent?.eventId, 'older_event');
 
       expect(room.lastEvent?.body, 'older_event');
@@ -1882,7 +1887,7 @@ void main() {
         expect(room.lastEvent?.eventId, 'event_too_large');
         expect(room.lastEvent?.status, EventStatus.error);
 
-        roomFromDB = await matrix.database.getSingleRoom(matrix, room.id);
+        roomFromDB = await client.database.getSingleRoom(client, room.id);
         expect(roomFromDB?.lastEvent?.eventId, 'event_too_large');
 
         // force null because except would have caught it anyway
@@ -1898,12 +1903,12 @@ void main() {
 
       // check if persisted in db
       final lastEventFromDB =
-          await matrix.database.getEventById('event_too_large', room);
+          await client.database.getEventById('event_too_large', room);
 
       // null here because cancelSend removes event.
       expect(lastEventFromDB, null);
 
-      roomFromDB = await matrix.database.getSingleRoom(matrix, room.id);
+      roomFromDB = await client.database.getSingleRoom(client, room.id);
 
       expect(roomFromDB?.partial, true);
 
@@ -1913,7 +1918,7 @@ void main() {
         'Cancelled sending message',
       );
 
-      roomFromDB = await matrix.database.getSingleRoom(matrix, room.id);
+      roomFromDB = await client.database.getSingleRoom(client, room.id);
 
       await roomFromDB?.postLoad();
       expect(roomFromDB?.partial, false);
@@ -2025,10 +2030,6 @@ void main() {
       expect(secondResult.events.isEmpty, true);
       expect(secondResult.searchedUntil, null);
       expect(secondResult.nextBatch, null);
-    });
-
-    test('logout', () async {
-      await matrix.logout();
     });
   });
 }

@@ -29,6 +29,7 @@ void main() async {
     late Room room;
     late User user1, user2;
     Future? vodInit;
+
     setUp(() async {
       try {
         vodInit ??= vod.init(
@@ -72,9 +73,11 @@ void main() async {
       );
       await client.abortSync();
     });
+
     tearDown(() async {
-      await client.logout();
+      await client.dispose();
     });
+
     test('create', () async {
       expect(user1.powerLevel, 0);
       expect(user1.stateKey, '@alice:example.com');
@@ -189,10 +192,6 @@ void main() async {
     test('mentionFragments', () async {
       expect(user1.mentionFragments, {'@[Alice M]', '@[Alice M]#1745'});
       expect(user2.mentionFragments, {'@Bob', '@Bob#1542'});
-    });
-    test('dispose client', () async {
-      await Future.delayed(Duration(milliseconds: 50));
-      await client.dispose(closeDatabase: true);
     });
   });
 }

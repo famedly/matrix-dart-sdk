@@ -114,21 +114,22 @@ List<Event> createMockEvents({
 void main() {
   group('TimelineExportExtension', () {
     late DateTime now;
-    late MockClient client;
-    late Room room;
-    late Timeline timeline;
 
     setUp(() {
       now = DateTime.now();
-      client = MockClient('testclient');
-      room = Room(id: '!testroom:example.com', client: client);
-      timeline = Timeline(room: room, chunk: TimelineChunk(events: []));
     });
 
     group('basic export functionality', () {
       late List<Event> mockEvents;
 
+      late MockClient client;
+      late Room room;
+      late Timeline timeline;
+
       setUp(() {
+        client = MockClient('testclient');
+        room = Room(id: '!testroom:example.com', client: client);
+        timeline = Timeline(room: room, chunk: TimelineChunk(events: []));
         mockEvents = createMockEvents(count: 20, startTime: now, room: room);
 
         // Set up initial state
@@ -192,15 +193,15 @@ void main() {
 
     group('pagination handling', () {
       test('handles server pagination with large event sets', () async {
+        final client = MockClient('testclient');
+        final room = Room(id: '!testroom:example.com', client: client);
         final manyServerEvents = createMockEvents(
           count: 150,
           startTime: now.subtract(const Duration(hours: 10)),
           room: room,
         );
-
-        client = MockClient('testclient', serverEvents: manyServerEvents);
-        room = Room(id: '!testroom:example.com', client: client);
-        timeline = Timeline(
+        client.serverEvents = manyServerEvents;
+        final timeline = Timeline(
           room: room,
           chunk: TimelineChunk(events: manyServerEvents.take(10).toList()),
         );
@@ -232,13 +233,13 @@ void main() {
 
     group('error handling', () {
       test('continues export when server returns error', () async {
-        client = MockClient('testclient', throwError: true);
-        room = Room(id: '!testroom:example.com', client: client);
+        final client = MockClient('testclient', throwError: true);
+        final room = Room(id: '!testroom:example.com', client: client);
         final initialEvents =
             createMockEvents(count: 5, startTime: now, room: room);
         client.dbEvents = initialEvents;
         client.serverEvents = initialEvents;
-        timeline = Timeline(
+        final timeline = Timeline(
           room: room,
           chunk: TimelineChunk(events: initialEvents),
         );
@@ -279,6 +280,8 @@ void main() {
 
     group('event type counting', () {
       test('correctly counts media and UTD events', () async {
+        final client = MockClient('testclient');
+        final room = Room(id: '!testroom:example.com', client: client);
         final mixedEvents = [
           createTestEvent(
             eventId: 'image1',
@@ -309,10 +312,8 @@ void main() {
             room: room,
           ),
         ];
-
-        client = MockClient('testclient', serverEvents: mixedEvents);
-        room = Room(id: '!testroom:example.com', client: client);
-        timeline = Timeline(room: room, chunk: TimelineChunk(events: []));
+        client.serverEvents = mixedEvents;
+        final timeline = Timeline(room: room, chunk: TimelineChunk(events: []));
         room.prev_batch = '0';
 
         final results = <ExportResult>[];

@@ -19,7 +19,6 @@
 import 'dart:convert';
 
 import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
@@ -31,13 +30,12 @@ void main() {
     late Client client;
 
     setUpAll(() async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
-
       client = await getClient();
       await client.abortSync();
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
     });
 
     test('basic things', () async {
@@ -113,10 +111,6 @@ void main() {
         ),
         true,
       );
-    });
-
-    test('dispose client', () async {
-      await client.dispose(closeDatabase: true);
     });
   });
 }
