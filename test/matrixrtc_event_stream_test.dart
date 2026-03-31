@@ -40,6 +40,11 @@ void main() {
       await client.dispose();
     });
 
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     group('GroupCallStateChanged Events', () {
       test('emits GroupCallStateChanged when transitioning through all states',
           () async {

@@ -101,6 +101,11 @@ void main() {
       () async => client.dispose(closeDatabase: true).onError((e, s) {}),
     );
 
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     test('Request future', () async {
       timeline.events.clear();
       FakeMatrixApi.calledEndpoints.clear();

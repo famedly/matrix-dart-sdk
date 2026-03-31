@@ -41,6 +41,11 @@ void main() async {
 
     tearDown(() async => client.dispose().onError((e, s) {}));
 
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     test('archive room not loaded', () async {
       final archiveRoom =
           client.getArchiveRoomFromCache('!5345234234:example.com');

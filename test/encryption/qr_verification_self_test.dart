@@ -100,6 +100,11 @@ void main() async {
       await client2.dispose(closeDatabase: true);
     });
 
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     test('Run qr verification mode 1', () async {
       expect(
         client1.userDeviceKeys[client2.userID]?.masterKey!.verified,

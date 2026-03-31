@@ -36,6 +36,11 @@ void main() {
       await client.dispose();
     });
 
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     test('Test hand raise reaction receiving and state management', () async {
       // Set up a group call membership
       final membership = CallMembership(

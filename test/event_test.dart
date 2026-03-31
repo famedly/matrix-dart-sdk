@@ -69,6 +69,11 @@ void main() async {
       await client.dispose();
     });
 
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     test('Create from json', () async {
       jsonObj['content'] = json.decode(contentJson);
       expect(event.toJson(), jsonObj);

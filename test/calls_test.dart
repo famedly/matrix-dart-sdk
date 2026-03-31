@@ -29,6 +29,11 @@ void main() {
       await matrix.dispose();
     });
 
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     test('Test call methods', () async {
       final call = CallSession(
         CallOptions(

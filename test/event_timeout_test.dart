@@ -30,6 +30,11 @@ void main() {
       await client.dispose();
     });
 
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     test('Event constructor correctly checks timeout from originServerTs',
         () async {
       final completer = Completer();

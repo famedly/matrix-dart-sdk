@@ -30,6 +30,11 @@ import '../fake_client.dart';
 void main() {
   /// All Tests related to device keys
   group('Dehydrated Devices', () {
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     test('API calls', () async {
       final client = await getClient();
 

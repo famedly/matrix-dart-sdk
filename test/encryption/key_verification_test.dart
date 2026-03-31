@@ -104,6 +104,11 @@ void main() async {
       await client2.dispose(closeDatabase: true);
     });
 
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     test('Run emoji / number verification', () async {
       // for a full run we test in-room verification in a cleartext room
       // because then we can easily intercept the payloads and inject in the other client

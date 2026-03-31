@@ -42,6 +42,8 @@ void main() async {
     });
 
     tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
       await client.dispose();
       await otherClient.dispose();
     });

@@ -115,6 +115,11 @@ void main() {
       () async => client.dispose().onError((e, s) {}),
     );
 
+    tearDownAll(() async {
+      await FakeMatrixApi.client?.dispose();
+      FakeMatrixApi.client = null;
+    });
+
     test('Create', () async {
       client.onTimelineEvent.add(
         Event.fromJson(
