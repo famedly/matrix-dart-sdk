@@ -19,6 +19,7 @@
 import 'dart:convert';
 
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/matrix.dart';
 import './fake_client.dart';
@@ -30,6 +31,10 @@ void main() async {
 
     late Client client;
     setUpAll(() async {
+      await vod.init(
+        wasmPath: './pkg/',
+        libraryPath: './rust/target/debug/',
+      );
       client = await getClient();
       await client.abortSync();
     });
@@ -41,29 +46,49 @@ void main() async {
     });
 
     test('fromJson', () async {
+      const userId = '@alice:example.com';
+      const deviceId = 'JLAFKJWSCS';
+      final account = vod.Account();
+      final identityKeys = account.identityKeys;
+      final curve25519Key = identityKeys.curve25519.toBase64();
+      final ed25519Key = identityKeys.ed25519.toBase64();
+
+      final signingData = <String, dynamic>{
+        'algorithms': [
+          AlgorithmTypes.olmV1Curve25519AesSha2,
+          AlgorithmTypes.megolmV1AesSha2,
+        ],
+        'device_id': deviceId,
+        'keys': {
+          'curve25519:$deviceId': curve25519Key,
+          'ed25519:$deviceId': ed25519Key,
+        },
+        'user_id': userId,
+      };
+      final signingContent =
+          String.fromCharCodes(json.encode(signingData).codeUnits);
+      final signature = account.sign(signingContent).toBase64();
+
       var rawJson = <String, dynamic>{
-        'user_id': '@alice:example.com',
-        'device_id': 'JLAFKJWSCS',
+        'user_id': userId,
+        'device_id': deviceId,
         'algorithms': [
           AlgorithmTypes.olmV1Curve25519AesSha2,
           AlgorithmTypes.megolmV1AesSha2,
         ],
         'keys': {
-          'curve25519:JLAFKJWSCS':
-              '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
-          'ed25519:JLAFKJWSCS': 'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI',
+          'curve25519:$deviceId': curve25519Key,
+          'ed25519:$deviceId': ed25519Key,
         },
         'signatures': {
-          '@alice:example.com': {
-            'ed25519:JLAFKJWSCS':
-                'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA',
+          userId: {
+            'ed25519:$deviceId': signature,
           },
         },
         'unsigned': {'device_display_name': "Alice's mobile phone"},
       };
 
       final key = DeviceKeys.fromJson(rawJson, client);
-      // NOTE(Nico): this actually doesn't do anything, because the device signature is invalid...
       await key.setVerified(false, false);
       await key.setBlocked(true);
       expect(json.encode(key.toJson()), json.encode(rawJson));
