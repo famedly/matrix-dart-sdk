@@ -6,8 +6,9 @@ if [ -n "$NO_OLM" ]; then
     tagFlag="-x olm"
 fi
 
-dart test --concurrency=$thread_count --coverage=coverage_dir $tagFlag
-TEST_CODE=$?
+dart test --concurrency=$thread_count --reporter=json --coverage=coverage_dir $tagFlag \
+  | dart run scripts/test_monitor.dart "$thread_count"
+TEST_CODE=${PIPESTATUS[0]}
 
 # lets you do more stuff like reporton
 dart pub global activate coverage
