@@ -123,6 +123,10 @@ class Client extends MatrixApi {
     MatrixImageFileResizeArguments,
   )? customImageResizer;
 
+  /// The compare function how the rooms should be sorted internally.
+  /// The [defaultRoomSorter] is used if no custom room sorter is provided.
+  RoomSorter? _customRoomSorter;
+
   /// Create a client
   /// [clientName] = unique identifier of this client
   /// [databaseBuilder]: A function that creates the database instance, that will be used.
@@ -211,6 +215,7 @@ class Client extends MatrixApi {
     /// <br/> tags:
     this.convertLinebreaksInFormatting = true,
     this.dehydratedDeviceDisplayName = 'Dehydrated Device',
+    RoomSorter? customRoomSorter,
   })  : _database = database,
         syncFilter = syncFilter ??
             Filter(
@@ -223,6 +228,7 @@ class Client extends MatrixApi {
         supportedLoginTypes =
             supportedLoginTypes ?? {AuthenticationTypes.password},
         verificationMethods = verificationMethods ?? <KeyVerificationMethod>{},
+        _customRoomSorter = customRoomSorter,
         super(
           httpClient: FixedTimeoutHttpClient(
             httpClient ?? http.Client(),
@@ -3212,10 +3218,10 @@ class Client extends MatrixApi {
   /// If `true` then unread rooms are pinned at the top of the room list.
   bool pinInvitedRooms;
 
-  /// The compare function how the rooms should be sorted internally. By default
-  /// rooms are sorted by timestamp of the last m.room.message event or the last
+  /// Default sorting method for rooms to be sorted internally.
+  /// Rooms are sorted by timestamp of the last m.room.message event or the last
   /// event if there is no known message.
-  RoomSorter get sortRoomsBy => (a, b) {
+  RoomSorter get defaultRoomSorter => (a, b) {
         if (pinInvitedRooms &&
             a.membership != b.membership &&
             [a.membership, b.membership].any((m) => m == Membership.invite)) {
@@ -3233,10 +3239,17 @@ class Client extends MatrixApi {
         }
       };
 
+  /// Set a room sorter and sort the rooms once immediately.
+  /// If `null` is passed, the default room sorter will be used.
+  void setCustomRoomSorter(RoomSorter? sorter) {
+    _customRoomSorter = sorter;
+    _sortRooms();
+  }
+
   void _sortRooms() {
     if (_sortLock || rooms.length < 2) return;
     _sortLock = true;
-    rooms.sort(sortRoomsBy);
+    rooms.sort(_customRoomSorter ?? defaultRoomSorter);
     _sortLock = false;
   }
 
