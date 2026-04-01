@@ -40,8 +40,10 @@ Future<Client> getClient({
       wasmPath: './pkg/',
       libraryPath: './rust/target/debug/',
     );
-    await vodInit;
+    await vodInit!.timeout(const Duration(seconds: 5));
   } catch (_) {
+    // Reset so a hung future isn't reused on the next getClient() call.
+    vodInit = null;
     Logs().d('Encryption via Vodozemac not enabled');
   }
   final client = Client(
