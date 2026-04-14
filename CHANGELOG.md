@@ -1,8 +1,17 @@
+## [7.0.0] 15th April 2026
+
+- refactor: (BREAKING) add type for power level as extension type over int (Christian Kußowski)
+- fix(voip): allow updating `application` and stop timers for cancelled delayed events (Yash Garg)
+- chore: Ignore avoid void async in webworker (Christian Kußowski)
+- feat: Store sending files in file cache for 30 days (Christian Kußowski)
+- fix: shrinkImage fail blocks sendFileEvent without ux feedback (Christian Kußowski)
+
 ## [6.2.0] 13th March 2026
+
 - chore: (BREAKING) Apply default soft logout handling (Christian Kußowski)
 - chore: Add exit 0 to tear down all in bootstrap test (Christian Kußowski)
 - chore: improve to_device log lines (td)
-- chore: remove _discoveryDataLoading dead code (Karthikeyan S)
+- chore: remove \_discoveryDataLoading dead code (Karthikeyan S)
 - feat(auth): add additionalFields support to AuthenticationData for UIA stages (arman)
 - feat: Add support for low priority room and sort rooms properly (Christian Kußowski)
 - fix: expiresIn from OIDC is in seconds not milliseconds (Christian Kußowski)
@@ -36,6 +45,7 @@
 - refactor: (BREAKING) Use unified requestAndCache method (Christian Kußowski)
 
 ## [5.0.0] 12th Jan 2026
+
 - feat: Implement MSC2964 dynamic client registration (Christian Kußowski)
 - feat: Implement MSC2964 OIDC login flow (Christian Kußowski)
 - feat: MSC4075 - MatrixRTC notification event (call ringing) (Karthikeyan S)
@@ -48,9 +58,11 @@
 - test: \[Room].isDirectChat functionality (Karthikeyan S)
 
 ## [4.1.0] 20th December 2025
+
 - refactor: Deprecated Client.customRefreshTokenLifetime in favor of method parameter (Christian Kußowski)
 
 ## [4.0.3] 17th December 2025
+
 - fix: remove call member event wrt unprotected state keys (td)
 
 ## [4.0.2] 16th December 2025
@@ -79,6 +91,7 @@ v4.0.0 It comes with some breaking changes:
 - `RelationshipType.reply` has been removed in favor of `Event.inReplyToEventId()` where you can set if you want to ignore fallbacks or not. This makes it easier to differenciate fallback replies and replies inside of a thread.
 
 #### All changes
+
 - feat: (BREAKING) Discover OIDC auth metadata on Client.checkHomeserver() (Christian Kußowski)
 - feat: Allow init with access token (Christian Kußowski)
 - feat: Implement msc 3381 polls (krille-chan)
@@ -100,6 +113,7 @@ v4.0.0 It comes with some breaking changes:
 - test: matrixRTCEventStream emitted events in a group call (Karthikeyan S)
 
 ## [3.0.1] 15th October 2025
+
 - feat: Make display sending event configurable in Room.sendEvent() (Christian Kußowski)
 - chore: tidy up call membership event (td)
 - fix: Remove avatar crashes with invalid uri (Christian Kußowski)
@@ -132,11 +146,12 @@ v4.0.0 It comes with some breaking changes:
 - chore: Revert on upload progress (Christian Kußowski)
 
 ## [2.0.1] 9th Sept 2025
+
 - fix: scheduled event list init (td)
 
 ## [2.0.0] 9th Sept 2025
 
-There have been some breaking changes to the VoIP codebase. Specifically, you will have to pass your instance of the VoIP class to existing `getCallMemberships*` functions which are an extension on the Room class. 
+There have been some breaking changes to the VoIP codebase. Specifically, you will have to pass your instance of the VoIP class to existing `getCallMemberships*` functions which are an extension on the Room class.
 
 - feat: delayed and device owned state events support for group calls (td)
 - feat: allow setting keyring size (td)
@@ -154,8 +169,8 @@ There have been some breaking changes to the VoIP codebase. Specifically, you wi
 - refactor: Restrict canRequestHistory to joined or archived rooms (Christian Kußowski)
 - refactor: Sync for unknown room in push helper and catch timeout exceptions (Christian Kußowski)
 
-
 ## [1.1.0] 14th July 2025
+
 - fix: (BREAKING) Can not logout and login again with same Client object (Christian Kußowski)
 - refactor: Clean up new dart version lints (Christian Kußowski)
 
@@ -169,6 +184,7 @@ client.database = await MatrixSdkDatabase.init(/*...*/);
 ```
 
 ## [1.0.1] 16th June 2025
+
 - chore: Add hint to init vodozemac also in native implementations (Christian Kußowski)
 - fix: exportDump and importDump and add unit tests (Christian Kußowski)
 - fix: user.canKick should be true for knocking users as well (Christian Kußowski)
@@ -246,11 +262,12 @@ This should work on Android, iOS, macOS, Linux and Windows.
 
 For web you need to compile vodozemac to wasm. [Please refer to the Vodozemac bindings documentation](https://pub.dev/packages/vodozemac#build-for-web).
 
-
 ## [0.40.2] 5th June 2025
+
 - fix: fallback on homeserver is userID null (The one with the braid)
 
 ## [0.40.1] 2nd June 2025
+
 - feat: Add logout command (Christian Kußowski)
 - feat: Switch to github flavor markdown to render checkboxes (krille-chan)
 - fix: Add missing copy json in updateInboundGroupdSessionAllowedAtIndex method (Christian Kußowski)
@@ -259,6 +276,7 @@ For web you need to compile vodozemac to wasm. [Please refer to the Vodozemac bi
 - refactor: Do not store room update for leave rooms not cached anyway (Christian Kußowski)
 
 ## [0.40.0] 9th May 2025
+
 - feat: Add localization for voice message type (Krille)
 - feat: Support fallback for threads in Event.getReplyEvent() (Krille)
 - fix: Fetch well-known from domain from userId, not from homeserver domain (krille-chan)
@@ -273,9 +291,11 @@ For web you need to compile vodozemac to wasm. [Please refer to the Vodozemac bi
 - fix: sanity if room prev_batch null, populate it (td)
 
 ## [0.39.3] 6th May 2025
+
 - fix: Do not load timeline while sync is processed (Krille)
 
 ## [0.39.2] 30th April 2025
+
 - fix: add proper description for `User` class (Yash-Garg)
 - fix: handling of existing calls in `onCallInvite` (Yash-Garg)
 - fix: make sure to keep track of aggregated events after requesting history or future (td)
@@ -320,19 +340,22 @@ For web you need to compile vodozemac to wasm. [Please refer to the Vodozemac bi
 Now you can pass a `StringBuffer` object to the command handler to pass some arbitrary data back to the caller.
 
 **Before:**
+
 ```
 addCommand('newCommand', (CommandArgs args){});
 ```
 
 **After:**
+
 ```
 addCommand('newCommand', (CommandArgs args, StringBuffer? stdout){});
 ```
 
-In order to use the stdout, you should create a `StringBuffer` stdout object and 
+In order to use the stdout, you should create a `StringBuffer` stdout object and
 pass it to the `parseAndRunCommand` method or `sendTextEvent` (that uses `parseAndRunCommand` internally).
 
 Like this:
+
 ```
 final stdout = StringBuffer();
 
@@ -358,6 +381,7 @@ if(output != null) {
 ```
 
 ### All changes:
+
 - feat: (BREAKING) Make share keys with logic configurable (Krille)
 - feat: BREAKING improve command_extension (The one with the braid)
 - fix: Megolm sessions become invalid after restarting client (Krille)
@@ -423,6 +447,7 @@ trigger a notification.
 #### How to migrate from onMigration to onInitStateChanged
 
 **Before:**
+
 ```dart
 Client('Name', onMigration: () {
   print('Migrating now....');
@@ -454,8 +479,9 @@ Client('Name', onInitStateChanged: (state) {
 - refactor: Do not set the deprecated dont_notify action in push rules (Krille)
 - refactor: Fix new lints from flutter 3.27 (Krille)
 - refactor: Remove unnecessary roomId parameter from decryptRoomEvent method (Krille)
- 
+
 ## [0.35.0] 11th November 2024
+
 Fixes a minor performance leak where the app re-requests the member list of all encrypted rooms.
 For this the parameter `cache` in `Room.requestParticipants()` is now also
 responsible to store the member data in the database. Also it is not `true` by default anymore for
@@ -467,6 +493,7 @@ unencrypted rooms.
 - chore: add require trailing comma lint (Mohammad Reza Moradi)
 
 ## [0.34.0] 21st Oct 2024
+
 - feat: add equality and hashCode overrides for autogenerated models (BREAKING CHANGE) (td)
 - feat: v1.12 spec endpoints support (BREAKING CHANGE) (td)
 - fix: (BREAKING) Change power level without changing memory (Krille)
@@ -524,7 +551,7 @@ unencrypted rooms.
 - fix: Call logout on soft logout fail (Krille)
 - fix: don't restart github action service after apt install (Nicolas Werner)
 - fix: leave->invite in the same sync would hide the invite (Nicolas Werner)
--  (BREAKING) fix: update last event properly on cancel send (td)
+- (BREAKING) fix: update last event properly on cancel send (td)
 
 ## [0.31.0] 28th July 2024
 
@@ -548,6 +575,7 @@ unencrypted rooms.
 - refactor: Remove Matrix Connection Exception (Krille)
 
 ## [0.29.13] 24th June 2024
+
 - chore: allow clients to set their own voip key delays (td)
 - chore: use not cancelled in actions instead of always (td)
 - fix: Return empty uri instead of original uri if uri is not mxc (Krille)
