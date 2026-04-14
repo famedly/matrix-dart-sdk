@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:test/test.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
+import 'package:matrix/src/voip/models/delayed_event_canceller.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
 import 'fake_client.dart';
 import 'webrtc_stub.dart';
@@ -937,6 +940,282 @@ void main() {
 
       expect(room.groupCallParticipantCount('participants_count', voip), 2);
       expect(room.hasActiveGroupCall(voip), true);
+    });
+
+    group('application-agnostic membership tests', () {
+      test('CallMembership equality does not depend on application field', () {
+        final expiresTs =
+            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch;
+
+        final mem1 = CallMembership(
+          userId: '@alice:example.com',
+          callId: 'test_eq_call',
+          backend: MeshBackend(),
+          deviceId: 'DEVICE_A',
+          expiresTs: expiresTs,
+          roomId: room.id,
+          membershipId: 'session1',
+          voip: voip,
+          application: 'm.call',
+          scope: 'm.room',
+        );
+        final mem2 = CallMembership(
+          userId: '@alice:example.com',
+          callId: 'test_eq_call',
+          backend: MeshBackend(),
+          deviceId: 'DEVICE_A',
+          expiresTs: expiresTs,
+          roomId: room.id,
+          membershipId: 'session1',
+          voip: voip,
+          application: 'com.custom.app',
+          scope: 'm.room',
+        );
+
+        expect(mem1, equals(mem2));
+      });
+
+      test(
+        'onMemberStateChanged counts participants regardless of their application',
+        () async {
+          final groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            MeshBackend(),
+            'm.call',
+            'm.room',
+            'test_app_agnostic',
+          );
+          await MeshBackend().initLocalStream(groupCall);
+          groupCall.setState(GroupCallState.entered);
+
+          room.setState(
+            Event(
+              room: room,
+              eventId: 'local_mem_app_test',
+              originServerTs: DateTime.now(),
+              type: EventTypes.GroupCallMember,
+              content: {
+                'memberships': [
+                  CallMembership(
+                    userId: matrix.userID!,
+                    roomId: room.id,
+                    callId: 'test_app_agnostic',
+                    application: 'm.call',
+                    scope: 'm.room',
+                    backend: MeshBackend(),
+                    deviceId: matrix.deviceID!,
+                    expiresTs: DateTime.now()
+                        .add(Duration(hours: 1))
+                        .millisecondsSinceEpoch,
+                    membershipId: voip.currentSessionId,
+                    voip: voip,
+                  ).toJson(),
+                ],
+              },
+              senderId: matrix.userID!,
+              stateKey: matrix.userID,
+            ),
+          );
+
+          // Remote user joins with a different application value
+          room.setState(
+            Event(
+              room: room,
+              eventId: 'remote_mem_app_test',
+              originServerTs: DateTime.now(),
+              type: EventTypes.GroupCallMember,
+              content: {
+                'memberships': [
+                  CallMembership(
+                    userId: '@remoteuser:example.com',
+                    roomId: room.id,
+                    callId: 'test_app_agnostic',
+                    application: 'com.example.upgraded',
+                    scope: 'm.room',
+                    backend: MeshBackend(),
+                    deviceId: 'REMOTE_DEVICE',
+                    expiresTs: DateTime.now()
+                        .add(Duration(hours: 1))
+                        .millisecondsSinceEpoch,
+                    membershipId: 'remoteSession',
+                    voip: voip,
+                  ).toJson(),
+                ],
+              },
+              senderId: '@remoteuser:example.com',
+              stateKey: '@remoteuser:example.com',
+            ),
+          );
+
+          await groupCall.onMemberStateChanged();
+
+          expect(groupCall.participants.length, 2);
+          expect(
+            groupCall.participants.any((p) => p.userId == matrix.userID!),
+            isTrue,
+          );
+          expect(
+            groupCall.participants
+                .any((p) => p.userId == '@remoteuser:example.com'),
+            isTrue,
+          );
+        },
+      );
+
+      test(
+        'sendMemberStateEvent resend loop keeps firing after call is entered',
+        () async {
+          final shortTimerVoip = VoIP(
+            matrix,
+            MockWebRTCDelegate(),
+            timeouts: CallTimeouts(
+              updateExpireTsTimerDuration: Duration(milliseconds: 50),
+            ),
+          );
+
+          final groupCall = GroupCallSession.withAutoGenId(
+            room,
+            shortTimerVoip,
+            MeshBackend(),
+            'm.call',
+            'm.room',
+            'test_resend_timer',
+          );
+
+          FakeMatrixApi.calledEndpoints.clear();
+
+          await groupCall.enter();
+
+          // 1 send from enter() itself
+          final countAfterEnter = FakeMatrixApi.calledEndpoints.entries
+              .where((e) => e.key.contains('/state/com.famedly.call.member/'))
+              .fold<int>(0, (sum, e) => sum + e.value.length);
+
+          // Wait long enough for the 50ms timer to fire at least twice more
+          await Future.delayed(Duration(milliseconds: 200));
+
+          final countAfterWait = FakeMatrixApi.calledEndpoints.entries
+              .where((e) => e.key.contains('/state/com.famedly.call.member/'))
+              .fold<int>(0, (sum, e) => sum + e.value.length);
+
+          // The periodic timer should have fired and called sendMemberStateEvent
+          // at least twice beyond the initial call from enter()
+          expect(countAfterWait, greaterThan(countAfterEnter + 1));
+
+          await groupCall.leave();
+        },
+      );
+
+      test(
+        'delayed event canceller is cleaned up when removeFamedlyCallMemberEvent is called',
+        () async {
+          const callId = 'test_delayed_cleanup';
+
+          // Simulate a delayed event canceller that was set up for this call
+          voip.delayedEventCancellers['$callId|m.call|m.room'] =
+              DelayedEventCanceller(
+            delayedEventId: 'fake_delayed_event_id',
+            restartTimer: Timer.periodic(
+              Duration(hours: 1),
+              (_) {}, // intentionally long; will be cancelled
+            ),
+          );
+
+          expect(
+            voip.delayedEventCancellers.containsKey('$callId|m.call|m.room'),
+            isTrue,
+          );
+
+          // removeFamedlyCallMemberEvent will try to cancel the delayed event
+          // via manageDelayedEvent. Since the fake client doesn't support the
+          // msc4140 endpoint, that call throws and the catch block removes the
+          // canceller from the map.
+          await room.removeFamedlyCallMemberEvent(callId, voip);
+
+          expect(
+            voip.delayedEventCancellers.containsKey('$callId|m.call|m.room'),
+            isFalse,
+          );
+        },
+      );
+
+      test(
+        'application change mid-call: sendMemberStateEvent still works and loop continues',
+        () async {
+          final shortTimerVoip = VoIP(
+            matrix,
+            MockWebRTCDelegate(),
+            timeouts: CallTimeouts(
+              updateExpireTsTimerDuration: Duration(milliseconds: 50),
+            ),
+          );
+
+          const callId = 'test_app_upgrade';
+
+          // Set up our own membership with application = 'm.call'
+          room.setState(
+            Event(
+              room: room,
+              eventId: 'own_mem_before_upgrade',
+              originServerTs: DateTime.now(),
+              type: EventTypes.GroupCallMember,
+              content: {
+                'memberships': [
+                  CallMembership(
+                    userId: matrix.userID!,
+                    roomId: room.id,
+                    callId: callId,
+                    application: 'm.call',
+                    scope: 'm.room',
+                    backend: MeshBackend(),
+                    deviceId: matrix.deviceID!,
+                    expiresTs: DateTime.now()
+                        .add(Duration(hours: 1))
+                        .millisecondsSinceEpoch,
+                    membershipId: shortTimerVoip.currentSessionId,
+                    voip: shortTimerVoip,
+                  ).toJson(),
+                ],
+              },
+              senderId: matrix.userID!,
+              stateKey: matrix.userID,
+            ),
+          );
+
+          final groupCall = GroupCallSession.withAutoGenId(
+            room,
+            shortTimerVoip,
+            MeshBackend(),
+            'm.call',
+            'm.room',
+            callId,
+          );
+
+          await groupCall.enter();
+          expect(groupCall.state, GroupCallState.entered);
+
+          // Simulate application upgrade
+          groupCall.application = 'com.example.upgraded';
+
+          FakeMatrixApi.calledEndpoints.clear();
+
+          // sendMemberStateEvent should still succeed after the application change
+          await expectLater(groupCall.sendMemberStateEvent(), completes);
+
+          // Resend timer should still be firing with the updated application
+          await Future.delayed(Duration(milliseconds: 200));
+
+          final stateEventCalls = FakeMatrixApi.calledEndpoints.entries
+              .where((e) => e.key.contains('/state/com.famedly.call.member/'))
+              .fold<int>(0, (sum, e) => sum + e.value.length);
+
+          // At least the explicit sendMemberStateEvent() call plus timer firings
+          expect(stateEventCalls, greaterThan(1));
+
+          await groupCall.leave();
+        },
+      );
     });
 
     test('call persists after sending invite', () async {

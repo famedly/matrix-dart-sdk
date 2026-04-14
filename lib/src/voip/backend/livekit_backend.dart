@@ -459,8 +459,7 @@ class LiveKitBackend extends CallBackend {
                 !mem.isExpired &&
                 // sanity checks
                 mem.backend.type == groupCall.backend.type &&
-                mem.roomId == groupCall.room.id &&
-                mem.application == groupCall.application,
+                mem.roomId == groupCall.room.id,
           )
           .isNotEmpty) {
         Logs().d(
