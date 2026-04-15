@@ -1826,6 +1826,61 @@ void main() {
       },
     );
 
+    test('default and custom rooms sorter', () {
+      final roomA = Room(id: '!roomA:example.com', client: matrix)
+        ..lastEvent = Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'event_id': '\$evt_a',
+            'sender': '@test:fakeServer.notExisting',
+            'origin_server_ts': 1000,
+            'content': {'msgtype': 'm.text', 'body': 'message a'},
+          },
+          Room(id: '!roomA:example.com', client: matrix),
+        );
+
+      final roomB = Room(id: '!roomB:example.com', client: matrix)
+        ..lastEvent = Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'event_id': '\$evt_b',
+            'sender': '@test:fakeServer.notExisting',
+            'origin_server_ts': 3000,
+            'content': {'msgtype': 'm.text', 'body': 'message b'},
+          },
+          Room(id: '!roomB:example.com', client: matrix),
+        );
+
+      final roomC = Room(id: '!roomC:example.com', client: matrix)
+        ..lastEvent = Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'event_id': '\$evt_c',
+            'sender': '@test:fakeServer.notExisting',
+            'origin_server_ts': 2000,
+            'content': {'msgtype': 'm.text', 'body': 'message c'},
+          },
+          Room(id: '!roomC:example.com', client: matrix),
+        );
+
+      matrix.rooms.clear();
+      matrix.rooms.addAll([roomA, roomB, roomC]);
+
+      matrix.setCustomRoomSorter((a, b) => a.id.compareTo(b.id));
+      expect(
+        matrix.rooms,
+        [roomA, roomB, roomC],
+        reason: 'Rooms sorted by custom sorter (alphabetically)',
+      );
+
+      matrix.setCustomRoomSorter(null);
+      expect(
+        matrix.rooms,
+        [roomB, roomC, roomA],
+        reason: 'Rooms should revert to default sort by latest event time',
+      );
+    });
+
     tearDown(() async {
       await matrix.dispose(closeDatabase: true);
     });
