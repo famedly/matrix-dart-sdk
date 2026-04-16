@@ -18,7 +18,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
@@ -42,6 +41,10 @@ void main() {
       );
 
       client = await getClient();
+    });
+
+    tearDownAll(() async {
+      await client.dispose();
     });
 
     test(
@@ -251,16 +254,6 @@ void main() {
         await Future.delayed(Duration(milliseconds: 50));
       }
       expect(askedBadSsss, true);
-    });
-
-    test('dispose client', () async {
-      await client.dispose(closeDatabase: true);
-    });
-
-    tearDownAll(() async {
-      // Force process exit to prevent hanging in CI
-      // Some FFI resources from vodozemac may keep background threads alive
-      exit(0);
     });
   });
 }

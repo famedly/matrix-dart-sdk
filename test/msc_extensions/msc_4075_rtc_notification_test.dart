@@ -14,6 +14,10 @@ void main() {
     room = Room(id: '!1234:fakeServer.notExisting', client: client);
   });
 
+  tearDownAll(() async {
+    await client.dispose();
+  });
+
   group('RtcNotificationType', () {
     test('fromValue returns correct type', () {
       expect(RtcNotificationType.fromValue('ring'), RtcNotificationType.ring);
