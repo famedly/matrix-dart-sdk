@@ -235,11 +235,7 @@ abstract class SignableKey extends MatrixSignableKey {
     return String.fromCharCodes(canonicalJson.encode(data));
   }
 
-  bool _verifySignature(
-    String pubKey,
-    String signature, {
-    bool isSignatureWithoutLibolmValid = false,
-  }) {
+  bool _verifySignature(String pubKey, String signature) {
     var valid = false;
     try {
       vod.Ed25519PublicKey.fromBase64(pubKey).verify(
@@ -485,7 +481,6 @@ class DeviceKeys extends SignableKey {
           _verifySignature(
             ed25519Key!,
             signatures![userId]!['ed25519:$deviceId']!,
-            isSignatureWithoutLibolmValid: true,
           ));
 
   @override
