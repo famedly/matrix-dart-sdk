@@ -789,9 +789,10 @@ class OpenSSSS {
     }
     await ssss.store(type, secret, keyId, privateKey, add: add);
     while (!ssss.client.accountData.containsKey(type) ||
-        !(ssss.client.accountData[type]!.content
-            .tryGetMap<String, Object?>('encrypted')!
-            .containsKey(keyId)) ||
+        (ssss.client.accountData[type]!.content
+                .tryGetMap<String, Object?>('encrypted')
+                ?.containsKey(keyId) !=
+            true) ||
         await getStored(type) != secret) {
       Logs().d('Wait for secret of $type to match in accountdata');
       await ssss.client.oneShotSync();
