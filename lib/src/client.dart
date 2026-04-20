@@ -435,7 +435,7 @@ class Client extends MatrixApi {
     return '$clientName-$_transactionCounter-${DateTime.now().millisecondsSinceEpoch}';
   }
 
-  Room? getRoomByAlias(String alias) {
+  Room? getRoomByAlias(RoomAlias alias) {
     for (final room in rooms) {
       if (room.canonicalAlias == alias) return room;
     }

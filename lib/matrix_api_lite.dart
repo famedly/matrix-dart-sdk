@@ -27,6 +27,7 @@ library;
 export 'matrix_api_lite/generated/model.dart';
 export 'matrix_api_lite/matrix_api.dart';
 export 'matrix_api_lite/model/algorithm_types.dart';
+export 'matrix_api_lite/model/matrix_id.dart';
 export 'matrix_api_lite/model/auth/authentication_data.dart';
 export 'matrix_api_lite/model/auth/authentication_identifier.dart';
 export 'matrix_api_lite/model/auth/authentication_password.dart';
