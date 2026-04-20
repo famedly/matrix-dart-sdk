@@ -644,6 +644,156 @@ class SSSS {
     return null;
   }
 
+  /// Returns secret event types mapped to valid SSSS key ids.
+  ///
+  /// Only account data entries with a valid `encrypted` map shape are included.
+  Map<String, Set<String>> analyzeEncryptedSecrets() {
+    final secrets = <String, Set<String>>{};
+    for (final entry in client.accountData.entries) {
+      final type = entry.key;
+      final event = entry.value;
+      final encryptedContent = event.content.tryGetMap<String, Object?>(
+        'encrypted',
+      );
+      if (encryptedContent == null) continue;
+
+      final validKeys = <String>{};
+      for (final keyEntry in encryptedContent.entries) {
+        final key = keyEntry.key;
+        final value = keyEntry.value;
+        if (!_isUsableEncryptedKeyEntry(key, value)) continue;
+        validKeys.add(key);
+      }
+      if (validKeys.isNotEmpty) {
+        secrets[type] = validKeys;
+      }
+    }
+    return secrets;
+  }
+
+  /// Returns whether [type] has malformed encrypted entries, or entries
+  /// encrypted with invalid key ids.
+  bool hasInvalidEncryptedEntries(String type) {
+    final encryptedContent = client.accountData[type]?.content
+        .tryGetMap<String, Object?>('encrypted');
+    if (encryptedContent == null) return false;
+
+    for (final keyEntry in encryptedContent.entries) {
+      final key = keyEntry.key;
+      final value = keyEntry.value;
+      if (value is! Map) continue;
+      if (!_isUsableEncryptedKeyEntry(key, value)) return true;
+    }
+    return false;
+  }
+
+  bool _isUsableEncryptedKeyEntry(String key, Object? value) {
+    if (value is! Map) return false;
+    if (value['iv'] is! String ||
+        value['ciphertext'] is! String ||
+        value['mac'] is! String) {
+      return false;
+    }
+    return isKeyValid(key);
+  }
+
+  /// Ordered key ids to try for migration:
+  /// preferred key first, then all other candidates once.
+  List<String> orderedCandidateKeyIds(
+    Map<String, Set<String>> secretsByType,
+    String preferredKeyId,
+  ) {
+    final ordered = <String>[preferredKeyId];
+    for (final keyIds in secretsByType.values) {
+      for (final keyId in keyIds) {
+        if (keyId != preferredKeyId && !ordered.contains(keyId)) {
+          ordered.add(keyId);
+        }
+      }
+    }
+    return ordered;
+  }
+
+  /// Migrates available secrets from old keys to [destinationKey].
+  ///
+  /// Returns the set of secret types that were successfully migrated.
+  Future<Set<String>> migrateSecretsToKey({
+    required OpenSSSS primaryUnlockedKey,
+    required OpenSSSS destinationKey,
+    String? unlockCredential,
+    Map<String, OpenSSSS>? candidateOldKeys,
+  }) async {
+    final remainingSecrets = analyzeEncryptedSecrets();
+    final keyIds =
+        orderedCandidateKeyIds(remainingSecrets, primaryUnlockedKey.keyId);
+    if (keyIds.isEmpty) return {};
+
+    final migratedSecretTypes = <String>{};
+    Set<String> claimSecretsForKey(String keyId) {
+      final claimed = remainingSecrets.entries
+          .where((entry) => entry.value.contains(keyId))
+          .map((entry) => entry.key)
+          .toSet();
+      remainingSecrets.removeWhere((_, keys) => keys.contains(keyId));
+      return claimed;
+    }
+
+    for (final keyId in keyIds) {
+      final key = keyId == primaryUnlockedKey.keyId
+          ? primaryUnlockedKey
+          : candidateOldKeys?[keyId] ??
+              await _tryOpenAndUnlockKey(
+                keyId,
+                unlockCredential: unlockCredential,
+              );
+      if (key == null || !key.isUnlocked) continue;
+
+      for (final secretType in claimSecretsForKey(keyId)) {
+        final secret = await key.getStored(secretType);
+        await destinationKey.store(secretType, secret, add: true);
+        migratedSecretTypes.add(secretType);
+      }
+      if (remainingSecrets.isEmpty) break;
+    }
+    return migratedSecretTypes;
+  }
+
+  /// Validates migrated secrets for [destinationKey] and strips all other keys
+  /// from each migrated secret type.
+  Future<void> validateAndStripMigratedSecrets({
+    required OpenSSSS destinationKey,
+    required Iterable<String> migratedSecretTypes,
+  }) async {
+    for (final type in migratedSecretTypes) {
+      final secret = await destinationKey.getStored(type);
+      await destinationKey.validateAndStripOtherKeys(type, secret);
+    }
+    await destinationKey.maybeCacheAll();
+  }
+
+  Future<OpenSSSS?> _tryOpenAndUnlockKey(
+    String keyId, {
+    String? unlockCredential,
+  }) async {
+    try {
+      final key = open(keyId);
+      if (unlockCredential == null || key.isUnlocked) return key;
+      try {
+        await key.unlock(keyOrPassphrase: unlockCredential);
+      } catch (e, s) {
+        Logs().v(
+          'Could not unlock SSSS key $keyId with provided credential',
+          e,
+          s,
+        );
+      }
+      return key;
+    } catch (e, s) {
+      Logs().v('Skipping unavailable SSSS key $keyId during migration', e, s);
+      return null;
+    }
+  }
+
   String? keyIdFromType(String type) {
     final keys = keyIdsFromType(type);
     if (keys == null || keys.isEmpty) {

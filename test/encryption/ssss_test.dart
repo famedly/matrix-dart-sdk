@@ -516,6 +516,30 @@ void main() {
         await testKey.setPrivateKey(newKey.privateKey!);
       });
 
+      test('hasInvalidEncryptedEntries detects invalid key ids', () async {
+        final ssss = client.encryption!.ssss;
+        final defaultKeyId = ssss.defaultKeyId!;
+        final encrypted = client
+            .accountData[EventTypes.CrossSigningSelfSigning]!.content
+            .tryGetMap<String, Object?>('encrypted')!;
+        final validPayload = Map<String, Object?>.from(
+          encrypted[defaultKeyId] as Map,
+        );
+
+        await client.setAccountData(client.userID!, 'm.test.valid.secret', {
+          'encrypted': {defaultKeyId: validPayload},
+        });
+        expect(ssss.hasInvalidEncryptedEntries('m.test.valid.secret'), false);
+
+        await client.setAccountData(client.userID!, 'm.test.invalid.secret', {
+          'encrypted': {
+            'missing-fields': {'iv': 'a'},
+            'invalid-key-id': validPayload,
+          },
+        });
+        expect(ssss.hasInvalidEncryptedEntries('m.test.invalid.secret'), true);
+      });
+
       test('dispose client', () async {
         await client.dispose(closeDatabase: true);
       });

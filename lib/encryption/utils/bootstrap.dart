@@ -77,7 +77,6 @@ class Bootstrap {
   BootstrapState _state = BootstrapState.loading;
   Map<String, OpenSSSS>? oldSsssKeys;
   OpenSSSS? newSsssKey;
-  Map<String, String>? secretMap;
 
   Bootstrap({required this.encryption, this.onUpdate}) {
     if (analyzeSecrets().isNotEmpty) {
@@ -101,42 +100,14 @@ class Bootstrap {
       }
       return newSecrets;
     }
-    final secrets = <String, Set<String>>{};
+    final secrets = encryption.ssss.analyzeEncryptedSecrets();
     for (final entry in client.accountData.entries) {
       final type = entry.key;
-      final event = entry.value;
-      final encryptedContent =
-          event.content.tryGetMap<String, Object?>('encrypted');
-      if (encryptedContent == null) {
-        continue;
+      if (secrets.containsKey(type)) continue;
+      if (encryption.ssss.hasInvalidEncryptedEntries(type)) {
+        // no valid keys for this type, but invalid encrypted entries exist
+        secrets[type] = {};
       }
-      final validKeys = <String>{};
-      final invalidKeys = <String>{};
-      for (final keyEntry in encryptedContent.entries) {
-        final key = keyEntry.key;
-        final value = keyEntry.value;
-        if (value is! Map) {
-          // we don't add the key to invalidKeys as this was not a proper secret anyways!
-          continue;
-        }
-        if (value['iv'] is! String ||
-            value['ciphertext'] is! String ||
-            value['mac'] is! String) {
-          invalidKeys.add(key);
-          continue;
-        }
-        if (!encryption.ssss.isKeyValid(key)) {
-          invalidKeys.add(key);
-          continue;
-        }
-        validKeys.add(key);
-      }
-      if (validKeys.isEmpty && invalidKeys.isEmpty) {
-        continue; // this didn't contain any keys anyways!
-      }
-      // if there are no valid keys and only invalid keys then the validKeys set will be empty
-      // from that we know that there were errors with this secret and that we won't be able to migrate it
-      secrets[type] = validKeys;
     }
     _secretsCache = secrets;
     return analyzeSecrets();
@@ -266,33 +237,17 @@ class Bootstrap {
     try {
       Logs().v('Create key...');
       newSsssKey = await encryption.ssss.createKey(passphrase, name);
+      Set<String>? migratedSecretTypes;
       if (oldSsssKeys != null) {
-        // alright, we have to re-encrypt old secrets with the new key
-        final secrets = analyzeSecrets();
-        Set<String> removeKey(String key) {
-          final s = secrets.entries
-              .where((e) => e.value.contains(key))
-              .map((e) => e.key)
-              .toSet();
-          secrets.removeWhere((k, v) => v.contains(key));
-          return s;
-        }
-
-        secretMap = <String, String>{};
-        for (final entry in oldSsssKeys!.entries) {
-          final key = entry.value;
-          final keyId = entry.key;
-          if (!key.isUnlocked) {
-            continue;
-          }
-          for (final s in removeKey(keyId)) {
-            Logs().v('Get stored key of type $s...');
-            secretMap![s] = await key.getStored(s);
-            Logs().v('Store new secret with this key...');
-            await newSsssKey!.store(s, secretMap![s]!, add: true);
-          }
-        }
-        // alright, we re-encrypted all the secrets. We delete the dead weight only *after* we set our key to the default key
+        final existingOldKeys = oldSsssKeys!;
+        final primaryUnlockedKey =
+            existingOldKeys[encryption.ssss.defaultKeyId] ??
+                existingOldKeys.values.first;
+        migratedSecretTypes = await encryption.ssss.migrateSecretsToKey(
+          primaryUnlockedKey: primaryUnlockedKey,
+          destinationKey: newSsssKey!,
+          candidateOldKeys: existingOldKeys,
+        );
       }
       await encryption.ssss.setDefaultKeyId(newSsssKey!.keyId);
       while (encryption.ssss.defaultKeyId != newSsssKey!.keyId) {
@@ -301,13 +256,11 @@ class Bootstrap {
         );
         await client.oneShotSync();
       }
-      if (oldSsssKeys != null) {
-        for (final entry in secretMap!.entries) {
-          Logs().v('Validate and stripe other keys ${entry.key}...');
-          await newSsssKey!.validateAndStripOtherKeys(entry.key, entry.value);
-        }
-        Logs().v('And make super sure we have everything cached...');
-        await newSsssKey!.maybeCacheAll();
+      if (oldSsssKeys != null && migratedSecretTypes != null) {
+        await encryption.ssss.validateAndStripMigratedSecrets(
+          destinationKey: newSsssKey!,
+          migratedSecretTypes: migratedSecretTypes,
+        );
       }
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error trying to migrate old secrets', e, s);
