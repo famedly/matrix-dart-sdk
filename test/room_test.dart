@@ -932,6 +932,146 @@ void main() {
       expect(nonDmRoom.directChatMatrixID, isNull);
     });
 
+    test(
+      'functional members filtered from DM room display name',
+      () async {
+        // Helper to add member state events to a room
+        void addMember(
+          Room r,
+          String userId,
+          String displayName,
+          String evId,
+        ) {
+          r.setState(
+            Event(
+              room: r,
+              eventId: evId,
+              originServerTs: DateTime.fromMillisecondsSinceEpoch(0),
+              senderId: userId,
+              type: 'm.room.member',
+              content: {'membership': 'join', 'displayname': displayName},
+              stateKey: userId,
+            ),
+          );
+        }
+
+        // Set up client-level m.direct so directChatMatrixID is detected.
+        // We register both test room IDs as DMs with @john:example.com.
+        await matrix.handleSync(
+          SyncUpdate.fromJson(
+            jsonDecode('''
+            {
+              "next_batch": "sync_fm1",
+              "account_data": {
+                "events": [{
+                  "type": "m.direct",
+                  "content": {
+                    "@john:example.com": ["!dmtest:example.com", "!dmtest2:example.com"]
+                  }
+                }]
+              }
+            }
+          '''),
+          ),
+        );
+
+        // ── Positive test: functional_members set → bot is filtered out ────────
+        final dmRoom = Room(
+          client: matrix,
+          id: '!dmtest:example.com',
+          membership: Membership.join,
+          highlightCount: 0,
+          notificationCount: 0,
+          prev_batch: '',
+          summary: RoomSummary.fromJson({
+            'm.joined_member_count': 2,
+            'm.invited_member_count': 0,
+            'm.heroes': [
+              '@signal-bot:example.com',
+              '@john:example.com',
+            ],
+          }),
+        );
+
+        addMember(dmRoom, matrix.userID!, 'Me', 'ev_self');
+        addMember(dmRoom, '@john:example.com', 'John Doe', 'ev_john');
+        addMember(
+          dmRoom,
+          '@signal-bot:example.com',
+          'Signal Bridge Bot',
+          'ev_bot',
+        );
+
+        // io.element.functional_members lists the bridge bot
+        dmRoom.setState(
+          Event(
+            room: dmRoom,
+            eventId: 'ev_fm',
+            originServerTs: DateTime.fromMillisecondsSinceEpoch(0),
+            senderId: '@server:example.com',
+            type: 'io.element.functional_members',
+            content: {
+              'service_members': ['@signal-bot:example.com'],
+            },
+            stateKey: '',
+          ),
+        );
+
+        expect(
+          dmRoom.directChatMatrixID,
+          '@john:example.com',
+          reason: 'Room should be detected as a DM',
+        );
+        expect(
+          dmRoom.getLocalizedDisplayname(),
+          'John Doe',
+          reason:
+              'Bridge bot should be filtered from DM room name when io.element.functional_members is set',
+        );
+
+        // ── Negative test: no functional_members → bot appears in name ────────
+        final dmRoomNoFilter = Room(
+          client: matrix,
+          id: '!dmtest2:example.com',
+          membership: Membership.join,
+          highlightCount: 0,
+          notificationCount: 0,
+          prev_batch: '',
+          summary: RoomSummary.fromJson({
+            'm.joined_member_count': 2,
+            'm.invited_member_count': 0,
+            'm.heroes': [
+              '@signal-bot:example.com',
+              '@john:example.com',
+            ],
+          }),
+        );
+
+        addMember(dmRoomNoFilter, matrix.userID!, 'Me', 'ev_self2');
+        addMember(dmRoomNoFilter, '@john:example.com', 'John Doe', 'ev_john2');
+        addMember(
+          dmRoomNoFilter,
+          '@signal-bot:example.com',
+          'Signal Bridge Bot',
+          'ev_bot2',
+        );
+        // No io.element.functional_members state event set here
+
+        expect(
+          dmRoomNoFilter.directChatMatrixID,
+          '@john:example.com',
+          reason: 'Room should be detected as a DM',
+        );
+        // Without functional_members, the bot appears alongside the real user
+        expect(
+          dmRoomNoFilter.getLocalizedDisplayname(),
+          isNot('John Doe'),
+          reason:
+              'Without io.element.functional_members, bot should still appear in room name',
+        );
+      },
+    );
+
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
       expect(timeline.events.length, 17);

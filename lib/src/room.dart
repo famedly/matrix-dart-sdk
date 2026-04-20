@@ -221,6 +221,16 @@ class Room {
 
     if (heroes == null) return [];
 
+    // Filter out functional members (bots/bridges) when in a DM room,
+    // so that hero user loading only fetches the real human participant.
+    final directChatMatrixID = this.directChatMatrixID;
+    if (directChatMatrixID != null) {
+      final fMembers = functionalMembers;
+      if (fMembers.isNotEmpty) {
+        heroes = heroes.where((h) => !fMembers.contains(h)).toList();
+      }
+    }
+
     return await Future.wait(
       heroes.map(
         (hero) async =>
@@ -257,10 +267,21 @@ class Room {
       heroes.add(directChatMatrixID);
     }
     if (heroes.isNotEmpty) {
+      // When this is a DM room, filter out functional/service members (e.g.
+      // bridge bots listed in the `io.element.functional_members` state event)
+      // so that the room name reflects only the real human participant.
+      // This mirrors the behaviour of the JS SDK's getFunctionalMembers().
+      // See: https://github.com/element-hq/element-meta/blob/develop/spec/functional_members.md
+      final functionalMembers = this.functionalMembers;
       final result = heroes
           .where(
-            // removing oneself from the hero list
-            (hero) => hero.isNotEmpty && hero != client.userID,
+            // removing oneself from the hero list, and removing functional
+            // members (bots/bridges) when in a DM room
+            (hero) =>
+                hero.isNotEmpty &&
+                hero != client.userID &&
+                (directChatMatrixID == null ||
+                    !functionalMembers.contains(hero)),
           )
           .map(
             (hero) => unsafeGetUserFromMemoryOrFallback(hero)
@@ -380,6 +401,21 @@ class Room {
   /// To mark a room as a direct chat, use [addToDirectChat] or set
   /// `isDirect: true` when creating the room.
   bool get isDirectChat => directChatMatrixID != null;
+
+  /// Returns the list of user IDs considered "functional members" (e.g. bots,
+  /// bridge ghosts) as specified in the `io.element.functional_members` state
+  /// event. These should be excluded from room names in DM rooms so that only
+  /// the real human participant's name is shown.
+  ///
+  /// See: https://github.com/element-hq/element-meta/blob/develop/spec/functional_members.md
+  List<String> get functionalMembers {
+    final event = getState('io.element.functional_members');
+    final serviceMembers = event?.content['service_members'];
+    if (serviceMembers is List) {
+      return serviceMembers.whereType<String>().toList();
+    }
+    return [];
+  }
 
   Event? lastEvent;
 
