@@ -788,6 +788,7 @@ class Room {
         getEmotePacks: () => getImagePacksFlat(ImagePackUsage.emoticon),
         getMention: getMention,
         convertLinebreaks: client.convertLinebreaksInFormatting,
+        enableLatex: client.enableLatexMarkdown,
       );
       // if the decoded html is the same as the body, there is no need in sending a formatted message
       if (HtmlUnescape().convert(html.replaceAll(RegExp(r'<br />\n?'), '\n')) !=

@@ -114,6 +114,8 @@ class Client extends MatrixApi {
 
   final bool convertLinebreaksInFormatting;
 
+  final bool enableLatexMarkdown;
+
   final Duration sendTimelineEventTimeout;
 
   /// The timeout until a typing indicator gets removed automatically.
@@ -214,6 +216,7 @@ class Client extends MatrixApi {
     /// When sending a formatted message, converting linebreaks in markdown to
     /// <br/> tags:
     this.convertLinebreaksInFormatting = true,
+    this.enableLatexMarkdown = true,
     this.dehydratedDeviceDisplayName = 'Dehydrated Device',
     RoomSorter? customRoomSorter,
   })  : _database = database,
