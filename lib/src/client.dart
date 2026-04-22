@@ -1288,7 +1288,7 @@ class Client extends MatrixApi {
       room: archivedRoom,
       chunk: TimelineChunk(
         events: roomUpdate.timeline?.events?.reversed
-                .toList() // we display the event in the other sence
+                .toList() // we display the event in the other seence
                 .map((e) => Event.fromMatrixEvent(e, archivedRoom))
                 .toList() ??
             [],
@@ -1311,7 +1311,7 @@ class Client extends MatrixApi {
     if (timelineEvents != null) {
       await _handleRoomEvents(
         archivedRoom,
-        timelineEvents.reversed.toList(),
+        timelineEvents.toList(),
         EventUpdateType.timeline,
         store: false,
       );

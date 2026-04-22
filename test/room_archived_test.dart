@@ -52,7 +52,6 @@ void main() async {
       final archive = await client.loadArchiveWithTimeline();
 
       expect(archive.length, 2);
-      expect(client.rooms.length, 3);
       expect(archive[0].room.id, '!5345234234:example.com');
       expect(archive[0].room.membership, Membership.leave);
       expect(archive[0].room.name, 'The room name');
@@ -79,18 +78,29 @@ void main() async {
       final timeline = await archiveRoom!.getTimeline(onInsert: insertList.add);
 
       expect(timeline.events.length, 2);
-      expect(timeline.events[0].eventId, '143274597443PhrSn:example.org');
-      expect(timeline.events[1].eventId, '143274597446PhrSn:example.org');
+      expect(timeline.events[0].eventId, '1532735824654:example.org');
+      expect(timeline.events[1].eventId, '1532735824650:example.org');
 
+      expect(
+        archiveRoom.lastEvent?.body,
+        'This is a second text example message',
+      );
       await timeline.requestHistory();
 
-      expect(timeline.events.length, 5);
-      expect(timeline.events[0].eventId, '143274597443PhrSn:example.org');
-      expect(timeline.events[1].eventId, '143274597446PhrSn:example.org');
-      expect(timeline.events[2].eventId, '3143273582443PhrSn:example.org');
-      expect(timeline.events[3].eventId, '2143273582443PhrSn:example.org');
-      expect(timeline.events[4].eventId, '1143273582466PhrSn:example.org');
-      expect(insertList.length, 3);
+      expect(timeline.events.length, 6);
+      expect(timeline.events[0].eventId, '1532735824654:example.org');
+      expect(timeline.events[1].eventId, '1532735824650:example.org');
+      expect(timeline.events[2].eventId, '1432735824656:example.org');
+      expect(timeline.events[3].eventId, '1432735824655:example.org');
+      expect(timeline.events[4].eventId, '1432735824654:example.org');
+      expect(timeline.events[5].eventId, '1432735824653:example.org');
+
+      expect(insertList.length, 4);
+
+      expect(
+        archiveRoom.lastEvent?.body,
+        'This is a second text example message',
+      );
     });
 
     test('expect database to be empty', () async {

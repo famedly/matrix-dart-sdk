@@ -30,6 +30,8 @@ import 'package:matrix/src/models/timeline_chunk.dart';
 
 class Timeline {
   final Room room;
+
+  /// newest events will be at index 0 apparently
   List<Event> get events => chunk.events;
 
   /// Map of event ID to map of type to set of aggregated events
