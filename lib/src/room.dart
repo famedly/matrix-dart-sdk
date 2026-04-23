@@ -140,8 +140,18 @@ class Room {
   /// ```dart
   /// if (state is Event) { /*...*/ }
   /// ```
-  StrippedStateEvent? getState(String typeKey, [String stateKey = '']) =>
-      states[typeKey]?[stateKey];
+  StrippedStateEvent? getState(String typeKey, [String stateKey = '']) {
+    final ev = states[typeKey]?[stateKey];
+    if (ev != null) {
+      return StrippedStateEvent(
+        type: ev.type,
+        content: ev.content.copy(),
+        senderId: ev.senderId,
+        stateKey: ev.stateKey,
+      );
+    }
+    return null;
+  }
 
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
