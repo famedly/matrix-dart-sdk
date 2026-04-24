@@ -204,6 +204,16 @@ void main() {
         'meep <code>\$\\frac{2}{3}\$</code>',
       );
     });
+    test('enableLatex gates LaTeX parsing', () {
+      expect(
+        markdown('meep \$\\frac{2}{3}\$', enableLatex: true),
+        contains('data-mx-maths'),
+      );
+      expect(
+        markdown('meep \$\\frac{2}{3}\$', enableLatex: false),
+        isNot(contains('data-mx-maths')),
+      );
+    });
     test('Code blocks', () {
       expect(
         markdown(
