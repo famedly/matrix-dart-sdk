@@ -407,23 +407,27 @@ class Room {
         .getRoomEvents(
           id,
           Direction.b,
-          limit: 1,
+          limit: 5,
           filter: jsonEncode(filter.toJson()),
         )
         .timeout(timeout);
-    final matrixEvent = result.chunk.firstOrNull;
-    if (matrixEvent == null) {
+    final events = result.chunk
+        .map(
+          (event) => Event.fromMatrixEvent(
+            event,
+            this,
+            status: EventStatus.synced,
+          ),
+        )
+        .toList();
+    var event = _selectPreviewLastEvent(events);
+    if (event == null) {
       if (lastEvent?.type == EventTypes.refreshingLastEvent) {
         lastEvent = null;
       }
       Logs().d('No last event found for room', id);
       return null;
     }
-    var event = Event.fromMatrixEvent(
-      matrixEvent,
-      this,
-      status: EventStatus.synced,
-    );
     if (event.type == EventTypes.Encrypted) {
       final encryption = client.encryption;
       if (encryption != null) {
@@ -448,6 +452,27 @@ class Room {
     );
 
     return event;
+  }
+
+  Event? _selectPreviewLastEvent(List<Event> events) {
+    if (!isDirectChat) return events.firstOrNull;
+
+    final first = events.firstOrNull;
+    if (!_isEmptyGroupCallMemberEvent(first)) return first;
+
+    final nextPreviewEvent = events.skip(1).firstWhereOrNull(
+          (event) => !_isEmptyGroupCallMemberEvent(event),
+        );
+    return nextPreviewEvent?.type == EventTypes.CallReject
+        ? nextPreviewEvent
+        : first;
+  }
+
+  bool _isEmptyGroupCallMemberEvent(Event? event) {
+    final memberships = event?.content['memberships'];
+    return event?.type == EventTypes.GroupCallMember &&
+        memberships is List &&
+        memberships.isEmpty;
   }
 
   void setEphemeral(BasicEvent ephemeral) {

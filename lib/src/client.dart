@@ -3201,6 +3201,8 @@ class Client extends MatrixApi {
         // Is this event of an important type for the last event?
         if (!roomPreviewLastEvents.contains(event.type)) break;
 
+        if (_isP2PCallCleanupAfterReject(room, event)) break;
+
         // Event is a valid new lastEvent:
         room.lastEvent = event;
 
@@ -3211,6 +3213,19 @@ class Client extends MatrixApi {
     }
     // ignore: deprecated_member_use_from_same_package
     room.onUpdate.add(room.id);
+  }
+
+  bool _isP2PCallCleanupAfterReject(Room room, Event event) {
+    return room.isDirectChat &&
+        room.lastEvent?.type == EventTypes.CallReject &&
+        _isEmptyGroupCallMemberEvent(event);
+  }
+
+  bool _isEmptyGroupCallMemberEvent(Event event) {
+    final memberships = event.content['memberships'];
+    return event.type == EventTypes.GroupCallMember &&
+        memberships is List &&
+        memberships.isEmpty;
   }
 
   bool _sortLock = false;
