@@ -70,7 +70,7 @@ class CallReplaces {
 }
 
 // TODO: Change to "sdp_stream_metadata" when MSC3077 is merged
-const String sdpStreamMetadataKey = 'org.matrix.msc3077.sdp_stream_metadata';
+const String sdpStreamMetadataKey = 'sdp_stream_metadata';
 
 /// https://github.com/matrix-org/matrix-doc/blob/dbkr/msc2747/proposals/2747-voip-call-transfer.md#capability-advertisment
 /// https://github.com/matrix-org/matrix-doc/blob/dbkr/msc2746/proposals/2746-reliable-voip.md#add-dtmf

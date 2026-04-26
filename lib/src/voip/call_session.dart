@@ -397,7 +397,12 @@ class CallSession {
     if (direction == CallDirection.kOutgoing) {
       setCallState(CallState.kConnecting);
       await pc!.setRemoteDescription(answer);
-      for (final candidate in _remoteCandidates) {
+
+      // Copy the list before iterating because `await` can yield execution,
+      // allowing `_remoteCandidates` to be modified elsewhere,
+      // which would cause a concurrent modification error
+      final candidates = List.of(_remoteCandidates);
+      for (final candidate in candidates) {
         await pc!.addCandidate(candidate);
       }
     }
