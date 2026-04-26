@@ -188,11 +188,12 @@ class Bootstrap {
     return keys;
   }
 
-  void wipeSsss(bool wipe) {
+  Future<void> wipeSsss(bool wipe) async {
     if (state != BootstrapState.askWipeSsss) {
       throw BootstrapBadStateException('Wrong State');
     }
     if (wipe) {
+      await encryption.ssss.wipeKey();
       state = BootstrapState.askNewSsss;
     } else if (encryption.ssss.defaultKeyId != null &&
         encryption.ssss.isKeyValid(encryption.ssss.defaultKeyId!)) {
@@ -348,6 +349,7 @@ class Bootstrap {
       throw BootstrapBadStateException();
     }
     if (wipe) {
+      await encryption.crossSigning.wipe();
       state = BootstrapState.askSetupCrossSigning;
     } else {
       await client.dehydratedDeviceSetup(newSsssKey!);
