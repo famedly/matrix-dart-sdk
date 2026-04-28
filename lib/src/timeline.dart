@@ -56,6 +56,13 @@ class Timeline {
 
   final Map<String, Event> _eventCache = {};
 
+  /// Tracks in-flight and completed relation fetches. A present key means
+  /// the fetch is either in progress or already done — concurrent callers
+  /// await the same future, and later callers get an already-completed
+  /// future (no-op). The key is removed on failure so the fetch can be
+  /// retried.
+  final Map<String, Future<void>> _relationRequests = {};
+
   TimelineChunk chunk;
 
   /// Searches for the event in this timeline. If not
@@ -315,6 +322,15 @@ class Timeline {
       }
     }
 
+    await Future.wait(
+      newEvents.where((event) => event.type == PollEventContent.startType).map(
+            (event) => fetchAggregatedEvents(
+              event.eventId,
+              RelationshipTypes.reference,
+            ),
+          ),
+    );
+
     if (onUpdate != null) {
       onUpdate!();
     }
@@ -524,6 +540,97 @@ class Timeline {
       for (final e in types.values) {
         _removeEventFromSet(e, event);
       }
+    }
+  }
+
+  /// Fetches related events from the server using the `/relations` API and
+  /// injects them into [aggregatedEvents]. Useful for fragmented timelines
+  /// where aggregated events (e.g. poll responses) may not be in the
+  /// current timeline chunk.
+  ///
+  /// Paginates through all results and deduplicates via [addAggregatedEvent].
+  /// Skips if this relation has already been fetched. Concurrent calls for the
+  /// same relation are coalesced into a single request.
+  Future<void> fetchAggregatedEvents(
+    String eventId,
+    String relType, {
+    String? eventType,
+  }) async {
+    final key = eventType != null
+        ? '$eventId:$relType:$eventType'
+        : '$eventId:$relType';
+
+    if (_relationRequests.containsKey(key)) return _relationRequests[key]!;
+
+    final future =
+        _doFetchAggregatedEvents(eventId, relType, eventType: eventType);
+    _relationRequests[key] = future;
+    try {
+      await future;
+    } catch (_) {
+      unawaited(_relationRequests.remove(key));
+    }
+  }
+
+  Future<void> _doFetchAggregatedEvents(
+    String eventId,
+    String relType, {
+    String? eventType,
+  }) async {
+    try {
+      String? nextBatch;
+      do {
+        final GetRelatingEventsWithRelTypeResponse resp;
+        if (eventType != null) {
+          final r = await room.client.getRelatingEventsWithRelTypeAndEventType(
+            room.id,
+            eventId,
+            relType,
+            eventType,
+            from: nextBatch,
+            limit: 50,
+          );
+          // Both response types share the same shape
+          resp = GetRelatingEventsWithRelTypeResponse(
+            chunk: r.chunk,
+            nextBatch: r.nextBatch,
+            prevBatch: r.prevBatch,
+          );
+        } else {
+          resp = await room.client.getRelatingEventsWithRelType(
+            room.id,
+            eventId,
+            relType,
+            from: nextBatch,
+            limit: 50,
+          );
+        }
+
+        final newEvents =
+            resp.chunk.map((e) => Event.fromMatrixEvent(e, room)).toList();
+
+        // Decrypt if needed
+        if (room.encrypted && room.client.encryptionEnabled) {
+          for (var i = 0; i < newEvents.length; i++) {
+            if (newEvents[i].type == EventTypes.Encrypted) {
+              newEvents[i] = await room.client.encryption!.decryptRoomEvent(
+                newEvents[i],
+              );
+            }
+          }
+        }
+
+        for (final event in newEvents) {
+          addAggregatedEvent(event);
+        }
+
+        nextBatch = resp.nextBatch;
+      } while (nextBatch != null);
+
+      onUpdate?.call();
+    } catch (e, s) {
+      Logs().w('Failed to fetch aggregated events for $eventId', e, s);
+      rethrow;
     }
   }
 
