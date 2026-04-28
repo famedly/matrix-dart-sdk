@@ -413,8 +413,9 @@ class SSSS {
     String type,
     String secret,
     String keyId,
-    Uint8List key,
-  ) async {
+    Uint8List key, {
+    bool isDefaultKey = true,
+  }) async {
     if (await getStored(type, keyId, key) != secret) {
       throw Exception('Secrets do not match up!');
     }
@@ -428,8 +429,14 @@ class SSSS {
       throw Exception('Wrong type for encrypted content!');
     }
 
-    final otherKeys =
-        Set<String>.from(encryptedContent.keys.where((k) => k != keyId));
+    final defaultKeyId = this.defaultKeyId;
+    final otherKeys = Set<String>.from(
+      encryptedContent.keys.where(
+        (k) => isDefaultKey || defaultKeyId == null
+            ? k != keyId
+            : k != keyId && k != defaultKeyId,
+      ),
+    );
     encryptedContent.removeWhere((k, v) => otherKeys.contains(k));
     // yes, we are paranoid...
     if (await getStored(type, keyId, key) != secret) {
@@ -763,10 +770,15 @@ class SSSS {
   Future<void> validateAndStripMigratedSecrets({
     required OpenSSSS destinationKey,
     required Iterable<String> migratedSecretTypes,
+    bool isDefaultKey = true,
   }) async {
     for (final type in migratedSecretTypes) {
       final secret = await destinationKey.getStored(type);
-      await destinationKey.validateAndStripOtherKeys(type, secret);
+      await destinationKey.validateAndStripOtherKeys(
+        type,
+        secret,
+        isDefaultKey: isDefaultKey,
+      );
     }
     await destinationKey.maybeCacheAll();
   }
@@ -949,12 +961,22 @@ class OpenSSSS {
     }
   }
 
-  Future<void> validateAndStripOtherKeys(String type, String secret) async {
+  Future<void> validateAndStripOtherKeys(
+    String type,
+    String secret, {
+    bool isDefaultKey = true,
+  }) async {
     final privateKey = this.privateKey;
     if (privateKey == null) {
       throw Exception('SSSS not unlocked');
     }
-    await ssss.validateAndStripOtherKeys(type, secret, keyId, privateKey);
+    await ssss.validateAndStripOtherKeys(
+      type,
+      secret,
+      keyId,
+      privateKey,
+      isDefaultKey: isDefaultKey,
+    );
   }
 
   Future<void> maybeCacheAll() async {

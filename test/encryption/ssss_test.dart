@@ -516,6 +516,32 @@ void main() {
         await testKey.setPrivateKey(newKey.privateKey!);
       });
 
+      test('validateAndStripMigratedSecrets keeps default key when requested', () async {
+        final ssss = client.encryption!.ssss;
+        final defaultKeyId = ssss.defaultKeyId!;
+        final defaultKey = ssss.open(defaultKeyId);
+        await defaultKey.unlock(recoveryKey: ssssKey);
+
+        final passphraseKey = await ssss.createKey('test-passphrase', 'passphrase');
+        final migratedSecretTypes = await ssss.migrateSecretsToKey(
+          primaryUnlockedKey: defaultKey,
+          destinationKey: passphraseKey,
+        );
+        expect(migratedSecretTypes, isNotEmpty);
+
+        await ssss.validateAndStripMigratedSecrets(
+          destinationKey: passphraseKey,
+          migratedSecretTypes: migratedSecretTypes,
+          isDefaultKey: false,
+        );
+
+        final migratedType = migratedSecretTypes.first;
+        final encrypted = client.accountData[migratedType]!.content
+            .tryGetMap<String, Object?>('encrypted')!;
+        expect(encrypted.containsKey(defaultKeyId), true);
+        expect(encrypted.containsKey(passphraseKey.keyId), true);
+      });
+
       test('hasInvalidEncryptedEntries detects invalid key ids', () async {
         final ssss = client.encryption!.ssss;
         final defaultKeyId = ssss.defaultKeyId!;
