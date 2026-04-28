@@ -3201,6 +3201,8 @@ class Client extends MatrixApi {
         // Is this event of an important type for the last event?
         if (!roomPreviewLastEvents.contains(event.type)) break;
 
+        if (_shouldKeepCallRejectLastEvent(event, room.lastEvent)) break;
+
         // Event is a valid new lastEvent:
         room.lastEvent = event;
 
@@ -3211,6 +3213,41 @@ class Client extends MatrixApi {
     }
     // ignore: deprecated_member_use_from_same_package
     room.onUpdate.add(room.id);
+  }
+
+  // Rejecting a MatrixRTC/P2P call produces two timeline events in order:
+  // 1. m.call.reject from the callee, which is the user-visible call outcome.
+  // 2. com.famedly.call.member from the caller with memberships: [], because the
+  //    caller still needs to leave the call it had already joined.
+  // Keep showing the reject event in the room list. Otherwise the later cleanup
+  // event would replace it and the preview would say "call ended" instead of
+  // "call rejected".
+  bool _shouldKeepCallRejectLastEvent(Event event, Event? lastEvent) {
+    if (lastEvent?.type != EventTypes.CallReject ||
+        event.type != EventTypes.GroupCallMember) {
+      return false;
+    }
+
+    final memberships = event.content.tryGetList<dynamic>('memberships');
+    if (memberships == null || memberships.isNotEmpty) return false;
+
+    final previousMemberships = event.prevContent
+        ?.tryGetList<dynamic>('memberships')
+        ?.whereType<Map>()
+        .map(Map<String, Object?>.from)
+        .toList();
+    if (previousMemberships == null || previousMemberships.isEmpty) {
+      return false;
+    }
+
+    final rejectCallId = lastEvent!.content.tryGet<String>('call_id');
+    final rejectApplication = lastEvent.content.tryGet<String>('application');
+    return previousMemberships.any((membership) {
+      final membershipCallId = membership.tryGet<String>('call_id');
+      final membershipApplication = membership.tryGet<String>('application');
+      return membershipCallId == rejectCallId &&
+          membershipApplication == rejectApplication;
+    });
   }
 
   bool _sortLock = false;

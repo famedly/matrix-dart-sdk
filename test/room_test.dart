@@ -432,6 +432,52 @@ void main() {
       expect(room.lastEvent?.status, EventStatus.sent);
     });
 
+    test('MatrixRTC member leave does not overwrite call reject lastEvent',
+        () async {
+      final rejectEvent = Event(
+        senderId: '@callee:example.com',
+        type: EventTypes.CallReject,
+        room: room,
+        eventId: 'call-reject',
+        originServerTs: DateTime.now(),
+        content: {
+          'call_id': '',
+          'application': 'm.call.audio',
+        },
+      );
+      await updateLastEvent(rejectEvent);
+      expect(room.lastEvent?.eventId, 'call-reject');
+
+      await updateLastEvent(
+        Event(
+          senderId: '@caller:example.com',
+          type: EventTypes.GroupCallMember,
+          room: room,
+          eventId: 'caller-left-call',
+          originServerTs: rejectEvent.originServerTs.add(
+            const Duration(seconds: 1),
+          ),
+          content: {
+            'memberships': [],
+          },
+          unsigned: {
+            'prev_content': {
+              'memberships': [
+                {
+                  'call_id': '',
+                  'application': 'm.call.audio',
+                  'scope': 'm.room',
+                },
+              ],
+            },
+          },
+          stateKey: '@caller:example.com',
+        ),
+      );
+
+      expect(room.lastEvent?.eventId, 'call-reject');
+    });
+
     test('lastEvent when edited and deleted', () async {
       await room.client.handleSync(
         SyncUpdate(
@@ -934,7 +980,7 @@ void main() {
 
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
-      expect(timeline.events.length, 17);
+      expect(timeline.events.length, 19);
     });
 
     test('Refresh last event', () async {
