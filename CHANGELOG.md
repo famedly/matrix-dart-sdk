@@ -1,3 +1,12 @@
+## [7.1.0] 29th April 2026
+- feat: custom rooms list sorter (Karthikeyan S)
+- feat: gate LaTeX markdown parsing behind enableLatexMarkdown flag (Khalil)
+- fix: clear database if onSoftLogout fails instead of logout (td)
+- fix: fetch poll responses for fragmented timelines (Khalil)
+- fix: last event in archived rooms (td)
+- fix: null check operator in SSSS accountData parsing (Karthikeyan S)
+- fix: preserve call rejection room previews (#2322) (Yash Garg)
+
 ## [7.0.0] 15th April 2026
 
 - refactor: (BREAKING) add type for power level as extension type over int (Christian Kußowski)
