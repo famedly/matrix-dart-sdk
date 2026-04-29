@@ -2389,7 +2389,8 @@ class Client extends MatrixApi {
         onLoginStateChanged.add(LoginState.loggedIn);
       } catch (e, s) {
         Logs().w('Unable to refresh session after soft logout', e, s);
-        await logout();
+        // cannot logout without a token, so we just clear our database
+        await clear();
         rethrow;
       }
     }();
