@@ -987,11 +987,12 @@ class Event extends MatrixEvent {
     bool plaintextBody = false,
     bool removeMarkdown = false,
   }) {
-    if (redacted) {
+    final redactedBecause = this.redactedBecause;
+    if (redactedBecause != null) {
       if (status.intValue < EventStatus.synced.intValue) {
         return i18n.cancelledSend;
       }
-      return i18n.removedBy(this);
+      return i18n.removedBy(redactedBecause);
     }
 
     final body = calcUnlocalizedBody(
