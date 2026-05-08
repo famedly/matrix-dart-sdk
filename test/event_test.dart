@@ -2520,7 +2520,7 @@ void main() async {
         onDownloadProgress: progressList.add,
       );
       await client.dispose();
-      expect(progressList, [112]);
+      expect(progressList, [201]);
     });
     test('downloadAndDecryptAttachment store', tags: 'olm', () async {
       final FILE_BUFF = Uint8List.fromList([0]);

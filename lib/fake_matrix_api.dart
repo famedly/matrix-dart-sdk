@@ -20,6 +20,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:http/http.dart';
 
@@ -1230,6 +1231,8 @@ class FakeMatrixApi extends BaseClient {
                 'matrix:image:size': 102400,
               },
       '/media/v3/config': (var req) => {'m.upload.size': 50000000},
+      '/client/v1/media/download/example.org/abcd1234ascii': (var req) =>
+          Uint8List(100),
       '/client/v1/media/config': (var req) => {'m.upload.size': 50000000},
       '/.well-known/matrix/client': (var req) => {
             'm.homeserver': {'base_url': 'https://fakeserver.notexisting'},
