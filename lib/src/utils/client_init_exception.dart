@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// Exception thrown on Client initialization. This object might contain
 /// enough information to restore the session or to decide if you need to
 /// logout the session or clear the database.

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'model.dart';
