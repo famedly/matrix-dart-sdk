@@ -75,7 +75,9 @@ extension FamedlyCallMemberEventsExtension on Room {
     return participantCount;
   }
 
-  bool hasActiveGroupCall(VoIP voip) {
+  /// use voipPlugin.roomHasTrackedActiveCalls instead of this for UI
+  bool hasActiveGroupCall(VoIP voip, {bool ignoreDirectChats = true}) {
+    if (ignoreDirectChats && isDirectChat) return false;
     if (activeGroupCallIds(voip).isNotEmpty) {
       return true;
     }
@@ -158,8 +160,7 @@ extension FamedlyCallMemberEventsExtension on Room {
       scope: scope,
     );
 
-    final canceller =
-        voip.delayedEventCancellers['$groupCallId|$application|$scope'];
+    final canceller = voip.delayedEventCancellers['$id|$groupCallId|$scope'];
     if (canceller == null) return;
     canceller.restartTimer.cancel();
 
@@ -174,9 +175,8 @@ extension FamedlyCallMemberEventsExtension on Room {
         e,
         s,
       );
-
-      voip.delayedEventCancellers.remove('$groupCallId|$application|$scope');
     }
+    voip.delayedEventCancellers.remove('$id|$groupCallId|$scope');
   }
 
   Future<String?> setFamedlyCallMemberEvent(
@@ -199,8 +199,7 @@ extension FamedlyCallMemberEventsExtension on Room {
               .unstableFeatures?['org.matrix.msc4140'] ??
           false;
 
-      final canceller =
-          voip.delayedEventCancellers['$groupCallId|$application|$scope'];
+      final canceller = voip.delayedEventCancellers['$id|$groupCallId|$scope'];
 
       /// can use delayed events and haven't used it yet
       if (useDelayedEvents && canceller == null) {
@@ -288,7 +287,7 @@ extension FamedlyCallMemberEventsExtension on Room {
           }),
         );
 
-        voip.delayedEventCancellers['$groupCallId|$application|$scope'] =
+        voip.delayedEventCancellers['$id|$groupCallId|$scope'] =
             DelayedEventCanceller(
           delayedEventId: delayedLeaveEventId,
           restartTimer: restartDelayedLeaveEventTimer,

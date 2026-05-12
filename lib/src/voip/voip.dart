@@ -41,7 +41,7 @@ class VoIP {
   final Map<VoipId, GroupCallSession> _groupCalls = {};
 
   // The delayed event id to cancel membership for that groupcall
-  // key is '$groupCallId|$application|$scope'
+  // key is '${room.id}|$groupCallId|$scope'
   @internal
   final delayedEventCancellers = <String, DelayedEventCanceller>{};
 
