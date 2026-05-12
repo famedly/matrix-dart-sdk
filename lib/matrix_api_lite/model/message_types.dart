@@ -1,6 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
-// SPDX-FileCopyrightText: 2019-2021 Famedly GmbH
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 

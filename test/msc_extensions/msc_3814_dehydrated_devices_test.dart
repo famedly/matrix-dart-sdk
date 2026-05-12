@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2019-2022 Famedly GmbH
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 

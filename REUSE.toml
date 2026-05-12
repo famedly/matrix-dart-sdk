@@ -3,6 +3,7 @@ version = 1
 [[annotations]]
 path = [
     ".github/CODEOWNERS",
+    ".github/workflows/versions.env",
     ".gitignore",
     ".metadata",
     "test_driver/synapse/data/.gitignore",
