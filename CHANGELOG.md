@@ -1,3 +1,6 @@
+## [7.1.2] 12th May 2026
+- fix: do not send notify rtc event in direct chats (td)
+
 ## [7.1.1] 12th May 2026
 - fix: call delayed event canceller should not use application and actually remove it from local state on leave (td)
 - fix: Do not send dozens of key request to device messages on timeline export (krille-chan)
