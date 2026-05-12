@@ -1113,7 +1113,7 @@ void main() {
           const callId = 'test_delayed_cleanup';
 
           // Simulate a delayed event canceller that was set up for this call
-          voip.delayedEventCancellers['$callId|m.call|m.room'] =
+          voip.delayedEventCancellers['${room.id}|$callId|m.room'] =
               DelayedEventCanceller(
             delayedEventId: 'fake_delayed_event_id',
             restartTimer: Timer.periodic(
@@ -1123,7 +1123,8 @@ void main() {
           );
 
           expect(
-            voip.delayedEventCancellers.containsKey('$callId|m.call|m.room'),
+            voip.delayedEventCancellers
+                .containsKey('${room.id}|$callId|m.room'),
             isTrue,
           );
 
@@ -1134,7 +1135,8 @@ void main() {
           await room.removeFamedlyCallMemberEvent(callId, voip);
 
           expect(
-            voip.delayedEventCancellers.containsKey('$callId|m.call|m.room'),
+            voip.delayedEventCancellers
+                .containsKey('${room.id}|$callId|m.room'),
             isFalse,
           );
         },

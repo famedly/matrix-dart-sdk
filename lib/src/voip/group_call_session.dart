@@ -332,7 +332,7 @@ class GroupCallSession {
 
           // also clear delayed event state so that they can be started again
           final canceller =
-              voip.delayedEventCancellers['$groupCallId|$application|$scope'];
+              voip.delayedEventCancellers['${room.id}|$groupCallId|$scope'];
           if (canceller != null) {
             canceller.restartTimer.cancel();
 
@@ -340,7 +340,7 @@ class GroupCallSession {
             // the delayed event, the server already thinks it's cancelled
 
             voip.delayedEventCancellers
-                .remove('$groupCallId|$application|$scope');
+                .remove('${room.id}|$groupCallId|$scope');
           }
 
           // rejoin the call and share the key with the existing participants
