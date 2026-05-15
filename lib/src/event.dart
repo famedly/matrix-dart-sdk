@@ -858,6 +858,11 @@ class Event extends MatrixEvent {
 
         final response = await httpClient.send(request);
 
+        if (response.statusCode >= 400) {
+          room.client
+              .unexpectedResponse(response, await response.stream.toBytes());
+        }
+
         return await response.stream.toBytesWithProgress(onDownloadProgress);
       };
       uint8list =
