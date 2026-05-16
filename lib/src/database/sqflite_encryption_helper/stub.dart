@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:sqflite_common/sqlite_api.dart';
 
 /// A helper utility for SQfLite related encryption operations

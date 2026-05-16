@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 name: Continuous Integration
 
 on:
@@ -27,6 +31,14 @@ jobs:
     permissions:
       contents: read
     uses: famedly/frontend-ci-templates/.github/workflows/general.yml@main
+
+  reuse-compliance-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check licenses
+        uses: fsfe/reuse-action@v5
 
   e2ee_test:
     runs-on: ubuntu-latest

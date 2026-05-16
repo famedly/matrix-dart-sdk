@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 if [ -z $HOMESERVER ]; then
   echo "Please ensure HOMESERVER environment variable is set to the IP or hostname of the homeserver."
   exit 1

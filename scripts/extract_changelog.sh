@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 echo "$(awk -v ver=$1 '
           /^(##|###) \[?[0-9]+.[0-9]+.[0-9]+/ {
              if (p) { exit };
