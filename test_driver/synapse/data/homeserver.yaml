@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 # Configuration file for Synapse.
 #
 # This is a YAML file: see [1] for a quick introduction. Note in particular

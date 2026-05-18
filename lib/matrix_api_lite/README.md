@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Matrix API Lite
 
 This package is a dead simple data model over the client-server specification of https://matrix.org and is mostly used as a base for a more complete Matrix SDK.

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// The database always gives back an `_InternalLinkedHasMap<dynamic, dynamic>`.
 /// This creates a deep copy of the json and makes sure that the format is
 /// always `Map<String, Object?>`.

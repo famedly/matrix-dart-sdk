@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 name: matrix
 description: Matrix Dart SDK
 version: 7.1.2

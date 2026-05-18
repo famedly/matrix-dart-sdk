@@ -1,0 +1,15 @@
+version = 1
+
+[[annotations]]
+path = [
+    ".github/CODEOWNERS",
+    ".github/workflows/versions.env",
+    ".gitignore",
+    ".metadata",
+    "test_driver/synapse/data/.gitignore",
+    "test_driver/synapse/data/localhost.log.config",
+    "web_test/.gitignore"
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2019-Present Famedly GmbH"
+SPDX-License-Identifier = "AGPL-3.0-or-later"

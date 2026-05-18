@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 docker run -d --rm \
   -e CONDUIT_CONFIG="" \
   -e CONDUIT_SERVER_NAME="famedlysdk.test" \

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 Follow these steps to login with Matrix native OIDC. Your app must be
 capable of opening a website (e.g. in an in-app-browser or for web clients in a new tab)
 and retrieve a redirect URI. We recommend investigating into a package

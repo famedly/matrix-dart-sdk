@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// Extensions for the experimental dehydrated devices MSC, which allows
 /// receiving encrypted messages while you have no devices signed in.
 library;

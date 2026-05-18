@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 ## [7.1.2] 12th May 2026
 - fix: do not send notify rtc event in direct chats (td)
 

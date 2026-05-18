@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // OpenAPI only supports real enums (modeled as enum in generated/model.dart).
 
 // In this file, possible values are defined manually,
