@@ -111,6 +111,13 @@ class Client extends MatrixApi {
     MatrixImageFileResizeArguments,
   )? customImageResizer;
 
+  /// Optional matrix-content-scanner proxy configuration.
+  ///
+  /// When set, media URL helpers resolve `mxc://` URIs to scanner URLs, and
+  /// attachment downloads use the scanner for network requests. Cached media is
+  /// trusted and is not scanned again.
+  MatrixContentScannerConfig? contentScannerConfig;
+
   /// The compare function how the rooms should be sorted internally.
   /// The [defaultRoomSorter] is used if no custom room sorter is provided.
   RoomSorter? _customRoomSorter;
@@ -205,6 +212,7 @@ class Client extends MatrixApi {
     this.enableLatexMarkdown = true,
     this.dehydratedDeviceDisplayName = 'Dehydrated Device',
     RoomSorter? customRoomSorter,
+    this.contentScannerConfig,
   })  : _database = database,
         syncFilter = syncFilter ??
             Filter(
