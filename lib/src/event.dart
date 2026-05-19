@@ -659,7 +659,7 @@ class Event extends MatrixEvent {
   /// Throws an exception if the scheme is not `mxc` or the homeserver is not
   /// set.
   ///
-  /// Important! To use this link you have to set a http header like this:
+  /// Scanner and authenticated media URLs may need an authorization header:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
   Future<Uri?> getAttachmentUri({
     bool getThumbnail = false,
@@ -717,9 +717,13 @@ class Event extends MatrixEvent {
   /// Throws an exception if the scheme is not `mxc` or the homeserver is not
   /// set.
   ///
-  /// Important! To use this link you have to set a http header like this:
+  /// Deprecated: scanner-unaware. Use [getAttachmentUri] instead.
+  ///
+  /// This URL may need an authorization header:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
-  @Deprecated('Use getAttachmentUri() instead')
+  @Deprecated(
+    'Use getAttachmentUri() instead. This legacy helper is scanner-unaware.',
+  )
   Uri? getAttachmentUrl({
     bool getThumbnail = false,
     bool useThumbnailMxcUrl = false,
@@ -795,6 +799,10 @@ class Event extends MatrixEvent {
   /// true to download the thumbnail instead. Set [fromLocalStoreOnly] to true
   /// if you want to retrieve the attachment from the local store only without
   /// making http request.
+  ///
+  /// With `Client.contentScannerConfig`, network downloads use the scanner.
+  /// Scanner errors throw [ContentScannerException]. For encrypted scanner
+  /// downloads, [downloadCallback] is ignored.
   Future<MatrixFile> downloadAndDecryptAttachment({
     bool getThumbnail = false,
     Future<Uint8List> Function(Uri)? downloadCallback,
@@ -828,31 +836,38 @@ class Event extends MatrixEvent {
     final thisInfoMapSize = thisInfoMap.tryGet<int>('size');
     var storeable =
         thisInfoMapSize != null && thisInfoMapSize <= database.maxFileSize;
-
     Uint8List? uint8list;
     if (storeable) {
       uint8list = await room.client.database.getFile(mxcUrl);
     }
 
     // Download the file
+    final scanner = room.client.contentScannerConfig;
+    final useScannerForEncrypted = scanner != null && isEncrypted;
     final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
     if (canDownloadFileFromServer) {
-      final httpClient = room.client.httpClient;
-      downloadCallback ??= (Uri url) async {
-        final request = http.Request('GET', url);
-        request.headers['authorization'] = 'Bearer ${room.client.accessToken}';
+      if (useScannerForEncrypted) {
+        final fileMap = getThumbnail
+            ? infoMap.tryGetMap<String, Object?>('thumbnail_file')
+            : content.tryGetMap<String, Object?>('file');
+        if (fileMap == null) throw ('No encrypted file info found');
 
-        final response = await httpClient.send(request);
-
-        if (response.statusCode >= 400) {
-          room.client
-              .unexpectedResponse(response, await response.stream.toBytes());
+        uint8list = await _downloadEncryptedAttachmentViaScanner(
+          scanner: scanner,
+          fileMap: fileMap,
+        );
+      } else {
+        final downloadUri = await mxcUrl.getDownloadUri(room.client);
+        if (downloadCallback != null) {
+          uint8list = await downloadCallback(downloadUri);
+        } else {
+          uint8list = await _downloadAttachmentBytes(
+            downloadUri,
+            scanner: scanner,
+            onDownloadProgress: onDownloadProgress,
+          );
         }
-
-        return await response.stream.toBytesWithProgress(onDownloadProgress);
-      };
-      uint8list =
-          await downloadCallback(await mxcUrl.getDownloadUri(room.client));
+      }
       storeable = storeable && uint8list.lengthInBytes < database.maxFileSize;
       if (storeable) {
         await database.storeFile(
@@ -865,7 +880,7 @@ class Event extends MatrixEvent {
       throw ('Unable to download file from local store.');
     }
 
-    // Decrypt the file
+    // Scanner downloads still return encrypted media bytes.
     if (isEncrypted) {
       final fileMap = getThumbnail
           ? infoMap.tryGetMap<String, Object?>('thumbnail_file')
@@ -903,6 +918,53 @@ class Event extends MatrixEvent {
           : filename,
       mimeType: attachmentMimetype,
     );
+  }
+
+  Future<Uint8List> _downloadEncryptedAttachmentViaScanner({
+    required MatrixContentScannerConfig scanner,
+    required Map<String, Object?> fileMap,
+  }) async {
+    final request = http.Request('POST', scanner.downloadEncryptedUri);
+    request.headers['content-type'] = 'application/json';
+    if (scanner.withAuthHeader) {
+      request.headers['authorization'] = 'Bearer ${room.client.accessToken}';
+    }
+    request.body = jsonEncode({'file': fileMap});
+
+    final streamed = await room.client.httpClient.send(request);
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw parseContentScannerError(response);
+    }
+
+    return response.bodyBytes;
+  }
+
+  Future<Uint8List> _downloadAttachmentBytes(
+    Uri url, {
+    required MatrixContentScannerConfig? scanner,
+    void Function(int)? onDownloadProgress,
+  }) async {
+    final request = http.Request('GET', url);
+    if (scanner == null || scanner.withAuthHeader) {
+      request.headers['authorization'] = 'Bearer ${room.client.accessToken}';
+    }
+
+    final response = await room.client.httpClient.send(request);
+    if (scanner != null &&
+        (response.statusCode < 200 || response.statusCode >= 300)) {
+      throw parseContentScannerError(
+        await http.Response.fromStream(response),
+      );
+    }
+    if (scanner == null && response.statusCode >= 400) {
+      room.client.unexpectedResponse(
+        response,
+        await response.stream.toBytes(),
+      );
+    }
+
+    return response.stream.toBytesWithProgress(onDownloadProgress);
   }
 
   /// Returns if this is a known event type.

@@ -74,7 +74,6 @@ class MatrixCrossSigningKey extends MatrixSignableKey {
   @override
   String? get identifier => keys.values.first;
 
-  @override
   MatrixCrossSigningKey.fromJson(super.json)
       : usage = json.tryGetList<String>('usage') ?? [],
         super.fromJson();
@@ -106,7 +105,6 @@ class MatrixDeviceKeys extends MatrixSignableKey {
   @override
   String? get identifier => deviceId;
 
-  @override
   MatrixDeviceKeys.fromJson(super.json)
       : algorithms = json.tryGetList<String>('algorithms') ?? [],
         deviceId = json['device_id'] as String,
