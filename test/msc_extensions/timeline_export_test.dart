@@ -129,6 +129,10 @@ void main() {
       timeline = Timeline(room: room, chunk: TimelineChunk(events: []));
     });
 
+    tearDown(() async {
+      await client.dispose(closeDatabase: false);
+    });
+
     group('basic export functionality', () {
       late List<Event> mockEvents;
 
