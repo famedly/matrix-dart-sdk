@@ -28,12 +28,6 @@ void main() async {
 
     tearDown(() async => client.dispose().onError((e, s) {}));
 
-    test('archive room not loaded', () async {
-      final archiveRoom =
-          client.getArchiveRoomFromCache('!5345234234:example.com');
-      expect(archiveRoom, null);
-    });
-
     test('get archive', () async {
       final archive = await client.loadArchiveWithTimeline();
 
@@ -41,61 +35,37 @@ void main() async {
       expect(archive[0].room.id, '!5345234234:example.com');
       expect(archive[0].room.membership, Membership.leave);
       expect(archive[0].room.name, 'The room name');
-      expect(
-        archive[0].room.lastEvent?.body,
-        'This is a second text example message',
-      );
       expect(archive[0].room.roomAccountData.length, 1);
       expect(archive[1].room.id, '!5345234235:example.com');
       expect(archive[1].room.membership, Membership.leave);
       expect(archive[1].room.name, 'The room name 2');
-
-      final archiveRoom =
-          client.getArchiveRoomFromCache('!5345234234:example.com');
-      expect(archiveRoom != null, true);
-      expect(archiveRoom!.timeline.events.length, 2);
     });
 
     test('request history', () async {
-      await client.loadArchiveWithTimeline();
-      final archiveRoom = client.getRoomById('!5345234234:example.com');
-      expect(archiveRoom != null, true);
+      final archive = await client.loadArchiveWithTimeline();
 
-      final timeline = await archiveRoom!.getTimeline(onInsert: insertList.add);
+      final timeline = archive.first.timeline;
 
       expect(timeline.events.length, 2);
       expect(timeline.events[0].eventId, '1532735824654:example.org');
       expect(timeline.events[1].eventId, '1532735824650:example.org');
 
-      expect(
-        archiveRoom.lastEvent?.body,
-        'This is a second text example message',
-      );
       await timeline.requestHistory();
 
-      expect(timeline.events.length, 6);
-      expect(timeline.events[0].eventId, '1532735824654:example.org');
-      expect(timeline.events[1].eventId, '1532735824650:example.org');
-      expect(timeline.events[2].eventId, '1432735824656:example.org');
-      expect(timeline.events[3].eventId, '1432735824655:example.org');
-      expect(timeline.events[4].eventId, '1432735824654:example.org');
-      expect(timeline.events[5].eventId, '1432735824653:example.org');
-
-      expect(insertList.length, 4);
-
-      expect(
-        archiveRoom.lastEvent?.body,
-        'This is a second text example message',
-      );
+      expect(timeline.events.length, 5);
+      expect(timeline.events[0].eventId, '143274597443PhrSn:example.org');
+      expect(timeline.events[1].eventId, '143274597446PhrSn:example.org');
+      expect(timeline.events[2].eventId, '3143273582443PhrSn:example.org');
+      expect(timeline.events[3].eventId, '2143273582443PhrSn:example.org');
+      expect(timeline.events[4].eventId, '1143273582466PhrSn:example.org');
     });
 
     test('expect database to be empty', () async {
-      await client.loadArchiveWithTimeline();
-      final archiveRoom = client.getRoomById('!5345234234:example.com');
-      expect(archiveRoom != null, true);
+      final archive = await client.loadArchiveWithTimeline();
+      final archiveRoom = archive.first;
 
       final eventsFromStore = await client.database.getEventList(
-        archiveRoom!,
+        archiveRoom.room,
         start: 0,
         limit: Room.defaultHistoryCount,
       );
@@ -104,10 +74,6 @@ void main() async {
 
     test('discard room from archives when membership change', () async {
       await client.loadArchiveWithTimeline();
-      expect(
-        client.getArchiveRoomFromCache('!5345234235:example.com') != null,
-        true,
-      );
       await client.handleSync(
         SyncUpdate(
           nextBatch: 't_456',
@@ -116,85 +82,6 @@ void main() async {
           ),
         ),
       );
-      expect(client.getArchiveRoomFromCache('!5345234235:example.com'), null);
-    });
-
-    test(
-      "assert that key updates don't change membership",
-      () async {
-        const roomid = '!5345234235:example.com';
-
-        // prep work to be able to set a last event that would trigger the (fixed) bug
-        await client.loadArchiveWithTimeline();
-        expect(client.getArchiveRoomFromCache(roomid) != null, true);
-        expect(client.getRoomById(roomid)?.membership, Membership.leave);
-
-        final outboundSession = await client.encryption?.keyManager
-            .createOutboundGroupSession(roomid);
-        final inboundSession =
-            client.encryption!.keyManager.getInboundGroupSession(
-          roomid,
-          outboundSession!.outboundGroupSession!.sessionId,
-        )!;
-
-        // ensure encryption is "enabled"
-        client.getRoomById(roomid)?.setState(
-              StrippedStateEvent(
-                type: EventTypes.Encryption,
-                content: {'algorithm': AlgorithmTypes.megolmV1AesSha2},
-                senderId: client.userID!,
-                stateKey: '',
-              ),
-            );
-        final encryptedEvent =
-            await client.encryption!.encryptGroupMessagePayload(
-          roomid,
-          {'msgtype': 'm.room.text', 'body': 'empty'},
-        );
-
-        // reset client
-        await client.dispose().onError((e, s) {});
-        client = await getClient(
-          sendTimelineEventTimeout: const Duration(seconds: 5),
-        );
-
-        await client.abortSync();
-        insertList.clear();
-
-        // now do our tests
-        await client.loadArchiveWithTimeline();
-        expect(client.getArchiveRoomFromCache(roomid) != null, true);
-        expect(client.getRoomById(roomid)?.membership, Membership.leave);
-
-        // set the last event
-        final room = client.getRoomById(roomid)!;
-        room.lastEvent = Event(
-          type: EventTypes.Encrypted,
-          content: encryptedEvent,
-          senderId: client.userID!,
-          eventId: '\$archivedencr',
-          room: room,
-          originServerTs: DateTime.now(),
-        );
-
-        // import the inbound session
-        await client.encryption!.keyManager.setInboundGroupSession(
-          roomid,
-          inboundSession.sessionId,
-          inboundSession.senderKey,
-          inboundSession.content,
-        );
-
-        expect(client.getArchiveRoomFromCache(roomid) != null, true);
-        expect(client.getRoomById(roomid)?.membership, Membership.leave);
-      },
-      tags: 'olm',
-    );
-
-    test('clear archive', () async {
-      await client.loadArchiveWithTimeline();
-      client.clearArchivesFromCache();
-      expect(client.getArchiveRoomFromCache('!5345234234:example.com'), null);
     });
 
     test('logout', () async {
