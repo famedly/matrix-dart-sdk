@@ -60,7 +60,7 @@ void main() => group(
             Logs().i('++++ (Alice) Leave all rooms ++++');
             while (testClientA.rooms.isNotEmpty) {
               final room = testClientA.rooms.first;
-              if (room.canonicalAlias.isNotEmpty) {
+              if (room.canonicalAlias != null) {
                 break;
               }
               try {
@@ -525,7 +525,7 @@ void main() => group(
             Logs().i('++++ (Alice) Leave all rooms ++++');
             while (testClientA.rooms.isNotEmpty) {
               final room = testClientA.rooms.first;
-              if (room.canonicalAlias.isNotEmpty) {
+              if (room.canonicalAlias != null) {
                 break;
               }
               try {
