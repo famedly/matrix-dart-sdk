@@ -2837,15 +2837,41 @@ class Room {
         .map((matrixEvent) => Event.fromMatrixEvent(matrixEvent, this))
         .toList();
 
+    /// Attempt decrypting the event, if it fails, load the key and try again once.
+    /// Returns null if event cannot be decrypted.
+    Future<Event?> loadKeysAndDecryptEvent(
+      Event event, {
+      bool keyAlreadyLoaded = false,
+    }) async {
+      final decrypted = await client.encryption!.decryptRoomEvent(
+        event,
+        store: false,
+        updateType: EventUpdateType.history,
+      );
+      if (decrypted.type != EventTypes.Encrypted) {
+        return decrypted;
+      } else if (!keyAlreadyLoaded) {
+        final content = event.parsedRoomEncryptedContent;
+        if (content.sessionId != null) {
+          await client.encryption!.keyManager.maybeAutoRequest(
+            id,
+            content.sessionId!,
+            content.senderKey,
+            tryOnlineBackup: true,
+            onlineKeyBackupOnly: true,
+            awaitRequest: true,
+          );
+          return loadKeysAndDecryptEvent(event, keyAlreadyLoaded: true);
+        }
+      }
+      return null;
+    }
+
     // Decrypt all events one after another:
     for (final (index, event) in events.indexed) {
-      if (event.type == EventTypes.Encrypted) {
-        final decrypted = await client.encryption?.decryptRoomEvent(
-          event,
-          store: false,
-          updateType: EventUpdateType.history,
-        );
-        if (decrypted != null && decrypted.type != EventTypes.Encrypted) {
+      if (event.type == EventTypes.Encrypted && client.encryption != null) {
+        final decrypted = await loadKeysAndDecryptEvent(event);
+        if (decrypted != null) {
           events[index] = decrypted;
         }
       }
