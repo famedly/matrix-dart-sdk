@@ -27,7 +27,8 @@ class KeyManager {
   final _inboundGroupSessions = <String, Map<String, SessionKey>>{};
   final _outboundGroupSessions = <String, OutboundGroupSession>{};
   final Set<String> _loadedOutboundGroupSessions = <String>{};
-  final Set<String> _requestedSessionIds = <String>{};
+  final Map<String, Completer<void>> _requestedSessionIdCompleters =
+      <String, Completer<void>>{};
 
   KeyManager(this.encryption) {
     encryption.ssss.setValidator(megolmKey, (String secret) async {
@@ -48,7 +49,7 @@ class KeyManager {
     encryption.ssss.setCacheCallback(megolmKey, (String secret) {
       // we got a megolm key cached, clear our requested keys and try to re-decrypt
       // last events
-      _requestedSessionIds.clear();
+      _requestedSessionIdCompleters.clear();
       for (final room in client.rooms) {
         final lastEvent = room.lastEvent;
         if (lastEvent != null &&
@@ -217,30 +218,44 @@ class KeyManager {
   }
 
   /// Attempt auto-request for a key
-  void maybeAutoRequest(
+  FutureOr<void> maybeAutoRequest(
     String roomId,
     String sessionId,
     String? senderKey, {
     bool tryOnlineBackup = true,
     bool onlineKeyBackupOnly = true,
-  }) {
+    bool awaitRequest = false,
+  }) async {
     final room = client.getRoomById(roomId);
     final requestIdent = '$roomId|$sessionId';
-    if (room != null &&
-        !_requestedSessionIds.contains(requestIdent) &&
-        !client.isUnknownSession) {
-      // do e2ee recovery
-      _requestedSessionIds.add(requestIdent);
+    if (room != null && !client.isUnknownSession) {
+      final existingReqCompleter = _requestedSessionIdCompleters[requestIdent];
+      if (existingReqCompleter != null) {
+        if (awaitRequest) {
+          await existingReqCompleter.future;
+        }
+        // return if already exists (after awaiting completion if required)
+        return;
+      }
 
-      runInRoot(
-        () async => request(
+      Future<void> requestFn() async {
+        final completer = Completer<void>();
+        _requestedSessionIdCompleters[requestIdent] = completer;
+        await request(
           room,
           sessionId,
           senderKey,
           tryOnlineBackup: tryOnlineBackup,
           onlineKeyBackupOnly: onlineKeyBackupOnly,
-        ),
-      );
+        );
+        completer.complete();
+      }
+
+      if (awaitRequest) {
+        await requestFn();
+      } else {
+        runInRoot(requestFn);
+      }
     }
   }
 
@@ -746,9 +761,13 @@ class KeyManager {
     bool tryOnlineBackup = true,
     bool onlineKeyBackupOnly = false,
   }) async {
+    Logs().i(
+      '[KeyManager] Requesting session key for $sessionId for room ${room.id}',
+    );
     if (tryOnlineBackup && await isCached()) {
       // let's first check our online key backup store thingy...
-      final hadPreviously = getInboundGroupSession(room.id, sessionId) != null;
+      final hadSessionBefore =
+          getInboundGroupSession(room.id, sessionId) != null;
       try {
         await loadSingleKey(room.id, sessionId);
       } catch (err, stacktrace) {
@@ -764,10 +783,17 @@ class KeyManager {
           );
         }
       }
-      // TODO: also don't request from others if we have an index of 0 now
-      if (!hadPreviously &&
-          getInboundGroupSession(room.id, sessionId) != null) {
-        return; // we managed to load the session from online backup, no need to care about it now
+
+      final storedSession = getInboundGroupSession(room.id, sessionId);
+      // We loaded *something* from backup we didn't have before — peers are
+      // unlikely to do better, so don't spam to-device requests.
+      final loadedFreshFromBackup = !hadSessionBefore && storedSession != null;
+      // We have the session from its very first index; peers literally cannot
+      // give us anything better.
+      final hasFullSession =
+          storedSession?.inboundGroupSession?.firstKnownIndex == 0;
+      if (loadedFreshFromBackup || hasFullSession) {
+        return;
       }
     }
     if (onlineKeyBackupOnly) {
