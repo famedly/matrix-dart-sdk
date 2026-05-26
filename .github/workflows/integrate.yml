@@ -21,7 +21,7 @@ jobs:
   dart:
     permissions:
       contents: read
-    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@main
+    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@e8167567258899ed2a5bcc7fe04c79ad78f87967
     with:
       env_file: ".github/workflows/versions.env"
     secrets:
@@ -30,13 +30,13 @@ jobs:
   general:
     permissions:
       contents: read
-    uses: famedly/frontend-ci-templates/.github/workflows/general.yml@main
+    uses: famedly/frontend-ci-templates/.github/workflows/general.yml@e8167567258899ed2a5bcc7fe04c79ad78f87967
 
   reuse-compliance-check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
       - name: Check licenses
         uses: fsfe/reuse-action@6ac5c823270d369f01e3c491c708f706f2bdc355
 
