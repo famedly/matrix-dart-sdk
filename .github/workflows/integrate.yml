@@ -38,7 +38,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Check licenses
-        uses: fsfe/reuse-action@v5
+        uses: fsfe/reuse-action@6ac5c823270d369f01e3c491c708f706f2bdc355
 
   e2ee_test:
     runs-on: ubuntu-latest
@@ -127,7 +127,7 @@ jobs:
           genhtml merged.info -o merged
           echo $(lcov --summary merged.info | grep 'lines......:') >> $GITHUB_STEP_SUMMARY
       - name: Codecov - Upload coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@ca0a928a4cb3911011e868128a5cd90437c12db1
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           files: ./merged.info, ./coverage/lcov.info, ./coverage_without_olm/lcov.info
