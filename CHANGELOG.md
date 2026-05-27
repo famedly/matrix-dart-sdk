@@ -7,9 +7,6 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 ## [7.2.0] 26th May 2026
 
 - build: (deps): bump actions/checkout from 4 to 6 (dependabot[bot])
-- chore: add license headers and REUSE configuration for automatic copyright management (Christian Kußowski)
-- chore: Add reuse compliance check job to CI workflow (Christian Kußowski)
-- chore: Update license headers across multiple test files to SPDX format (Christian Kußowski)
 - feat: add matrix content scanner support (Khalil)
 - fix: Actually throw error on failed download (Christian Kußowski)
 - fix: Workaround that synapse's initial sync account data may not be up to date (Christian Kußowski)
