@@ -123,14 +123,14 @@ jobs:
       - name: Merge lcov files
         run: |
           sudo apt-get -y install lcov
-          lcov -a coverage/lcov.info -a coverage_without_olm/lcov.info -o merged.info
+          lcov -a coverage/coverage_dir/lcov.info -a coverage_without_olm/coverage_dir/lcov.info -o merged.info
           genhtml merged.info -o merged
           echo $(lcov --summary merged.info | grep 'lines......:') >> $GITHUB_STEP_SUMMARY
       - name: Codecov - Upload coverage
         uses: codecov/codecov-action@v5
         with:
           token: ${{secrets.CODECOV_TOKEN}}
-          files: ./merged.info, ./coverage/lcov.info, ./coverage_without_olm/lcov.info
+          files: ./merged.info, ./coverage/coverage_dir/lcov.info, ./coverage_without_olm/coverage_dir/lcov.info
       - uses: actions/upload-artifact@v7
         with:
           name: merged

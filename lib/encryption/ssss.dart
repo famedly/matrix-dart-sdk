@@ -93,8 +93,11 @@ class SSSS {
     final keys = deriveKeys(key, name);
 
     final plain = Uint8List.fromList(utf8.encode(data));
-    final ciphertext =
-        CryptoUtils.aesCtr(input: plain, key: keys.aesKey, iv: iv);
+    final ciphertext = CryptoUtils.aesCtr(
+      input: plain,
+      key: keys.aesKey,
+      iv: iv,
+    );
 
     final hmac = CryptoUtils.hmac(key: keys.hmacKey, input: ciphertext);
 
@@ -318,11 +321,7 @@ class SSSS {
     if (info.algorithm == AlgorithmTypes.secretStorageV1AesHmcSha2) {
       if ((info.mac is String) && (info.iv is String)) {
         return client.nativeImplementations.checkSecretStorageKey(
-          CheckSecretStorageKeyArgs(
-            key: key,
-            iv: info.iv!,
-            mac: info.mac!,
-          ),
+          CheckSecretStorageKeyArgs(key: key, iv: info.iv!, mac: info.mac!),
         );
       } else {
         // no real information about the key, assume it is valid
@@ -371,8 +370,9 @@ class SSSS {
     if (secretInfo == null) {
       throw Exception('Not found');
     }
-    final encryptedContent =
-        secretInfo.content.tryGetMap<String, Object?>('encrypted');
+    final encryptedContent = secretInfo.content.tryGetMap<String, Object?>(
+      'encrypted',
+    );
     if (encryptedContent == null) {
       throw Exception('Content is not encrypted');
     }
@@ -419,9 +419,7 @@ class SSSS {
         content['encrypted'] = <String, dynamic>{};
       }
     }
-    content ??= <String, dynamic>{
-      'encrypted': <String, dynamic>{},
-    };
+    content ??= <String, dynamic>{'encrypted': <String, dynamic>{}};
     content['encrypted'][keyId] = <String, dynamic>{
       'iv': encrypted.iv,
       'ciphertext': encrypted.ciphertext,
@@ -600,19 +598,18 @@ class SSSS {
       }
       final secret = await getCached(type);
       if (secret == null) {
-        Logs()
-            .i('[SSSS] We don\'t have the secret for $type ourself, ignoring');
+        Logs().i(
+          '[SSSS] We don\'t have the secret for $type ourself, ignoring',
+        );
         return; // seems like we don't have this, either
       }
       // okay, all checks out...time to share this secret!
       Logs().i('[SSSS] Replying with secret for $type');
       await client.sendToDeviceEncrypted(
-          [device],
-          EventTypes.SecretSend,
-          {
-            'request_id': event.content['request_id'],
-            'secret': secret,
-          });
+        [device],
+        EventTypes.SecretSend,
+        {'request_id': event.content['request_id'], 'secret': secret},
+      );
     } else if (event.type == EventTypes.SecretSend) {
       // receiving a secret we asked for
       Logs().i('[SSSS] Received shared secret...');
@@ -676,8 +673,9 @@ class SSSS {
     if (data == null) {
       return null;
     }
-    final contentEncrypted =
-        data.content.tryGetMap<String, Object?>('encrypted');
+    final contentEncrypted = data.content.tryGetMap<String, Object?>(
+      'encrypted',
+    );
     if (contentEncrypted != null) {
       return contentEncrypted.keys.toSet();
     }
@@ -829,8 +827,10 @@ class SSSS {
     bool stripAsDefaultKey = true,
   }) async {
     final remainingSecrets = analyzeEncryptedSecrets();
-    final keyIds =
-        orderedCandidateKeyIds(remainingSecrets, primaryUnlockedKey.keyId);
+    final keyIds = orderedCandidateKeyIds(
+      remainingSecrets,
+      primaryUnlockedKey.keyId,
+    );
     if (keyIds.isEmpty) return {};
 
     final migratedSecretTypes = <String>{};
@@ -862,7 +862,7 @@ class SSSS {
             }
           } catch (e, s) {
             Logs().v(
-              'Could not check existing migrated secret $secretType on destination key ${destinationKey.keyId}, this is usually fine',
+              'Could not check existing migrated secret $secretType on destination key ${destinationKey.keyId}',
               e,
               s,
             );
@@ -871,11 +871,7 @@ class SSSS {
           migratedSecretTypes.add(secretType);
           remainingSecrets.remove(secretType);
         } catch (e, s) {
-          Logs().v(
-            'Could not migrate $secretType using SSSS key $keyId',
-            e,
-            s,
-          );
+          Logs().v('Could not migrate $secretType using SSSS key $keyId', e, s);
         }
       }
       if (remainingSecrets.isEmpty) break;

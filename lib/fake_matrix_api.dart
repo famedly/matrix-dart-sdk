@@ -210,7 +210,11 @@ class FakeMatrixApi extends BaseClient {
       res = {};
     } else {
       final act = api[method]?[action];
-      if (act != null) {
+      if (act != null &&
+          !(method == 'PUT' &&
+              _client != null &&
+              action ==
+                  '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/best%20animal')) {
         res = act(data);
         if (res is Map && res.containsKey('errcode')) {
           if (res['errcode'] == 'M_NOT_FOUND') {

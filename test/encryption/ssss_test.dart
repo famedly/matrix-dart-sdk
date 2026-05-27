@@ -559,8 +559,9 @@ void main() {
 
         final encrypted = client.accountData[secretType]!.content
             .tryGetMap<String, Object?>('encrypted')!;
+        final encryptedKeys = encrypted.keys.toSet();
         expect(
-          encrypted.keys.toSet().containsAll({
+          encryptedKeys.containsAll({
             defaultKeyId,
             passphraseKey.keyId,
             staleKey.keyId,
