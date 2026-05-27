@@ -217,6 +217,23 @@ void main() {
       timeout: Timeout(Duration(minutes: 2)),
     );
 
+    test(
+      'newSsss skips migration when old key map is empty',
+      () async {
+        client.accountData.clear();
+        final bootstrap = client.encryption!.bootstrap();
+
+        expect(bootstrap.state, BootstrapState.askNewSsss);
+        bootstrap.oldSsssKeys = {};
+
+        await bootstrap.newSsss('empty-old-keys-passphrase');
+
+        expect(bootstrap.state, isNot(BootstrapState.error));
+        expect(bootstrap.newSsssKey, isNotNull);
+      },
+      timeout: Timeout(Duration(minutes: 2)),
+    );
+
     test('bad ssss', () async {
       client.accountData.clear();
       await client.setAccountData(client.userID!, 'foxes', oldSecret);
