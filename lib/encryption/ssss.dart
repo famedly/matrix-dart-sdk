@@ -734,7 +734,8 @@ class SSSS {
     const prefix = 'm.secret_storage.key.';
     final usedKeyIds =
         analyzeEncryptedSecrets().values.expand((s) => s).toSet();
-    for (final entry in client.accountData.entries) {
+    final entries = client.accountData.entries.toList(growable: false);
+    for (final entry in entries) {
       if (!entry.key.startsWith(prefix)) continue;
       final keyId = entry.key.substring(prefix.length);
       if (entry.value.content['name'] != name) continue;

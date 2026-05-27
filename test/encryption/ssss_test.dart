@@ -670,6 +670,18 @@ void main() {
       );
 
       test(
+        'keyIdForNamedSecretStorageKey returns null for multiple unused matching keys',
+        () async {
+          final ssss = client.encryption!.ssss;
+          const dupUnusedName = 'duplicate-unused-passphrase-name-test';
+          await ssss.createKey('unused-1', dupUnusedName);
+          await ssss.createKey('unused-2', dupUnusedName);
+
+          expect(ssss.keyIdForNamedSecretStorageKey(dupUnusedName), isNull);
+        },
+      );
+
+      test(
         'hasInvalidEncryptedEntries detects malformed entries and invalid key ids',
         () async {
           final ssss = client.encryption!.ssss;
