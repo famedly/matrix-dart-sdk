@@ -152,6 +152,12 @@ class SSSS {
     );
   }
 
+  /// Whether [input] looks like an Olm/SSSS recovery key (not a passphrase).
+  static bool looksLikeRecoveryKey(String input) {
+    final cleaned = input.replaceAll(RegExp(r'\s+'), '');
+    return cleaned.length == 48 && cleaned.startsWith('Es');
+  }
+
   static String encodeRecoveryKey(Uint8List recoveryKey) {
     final keyToEncode = <int>[...olmRecoveryKeyPrefix, ...recoveryKey];
     final parity = keyToEncode.fold<int>(0, (a, b) => a ^ b);
@@ -197,11 +203,55 @@ class SSSS {
       .key;
 
   Future<void> setDefaultKeyId(String keyId) async {
-    await client.setAccountData(
-      client.userID!,
+    await _setAccountDataAndWaitForSync(
       EventTypes.SecretStorageDefaultKey,
       SecretStorageDefaultKeyContent(key: keyId).toJson(),
     );
+  }
+
+  /// PUTs account data, then waits until [/sync] has applied the same payload so
+  /// [Client.accountData] and the DB stay aligned (both are updated in
+  /// [Client]'s sync handler). [MatrixApi.setAccountData] alone does not touch
+  /// local state; mirroring the PUT locally would race concurrent sync updates.
+  Future<void> _setAccountDataAndWaitForSync(
+    String type,
+    Map<String, Object?> content,
+  ) async {
+    final expected = content.copy();
+    await client.setAccountData(client.userID!, type, content);
+    await _waitForAccountDataFromSync(type, expected);
+  }
+
+  Future<void> _waitForAccountDataFromSync(
+    String type,
+    Map<String, Object?> expectedContent,
+  ) async {
+    bool matchesExpected() {
+      final ev = client.accountData[type];
+      if (ev == null) return false;
+      return const DeepCollectionEquality().equals(ev.content, expectedContent);
+    }
+
+    if (matchesExpected()) return;
+
+    final completer = Completer<void>();
+    final subscription = client.onAccountData.stream.listen((event) {
+      if (event.type == type && matchesExpected()) {
+        if (!completer.isCompleted) completer.complete();
+      }
+    });
+    try {
+      if (matchesExpected()) return;
+      await completer.future.timeout(
+        const Duration(seconds: 60),
+        onTimeout: () => throw TimeoutException(
+          'Timed out waiting for account data "$type" from sync after '
+          'setAccountData.',
+        ),
+      );
+    } finally {
+      await subscription.cancel();
+    }
   }
 
   SecretStorageKeyContent? getKey(String keyId) {
@@ -257,16 +307,7 @@ class SSSS {
     final accountDataTypeKeyId = EventTypes.secretStorageKey(keyId);
     // noooow we set the account data
 
-    await client.setAccountData(
-      client.userID!,
-      accountDataTypeKeyId,
-      content.toJson(),
-    );
-
-    while (!client.accountData.containsKey(accountDataTypeKeyId)) {
-      Logs().v('Waiting accountData to have $accountDataTypeKeyId');
-      await client.oneShotSync();
-    }
+    await _setAccountDataAndWaitForSync(accountDataTypeKeyId, content.toJson());
 
     final key = open(keyId);
     await key.setPrivateKey(privateKey);
@@ -276,9 +317,13 @@ class SSSS {
   Future<bool> checkKey(Uint8List key, SecretStorageKeyContent info) async {
     if (info.algorithm == AlgorithmTypes.secretStorageV1AesHmcSha2) {
       if ((info.mac is String) && (info.iv is String)) {
-        final encrypted = await encryptAes(zeroStr, key, '', info.iv);
-        return info.mac!.replaceAll(RegExp(r'=+$'), '') ==
-            encrypted.mac.replaceAll(RegExp(r'=+$'), '');
+        return client.nativeImplementations.checkSecretStorageKey(
+          CheckSecretStorageKeyArgs(
+            key: key,
+            iv: info.iv!,
+            mac: info.mac!,
+          ),
+        );
       } else {
         // no real information about the key, assume it is valid
         return true;
@@ -383,7 +428,10 @@ class SSSS {
       'mac': encrypted.mac,
     };
     // store the thing in your account data
-    await client.setAccountData(client.userID!, type, content);
+    await _setAccountDataAndWaitForSync(
+      type,
+      Map<String, Object?>.from(content),
+    );
     final db = client.database;
     if (cacheTypes.contains(type)) {
       // cache the thing
@@ -399,8 +447,9 @@ class SSSS {
     String type,
     String secret,
     String keyId,
-    Uint8List key,
-  ) async {
+    Uint8List key, {
+    bool isDefaultKey = true,
+  }) async {
     if (await getStored(type, keyId, key) != secret) {
       throw Exception('Secrets do not match up!');
     }
@@ -414,17 +463,22 @@ class SSSS {
       throw Exception('Wrong type for encrypted content!');
     }
 
-    final otherKeys =
-        Set<String>.from(encryptedContent.keys.where((k) => k != keyId));
+    final defaultKeyId = this.defaultKeyId;
+    final otherKeys = Set<String>.from(
+      encryptedContent.keys.where(
+        (k) => isDefaultKey || defaultKeyId == null
+            ? k != keyId
+            : k != keyId && k != defaultKeyId,
+      ),
+    );
     encryptedContent.removeWhere((k, v) => otherKeys.contains(k));
-    // yes, we are paranoid...
+    content['encrypted'] = encryptedContent;
+    // Yes, we are paranoid...
     if (await getStored(type, keyId, key) != secret) {
       throw Exception('Secrets do not match up!');
     }
-    // store the thing in your account data
-    await client.setAccountData(client.userID!, type, content);
+    await _setAccountDataAndWaitForSync(type, content);
     if (cacheTypes.contains(type)) {
-      // cache the thing
       final ciphertext = encryptedContent
           .tryGetMap<String, Object?>(keyId)
           ?.tryGet<String>('ciphertext');
@@ -630,6 +684,239 @@ class SSSS {
     return null;
   }
 
+  /// Resolves the key id for a secret-storage key definition by its [name]
+  /// field on `m.secret_storage.key.<key_id>` account data.
+  ///
+  /// If several keys share the same [name] (e.g. an orphaned definition left
+  /// on the server after rotation), returns the id that appears most often in
+  /// encrypted secret account data from [analyzeEncryptedSecrets]. Ties use
+  /// lexicographic key order. Returns null when no key with that [name]
+  /// exists.
+  String? keyIdForNamedSecretStorageKey(String name) {
+    if (name.isEmpty) return null;
+    const prefix = 'm.secret_storage.key.';
+    final candidates = <String>[];
+    for (final entry in client.accountData.entries) {
+      if (!entry.key.startsWith(prefix)) continue;
+      final keyName = entry.value.content['name'];
+      if (keyName == name) {
+        candidates.add(entry.key.substring(prefix.length));
+      }
+    }
+    if (candidates.isEmpty) return null;
+
+    if (candidates.length == 1) {
+      return candidates.first;
+    }
+
+    final usage = <String, int>{for (final id in candidates) id: 0};
+    for (final keyIds in analyzeEncryptedSecrets().values) {
+      for (final kid in keyIds) {
+        if (usage.containsKey(kid)) {
+          usage[kid] = usage[kid]! + 1;
+        }
+      }
+    }
+    final ranked = usage.entries.toList()
+      ..sort((a, b) {
+        final byCount = b.value.compareTo(a.value);
+        if (byCount != 0) return byCount;
+        return a.key.compareTo(b.key);
+      });
+    if (ranked.first.value > 0) {
+      return ranked.first.key;
+    }
+    return null;
+  }
+
+  Future<void> removeUnusedNamedSecretStorageKeys(String name) async {
+    if (name.isEmpty) return;
+    const prefix = 'm.secret_storage.key.';
+    final usedKeyIds =
+        analyzeEncryptedSecrets().values.expand((s) => s).toSet();
+    for (final entry in client.accountData.entries) {
+      if (!entry.key.startsWith(prefix)) continue;
+      final keyId = entry.key.substring(prefix.length);
+      if (entry.value.content['name'] != name) continue;
+      if (usedKeyIds.contains(keyId)) continue;
+      await _setAccountDataAndWaitForSync(
+        EventTypes.secretStorageKey(keyId),
+        {},
+      );
+    }
+  }
+
+  /// Returns secret event types mapped to valid SSSS key ids.
+  ///
+  /// Only account data entries with a valid `encrypted` map shape are included.
+  Map<String, Set<String>> analyzeEncryptedSecrets() {
+    final secrets = <String, Set<String>>{};
+    for (final entry in client.accountData.entries) {
+      final type = entry.key;
+      final event = entry.value;
+      final encryptedContent = event.content.tryGetMap<String, Object?>(
+        'encrypted',
+      );
+      if (encryptedContent == null) continue;
+
+      final validKeys = <String>{};
+      for (final keyEntry in encryptedContent.entries) {
+        final key = keyEntry.key;
+        final value = keyEntry.value;
+        if (!_isUsableEncryptedKeyEntry(key, value)) continue;
+        validKeys.add(key);
+      }
+      if (validKeys.isNotEmpty) {
+        secrets[type] = validKeys;
+      }
+    }
+    return secrets;
+  }
+
+  /// Returns whether [type] has malformed encrypted entries, or entries
+  /// encrypted with invalid key ids.
+  bool hasInvalidEncryptedEntries(String type) {
+    final encryptedContent = client.accountData[type]?.content
+        .tryGetMap<String, Object?>('encrypted');
+    if (encryptedContent == null) return false;
+
+    for (final keyEntry in encryptedContent.entries) {
+      final key = keyEntry.key;
+      final value = keyEntry.value;
+      if (value is! Map) return true;
+      if (!_isUsableEncryptedKeyEntry(key, value)) return true;
+    }
+    return false;
+  }
+
+  bool _isUsableEncryptedKeyEntry(String key, Object? value) {
+    if (value is! Map) return false;
+    if (value['iv'] is! String ||
+        value['ciphertext'] is! String ||
+        value['mac'] is! String) {
+      return false;
+    }
+    return isKeyValid(key);
+  }
+
+  /// Ordered key ids to try for migration:
+  /// preferred key first, then all other candidates once.
+  List<String> orderedCandidateKeyIds(
+    Map<String, Set<String>> secretsByType,
+    String preferredKeyId,
+  ) {
+    final ordered = <String>[preferredKeyId];
+    for (final keyIds in secretsByType.values) {
+      for (final keyId in keyIds) {
+        if (keyId != preferredKeyId && !ordered.contains(keyId)) {
+          ordered.add(keyId);
+        }
+      }
+    }
+    return ordered;
+  }
+
+  /// Migrates available secrets from old keys to [destinationKey].
+  ///
+  /// Returns the set of secret types that were successfully migrated.
+  Future<Set<String>> migrateSecretsToKey({
+    required OpenSSSS primaryUnlockedKey,
+    required OpenSSSS destinationKey,
+    String? unlockCredential,
+    Map<String, OpenSSSS>? candidateOldKeys,
+    bool stripKeys = false,
+    bool stripAsDefaultKey = true,
+  }) async {
+    final remainingSecrets = analyzeEncryptedSecrets();
+    final keyIds =
+        orderedCandidateKeyIds(remainingSecrets, primaryUnlockedKey.keyId);
+    if (keyIds.isEmpty) return {};
+
+    final migratedSecretTypes = <String>{};
+    Set<String> candidateSecretsForKey(String keyId) {
+      return remainingSecrets.entries
+          .where((entry) => entry.value.contains(keyId))
+          .map((entry) => entry.key)
+          .toSet();
+    }
+
+    for (final keyId in keyIds) {
+      final key = keyId == primaryUnlockedKey.keyId
+          ? primaryUnlockedKey
+          : candidateOldKeys?[keyId] ??
+              await _tryOpenAndUnlockKey(
+                keyId,
+                unlockCredential: unlockCredential,
+              );
+      if (key == null || !key.isUnlocked) continue;
+
+      for (final secretType in candidateSecretsForKey(keyId)) {
+        try {
+          final secret = await key.getStored(secretType);
+          await destinationKey.store(secretType, secret, add: true);
+          migratedSecretTypes.add(secretType);
+          remainingSecrets.remove(secretType);
+        } catch (e, s) {
+          Logs().v(
+            'Could not migrate $secretType using SSSS key $keyId',
+            e,
+            s,
+          );
+        }
+      }
+      if (remainingSecrets.isEmpty) break;
+    }
+    if (stripKeys) {
+      await _validateAndStripMigratedSecrets(
+        destinationKey: destinationKey,
+        migratedSecretTypes: migratedSecretTypes,
+        isDefaultKey: stripAsDefaultKey,
+      );
+    }
+    return migratedSecretTypes;
+  }
+
+  /// Validates migrated secrets for [destinationKey] and strips all other keys
+  /// from each migrated secret type.
+  Future<void> _validateAndStripMigratedSecrets({
+    required OpenSSSS destinationKey,
+    required Iterable<String> migratedSecretTypes,
+    bool isDefaultKey = true,
+  }) async {
+    for (final type in migratedSecretTypes) {
+      final secret = await destinationKey.getStored(type);
+      await destinationKey.validateAndStripOtherKeys(
+        type,
+        secret,
+        isDefaultKey: isDefaultKey,
+      );
+    }
+    await destinationKey.maybeCacheAll();
+  }
+
+  Future<OpenSSSS?> _tryOpenAndUnlockKey(
+    String keyId, {
+    String? unlockCredential,
+  }) async {
+    try {
+      final key = open(keyId);
+      if (unlockCredential == null || key.isUnlocked) return key;
+      try {
+        await key.unlock(keyOrPassphrase: unlockCredential);
+      } catch (e, s) {
+        Logs().v(
+          'Could not unlock SSSS key $keyId with provided credential',
+          e,
+          s,
+        );
+      }
+      return key;
+    } catch (e, s) {
+      Logs().v('Skipping unavailable SSSS key $keyId during migration', e, s);
+      return null;
+    }
+  }
+
   String? keyIdFromType(String type) {
     final keys = keyIdsFromType(type);
     if (keys == null || keys.isEmpty) {
@@ -710,14 +997,22 @@ class OpenSSSS {
     bool postUnlock = true,
   }) async {
     if (keyOrPassphrase != null) {
-      try {
-        await unlock(recoveryKey: keyOrPassphrase, postUnlock: postUnlock);
-      } catch (_) {
-        if (hasPassphrase) {
-          await unlock(passphrase: keyOrPassphrase, postUnlock: postUnlock);
-        } else {
-          rethrow;
+      if (SSSS.looksLikeRecoveryKey(keyOrPassphrase)) {
+        try {
+          await unlock(recoveryKey: keyOrPassphrase, postUnlock: postUnlock);
+          return;
+        } catch (e) {
+          if (!hasPassphrase) {
+            rethrow;
+          }
         }
+      }
+      if (hasPassphrase) {
+        await unlock(passphrase: keyOrPassphrase, postUnlock: postUnlock);
+      } else {
+        throw InvalidPassphraseException(
+          'Tried to unlock with passphrase while key does not have a passphrase',
+        );
       }
       return;
     } else if (passphrase != null) {
@@ -785,12 +1080,22 @@ class OpenSSSS {
     }
   }
 
-  Future<void> validateAndStripOtherKeys(String type, String secret) async {
+  Future<void> validateAndStripOtherKeys(
+    String type,
+    String secret, {
+    bool isDefaultKey = true,
+  }) async {
     final privateKey = this.privateKey;
     if (privateKey == null) {
       throw Exception('SSSS not unlocked');
     }
-    await ssss.validateAndStripOtherKeys(type, secret, keyId, privateKey);
+    await ssss.validateAndStripOtherKeys(
+      type,
+      secret,
+      keyId,
+      privateKey,
+      isDefaultKey: isDefaultKey,
+    );
   }
 
   Future<void> maybeCacheAll() async {

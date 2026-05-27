@@ -116,6 +116,12 @@ class NativeImplementationsWebWorker extends NativeImplementations {
       return NativeImplementations.dummy.shrinkImage(args);
     }
   }
+
+  @override
+  FutureOr<bool> checkSecretStorageKey(CheckSecretStorageKeyArgs args) {
+    // Fallback: web worker only supports image computation in this SDK version.
+    return NativeImplementations.dummy.checkSecretStorageKey(args);
+  }
 }
 
 class WebWorkerData {

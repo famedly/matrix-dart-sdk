@@ -94,8 +94,9 @@ extension CryptoSetupExtension on Client {
                   .unlock(keyOrPassphrase: keyOrPassphrase);
               await bootstrap.openExistingSsss();
               if (selfSign) {
-                await bootstrap.client.encryption!.crossSigning
-                    .selfSign(keyOrPassphrase: keyOrPassphrase);
+                await bootstrap.client.encryption!.crossSigning.selfSign(
+                  openSsss: bootstrap.newSsssKey,
+                );
               }
               break;
             case BootstrapState.askWipeCrossSigning:
