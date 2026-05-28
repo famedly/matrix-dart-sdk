@@ -4,6 +4,11 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [7.2.1] 28th May 2026
+- feat: update ssss to centralise key logic (Abrish Sabri)
+- fix: Account data not existing throws exception while function expects empty json object (Christian Kußowski)
+- fix: encryption loop iteration (Abrish Sabri)
+
 ## [7.2.0] 26th May 2026
 
 - build: (deps): bump actions/checkout from 4 to 6 (dependabot[bot])
