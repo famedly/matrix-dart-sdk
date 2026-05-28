@@ -52,12 +52,17 @@ void main() async {
       };
 
       final key = DeviceKeys.fromJson(rawJson, client);
-      // NOTE(Nico): this actually doesn't do anything, because the device signature is invalid...
-      await key.setVerified(false, false);
-      await key.setBlocked(true);
+      // Signature is intentionally invalid in this fixture, so mutating
+      // verification/block state must fail on invalid keys.
+      expect(key.isValid, false);
+      await expectLater(
+        key.setVerified(false, false),
+        throwsA(isA<Exception>()),
+      );
+      await expectLater(key.setBlocked(true), throwsA(isA<Exception>()));
       expect(json.encode(key.toJson()), json.encode(rawJson));
       expect(key.directVerified, false);
-      expect(key.blocked, true);
+      expect(key.blocked, true); // invalid keys are considered blocked
 
       rawJson = <String, dynamic>{
         'user_id': '@test:fakeServer.notExisting',
