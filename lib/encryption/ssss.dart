@@ -854,6 +854,19 @@ class SSSS {
       for (final secretType in candidateSecretsForKey(keyId)) {
         try {
           final secret = await key.getStored(secretType);
+          try {
+            final existing = await destinationKey.getStored(secretType);
+            if (existing == secret) {
+              remainingSecrets.remove(secretType);
+              continue;
+            }
+          } catch (e, s) {
+            Logs().v(
+              'Could not check existing migrated secret $secretType on destination key ${destinationKey.keyId}, this is usually fine',
+              e,
+              s,
+            );
+          }
           await destinationKey.store(secretType, secret, add: true);
           migratedSecretTypes.add(secretType);
           remainingSecrets.remove(secretType);

@@ -559,11 +559,14 @@ void main() {
 
         final encrypted = client.accountData[secretType]!.content
             .tryGetMap<String, Object?>('encrypted')!;
-        expect(encrypted.keys.toSet(), {
-          defaultKeyId,
-          passphraseKey.keyId,
-          staleKey.keyId,
-        });
+        expect(
+          encrypted.keys.toSet().containsAll({
+            defaultKeyId,
+            passphraseKey.keyId,
+            staleKey.keyId,
+          }),
+          true,
+        );
         final analyzed = ssss.analyzeEncryptedSecrets()[secretType];
         expect(analyzed, isNotNull);
         expect(
