@@ -30,8 +30,14 @@ extension CryptoSetupExtension on Client {
       EventTypes.CrossSigningUserSigning,
       EventTypes.CrossSigningMasterKey,
     ]) {
-      accountData[type] ??=
-          BasicEvent(content: await getAccountData(userID!, type), type: type);
+      try {
+        accountData[type] ??= BasicEvent(
+          content: await getAccountData(userID!, type),
+          type: type,
+        );
+      } on MatrixException catch (e) {
+        if (e.error != MatrixError.M_NOT_FOUND) rethrow;
+      }
     }
 
     return (
