@@ -22,6 +22,7 @@ import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
 import 'package:matrix/src/utils/multilock.dart';
+import 'package:matrix/src/utils/on_tofu_event.dart';
 import 'package:matrix/src/utils/request_and_cache.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
@@ -192,6 +193,7 @@ class Client extends MatrixApi {
     this.customImageResizer,
     this.shareKeysWith = ShareKeysWith.crossVerifiedIfEnabled,
     this.enableDehydratedDevices = false,
+    this.onTofuEvent = sendTofuEvent,
     this.receiptsPublicByDefault = true,
 
     /// Implement your https://spec.matrix.org/v1.9/client-server-api/#soft-logout
@@ -375,6 +377,8 @@ class Client extends MatrixApi {
   List<ArchivedRoom> get archivedRooms => _archivedRooms;
 
   bool enableDehydratedDevices = false;
+
+  void Function(Room room, Set<String> userIds)? onTofuEvent;
 
   final String dehydratedDeviceDisplayName;
 
@@ -3530,11 +3534,18 @@ class Client extends MatrixApi {
             final oldKeys =
                 Map<String, CrossSigningKey>.from(userKeys.crossSigningKeys);
             userKeys.crossSigningKeys = {};
+
+            final entry = CrossSigningKey.fromMatrixCrossSigningKey(
+              crossSigningKeyListEntry.value,
+              this,
+            );
+
             // add the types we aren't handling atm back
             for (final oldEntry in oldKeys.entries) {
               if (!oldEntry.value.usage.contains(keyType)) {
                 userKeys.crossSigningKeys[oldEntry.key] = oldEntry.value;
               } else {
+                entry.lastSeenPublicKey = oldEntry.value.lastSeenPublicKey;
                 // There is a previous cross-signing key with  this usage, that we no
                 // longer need/use. Clear it from the database.
                 dbActions.add(
@@ -3543,10 +3554,6 @@ class Client extends MatrixApi {
                 );
               }
             }
-            final entry = CrossSigningKey.fromMatrixCrossSigningKey(
-              crossSigningKeyListEntry.value,
-              this,
-            );
             final publicKey = entry.publicKey;
             if (entry.isValid && publicKey != null) {
               final oldKey = oldKeys[publicKey];
@@ -3571,6 +3578,7 @@ class Client extends MatrixApi {
                   json.encode(entry.toJson()),
                   entry.directVerified,
                   entry.blocked,
+                  entry.lastSeenPublicKey,
                 ),
               );
             }
@@ -4129,6 +4137,7 @@ class Client extends MatrixApi {
             jsonEncode(crossSigningKey.toJson()),
             crossSigningKey.directVerified,
             crossSigningKey.blocked,
+            crossSigningKey.lastSeenPublicKey,
           );
         }
       }

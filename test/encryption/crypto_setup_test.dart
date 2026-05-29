@@ -55,6 +55,21 @@ void main() {
       expect(state.connected, true);
     });
 
+    test('TOFU', () async {
+      final client = await getClient();
+      await client.initCryptoIdentity();
+      expect(
+        client.userDeviceKeys['@othertest:fakeServer.notExisting']!.masterKey!
+            .lastSeenPublicKey,
+        null,
+      );
+      expect(
+        client.userDeviceKeys['@othertest:fakeServer.notExisting']!.masterKey!
+            .tofuVerified,
+        true,
+      );
+    });
+
     test(
       'initCryptoIdentity with passphrase',
       () async {

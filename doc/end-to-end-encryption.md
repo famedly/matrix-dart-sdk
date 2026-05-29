@@ -89,3 +89,25 @@ identity and get a new key with `client.initCryptoIdentity()` at any time.
 >
 > The Client would then request all necessary secrets of your crypto identity
 > automatically via **to-device-messaging**.
+
+### Trust On First Use (Tofu)
+
+With **Trust On First Use** you can inform the user when the crypto identity of
+a participant changes. This is usually checked when preparing the encryption
+before sending a message into a room. Therefore a Tofu Event is
+connected to a room but sent only once per user.
+
+To enable Tofu, just implement the `onTofuEvent` callback in the client
+constructor:
+
+```dart
+Client('Client Name',
+  // ...
+  onTofuEvent: (room, userIds) {
+    print('$userIds have changed their crypto identity!');
+  }
+);
+```
+
+By default it sends a state event of type `sdk.matrix.dart.tofu_notification`
+into the room by using the function `sendTofuEvent()`.
