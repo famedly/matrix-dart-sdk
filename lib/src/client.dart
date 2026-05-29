@@ -3396,6 +3396,7 @@ class Client extends MatrixApi {
       }
 
       if (outdatedLists.isNotEmpty) {
+        if (!isLogged()) return;
         // Request the missing device key lists from the server.
         final response = await queryKeys(outdatedLists, timeout: 10000);
         if (!isLogged()) return;
