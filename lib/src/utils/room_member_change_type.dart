@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:matrix/matrix.dart';
 
 /// The kind of what has changed with this m.room.member event to have a

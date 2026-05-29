@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:matrix/matrix_api_lite/utils/logs.dart';
 
 bool isVersionGreaterThanOrEqualTo(String version, String target) {
@@ -6,7 +10,7 @@ bool isVersionGreaterThanOrEqualTo(String version, String target) {
         version.substring(1).split('.').map(int.parse).toList();
     final targetParts = target.substring(1).split('.').map(int.parse).toList();
 
-    for (int i = 0; i < versionParts.length; i++) {
+    for (var i = 0; i < versionParts.length; i++) {
       if (i >= targetParts.length) return true; // reached the end, both equal
       if (versionParts[i] > targetParts[i]) return true; // ver greater
       if (versionParts[i] < targetParts[i]) return false; // tar greater

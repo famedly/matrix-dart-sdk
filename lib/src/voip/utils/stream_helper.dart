@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:collection/collection.dart';
 import 'package:random_string/random_string.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';

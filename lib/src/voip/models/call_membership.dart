@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:matrix/matrix.dart';
 
 class FamedlyCallMemberEvent {
@@ -10,7 +14,7 @@ class FamedlyCallMemberEvent {
   }
 
   factory FamedlyCallMemberEvent.fromJson(Event event, VoIP voip) {
-    final List<CallMembership> callMemberships = [];
+    final callMemberships = <CallMembership>[];
     final memberships = event.content.tryGetList('memberships');
     if (memberships != null && memberships.isNotEmpty) {
       for (final mem in memberships) {
@@ -136,7 +140,6 @@ class CallMembership {
           userId == other.userId &&
           roomId == other.roomId &&
           callId == other.callId &&
-          application == other.application &&
           scope == other.scope &&
           backend.type == other.backend.type &&
           deviceId == other.deviceId &&

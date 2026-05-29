@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 abstract class CuteEventContent {
   static const String eventType = 'im.fluffychat.cute_event';
 

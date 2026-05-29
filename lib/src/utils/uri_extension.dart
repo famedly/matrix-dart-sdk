@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:core';
 
@@ -27,9 +13,16 @@ extension MxcUriExtension on Uri {
   /// Throws an exception if the scheme is not `mxc` or the homeserver is not
   /// set.
   ///
-  /// Important! To use this link you have to set a http header like this:
+  /// Scanner and authenticated media URLs may need an authorization header:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
   Future<Uri> getDownloadUri(Client client) async {
+    if (!isScheme('mxc')) return Uri();
+
+    final scanner = client.contentScannerConfig;
+    if (scanner != null) {
+      return _appendMxcTo(scanner.downloadUri);
+    }
+
     String uriPath;
 
     if (await client.authenticatedMediaSupported()) {
@@ -40,11 +33,18 @@ extension MxcUriExtension on Uri {
           '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path';
     }
 
-    return isScheme('mxc')
-        ? client.homeserver != null
-            ? client.homeserver?.resolve(uriPath) ?? Uri()
-            : Uri()
-        : Uri();
+    final homeserver = client.homeserver;
+    if (homeserver == null) return Uri();
+
+    return homeserver.resolve(uriPath);
+  }
+
+  Uri _appendMxcTo(Uri base) {
+    final reference = '$host${hasPort ? ':$port' : ''}$path';
+    final trimmed =
+        reference.startsWith('/') ? reference.substring(1) : reference;
+    final basePath = base.path.endsWith('/') ? base.path : '${base.path}/';
+    return base.replace(path: '$basePath$trimmed');
   }
 
   /// Transforms this `mxc://` Uri into a `http` resource, which can be used
@@ -57,7 +57,7 @@ extension MxcUriExtension on Uri {
   /// Throws an exception if the scheme is not `mxc` or the homeserver is not
   /// set.
   ///
-  /// Important! To use this link you have to set a http header like this:
+  /// Scanner and authenticated media URLs may need an authorization header:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
   Future<Uri> getThumbnailUri(
     Client client, {
@@ -67,6 +67,20 @@ extension MxcUriExtension on Uri {
     bool? animated = false,
   }) async {
     if (!isScheme('mxc')) return Uri();
+
+    final queryParameters = {
+      if (width != null) 'width': width.round().toString(),
+      if (height != null) 'height': height.round().toString(),
+      if (method != null) 'method': method.toString().split('.').last,
+      if (animated != null) 'animated': animated.toString(),
+    };
+
+    final scanner = client.contentScannerConfig;
+    if (scanner != null) {
+      return _appendMxcTo(scanner.downloadThumbnailUri)
+          .replace(queryParameters: queryParameters);
+    }
+
     final homeserver = client.homeserver;
     if (homeserver == null) {
       return Uri();
@@ -86,16 +100,13 @@ extension MxcUriExtension on Uri {
       host: homeserver.host,
       path: requestPath,
       port: homeserver.port,
-      queryParameters: {
-        if (width != null) 'width': width.round().toString(),
-        if (height != null) 'height': height.round().toString(),
-        if (method != null) 'method': method.toString().split('.').last,
-        if (animated != null) 'animated': animated.toString(),
-      },
+      queryParameters: queryParameters,
     );
   }
 
-  @Deprecated('Use `getDownloadUri()` instead')
+  @Deprecated(
+    'Use `getDownloadUri()` instead. This legacy helper is scanner-unaware.',
+  )
   Uri getDownloadLink(Client matrix) => isScheme('mxc')
       ? matrix.homeserver != null
           ? matrix.homeserver?.resolve(
@@ -110,7 +121,9 @@ extension MxcUriExtension on Uri {
   /// `ThumbnailMethod.scale` and defaults to `ThumbnailMethod.scale`.
   /// If `animated` (default false) is set to true, an animated thumbnail is requested
   /// as per MSC2705. Thumbnails only animate if the media repository supports that.
-  @Deprecated('Use `getThumbnailUri()` instead')
+  @Deprecated(
+    'Use `getThumbnailUri()` instead. This legacy helper is scanner-unaware.',
+  )
   Uri getThumbnail(
     Client matrix, {
     num? width,

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
@@ -156,7 +160,7 @@ void main() {
         );
 
         // Verify events are in chronological order
-        for (int i = 1; i < complete.events.length; i++) {
+        for (var i = 1; i < complete.events.length; i++) {
           expect(
             complete.events[i].originServerTs
                     .isBefore(complete.events[i - 1].originServerTs) ||

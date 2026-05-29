@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 ## Available Chat Commands
 
 The Matrix Dart SDK supports out of the box chat commands. Just use `Room.sendTextEvent("/command");`. If you do not desire to get chat commands parsed, you can disable them like this: `Room.sendTextEvent("/command", parseCommands: false);`

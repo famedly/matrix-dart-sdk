@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /// Matrix SDK written in pure Dart.
 library;
@@ -72,8 +58,10 @@ export 'src/models/receipts.dart';
 export 'src/utils/sync_update_extension.dart';
 export 'src/utils/to_device_event.dart';
 export 'src/utils/uia_request.dart';
+export 'src/utils/content_scanner_config.dart';
 export 'src/utils/uri_extension.dart';
 export 'src/models/login_type.dart';
+export 'src/models/power_level.dart';
 
 export 'msc_extensions/extension_recent_emoji/recent_emoji.dart';
 export 'msc_extensions/extension_audio_events/audio_events.dart';

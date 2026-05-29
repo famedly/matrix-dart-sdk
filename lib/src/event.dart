@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
@@ -438,7 +424,76 @@ class Event extends MatrixEvent {
     room.client.onCancelSendEvent.add(eventId);
   }
 
+  Future<MatrixFile?> _getCachedFile({bool getThumbnail = false}) async {
+    if (transactionId == null) return null;
+
+    final filename = content.tryGet<String>('filename')!;
+
+    if (getThumbnail) {
+      final thumbnailBytes = await room.client.database.getFile(
+        Uri(
+          scheme: 'cache',
+          host: 'thumbnail',
+          path: transactionId,
+        ),
+      );
+      if (thumbnailBytes != null) {
+        return MatrixImageFile(
+          bytes: thumbnailBytes,
+          name: filename,
+          mimeType: thumbnailMimetype,
+          width: thumbnailInfoMap.tryGet<int>('w'),
+          height: thumbnailInfoMap.tryGet<int>('h'),
+        );
+      }
+    }
+
+    final fileBytes = await room.client.database.getFile(
+      Uri(
+        scheme: 'cache',
+        host: 'file',
+        path: transactionId,
+      ),
+    );
+    if (fileBytes == null) {
+      await cancelSend();
+      throw Exception('Can not try to send again. File is no longer cached.');
+    }
+    return switch (messageType) {
+      MessageTypes.Video => MatrixVideoFile(
+          bytes: fileBytes,
+          name: filename,
+          mimeType: attachmentMimetype,
+          duration: infoMap.tryGet<int>('duration'),
+          width: infoMap.tryGet<int>('w'),
+          height: infoMap.tryGet<int>('h'),
+        ),
+      MessageTypes.Audio => MatrixAudioFile(
+          bytes: fileBytes,
+          name: filename,
+          mimeType: attachmentMimetype,
+          duration: infoMap.tryGet<int>('duration'),
+        ),
+      MessageTypes.Image => MatrixImageFile(
+          bytes: fileBytes,
+          name: filename,
+          mimeType: attachmentMimetype,
+          width: infoMap.tryGet<int>('w'),
+          height: infoMap.tryGet<int>('h'),
+          blurhash: infoMap.tryGet<String>('xyz.amorgan.blurhash'),
+        ),
+      MessageTypes.File || _ => MatrixFile(
+          bytes: fileBytes,
+          name: filename,
+          mimeType: attachmentMimetype,
+        ),
+    };
+  }
+
   /// Try to send this event again. Only works with events of status -1.
+  /// If this is a file event and the file was not uploaded yet and the file is
+  /// not found in the cache locally, this throws a
+  /// `FileNoLongerInCacheException`.
   Future<String?> sendAgain({String? txid}) async {
     if (!status.isError) return null;
 
@@ -449,12 +504,10 @@ class Event extends MatrixEvent {
       MessageTypes.Audio,
       MessageTypes.File,
     }.contains(messageType)) {
-      final file = room.sendingFilePlaceholders[eventId];
-      if (file == null) {
-        await cancelSend();
-        throw Exception('Can not try to send again. File is no longer cached.');
-      }
-      final thumbnail = room.sendingFileThumbnails[eventId];
+      final file = await _getCachedFile();
+      final thumbnail = await _getCachedFile(getThumbnail: true);
+      if (file == null) throw FileNoLongerInCacheException();
+
       final credentials = FileSendRequestCredentials.fromJson(unsigned ?? {});
       final inReplyTo = credentials.inReplyTo == null
           ? null
@@ -462,7 +515,7 @@ class Event extends MatrixEvent {
       return await room.sendFileEvent(
         file,
         txid: txid ?? transactionId,
-        thumbnail: thumbnail,
+        thumbnail: thumbnail as MatrixImageFile,
         inReplyTo: inReplyTo,
         editEventId: credentials.editEventId,
         shrinkImageMaxDimension: credentials.shrinkImageMaxDimension,
@@ -606,7 +659,7 @@ class Event extends MatrixEvent {
   /// Throws an exception if the scheme is not `mxc` or the homeserver is not
   /// set.
   ///
-  /// Important! To use this link you have to set a http header like this:
+  /// Scanner and authenticated media URLs may need an authorization header:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
   Future<Uri?> getAttachmentUri({
     bool getThumbnail = false,
@@ -664,9 +717,13 @@ class Event extends MatrixEvent {
   /// Throws an exception if the scheme is not `mxc` or the homeserver is not
   /// set.
   ///
-  /// Important! To use this link you have to set a http header like this:
+  /// Deprecated: scanner-unaware. Use [getAttachmentUri] instead.
+  ///
+  /// This URL may need an authorization header:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
-  @Deprecated('Use getAttachmentUri() instead')
+  @Deprecated(
+    'Use getAttachmentUri() instead. This legacy helper is scanner-unaware.',
+  )
   Uri? getAttachmentUrl({
     bool getThumbnail = false,
     bool useThumbnailMxcUrl = false,
@@ -742,6 +799,10 @@ class Event extends MatrixEvent {
   /// true to download the thumbnail instead. Set [fromLocalStoreOnly] to true
   /// if you want to retrieve the attachment from the local store only without
   /// making http request.
+  ///
+  /// With `Client.contentScannerConfig`, network downloads use the scanner.
+  /// Scanner errors throw [ContentScannerException]. For encrypted scanner
+  /// downloads, [downloadCallback] is ignored.
   Future<MatrixFile> downloadAndDecryptAttachment({
     bool getThumbnail = false,
     Future<Uint8List> Function(Uri)? downloadCallback,
@@ -754,8 +815,8 @@ class Event extends MatrixEvent {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
-    if (status.isSending) {
-      final localFile = room.sendingFilePlaceholders[eventId];
+    if (!status.isSent) {
+      final localFile = await _getCachedFile(getThumbnail: getThumbnail);
       if (localFile != null) return localFile;
     }
     final database = room.client.database;
@@ -775,26 +836,38 @@ class Event extends MatrixEvent {
     final thisInfoMapSize = thisInfoMap.tryGet<int>('size');
     var storeable =
         thisInfoMapSize != null && thisInfoMapSize <= database.maxFileSize;
-
     Uint8List? uint8list;
     if (storeable) {
       uint8list = await room.client.database.getFile(mxcUrl);
     }
 
     // Download the file
+    final scanner = room.client.contentScannerConfig;
+    final useScannerForEncrypted = scanner != null && isEncrypted;
     final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
     if (canDownloadFileFromServer) {
-      final httpClient = room.client.httpClient;
-      downloadCallback ??= (Uri url) async {
-        final request = http.Request('GET', url);
-        request.headers['authorization'] = 'Bearer ${room.client.accessToken}';
+      if (useScannerForEncrypted) {
+        final fileMap = getThumbnail
+            ? infoMap.tryGetMap<String, Object?>('thumbnail_file')
+            : content.tryGetMap<String, Object?>('file');
+        if (fileMap == null) throw ('No encrypted file info found');
 
-        final response = await httpClient.send(request);
-
-        return await response.stream.toBytesWithProgress(onDownloadProgress);
-      };
-      uint8list =
-          await downloadCallback(await mxcUrl.getDownloadUri(room.client));
+        uint8list = await _downloadEncryptedAttachmentViaScanner(
+          scanner: scanner,
+          fileMap: fileMap,
+        );
+      } else {
+        final downloadUri = await mxcUrl.getDownloadUri(room.client);
+        if (downloadCallback != null) {
+          uint8list = await downloadCallback(downloadUri);
+        } else {
+          uint8list = await _downloadAttachmentBytes(
+            downloadUri,
+            scanner: scanner,
+            onDownloadProgress: onDownloadProgress,
+          );
+        }
+      }
       storeable = storeable && uint8list.lengthInBytes < database.maxFileSize;
       if (storeable) {
         await database.storeFile(
@@ -807,7 +880,7 @@ class Event extends MatrixEvent {
       throw ('Unable to download file from local store.');
     }
 
-    // Decrypt the file
+    // Scanner downloads still return encrypted media bytes.
     if (isEncrypted) {
       final fileMap = getThumbnail
           ? infoMap.tryGetMap<String, Object?>('thumbnail_file')
@@ -845,6 +918,53 @@ class Event extends MatrixEvent {
           : filename,
       mimeType: attachmentMimetype,
     );
+  }
+
+  Future<Uint8List> _downloadEncryptedAttachmentViaScanner({
+    required MatrixContentScannerConfig scanner,
+    required Map<String, Object?> fileMap,
+  }) async {
+    final request = http.Request('POST', scanner.downloadEncryptedUri);
+    request.headers['content-type'] = 'application/json';
+    if (scanner.withAuthHeader) {
+      request.headers['authorization'] = 'Bearer ${room.client.accessToken}';
+    }
+    request.body = jsonEncode({'file': fileMap});
+
+    final streamed = await room.client.httpClient.send(request);
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw parseContentScannerError(response);
+    }
+
+    return response.bodyBytes;
+  }
+
+  Future<Uint8List> _downloadAttachmentBytes(
+    Uri url, {
+    required MatrixContentScannerConfig? scanner,
+    void Function(int)? onDownloadProgress,
+  }) async {
+    final request = http.Request('GET', url);
+    if (scanner == null || scanner.withAuthHeader) {
+      request.headers['authorization'] = 'Bearer ${room.client.accessToken}';
+    }
+
+    final response = await room.client.httpClient.send(request);
+    if (scanner != null &&
+        (response.statusCode < 200 || response.statusCode >= 300)) {
+      throw parseContentScannerError(
+        await http.Response.fromStream(response),
+      );
+    }
+    if (scanner == null && response.statusCode >= 400) {
+      room.client.unexpectedResponse(
+        response,
+        await response.stream.toBytes(),
+      );
+    }
+
+    return response.stream.toBytesWithProgress(onDownloadProgress);
   }
 
   /// Returns if this is a known event type.
@@ -920,11 +1040,12 @@ class Event extends MatrixEvent {
     bool plaintextBody = false,
     bool removeMarkdown = false,
   }) {
-    if (redacted) {
+    final redactedBecause = this.redactedBecause;
+    if (redactedBecause != null) {
       if (status.intValue < EventStatus.synced.intValue) {
         return i18n.cancelledSend;
       }
-      return i18n.removedBy(this);
+      return i18n.removedBy(redactedBecause);
     }
 
     final body = calcUnlocalizedBody(
@@ -1213,3 +1334,5 @@ enum FileSendingStatus {
   encrypting,
   uploading,
 }
+
+class FileNoLongerInCacheException implements Exception {}

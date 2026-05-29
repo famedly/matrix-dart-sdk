@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:test/test.dart';
 
@@ -7,7 +11,7 @@ import 'package:matrix/src/database/sqflite_box.dart'
 void main() {
   group('Box tests', () {
     late BoxCollection collection;
-    const Set<String> boxNames = {'cats', 'dogs'};
+    const boxNames = <String>{'cats', 'dogs'};
     const data = {'name': 'Fluffy', 'age': 2};
     const data2 = {'name': 'Loki', 'age': 4};
     Database? db;

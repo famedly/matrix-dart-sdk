@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
@@ -54,15 +40,17 @@ void main() {
   group('Room', () {
     Logs().level = Level.error;
     test('Login', () async {
-      matrix = await getClient();
+      matrix = await getClient(
+        sendTimelineEventTimeout: const Duration(seconds: 10),
+      );
       await matrix.abortSync();
     });
 
     test('Create from json', () async {
-      final id = '!localpart:server.abc';
-      final membership = Membership.join;
-      final notificationCount = 2;
-      final highlightCount = 1;
+      const id = '!localpart:server.abc';
+      const membership = Membership.join;
+      const notificationCount = 2;
+      const highlightCount = 1;
       final heroes = [
         '@alice:matrix.org',
         '@bob:example.com',
@@ -126,7 +114,7 @@ void main() {
           type: 'm.room.member',
           unsigned: {'age': 1234},
           content: {'membership': 'join', 'displayname': 'YOU'},
-          stateKey: matrix.userID!,
+          stateKey: matrix.userID,
         ),
       );
       room.setState(
@@ -428,6 +416,52 @@ void main() {
       expect(room.lastEvent?.eventId, '6');
       expect(room.lastEvent?.body, 'edited cdc is back!');
       expect(room.lastEvent?.status, EventStatus.sent);
+    });
+
+    test('MatrixRTC member leave does not overwrite call reject lastEvent',
+        () async {
+      final rejectEvent = Event(
+        senderId: '@callee:example.com',
+        type: EventTypes.CallReject,
+        room: room,
+        eventId: 'call-reject',
+        originServerTs: DateTime.now(),
+        content: {
+          'call_id': '',
+          'application': 'm.call.audio',
+        },
+      );
+      await updateLastEvent(rejectEvent);
+      expect(room.lastEvent?.eventId, 'call-reject');
+
+      await updateLastEvent(
+        Event(
+          senderId: '@caller:example.com',
+          type: EventTypes.GroupCallMember,
+          room: room,
+          eventId: 'caller-left-call',
+          originServerTs: rejectEvent.originServerTs.add(
+            const Duration(seconds: 1),
+          ),
+          content: {
+            'memberships': [],
+          },
+          unsigned: {
+            'prev_content': {
+              'memberships': [
+                {
+                  'call_id': '',
+                  'application': 'm.call.audio',
+                  'scope': 'm.room',
+                },
+              ],
+            },
+          },
+          stateKey: '@caller:example.com',
+        ),
+      );
+
+      expect(room.lastEvent?.eventId, 'call-reject');
     });
 
     test('lastEvent when edited and deleted', () async {
@@ -746,10 +780,10 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.ownPowerLevel, 100);
+      expect(room.ownPowerLevel.level, 100);
       expect(room.getPowerLevelByUserId(matrix.userID!), room.ownPowerLevel);
-      expect(room.getPowerLevelByUserId('@nouser:example.com'), 10);
-      expect(room.ownPowerLevel, 100);
+      expect(room.getPowerLevelByUserId('@nouser:example.com').level, 10);
+      expect(room.ownPowerLevel.level, 100);
       expect(room.canBan, true);
       expect(room.canInvite, true);
       expect(room.canKick, true);
@@ -784,9 +818,9 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.powerForChangingStateEvent('m.room.name'), 60);
-      expect(room.powerForChangingStateEvent('m.room.power_levels'), 100);
-      expect(room.powerForChangingStateEvent('m.room.nonExisting'), 60);
+      expect(room.powerForChangingStateEvent('m.room.name').level, 60);
+      expect(room.powerForChangingStateEvent('m.room.power_levels').level, 100);
+      expect(room.powerForChangingStateEvent('m.room.nonExisting').level, 60);
 
       room.setState(
         Event(
@@ -810,7 +844,7 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.ownPowerLevel, 0);
+      expect(room.ownPowerLevel.level, 0);
       expect(room.canBan, false);
       expect(room.canInvite, false);
       expect(room.canKick, false);
@@ -826,12 +860,12 @@ void main() {
 
       // Creator has max power level from room version 12 on:
       expect(room.creatorUserIds.contains('@example:example.org'), true);
-      expect(room.getPowerLevelByUserId('@example:example.org'), 0);
+      expect(room.getPowerLevelByUserId('@example:example.org').level, 0);
       expect(room.roomVersion, '11');
       room.states[EventTypes.RoomCreate]!['']!.content['room_version'] = '12';
       expect(room.roomVersion, '12');
       expect(
-        room.getPowerLevelByUserId('@example:example.org'),
+        room.getPowerLevelByUserId('@example:example.org').level,
         9007199254740991,
       );
     });
@@ -1072,7 +1106,7 @@ void main() {
 
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
-      expect(timeline.events.length, 17);
+      expect(timeline.events.length, 19);
     });
 
     test('Refresh last event', () async {
@@ -1112,12 +1146,10 @@ void main() {
     });
 
     test('getUserByMXID', () async {
-      final List<String> called = [];
-      final List<String> called2 = [];
+      final called = <String>[];
+      final called2 = <String>[];
       // ignore: deprecated_member_use_from_same_package
-      final subscription = room.onUpdate.stream.listen((i) {
-        called.add(i);
-      });
+      final subscription = room.onUpdate.stream.listen(called.add);
       final subscription2 = room.client.onRoomState.stream.listen((i) {
         called2.add(i.roomId);
       });
@@ -1509,8 +1541,8 @@ void main() {
     test('send location', () async {
       FakeMatrixApi.calledEndpoints.clear();
 
-      final body = 'Middle of the ocean';
-      final geoUri = 'geo:0.0,0.0';
+      const body = 'Middle of the ocean';
+      const geoUri = 'geo:0.0,0.0';
       final dynamic resp =
           await room.sendLocation(body, geoUri, txid: 'testtxid');
       expect(resp?.startsWith('\$event'), true);
@@ -1525,18 +1557,43 @@ void main() {
       });
     });
 
-    // Not working because there is no real file to test it...
-    /*test('sendImageEvent', () async {
-      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
-      final dynamic resp =
-          await room.sendImageEvent(testFile, txid: "testtxid");
-      expect(resp, "42");
-    });*/
-
     test('sendFileEvent', () async {
-      final testFile = MatrixFile(bytes: Uint8List(0), name: 'file.jpeg');
+      var testFile = MatrixFile(bytes: Uint8List(0), name: 'file.jpeg');
       final resp = await room.sendFileEvent(testFile, txid: 'testtxid');
       expect(resp.toString(), '\$event12');
+      expect(
+        await room.client.database.getFile(
+          Uri(
+            scheme: 'cache',
+            host: 'file',
+            path: 'testtxid',
+          ),
+        ),
+        null, // It is sent so shouldn't be in cache anymore
+      );
+
+      const txnid = 'test_send_file_txnid';
+      testFile = MatrixFile(bytes: Uint8List(0), name: 'crash.jpeg');
+      FakeMatrixApi
+          .currentApi!.api['POST']!['/media/v3/upload?filename=crash.jpeg'] = {
+        'errcode': 'M_UNKNOWN',
+        'error': 'Boom!',
+      };
+
+      try {
+        await room.sendFileEvent(testFile, txid: 'test_send_file_txnid');
+      } catch (_) {}
+
+      expect(
+        await room.client.database.getFile(
+          Uri(
+            scheme: 'cache',
+            host: 'file',
+            path: txnid,
+          ),
+        ),
+        testFile.bytes,
+      );
     });
 
     test('pushRuleState', () async {
@@ -2114,7 +2171,7 @@ void main() {
                 'start': 't47429-4392820_219380_26003_2265',
               };
       final searchResult = await room.searchEvents(searchFunc: (_) => true);
-      expect(searchResult.events.length, 18);
+      expect(searchResult.events.length, 19);
       expect(searchResult.nextBatch, 't47409-4357353_219380_26003_2265');
       expect(searchResult.searchedUntil!.millisecondsSinceEpoch, 1432735824653);
       expect(

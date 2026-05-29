@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:math' show max;
@@ -215,7 +219,7 @@ class SQfLiteEncryptionHelper {
     if (identical(a, b)) {
       return true;
     }
-    for (int index = 0; index < a.length; index += 1) {
+    for (var index = 0; index < a.length; index += 1) {
       if (a[index] != b[index]) {
         return false;
       }

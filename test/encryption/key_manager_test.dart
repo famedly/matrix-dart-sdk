@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:convert';
 
@@ -39,9 +25,9 @@ void main() {
     });
 
     test('handle new m.room_key', () async {
-      final validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
-      final validSenderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
-      final sessionKey =
+      const validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+      const validSenderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
+      const sessionKey =
           'AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw';
 
       client.encryption!.keyManager.clearInboundGroupSessions();
@@ -94,7 +80,7 @@ void main() {
     });
 
     test('outbound group session', () async {
-      final roomId = '!726s6s6q:example.com';
+      const roomId = '!726s6s6q:example.com';
       expect(
         client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
         false,
@@ -297,9 +283,9 @@ void main() {
     });
 
     test('inbound group session', () async {
-      final roomId = '!726s6s6q:example.com';
-      final sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
-      final senderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
+      const roomId = '!726s6s6q:example.com';
+      const sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+      const senderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
       final sessionContent = <String, dynamic>{
         'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': '!726s6s6q:example.com',
@@ -361,7 +347,7 @@ void main() {
       final inbound = vod.InboundGroupSession(session.sessionKey);
 
       final senderKey = client.identityKey;
-      final roomId = '!someroom:example.org';
+      const roomId = '!someroom:example.org';
       final sessionId = inbound.sessionId;
       final room = Room(id: roomId, client: client);
       final nextSyncUpdateFuture = client.onSync.stream

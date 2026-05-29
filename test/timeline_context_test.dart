@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 
@@ -27,7 +13,7 @@ import 'fake_client.dart';
 void main() {
   group('Timeline context', tags: 'olm', () {
     Logs().level = Level.error;
-    final roomID = '!1234:example.com';
+    const roomID = '!1234:example.com';
     var testTimeStamp = 0;
     var updateCount = 0;
     final insertList = <int>[];
@@ -141,7 +127,7 @@ void main() {
         timeline.events.length,
       ); // expect no new events to have been added
 
-      final eventId = '1844295642248BcDkn:example.org';
+      const eventId = '1844295642248BcDkn:example.org';
       client.onTimelineEvent.add(
         Event.fromJson(
           {

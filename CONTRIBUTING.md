@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Contributing code to Famedly
 
 *See also: Code of Conduct*

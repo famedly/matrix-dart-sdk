@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -66,7 +70,7 @@ class BoxCollection with ZoneTransactionMixin {
         },
       );
 
-  Future<void> close() => zoneTransaction(() => _db.close());
+  Future<void> close() => zoneTransaction(_db.close);
 
   @Deprecated('use collection.deleteDatabase now')
   static Future<void> delete(String path, [dynamic factory]) =>
@@ -102,7 +106,7 @@ class Box<V> {
   Box(this.name, this.boxCollection) {
     if (!allowedValueTypes.any((type) => V == type)) {
       throw Exception(
-        'Illegal value type for Box: "${V.toString()}". Must be one of $allowedValueTypes',
+        'Illegal value type for Box: "$V". Must be one of $allowedValueTypes',
       );
     }
   }

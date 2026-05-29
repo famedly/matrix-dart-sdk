@@ -1,25 +1,12 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:http/http.dart';
 
@@ -170,6 +157,57 @@ class FakeMatrixApi extends BaseClient {
         ],
         'unstable_features': {'m.lazy_load_members': true},
       };
+    } else if (method == 'PUT' &&
+        _client != null &&
+        action.contains('/account_data/') &&
+        !action.contains('/rooms/')) {
+      // Mirror user-level account-data PUTs back via handleSync before any
+      // explicit per-endpoint stub runs, so SSSS._waitForAccountDataFromSync
+      // and similar callers always observe the round-trip a real homeserver
+      // would produce.
+      final type = Uri.decodeComponent(action.split('/').last);
+      final syncUpdate = sdk.SyncUpdate(
+        nextBatch: '',
+        accountData: [sdk.BasicEvent(content: decodeJson(data), type: type)],
+      );
+      if (_client?.database != null) {
+        await _client?.database.transaction(() async {
+          await _client?.handleSync(syncUpdate);
+        });
+      } else {
+        await _client?.handleSync(syncUpdate);
+      }
+      res = {};
+    } else if (method == 'PUT' &&
+        _client != null &&
+        action.contains('/account_data/') &&
+        action.contains('/rooms/')) {
+      final segments = action.split('/');
+      final type = Uri.decodeComponent(segments.last);
+      final roomId = Uri.decodeComponent(segments[segments.length - 3]);
+      final syncUpdate = sdk.SyncUpdate(
+        nextBatch: '',
+        rooms: RoomsUpdate(
+          join: {
+            roomId: JoinedRoomUpdate(
+              accountData: [
+                sdk.BasicEvent(
+                  content: decodeJson(data),
+                  type: type,
+                ),
+              ],
+            ),
+          },
+        ),
+      );
+      if (_client?.database != null) {
+        await _client?.database.transaction(() async {
+          await _client?.handleSync(syncUpdate);
+        });
+      } else {
+        await _client?.handleSync(syncUpdate);
+      }
+      res = {};
     } else {
       final act = api[method]?[action];
       if (act != null) {
@@ -238,53 +276,6 @@ class FakeMatrixApi extends BaseClient {
             'signed_curve25519': 100,
           },
         };
-      } else if (method == 'PUT' &&
-          _client != null &&
-          action.contains('/account_data/') &&
-          !action.contains('/rooms/')) {
-        final type = Uri.decodeComponent(action.split('/').last);
-        final syncUpdate = sdk.SyncUpdate(
-          nextBatch: '',
-          accountData: [sdk.BasicEvent(content: decodeJson(data), type: type)],
-        );
-        if (_client?.database != null) {
-          await _client?.database.transaction(() async {
-            await _client?.handleSync(syncUpdate);
-          });
-        } else {
-          await _client?.handleSync(syncUpdate);
-        }
-        res = {};
-      } else if (method == 'PUT' &&
-          _client != null &&
-          action.contains('/account_data/') &&
-          action.contains('/rooms/')) {
-        final segments = action.split('/');
-        final type = Uri.decodeComponent(segments.last);
-        final roomId = Uri.decodeComponent(segments[segments.length - 3]);
-        final syncUpdate = sdk.SyncUpdate(
-          nextBatch: '',
-          rooms: RoomsUpdate(
-            join: {
-              roomId: JoinedRoomUpdate(
-                accountData: [
-                  sdk.BasicEvent(
-                    content: decodeJson(data),
-                    type: type,
-                  ),
-                ],
-              ),
-            },
-          ),
-        );
-        if (_client?.database != null) {
-          await _client?.database.transaction(() async {
-            await _client?.handleSync(syncUpdate);
-          });
-        } else {
-          await _client?.handleSync(syncUpdate);
-        }
-        res = {};
       } else {
         res = {
           'errcode': 'M_UNRECOGNIZED',
@@ -508,55 +499,60 @@ class FakeMatrixApi extends BaseClient {
     'chunk': [
       {
         'content': {
-          'body': 'This is an example text message',
+          'body': '6',
           'msgtype': 'm.text',
           'format': 'org.matrix.custom.html',
           'formatted_body': '<b>This is an example text message</b>',
         },
         'type': 'm.room.message',
-        'event_id': '3143273582443PhrSn:example.org',
+        'event_id': '1432735824656:example.org',
         'room_id': '!5345234234:example.com',
         'sender': '@example:example.org',
-        'origin_server_ts': 1432735824653,
+        'origin_server_ts': 1432735824656,
         'unsigned': {'age': 1234},
-      },
-      {
-        'content': {'name': 'The room name'},
-        'type': 'm.room.name',
-        'event_id': '2143273582443PhrSn:example.org',
-        'room_id': '!5345234234:example.com',
-        'sender': '@example:example.org',
-        'origin_server_ts': 1432735824653,
-        'unsigned': {'age': 1234},
-        'state_key': '',
       },
       {
         'content': {
-          'body': 'Gangnam Style',
-          'url': 'mxc://example.org/a526eYUSFFxlgbQYZmo442',
-          'info': {
-            'thumbnail_url': 'mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe',
-            'thumbnail_info': {
-              'mimetype': 'image/jpeg',
-              'size': 46144,
-              'w': 300,
-              'h': 300,
-            },
-            'w': 480,
-            'h': 320,
-            'duration': 2140786,
-            'size': 1563685,
-            'mimetype': 'video/mp4',
-          },
-          'msgtype': 'm.video',
+          'body': '5',
+          'msgtype': 'm.text',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>This is an example text message</b>',
         },
         'type': 'm.room.message',
-        'event_id': '1143273582466PhrSn:example.org',
+        'event_id': '1432735824655:example.org',
+        'room_id': '!5345234234:example.com',
+        'sender': '@example:example.org',
+        'origin_server_ts': 1432735824655,
+        'unsigned': {'age': 1234},
+      },
+      {
+        'content': {
+          'body': '4',
+          'msgtype': 'm.text',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>This is an example text message</b>',
+        },
+        'type': 'm.room.message',
+        'event_id': '1432735824654:example.org',
         'room_id': '!5345234234:example.com',
         'sender': '@example:example.org',
         'origin_server_ts': 1432735824654,
         'unsigned': {'age': 1234},
-      }
+      },
+      {
+        'content': {
+          'body': '3',
+          'msgtype': 'm.text',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>This is an example text message</b>',
+        },
+        'type': 'm.room.message',
+        'event_id': '1432735824653:example.org',
+        'room_id': '!5345234234:example.com',
+        'sender': '@example:example.org',
+        'origin_server_ts': 1432735824653,
+        'unsigned': {'age': 1234},
+      },
     ],
     'state': [],
   };
@@ -1108,21 +1104,6 @@ class FakeMatrixApi extends BaseClient {
             'events': [
               {
                 'content': {
-                  'body': 'This is a second text example message',
-                  'msgtype': 'm.text',
-                  'format': 'org.matrix.custom.html',
-                  'formatted_body':
-                      '<b>This is a second text example message</b>',
-                },
-                'type': 'm.room.message',
-                'event_id': '143274597446PhrSn:example.org',
-                'room_id': '!5345234234:example.com',
-                'sender': '@example:example.org',
-                'origin_server_ts': 1432735824654,
-                'unsigned': {'age': 1234},
-              },
-              {
-                'content': {
                   'body': 'This is a first text example message',
                   'msgtype': 'm.text',
                   'format': 'org.matrix.custom.html',
@@ -1130,12 +1111,27 @@ class FakeMatrixApi extends BaseClient {
                       '<b>This is a first text example message</b>',
                 },
                 'type': 'm.room.message',
-                'event_id': '143274597443PhrSn:example.org',
+                'event_id': '1532735824650:example.org',
                 'room_id': '!5345234234:example.com',
                 'sender': '@example:example.org',
-                'origin_server_ts': 1432735824653,
+                'origin_server_ts': 1532735824653,
                 'unsigned': {'age': 1234},
-              }
+              },
+              {
+                'content': {
+                  'body': 'This is a second text example message',
+                  'msgtype': 'm.text',
+                  'format': 'org.matrix.custom.html',
+                  'formatted_body':
+                      '<b>This is a second text example message</b>',
+                },
+                'type': 'm.room.message',
+                'event_id': '1532735824654:example.org',
+                'room_id': '!5345234234:example.com',
+                'sender': '@example:example.org',
+                'origin_server_ts': 1532735824654,
+                'unsigned': {'age': 1234},
+              },
             ],
             'prev_batch': 't_1234a',
           },
@@ -1225,6 +1221,8 @@ class FakeMatrixApi extends BaseClient {
                 'matrix:image:size': 102400,
               },
       '/media/v3/config': (var req) => {'m.upload.size': 50000000},
+      '/client/v1/media/download/example.org/abcd1234ascii': (var req) =>
+          Uint8List(100),
       '/client/v1/media/config': (var req) => {'m.upload.size': 50000000},
       '/.well-known/matrix/client': (var req) => {
             'm.homeserver': {'base_url': 'https://fakeserver.notexisting'},

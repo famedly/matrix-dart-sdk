@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:collection/collection.dart';
 
 import 'package:matrix/matrix.dart';
@@ -48,17 +52,29 @@ extension PollEventExtension on Event {
     );
   }
 
+  /// Fetches poll response events from the server for fragmented timelines
+  /// where responses may not be in the current timeline chunk.
+  /// After fetching, the existing sync [getPollResponses] method will
+  /// return the correct data from [timeline.aggregatedEvents].
+  Future<void> fetchPollResponses(Timeline timeline) async {
+    assert(type == PollEventContent.startType);
+    await timeline.fetchAggregatedEvents(
+      eventId,
+      RelationshipTypes.reference,
+    );
+  }
+
   Event? _getEndPollEvent(Timeline timeline) {
     assert(type == PollEventContent.startType);
     final aggregatedEvents =
         timeline.aggregatedEvents[eventId]?[RelationshipTypes.reference];
     if (aggregatedEvents == null || aggregatedEvents.isEmpty) return null;
 
-    final redactPowerLevel = (room
+    final redactPowerLevel = room
             .getState(EventTypes.RoomPowerLevels)
             ?.content
             .tryGet<int>('redact') ??
-        50);
+        50;
 
     return aggregatedEvents.firstWhereOrNull(
       (event) {
@@ -72,7 +88,8 @@ extension PollEventExtension on Event {
         //creator or user with permission to redact other's messages in the
         //room, the event must be ignored by clients due to being invalid.
         if (event.senderId == senderId ||
-            event.senderFromMemoryOrFallback.powerLevel >= redactPowerLevel) {
+            event.senderFromMemoryOrFallback.powerLevel.level >=
+                redactPowerLevel) {
           return true;
         }
         Logs().w(

@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General License for more details.
- *
- *   You should have received a copy of the GNU Affero General License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:core';
@@ -40,7 +26,7 @@ class GroupCallSession {
   final CallBackend backend;
 
   /// something like normal calls or thirdroom
-  final String? application;
+  String? application;
 
   /// either room scoped or user scoped calls
   final String? scope;
@@ -132,7 +118,7 @@ class GroupCallSession {
       await backend.initLocalStream(this, stream: stream);
     }
 
-    bool shouldSendNotification = false;
+    var shouldSendNotification = false;
     if (!room.hasActiveGroupCall(voip)) {
       shouldSendNotification = true;
     }
@@ -195,13 +181,12 @@ class GroupCallSession {
       (m) =>
           m.callId == groupCallId &&
           m.deviceId == client.deviceID! &&
-          m.application == application &&
           m.scope == scope &&
           m.roomId == room.id,
     );
 
     // Store permanent reactions from the current member event if it exists
-    List<MatrixEvent> permanentReactions = [];
+    var permanentReactions = <MatrixEvent>[];
     final membershipExpired = currentMembership?.isExpired ?? false;
 
     if (currentMembership?.eventId != null && !membershipExpired) {
@@ -281,12 +266,11 @@ class GroupCallSession {
     final memsForCurrentGroupCall = mems.where((element) {
       return element.callId == groupCallId &&
           !element.isExpired &&
-          element.application == application &&
           element.scope == scope &&
           element.roomId == room.id; // sanity checks
     }).toList();
 
-    final Set<CallParticipant> newP = {};
+    final newP = <CallParticipant>{};
 
     for (final mem in memsForCurrentGroupCall) {
       final rp = CallParticipant(
@@ -314,7 +298,7 @@ class GroupCallSession {
           ..remove(localParticipant);
         if (nonLocalAnyJoined.isNotEmpty && state == GroupCallState.entered) {
           Logs().v(
-            'nonLocalAnyJoined: ${nonLocalAnyJoined.map((e) => e.id).toString()} roomId: ${room.id} groupCallId: $groupCallId',
+            'nonLocalAnyJoined: ${nonLocalAnyJoined.map((e) => e.id)} roomId: ${room.id} groupCallId: $groupCallId',
           );
           await backend.onNewParticipant(this, nonLocalAnyJoined.toList());
         }
@@ -334,7 +318,7 @@ class GroupCallSession {
 
           // also clear delayed event state so that they can be started again
           final canceller =
-              voip.delayedEventCancellers['$groupCallId|$application|$scope'];
+              voip.delayedEventCancellers['${room.id}|$groupCallId|$scope'];
           if (canceller != null) {
             canceller.restartTimer.cancel();
 
@@ -342,7 +326,7 @@ class GroupCallSession {
             // the delayed event, the server already thinks it's cancelled
 
             voip.delayedEventCancellers
-                .remove('$groupCallId|$application|$scope');
+                .remove('${room.id}|$groupCallId|$scope');
           }
 
           // rejoin the call and share the key with the existing participants
@@ -355,7 +339,7 @@ class GroupCallSession {
           ..remove(localParticipant);
         if (nonLocalAnyLeft.isNotEmpty && state == GroupCallState.entered) {
           Logs().v(
-            'nonLocalAnyLeft: ${nonLocalAnyLeft.map((e) => e.id).toString()} roomId: ${room.id} groupCallId: $groupCallId',
+            'nonLocalAnyLeft: ${nonLocalAnyLeft.map((e) => e.id)} roomId: ${room.id} groupCallId: $groupCallId',
           );
           await backend.onLeftParticipant(this, nonLocalAnyLeft.toList());
         }
@@ -395,7 +379,6 @@ class GroupCallSession {
           m.callId == groupCallId &&
           m.deviceId == client.deviceID! &&
           m.roomId == room.id &&
-          m.application == application &&
           m.scope == scope,
     );
 
@@ -462,7 +445,6 @@ class GroupCallSession {
         .where(
           (m) =>
               m.callId == groupCallId &&
-              m.application == application &&
               m.scope == scope &&
               m.roomId == room.id,
         )

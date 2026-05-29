@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:convert';
 
@@ -45,15 +31,15 @@ void main() {
     Logs().level = Level.error;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final id = '!4fsdfjisjf:server.abc';
-    final senderID = '@alice:server.abc';
-    final type = 'm.room.message';
-    final msgtype = 'm.text';
-    final body = 'Hello fox';
-    final formatted_body = '<b>Hello</b> fox';
+    const id = '!4fsdfjisjf:server.abc';
+    const senderID = '@alice:server.abc';
+    const type = 'm.room.message';
+    const msgtype = 'm.text';
+    const body = 'Hello fox';
+    const formattedBody = '<b>Hello</b> fox';
 
-    final contentJson =
-        '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body","m.relates_to":{"m.in_reply_to":{"event_id":"\$1234:example.com"}}}';
+    const contentJson =
+        '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formattedBody","m.relates_to":{"m.in_reply_to":{"event_id":"\$1234:example.com"}}}';
 
     final jsonObj = <String, dynamic>{
       'event_id': id,

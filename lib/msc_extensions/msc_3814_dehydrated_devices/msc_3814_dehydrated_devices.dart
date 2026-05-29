@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// Extensions for the experimental dehydrated devices MSC, which allows
 /// receiving encrypted messages while you have no devices signed in.
 library;
@@ -132,7 +136,7 @@ extension DehydratedDeviceHandler on Client {
         await encryption.dispose();
       }
     } catch (e) {
-      Logs().w('Exception while handling dehydrated devices: ${e.toString()}');
+      Logs().w('Exception while handling dehydrated devices: $e');
       return;
     }
   }
@@ -164,7 +168,7 @@ extension DehydratedDeviceHandler on Client {
           (_) => chars.codeUnitAt(rnd.nextInt(chars.length)),
         ),
       );
-      final String device = 'FAM$deviceIdSuffix';
+      final device = 'FAM$deviceIdSuffix';
 
       // Generate a new olm account for the dehydrated device.
       try {

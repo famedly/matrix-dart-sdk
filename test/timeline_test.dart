@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:math';
@@ -28,7 +14,7 @@ import 'fake_client.dart';
 void main() {
   group('Timeline', tags: 'olm', () {
     Logs().level = Level.error;
-    final roomID = '!1234:example.com';
+    const roomID = '!1234:example.com';
     var testTimeStamp = 0;
     var updateCount = 0;
     final insertList = <int>[];
@@ -1209,7 +1195,7 @@ void main() {
       timeline.events.clear();
       timeline.room.prev_batch = null;
 
-      Timeline t = await room.getTimeline();
+      var t = await room.getTimeline();
       expect(t.events.length, 0);
       expect(t.room.prev_batch, null);
 
@@ -1255,8 +1241,8 @@ void main() {
     });
 
     test('make sure room prev_batch is set correctly when invited', () async {
-      final newRoomId1 = '!newroom:example.com';
-      final newRoomId2 = '!newroom2:example.com';
+      const newRoomId1 = '!newroom:example.com';
+      const newRoomId2 = '!newroom2:example.com';
 
       await client.handleSync(
         SyncUpdate(
@@ -1292,11 +1278,11 @@ void main() {
         ),
       );
 
-      Room? newRoom1 = client.getRoomById(newRoomId1);
+      var newRoom1 = client.getRoomById(newRoomId1);
       expect(newRoom1?.membership, Membership.invite);
       expect(newRoom1?.prev_batch, null);
 
-      Room? newRoom2 = client.getRoomById(newRoomId2);
+      var newRoom2 = client.getRoomById(newRoomId2);
       expect(newRoom2?.membership, Membership.invite);
       expect(newRoom2?.prev_batch, null);
 
@@ -1383,7 +1369,7 @@ void main() {
         ),
       );
 
-      Timeline t = await room.getTimeline();
+      var t = await room.getTimeline();
 
       expect(t.events.length, 2);
       expect(

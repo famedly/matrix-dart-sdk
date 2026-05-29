@@ -1,7 +1,15 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:vodozemac/vodozemac.dart';
+
 import 'package:matrix/encryption.dart';
+import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/compute_callback.dart';
 
@@ -50,6 +58,8 @@ abstract class NativeImplementations {
     bool retryInDummy = false,
   });
 
+  FutureOr<bool> checkSecretStorageKey(CheckSecretStorageKeyArgs args);
+
   /// this implementation will catch any non-implemented method
   @override
   dynamic noSuchMethod(Invocation invocation) {
@@ -76,10 +86,24 @@ abstract class NativeImplementations {
         return dummy.shrinkImage(argument);
       case 'calcImageMetadata':
         return dummy.calcImageMetadata(argument);
+      case 'checkSecretStorageKey':
+        return dummy.checkSecretStorageKey(argument);
       default:
         return super.noSuchMethod(invocation);
     }
   }
+}
+
+class CheckSecretStorageKeyArgs {
+  final Uint8List key;
+  final String iv;
+  final String mac;
+
+  const CheckSecretStorageKeyArgs({
+    required this.key,
+    required this.iv,
+    required this.mac,
+  });
 }
 
 class NativeImplementationsDummy extends NativeImplementations {
@@ -123,6 +147,47 @@ class NativeImplementationsDummy extends NativeImplementations {
     bool retryInDummy = false,
   }) {
     return MatrixImageFile.calcMetadataImplementation(bytes);
+  }
+
+  @override
+  FutureOr<bool> checkSecretStorageKey(CheckSecretStorageKeyArgs args) {
+    final iv = base64decodeUnpadded(args.iv);
+    iv[8] &= 0x7f;
+
+    final zerosalt = Uint8List(8);
+    final prk = CryptoUtils.hmac(key: zerosalt, input: args.key);
+    final b = Uint8List(1);
+
+    b[0] = 1;
+    final aesKey = CryptoUtils.hmac(
+      key: prk,
+      input: utf8.encode('') + b,
+    );
+
+    b[0] = 2;
+    final hmacKey = CryptoUtils.hmac(
+      key: prk,
+      input: aesKey + utf8.encode('') + b,
+    );
+
+    const zeroStr =
+        '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00';
+
+    final plain = Uint8List.fromList(utf8.encode(zeroStr));
+    final ciphertext = CryptoUtils.aesCtr(
+      input: plain,
+      key: Uint8List.fromList(aesKey),
+      iv: iv,
+    );
+    final computedMac = CryptoUtils.hmac(
+      key: Uint8List.fromList(hmacKey),
+      input: ciphertext,
+    );
+
+    final expected = args.mac.replaceAll(RegExp(r'=+$'), '');
+    final actual = base64.encode(computedMac).replaceAll(RegExp(r'=+$'), '');
+    return expected == actual;
   }
 }
 
@@ -211,6 +276,17 @@ class NativeImplementationsIsolate extends NativeImplementations {
     return runInBackground<MatrixImageFileResizedResponse?, Uint8List>(
       NativeImplementations.dummy.calcImageMetadata,
       bytes,
+    );
+  }
+
+  @override
+  Future<bool> checkSecretStorageKey(CheckSecretStorageKeyArgs args) {
+    return runInBackground<bool, CheckSecretStorageKeyArgs>(
+      (CheckSecretStorageKeyArgs args) async {
+        await vodozemacInit?.call();
+        return NativeImplementations.dummy.checkSecretStorageKey(args);
+      },
+      args,
     );
   }
 }

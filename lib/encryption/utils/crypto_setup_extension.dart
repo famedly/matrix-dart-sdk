@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:async';
 
 import 'package:matrix/encryption/utils/bootstrap.dart';
@@ -14,13 +18,35 @@ extension CryptoSetupExtension on Client {
   /// `Client.initCryptoIdentity()` to wipe the current identity in case of
   /// that you lost your recovery key / passphrase and have no other way
   /// to restore.
-  Future<({bool initialized, bool connected})> getCryptoIdentityState() async =>
-      (
-        initialized: (encryption?.keyManager.enabled ?? false) &&
-            (encryption?.crossSigning.enabled ?? false),
-        connected: ((await encryption?.keyManager.isCached()) ?? false) &&
-            ((await encryption?.crossSigning.isCached()) ?? false),
-      );
+  Future<({bool initialized, bool connected})> getCryptoIdentityState() async {
+    await accountDataLoading;
+    await firstSyncReceived;
+
+    // Make sure we have the necessary account data types synced. Workaround for
+    // https://github.com/element-hq/synapse/issues/15500
+    for (final type in [
+      EventTypes.MegolmBackup,
+      EventTypes.CrossSigningSelfSigning,
+      EventTypes.CrossSigningUserSigning,
+      EventTypes.CrossSigningMasterKey,
+    ]) {
+      try {
+        accountData[type] ??= BasicEvent(
+          content: await getAccountData(userID!, type),
+          type: type,
+        );
+      } on MatrixException catch (e) {
+        if (e.error != MatrixError.M_NOT_FOUND) rethrow;
+      }
+    }
+
+    return (
+      initialized: (encryption?.keyManager.enabled ?? false) &&
+          (encryption?.crossSigning.enabled ?? false),
+      connected: ((await encryption?.keyManager.isCached()) ?? false) &&
+          ((await encryption?.crossSigning.isCached()) ?? false),
+    );
+  }
 
   /// Reconnects to an already initialized crypto identity using the provided
   /// recovery key or passphrase. Throws if encryption is unavailable, the
@@ -74,8 +100,9 @@ extension CryptoSetupExtension on Client {
                   .unlock(keyOrPassphrase: keyOrPassphrase);
               await bootstrap.openExistingSsss();
               if (selfSign) {
-                await bootstrap.client.encryption!.crossSigning
-                    .selfSign(keyOrPassphrase: keyOrPassphrase);
+                await bootstrap.client.encryption!.crossSigning.selfSign(
+                  openSsss: bootstrap.newSsssKey,
+                );
               }
               break;
             case BootstrapState.askWipeCrossSigning:

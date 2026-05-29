@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // ignore_for_file: constant_identifier_names
 
 enum EncryptionKeyTypes { remote, local }
@@ -99,7 +103,7 @@ class CallError extends Error {
 
   @override
   String toString() {
-    return '[$code] $msg, err: ${err.toString()}';
+    return '[$code] $msg, err: $err';
   }
 }
 
@@ -161,7 +165,7 @@ class GroupCallError extends Error {
 
   @override
   String toString() {
-    return 'Group Call Error: [$code] $msg, err: ${err.toString()}';
+    return 'Group Call Error: [$code] $msg, err: $err';
   }
 }
 

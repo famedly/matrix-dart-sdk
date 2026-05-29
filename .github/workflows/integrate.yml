@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 name: Continuous Integration
 
 on:
@@ -28,8 +32,16 @@ jobs:
       contents: read
     uses: famedly/frontend-ci-templates/.github/workflows/general.yml@main
 
-  e2ee_test:
+  reuse-compliance-check:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Check licenses
+        uses: fsfe/reuse-action@v5
+
+  e2ee_test:
+    runs-on: ubuntu-latest-16core
     timeout-minutes: 30
     strategy:
       matrix:
@@ -78,8 +90,8 @@ jobs:
 
   coverage:
     #runs-on: arm-ubuntu-latest-16core
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-latest-16core
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV

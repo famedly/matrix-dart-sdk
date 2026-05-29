@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 rm -rf rust
 version=$(yq ".dependencies.vodozemac" < pubspec.yaml)
 version=$(expr "$version" : '\^*\(.*\)')

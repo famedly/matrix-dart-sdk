@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:async';
 import 'dart:io';
 
@@ -53,7 +57,7 @@ void main() {
       // this will trigger the check in the Event constructor to see if the
       // event is in error state (and call fake sync with updated error status)
       await client.oneShotSync();
-      Timeline timeline = await room.getTimeline();
+      var timeline = await room.getTimeline();
       expect(timeline.events.length, 1);
       expect(timeline.events.first.status, EventStatus.sending);
 

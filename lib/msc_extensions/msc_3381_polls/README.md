@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Polls
 
 Implementation of [MSC-3381](https://github.com/matrix-org/matrix-spec-proposals/blob/main/proposals/3381-polls.md).

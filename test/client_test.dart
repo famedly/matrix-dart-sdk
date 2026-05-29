@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
@@ -93,7 +79,7 @@ void main() {
         database: await getDatabase(),
       );
       expect(client.isLogged(), false);
-      final Set<InitState> initStates = {};
+      final initStates = <InitState>{};
       await client.init(onInitStateChanged: initStates.add);
       expect(client.isLogged(), false);
       expect(initStates, {InitState.initializing, InitState.finished});
@@ -392,7 +378,7 @@ void main() {
         'bla': 'blub',
       };
 
-      final key = 'abc def!/_-';
+      const key = 'abc def!/_-';
       await matrix.setAccountData(matrix.userID!, key, content);
       final dbContent = await matrix.database.getAccountData();
 
@@ -405,8 +391,8 @@ void main() {
         'bla': 'blub',
       };
 
-      final key = 'abc def!/_-';
-      final roomId = '!726s6s6q:example.com';
+      const key = 'abc def!/_-';
+      const roomId = '!726s6s6q:example.com';
       await matrix.setAccountDataPerRoom(matrix.userID!, roomId, key, content);
       final roomFromList = (await matrix.database.getRoomList(matrix))
           .firstWhere((room) => room.id == roomId);
@@ -612,7 +598,7 @@ void main() {
     });
 
     test('sync state event in-memory handling', () async {
-      final roomId = '!726s6s6q:example.com';
+      const roomId = '!726s6s6q:example.com';
       final room = matrix.getRoomById(roomId)!;
       // put an important state event in-memory
       await matrix.handleSync(
@@ -1040,7 +1026,7 @@ void main() {
       client.rooms.clear();
       await client.database.clearCache();
 
-      final roomId = '!inviteLeaveRoom:example.com';
+      const roomId = '!inviteLeaveRoom:example.com';
       await client.handleSync(
         SyncUpdate(
           nextBatch: 'ABCDEF',
@@ -1148,7 +1134,7 @@ void main() {
       for (var i = 0; i < 30; i++) {
         final account = vod.Account();
         final keys = account.identityKeys;
-        final userId = '@testuser:example.org';
+        const userId = '@testuser:example.org';
         final deviceId = 'DEVICE$i';
         final keyObj = {
           'user_id': userId,
@@ -1668,7 +1654,7 @@ void main() {
         database: await getDatabase(),
         legacyDatabaseBuilder: (_) => firstDatabase,
       );
-      final Set<InitState> initStates = {};
+      final initStates = <InitState>{};
       await newClient.init(onInitStateChanged: initStates.add);
       expect(initStates, {
         InitState.initializing,
@@ -1825,6 +1811,61 @@ void main() {
         await customClient.dispose(closeDatabase: true);
       },
     );
+
+    test('default and custom rooms sorter', () {
+      final roomA = Room(id: '!roomA:example.com', client: matrix)
+        ..lastEvent = Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'event_id': '\$evt_a',
+            'sender': '@test:fakeServer.notExisting',
+            'origin_server_ts': 1000,
+            'content': {'msgtype': 'm.text', 'body': 'message a'},
+          },
+          Room(id: '!roomA:example.com', client: matrix),
+        );
+
+      final roomB = Room(id: '!roomB:example.com', client: matrix)
+        ..lastEvent = Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'event_id': '\$evt_b',
+            'sender': '@test:fakeServer.notExisting',
+            'origin_server_ts': 3000,
+            'content': {'msgtype': 'm.text', 'body': 'message b'},
+          },
+          Room(id: '!roomB:example.com', client: matrix),
+        );
+
+      final roomC = Room(id: '!roomC:example.com', client: matrix)
+        ..lastEvent = Event.fromJson(
+          {
+            'type': 'm.room.message',
+            'event_id': '\$evt_c',
+            'sender': '@test:fakeServer.notExisting',
+            'origin_server_ts': 2000,
+            'content': {'msgtype': 'm.text', 'body': 'message c'},
+          },
+          Room(id: '!roomC:example.com', client: matrix),
+        );
+
+      matrix.rooms.clear();
+      matrix.rooms.addAll([roomA, roomB, roomC]);
+
+      matrix.setCustomRoomSorter((a, b) => a.id.compareTo(b.id));
+      expect(
+        matrix.rooms,
+        [roomA, roomB, roomC],
+        reason: 'Rooms sorted by custom sorter (alphabetically)',
+      );
+
+      matrix.setCustomRoomSorter(null);
+      expect(
+        matrix.rooms,
+        [roomB, roomC, roomA],
+        reason: 'Rooms should revert to default sort by latest event time',
+      );
+    });
 
     tearDown(() async {
       await matrix.dispose(closeDatabase: true);

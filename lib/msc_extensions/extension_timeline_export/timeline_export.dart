@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:convert';
 
 import 'package:matrix/matrix_api_lite.dart';
@@ -162,12 +166,6 @@ extension TimelineExportExtension on Timeline {
             var event = Event.fromMatrixEvent(matrixEvent, room);
             if (event.type == EventTypes.Encrypted && encryption != null) {
               event = await encryption.decryptRoomEvent(event);
-              if (event.type == EventTypes.Encrypted &&
-                  event.messageType == MessageTypes.BadEncrypted &&
-                  event.content['can_request_session'] == true) {
-                // Await requestKey() here to ensure decrypted message bodies
-                await event.requestKey().catchError((_) {});
-              }
             }
             if (from != null && event.originServerTs.isBefore(from)) break;
             if (until != null && event.originServerTs.isAfter(until)) continue;

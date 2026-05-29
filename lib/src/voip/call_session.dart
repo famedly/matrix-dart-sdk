@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:core';
@@ -931,7 +917,7 @@ class CallSession {
   Future<void> reject({CallErrorCode? reason, bool shouldEmit = true}) async {
     if (state != CallState.kRinging && state != CallState.kFledgling) {
       Logs().e(
-        '[VOIP] Call must be in \'ringing|fledgling\' state to reject! (current state was: ${state.toString()}) Calling hangup instead',
+        '[VOIP] Call must be in \'ringing|fledgling\' state to reject! (current state was: $state) Calling hangup instead',
       );
       await hangup(reason: CallErrorCode.userHangup, shouldEmit: shouldEmit);
       return;
@@ -955,7 +941,7 @@ class CallSession {
           await sendHangupCall(room, callId, localPartyId, 'userHangup');
       Logs().v('[VOIP] hangup res => $res');
     } catch (e) {
-      Logs().v('[VOIP] hangup error => ${e.toString()}');
+      Logs().v('[VOIP] hangup error => $e');
     }
   }
 
@@ -1046,7 +1032,7 @@ class CallSession {
         true,
       );
     } else {
-      Logs().e('[VOIP] Call is in state: ${state.toString()}: ignoring reject');
+      Logs().e('[VOIP] Call is in state: $state: ignoring reject');
     }
   }
 
@@ -1061,7 +1047,7 @@ class CallSession {
     try {
       await pc!.setLocalDescription(offer);
     } catch (err) {
-      Logs().d('Error setting local description! ${err.toString()}');
+      Logs().d('Error setting local description! $err');
       await terminate(
         CallParty.kLocal,
         CallErrorCode.setLocalDescription,
@@ -1148,7 +1134,7 @@ class CallSession {
   }
 
   Future<void> _preparePeerConnection() async {
-    int iceRestartedCount = 0;
+    var iceRestartedCount = 0;
 
     try {
       pc = await _createPeerConnection();
@@ -1171,7 +1157,7 @@ class CallSession {
       };
 
       pc!.onIceGatheringState = (RTCIceGatheringState state) async {
-        Logs().v('[VOIP] IceGatheringState => ${state.toString()}');
+        Logs().v('[VOIP] IceGatheringState => $state');
         if (state == RTCIceGatheringState.RTCIceGatheringStateGathering) {
           Timer(Duration(seconds: 3), () async {
             if (!_iceGatheringFinished) {
@@ -1188,7 +1174,7 @@ class CallSession {
         }
       };
       pc!.onIceConnectionState = (RTCIceConnectionState state) async {
-        Logs().v('[VOIP] RTCIceConnectionState => ${state.toString()}');
+        Logs().v('[VOIP] RTCIceConnectionState => $state');
         if (state == RTCIceConnectionState.RTCIceConnectionStateConnected) {
           _localCandidates.clear();
           _remoteCandidates.clear();
@@ -1210,7 +1196,7 @@ class CallSession {
         }
       };
     } catch (e) {
-      Logs().v('[VOIP] prepareMediaStream error => ${e.toString()}');
+      Logs().v('[VOIP] prepareMediaStream error => $e');
     }
   }
 
@@ -1282,7 +1268,7 @@ class CallSession {
       }
     }
     final metadata = SDPStreamMetadata(sdpStreamMetadatas);
-    Logs().v('Got local SDPStreamMetadata ${metadata.toJson().toString()}');
+    Logs().v('Got local SDPStreamMetadata ${metadata.toJson()}');
     return metadata;
   }
 
@@ -1401,7 +1387,7 @@ class CallSession {
         Logs().v('[VOIP] sendCallCandidates res => $res');
       }
     } catch (e) {
-      Logs().v('[VOIP] sendCallCandidates e => ${e.toString()}');
+      Logs().v('[VOIP] sendCallCandidates e => $e');
       _candidateSendTries++;
       _localCandidates.clear();
       _localCandidates.addAll(candidatesQueue);
@@ -1423,13 +1409,13 @@ class CallSession {
 
   void fireCallEvent(CallStateChange event) {
     onCallEventChanged.add(event);
-    Logs().i('CallStateChange: ${event.toString()}');
+    Logs().i('CallStateChange: $event');
     switch (event) {
       case CallStateChange.kFeedsChanged:
         onCallStreamsChanged.add(this);
         break;
       case CallStateChange.kState:
-        Logs().i('CallState: ${state.toString()}');
+        Logs().i('CallState: $state');
         break;
       case CallStateChange.kError:
         break;
@@ -1447,14 +1433,14 @@ class CallSession {
   }
 
   Future<void> _getLocalOfferFailed(dynamic err) async {
-    Logs().e('Failed to get local offer ${err.toString()}');
+    Logs().e('Failed to get local offer $err');
     fireCallEvent(CallStateChange.kError);
 
     await terminate(CallParty.kLocal, CallErrorCode.localOfferFailed, true);
   }
 
   Future<void> _getUserMediaFailed(dynamic err) async {
-    Logs().w('Failed to get user media - ending call ${err.toString()}');
+    Logs().w('Failed to get user media - ending call $err');
     fireCallEvent(CallStateChange.kError);
     await terminate(CallParty.kLocal, CallErrorCode.userMediaFailed, true);
   }
@@ -1846,7 +1832,7 @@ class CallSession {
     // therefore only group calls use to-device messages for call events
     if (isGroupCall && remoteDeviceId != null) {
       final toDeviceSeq = _toDeviceSeq++;
-      final Map<String, Object> data = {
+      final data = <String, Object>{
         ...content,
         'seq': toDeviceSeq,
         if (remoteSessionId != null) 'dest_session_id': remoteSessionId!,

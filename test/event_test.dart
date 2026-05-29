@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:convert';
 import 'dart:typed_data';
@@ -40,15 +26,15 @@ void main() async {
     Logs().level = Level.error;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final id = '!4fsdfjisjf:server.abc';
-    final senderID = '@alice:server.abc';
-    final type = 'm.room.message';
-    final msgtype = 'm.text';
-    final body = 'Hello World';
-    final formatted_body = '<b>Hello</b> World';
+    const id = '!4fsdfjisjf:server.abc';
+    const senderID = '@alice:server.abc';
+    const type = 'm.room.message';
+    const msgtype = 'm.text';
+    const body = 'Hello World';
+    const formattedBody = '<b>Hello</b> World';
 
-    final contentJson =
-        '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body","m.relates_to":{"m.in_reply_to":{"event_id":"\$1234:example.com"}}}';
+    const contentJson =
+        '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formattedBody","m.relates_to":{"m.in_reply_to":{"event_id":"\$1234:example.com"}}}';
 
     final jsonObj = <String, dynamic>{
       'event_id': id,
@@ -76,7 +62,7 @@ void main() async {
       expect(event.senderId, senderID);
       expect(event.status, EventStatus.synced);
       expect(event.text, body);
-      expect(event.formattedText, formatted_body);
+      expect(event.formattedText, formattedBody);
       expect(event.body, body);
       expect(event.type, EventTypes.Message);
       expect(event.inReplyToEventId(), '\$1234:example.com');
@@ -393,7 +379,7 @@ void main() async {
     });
     test('canRedact', () async {
       final client = await getClient();
-      jsonObj['sender'] = client.userID!;
+      jsonObj['sender'] = client.userID;
       final event = Event.fromJson(
         jsonObj,
         Room(
@@ -1569,7 +1555,7 @@ void main() async {
     });
 
     group('unlocalized body reply stripping', () {
-      int i = 0;
+      var i = 0;
 
       void testUnlocalizedBody({
         required Object? body,
@@ -2520,7 +2506,7 @@ void main() async {
         onDownloadProgress: progressList.add,
       );
       await client.dispose();
-      expect(progressList, [112]);
+      expect(progressList, [201]);
     });
     test('downloadAndDecryptAttachment store', tags: 'olm', () async {
       final FILE_BUFF = Uint8List.fromList([0]);

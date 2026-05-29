@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
@@ -295,7 +281,7 @@ class KeyVerification {
     String type, {
     Uint8List? qrDataRawBytes,
   }) async {
-    bool qrChecksOut = false;
+    var qrChecksOut = false;
     if (possibleMethods.contains(type)) {
       if (qrDataRawBytes != null) {
         qrChecksOut = await verifyQrData(qrDataRawBytes);
@@ -349,7 +335,7 @@ class KeyVerification {
   bool _handlePayloadLock = false;
 
   QRMode getOurQRMode() {
-    QRMode mode = QRMode.verifyOtherUser;
+    var mode = QRMode.verifyOtherUser;
     if (client.userID == userId) {
       if (client.encryption != null &&
           client.encryption!.enabled &&
@@ -731,7 +717,7 @@ class KeyVerification {
     if (_method is _KeyVerificationMethodSas) {
       final numbers =
           _bytesToInt((_method as _KeyVerificationMethodSas).makeSas(6), 6);
-      return numbers.map((n) => KeyVerificationEmoji(n)).toList().sublist(0, 7);
+      return numbers.map(KeyVerificationEmoji.new).toList().sublist(0, 7);
     }
     return [];
   }
@@ -891,7 +877,7 @@ class KeyVerification {
       return true;
     }
     Logs().e(
-      '[KeyVerificaton] lastStep mismatch cancelling, expected from ${checkLastStep.toString()} was ${lastStep.toString()}',
+      '[KeyVerificaton] lastStep mismatch cancelling, expected from $checkLastStep was $lastStep',
     );
     await cancel('m.unexpected_message');
     return false;

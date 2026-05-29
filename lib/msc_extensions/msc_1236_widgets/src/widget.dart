@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:matrix/src/room.dart';
 
 class MatrixWidget {
@@ -100,7 +104,7 @@ class MatrixWidget {
 
     // a key-value map with the strings to be replaced
     final replaceMap = {
-      r'$matrix_user_id': room.client.userID!,
+      r'$matrix_user_id': room.client.userID,
       r'$matrix_room_id': room.id,
       r'$matrix_display_name': userProfile.displayname ?? '',
       r'$matrix_avatar_url': userProfile.avatarUrl?.toString() ?? '',

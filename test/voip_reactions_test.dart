@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:async';
 
 import 'package:test/test.dart';
@@ -28,7 +32,7 @@ void main() {
 
       voip = VoIP(matrix, MockWebRTCDelegate());
       VoIP.customTxid = '1234';
-      final id = '!calls:example.com';
+      const id = '!calls:example.com';
       room = matrix.getRoomById(id)!;
     });
 
@@ -440,7 +444,7 @@ void main() {
           senderId: matrix.userID!,
           originServerTs: DateTime.now(),
           room: room,
-          stateKey: matrix.userID!,
+          stateKey: matrix.userID,
         ),
       );
 
@@ -480,7 +484,7 @@ void main() {
                         'name': 'hand raise',
                         'is_ephemeral': true,
                         'call_id': 'test_call_own_reactions',
-                        'device_id': matrix.deviceID!,
+                        'device_id': matrix.deviceID,
                         'm.relates_to': {
                           'rel_type': RelationshipTypes.reference,
                           'event_id': 'my_membership_event',
@@ -507,7 +511,7 @@ void main() {
 
       final addedEvent = reactionEvents.first as CallReactionAddedEvent;
       expect(addedEvent.reactionKey, '🖐️');
-      expect(addedEvent.participant.userId, matrix.userID!);
+      expect(addedEvent.participant.userId, matrix.userID);
       expect(addedEvent.membershipEventId, 'my_membership_event');
 
       await subscription.cancel();
@@ -539,7 +543,7 @@ void main() {
           senderId: matrix.userID!,
           originServerTs: DateTime.now(),
           room: room,
-          stateKey: matrix.userID!,
+          stateKey: matrix.userID,
         ),
       );
 
@@ -606,7 +610,7 @@ void main() {
           senderId: matrix.userID!,
           originServerTs: DateTime.now(),
           room: room,
-          stateKey: matrix.userID!,
+          stateKey: matrix.userID,
         ),
       );
 
@@ -920,7 +924,7 @@ void main() {
       // Test different emoji reactions using first 5 emojis
       final emojis = testEmojis.take(5).toList();
 
-      for (int i = 0; i < emojis.length; i++) {
+      for (var i = 0; i < emojis.length; i++) {
         await matrix.handleSync(
           SyncUpdate(
             nextBatch: 'emoji_batch_$i',
@@ -932,8 +936,8 @@ void main() {
                       MatrixEvent(
                         type: EventTypes.GroupCallMemberReaction,
                         content: {
-                          'key': emojis[i]['emoji']!,
-                          'name': emojis[i]['name']!,
+                          'key': emojis[i]['emoji'],
+                          'name': emojis[i]['name'],
                           'is_ephemeral': true,
                           'call_id': 'test_call_emoji_variety',
                           'device_id': 'device123',
@@ -969,7 +973,7 @@ void main() {
       );
 
       // Verify each emoji was processed correctly
-      for (int i = 0; i < emojis.length; i++) {
+      for (var i = 0; i < emojis.length; i++) {
         final event = reactionEvents[i] as CallReactionAddedEvent;
         expect(event.reactionKey, emojis[i]['emoji']);
         expect(event.participant.userId, '@alice:testing.com');
@@ -1042,8 +1046,8 @@ void main() {
                     MatrixEvent(
                       type: EventTypes.GroupCallMemberReaction,
                       content: {
-                        'key': testEmojis[0]['emoji']!,
-                        'name': testEmojis[0]['name']!,
+                        'key': testEmojis[0]['emoji'],
+                        'name': testEmojis[0]['name'],
                         'is_ephemeral': true,
                         'call_id': 'test_call_ephemeral_permanent',
                         'device_id': 'device123',
@@ -1060,8 +1064,8 @@ void main() {
                     MatrixEvent(
                       type: EventTypes.GroupCallMemberReaction,
                       content: {
-                        'key': testEmojis[1]['emoji']!,
-                        'name': testEmojis[1]['name']!,
+                        'key': testEmojis[1]['emoji'],
+                        'name': testEmojis[1]['name'],
                         'is_ephemeral': false,
                         'call_id': 'test_call_ephemeral_permanent',
                         'device_id': 'device123',
@@ -1173,7 +1177,7 @@ void main() {
                     MatrixEvent(
                       type: EventTypes.GroupCallMemberReaction,
                       content: {
-                        'key': testEmojis[0]['emoji']!,
+                        'key': testEmojis[0]['emoji'],
                         'name': 'old ${testEmojis[0]['name']}',
                         'is_ephemeral': true,
                         'call_id': 'test_call_ephemeral_timeout',
@@ -1191,7 +1195,7 @@ void main() {
                     MatrixEvent(
                       type: EventTypes.GroupCallMemberReaction,
                       content: {
-                        'key': testEmojis[1]['emoji']!,
+                        'key': testEmojis[1]['emoji'],
                         'name': 'recent ${testEmojis[1]['name']}',
                         'is_ephemeral': true,
                         'call_id': 'test_call_ephemeral_timeout',
@@ -1209,7 +1213,7 @@ void main() {
                     MatrixEvent(
                       type: EventTypes.GroupCallMemberReaction,
                       content: {
-                        'key': testEmojis[3]['emoji']!,
+                        'key': testEmojis[3]['emoji'],
                         'name': 'old ${testEmojis[3]['name']}',
                         'is_ephemeral': false,
                         'call_id': 'test_call_ephemeral_timeout',
@@ -1297,7 +1301,7 @@ void main() {
           senderId: matrix.userID!,
           originServerTs: DateTime.now(),
           room: room,
-          stateKey: matrix.userID!,
+          stateKey: matrix.userID,
         ),
       );
 

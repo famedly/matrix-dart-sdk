@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
@@ -68,7 +54,7 @@ void main() async {
       client1 = await getClient();
       client2 = Client(
         'othertestclient',
-        httpClient: FakeMatrixApi.currentApi!,
+        httpClient: FakeMatrixApi.currentApi,
         database: await getDatabase(),
       );
       await client2.checkHomeserver(
@@ -132,9 +118,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -317,9 +301,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -463,9 +445,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -502,9 +482,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -608,9 +586,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -683,9 +659,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -786,9 +760,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -851,9 +823,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();
@@ -924,9 +894,7 @@ void main() async {
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       final comp = Completer<KeyVerification>();
-      final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        comp.complete(req);
-      });
+      final sub = client2.onKeyVerificationRequest.stream.listen(comp.complete);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       final req2 = await comp.future;
       await sub.cancel();

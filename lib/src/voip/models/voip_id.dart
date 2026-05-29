@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 class VoipId {
   final String roomId;
   final String callId;
@@ -5,7 +9,7 @@ class VoipId {
   String get id => '$roomId:$callId';
 
   factory VoipId.fromId(String id) {
-    final int lastIndex = id.lastIndexOf(':');
+    final lastIndex = id.lastIndexOf(':');
     return VoipId(
       roomId: id.substring(0, lastIndex),
       callId: id.substring(lastIndex + 1),

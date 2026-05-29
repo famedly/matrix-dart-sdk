@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 To enable end to end encryption you need to setup [Vodozemac](https://pub.dev/packages/vodozemac). For this you need Rust installed locally: [rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 For Flutter you can use [flutter_vodozemac](https://pub.dev/packages/flutter_vodozemac).

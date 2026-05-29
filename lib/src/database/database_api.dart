@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:typed_data';
 
@@ -124,6 +110,10 @@ abstract class DatabaseApi {
     int? limit,
   });
 
+  /// Get a file from the app's file cache which is usually an mxcUri. This is
+  /// also used for caching not-yet-sent files. Those are cached under an Uri
+  /// with this format:
+  /// `cache://file/<TRANSACTION_ID>` or `cache://thumbnail/<TRANSACTION_ID>`
   Future<Uint8List?> getFile(Uri mxcUri);
 
   Future storeFile(Uri mxcUri, Uint8List bytes, int time);

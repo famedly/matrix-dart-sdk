@@ -1,13 +1,17 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:matrix/matrix_api_lite.dart';
 
 extension PrintLogs on LogEvent {
   void printOut() {
     var logsStr = title;
     if (exception != null) {
-      logsStr += ' - ${exception.toString()}';
+      logsStr += ' - $exception';
     }
     if (stackTrace != null) {
-      logsStr += '\n${stackTrace.toString()}';
+      logsStr += '\n$stackTrace';
     }
     if (Logs().nativeColors) {
       switch (level) {
