@@ -388,6 +388,10 @@ class CrossSigningKey extends SignableKey {
   @override
   String? identifier;
 
+  DateTime? _trustOnFirstUseSince;
+
+  DateTime? get trustOnFirstUseSince => _trustOnFirstUseSince;
+
   String? get publicKey => identifier;
   late List<String> usage;
 
@@ -397,14 +401,29 @@ class CrossSigningKey extends SignableKey {
       keys.isNotEmpty &&
       ed25519Key != null;
 
+  Future<void> trustOnFirstUse({DateTime? since}) async {
+    since ??= DateTime.now();
+    await client.database.setVerifiedUserCrossSigningKey(
+      verified,
+      userId,
+      publicKey!,
+      trustOnFirstUseSince: since,
+    );
+    _trustOnFirstUseSince = since;
+  }
+
   @override
   Future<void> setVerified(bool newVerified, [bool sign = true]) async {
     if (!isValid) {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database
-        .setVerifiedUserCrossSigningKey(newVerified, userId, publicKey!);
+    await client.database.setVerifiedUserCrossSigningKey(
+      newVerified,
+      userId,
+      publicKey!,
+      trustOnFirstUseSince: trustOnFirstUseSince,
+    );
   }
 
   @override
@@ -424,6 +443,9 @@ class CrossSigningKey extends SignableKey {
     final json = toJson();
     identifier = key.publicKey;
     usage = json['usage'].cast<String>();
+    _trustOnFirstUseSince = json['tofu'] == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(json['tofu'] as int);
   }
 
   CrossSigningKey.fromDbJson(Map<String, dynamic> dbEntry, Client client)
@@ -433,12 +455,18 @@ class CrossSigningKey extends SignableKey {
     usage = json['usage'].cast<String>();
     _verified = dbEntry['verified'];
     _blocked = dbEntry['blocked'];
+    _trustOnFirstUseSince = dbEntry['tofu'] == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(dbEntry['tofu'] as int);
   }
 
   CrossSigningKey.fromJson(Map<String, dynamic> json, Client client)
       : super.fromJson(json.copy(), client) {
     final json = toJson();
     usage = json['usage'].cast<String>();
+    _trustOnFirstUseSince = json['tofu'] == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(json['tofu'] as int);
     if (keys.isNotEmpty) {
       identifier = keys.values.first;
     }

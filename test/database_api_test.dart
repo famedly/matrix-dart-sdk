@@ -681,6 +681,7 @@ void main() {
           true,
           '@alice:example.com',
           'publicKey',
+          trustOnFirstUseSince: DateTime(2000),
         );
       });
       test('setBlockedUserCrossSigningKey', () async {
