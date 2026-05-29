@@ -3,8 +3,12 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [7.2.2] 29th May 2026
+
+- fix: fail tests if they fail (#2348) (td)
 
 ## [7.2.1] 28th May 2026
+
 - feat: update ssss to centralise key logic (Abrish Sabri)
 - fix: Account data not existing throws exception while function expects empty json object (Christian Kußowski)
 - fix: encryption loop iteration (Abrish Sabri)
