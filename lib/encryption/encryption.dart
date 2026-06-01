@@ -316,9 +316,6 @@ class Encryption {
         );
       }
       if (event.type != EventTypes.Encrypted && store) {
-        if (updateType != EventUpdateType.history) {
-          event.room.setState(event);
-        }
         await client.database.storeEventUpdate(
           event.room.id,
           event,
