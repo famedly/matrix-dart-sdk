@@ -1108,17 +1108,60 @@ void main() {
       expect(resp?.startsWith('\$event'), true);
     });
 
-    test('sendEvent', () async {
+    test('sendEvent with message body backfills empty mentions metadata',
+        () async {
       FakeMatrixApi.calledEndpoints.clear();
-      final dynamic resp =
-          await room.sendTextEvent('Hello world', txid: 'testtxid');
+      final dynamic resp = await room.sendEvent(
+        {'msgtype': 'm.image', 'body': 'alice.png'},
+        txid: 'testtxid',
+        displayPendingEvent: false,
+      );
       expect(resp?.startsWith('\$event'), true);
       final entry = FakeMatrixApi.calledEndpoints.entries
           .firstWhere((p) => p.key.contains('/send/m.room.message/'));
       final content = json.decode(entry.value.first);
       expect(content, {
-        'body': 'Hello world',
+        'body': 'alice.png',
+        'msgtype': 'm.image',
+        'm.mentions': {},
+      });
+    });
+
+    test('sendEvent preserves existing mentions metadata', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      final dynamic resp = await room.sendEvent(
+        {
+          'msgtype': 'm.file',
+          'body': 'report.pdf',
+          'm.mentions': {
+            'user_ids': ['@alice:matrix.org'],
+          },
+        },
+        txid: 'testtxid',
+        displayPendingEvent: false,
+      );
+      expect(resp?.startsWith('\$event'), true);
+      final entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final content = json.decode(entry.value.first);
+      expect(content['m.mentions'], {
+        'user_ids': ['@alice:matrix.org'],
+      });
+    });
+
+    test('sendTextEvent with bare localpart includes empty mentions metadata',
+        () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      final dynamic resp =
+          await room.sendTextEvent('alice fixed this', txid: 'testtxid');
+      expect(resp?.startsWith('\$event'), true);
+      final entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final content = json.decode(entry.value.first);
+      expect(content, {
+        'body': 'alice fixed this',
         'msgtype': 'm.text',
+        'm.mentions': {},
       });
     });
 
@@ -1139,7 +1182,7 @@ void main() {
     test('sendEvent with user mention', () async {
       FakeMatrixApi.calledEndpoints.clear();
       final resp = await room.sendTextEvent(
-        'Hello world @[Alice Margatroid]',
+        'Hello world @[Alice Margatroid] ${matrix.userID}',
         addMentions: true,
         txid: 'testtxid',
       );
@@ -1150,6 +1193,89 @@ void main() {
       expect(content['m.mentions'], {
         'user_ids': ['@alice:matrix.org'],
       });
+    });
+
+    test('sendTextEvent detects mentions with trailing punctuation', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      final resp = await room.sendTextEvent(
+        'Hello @room. @alice:matrix.org, ${matrix.userID}!',
+        addMentions: true,
+        parseCommands: false,
+        txid: 'testtxid',
+        displayPendingEvent: false,
+      );
+      expect(resp?.startsWith('\$event'), true);
+      final entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final content = json.decode(entry.value.first);
+      expect(content['m.mentions'], {
+        'room': true,
+        'user_ids': ['@alice:matrix.org'],
+      });
+    });
+
+    test('mention candidate detection uses start or whitespace boundaries',
+        () async {
+      // Helper: send a message and return the m.mentions value.
+      Future<Map<String, dynamic>> mentions(String body) async {
+        FakeMatrixApi.calledEndpoints.clear();
+        await room.sendTextEvent(
+          body,
+          addMentions: true,
+          parseCommands: false,
+          displayPendingEvent: false,
+          txid: 'testtxid',
+        );
+        final entry = FakeMatrixApi.calledEndpoints.entries
+            .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+        return (json.decode(entry.value.first)['m.mentions']
+                as Map<String, dynamic>)
+            .cast<String, dynamic>();
+      }
+
+      // Detected: full MXID, display-name form, room mention, after whitespace
+      expect(
+        await mentions('@alice:matrix.org'),
+        {
+          'user_ids': ['@alice:matrix.org'],
+        },
+      );
+      expect(
+        await mentions('hello @alice:matrix.org'),
+        {
+          'user_ids': ['@alice:matrix.org'],
+        },
+      );
+      expect(
+        await mentions('@[Alice Margatroid]'),
+        {
+          'user_ids': ['@alice:matrix.org'],
+        },
+      );
+      expect(await mentions('@room'), {'room': true});
+
+      // Rejected: email-like, double @, invalid form
+      expect(await mentions('foo@alice:matrix.org'), {});
+      expect(await mentions('@@alice:matrix.org'), {});
+      expect(await mentions('@ alice:matrix.org'), {});
+    });
+
+    test(
+        'sendTextEvent with disabled mention parsing has empty mentions metadata',
+        () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      final resp = await room.sendTextEvent(
+        'Hello @[Alice Margatroid] @room',
+        addMentions: false,
+        parseCommands: false,
+        txid: 'testtxid',
+        displayPendingEvent: false,
+      );
+      expect(resp?.startsWith('\$event'), true);
+      final entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final content = json.decode(entry.value.first);
+      expect(content['m.mentions'], {});
     });
 
     test('send edit', () async {
@@ -1166,9 +1292,11 @@ void main() {
       expect(content, {
         'body': '* Hello world',
         'msgtype': 'm.text',
+        'm.mentions': {},
         'm.new_content': {
           'body': 'Hello world',
           'msgtype': 'm.text',
+          'm.mentions': {},
         },
         'm.relates_to': {
           'event_id': '\$otherEvent',
@@ -1381,6 +1509,32 @@ void main() {
       });
     });
 
+    test('send reply with inline mention aggregates both sources', () async {
+      final bobEvent = Event.fromJson(
+        {
+          'event_id': '\$bobEvent',
+          'content': {'body': 'Hey', 'msgtype': 'm.text'},
+          'type': 'm.room.message',
+          'sender': '@bob:example.com',
+        },
+        room,
+      );
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent(
+        'Hello @[Alice Margatroid]',
+        parseCommands: false,
+        txid: 'testtxid',
+        displayPendingEvent: false,
+        inReplyTo: bobEvent,
+      );
+      final entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final content = json.decode(entry.value.first);
+      expect(content['m.mentions'], {
+        'user_ids': unorderedEquals(['@alice:matrix.org', '@bob:example.com']),
+      });
+    });
+
     test('send reaction', () async {
       FakeMatrixApi.calledEndpoints.clear();
       final dynamic resp =
@@ -1414,13 +1568,21 @@ void main() {
         'msgtype': 'm.location',
         'body': body,
         'geo_uri': geoUri,
+        'm.mentions': {},
       });
     });
 
     test('sendFileEvent', () async {
+      FakeMatrixApi.calledEndpoints.clear();
       var testFile = MatrixFile(bytes: Uint8List(0), name: 'file.jpeg');
       final resp = await room.sendFileEvent(testFile, txid: 'testtxid');
-      expect(resp.toString(), '\$event12');
+      expect(resp, isNotNull);
+      expect(
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (key) => key.contains('/send/m.room.message/testtxid'),
+        ),
+        true,
+      );
       expect(
         await room.client.database.getFile(
           Uri(
