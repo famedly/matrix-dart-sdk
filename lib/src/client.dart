@@ -2494,7 +2494,14 @@ class Client extends MatrixApi {
         ),
       );
       if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
-        if (e.raw.tryGet<bool>('soft_logout') == true) {
+        // The server explicitely moved the session into soft logout state:
+        final isSoftLogoutState = e.raw.tryGet<bool>('soft_logout') == true;
+        // The access token is expired, so can assume from client side we
+        // are in soft logout state (Matrix Native OIDC):
+        final accessTokenExpired =
+            accessTokenExpiresAt?.isAfter(DateTime.now()) == true;
+
+        if (isSoftLogoutState || accessTokenExpired) {
           Logs().w(
             'The user has been soft logged out! Calling client.onSoftLogout() if present.',
           );
