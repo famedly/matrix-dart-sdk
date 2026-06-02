@@ -4,11 +4,11 @@
 
 import 'dart:convert';
 
+import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
-import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
-import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 
 void main() {

@@ -5,10 +5,9 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 extension Msc2964OidcLoginFlow on Client {
   /// Initializes a new OIDC Login session by creating a state, a code verifier

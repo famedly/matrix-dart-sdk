@@ -32,11 +32,10 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:matrix/matrix.dart';
 import 'package:path/path.dart' as path_joiner;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
-
-import 'package:matrix/matrix.dart';
 
 const _defaultPort = '8080';
 const _defaultContainerName = 'mcs-proxy';

@@ -5,11 +5,11 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:matrix/encryption/utils/crypto_setup_extension.dart';
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
-import 'package:matrix/encryption/utils/crypto_setup_extension.dart';
-import 'package:matrix/matrix.dart';
 import '../test/fake_database.dart';
 import 'test_config.dart';
 

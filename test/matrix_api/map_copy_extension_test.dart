@@ -2,9 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:test/test.dart';
-
 import 'package:matrix/src/utils/copy_map.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Map-copy-extension', () {

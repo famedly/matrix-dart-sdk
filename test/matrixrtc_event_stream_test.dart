@@ -4,10 +4,10 @@
 
 import 'dart:async';
 
-import 'package:test/test.dart';
-
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
+import 'package:test/test.dart';
+
 import 'fake_client.dart';
 import 'webrtc_stub.dart';
 

@@ -4,10 +4,9 @@
 
 import 'dart:convert';
 
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/matrix.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 class OutboundGroupSession {
   /// The devices is a map from user id to device id to if the device is blocked.

@@ -4,11 +4,10 @@
 
 import 'dart:convert';
 
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 class SessionKey {
   /// The raw json content of the key

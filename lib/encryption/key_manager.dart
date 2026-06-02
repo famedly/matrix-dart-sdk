@@ -6,8 +6,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/encryption/utils/outbound_group_session.dart';
@@ -16,6 +14,7 @@ import 'package:matrix/encryption/utils/session_key.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 const megolmKey = EventTypes.MegolmBackup;
 

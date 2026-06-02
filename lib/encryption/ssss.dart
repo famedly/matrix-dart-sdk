@@ -9,14 +9,13 @@ import 'dart:typed_data';
 
 import 'package:base58check/base58.dart';
 import 'package:collection/collection.dart';
-import 'package:vodozemac/vodozemac.dart';
-
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart' as uc;
+import 'package:vodozemac/vodozemac.dart';
 
 const cacheTypes = <String>{
   EventTypes.CrossSigningSelfSigning,

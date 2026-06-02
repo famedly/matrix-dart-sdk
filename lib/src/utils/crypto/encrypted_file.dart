@@ -5,10 +5,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:vodozemac/vodozemac.dart';
-
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
+import 'package:vodozemac/vodozemac.dart';
 
 class EncryptedFile {
   EncryptedFile({

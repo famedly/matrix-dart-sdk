@@ -5,10 +5,10 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:test/test.dart';
-
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
+import 'package:test/test.dart';
+
 import 'fake_client.dart';
 
 void main() {
