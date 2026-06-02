@@ -5,12 +5,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
+import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
+
 import 'fake_client.dart';
 import 'fake_database.dart';
 

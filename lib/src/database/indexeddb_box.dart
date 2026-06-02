@@ -5,10 +5,9 @@
 import 'dart:async';
 import 'dart:js_interop';
 
-import 'package:web/web.dart';
-
 import 'package:matrix/matrix_api_lite/utils/logs.dart';
 import 'package:matrix/src/database/zone_transaction_mixin.dart';
+import 'package:web/web.dart';
 
 /// Key-Value store abstraction over IndexedDB so that the sdk database can use
 /// a single interface for all platforms. API is inspired by Hive.

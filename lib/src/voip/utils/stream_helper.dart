@@ -3,10 +3,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:collection/collection.dart';
+import 'package:matrix/matrix.dart';
 import 'package:random_string/random_string.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
-
-import 'package:matrix/matrix.dart';
 
 Future<void> stopMediaStream(MediaStream? stream) async {
   if (stream != null) {

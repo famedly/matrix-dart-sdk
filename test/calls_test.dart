@@ -4,13 +4,13 @@
 
 import 'dart:async';
 
-import 'package:test/test.dart';
-import 'package:webrtc_interface/webrtc_interface.dart';
-
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/delayed_event_canceller.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
+import 'package:test/test.dart';
+import 'package:webrtc_interface/webrtc_interface.dart';
+
 import 'fake_client.dart';
 import 'webrtc_stub.dart';
 

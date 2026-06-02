@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/encryption/utils/crypto_setup_extension.dart';
 import 'package:matrix/matrix.dart';
+import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
+
 import '../fake_client.dart';
 
 void main() {

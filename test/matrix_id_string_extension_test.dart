@@ -2,9 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:test/test.dart';
-
 import 'package:matrix/src/utils/matrix_id_string_extension.dart';
+import 'package:test/test.dart';
 
 void main() {
   /// All Tests related to the ChatTime

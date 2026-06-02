@@ -9,13 +9,12 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
-import 'package:mime/mime.dart';
-
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
 import 'package:matrix/src/utils/html_to_text.dart';
 import 'package:matrix/src/utils/markdown.dart';
 import 'package:matrix/src/utils/multipart_request_progress.dart';
+import 'package:mime/mime.dart';
 
 abstract class RelationshipTypes {
   static const String edit = 'm.replace';

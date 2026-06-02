@@ -7,9 +7,9 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/matrix.dart';
 import 'fake_database.dart';
 
 const _mxc = 'mxc://example.org/abcd1234';

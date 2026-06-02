@@ -5,11 +5,11 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:matrix/encryption.dart';
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
-import 'package:matrix/encryption.dart';
-import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 
 Uint8List secureRandomBytes(int len) {

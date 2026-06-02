@@ -7,8 +7,6 @@ import 'dart:convert';
 import 'package:async/async.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
 import 'package:matrix/encryption/utils/olm_session.dart';
@@ -17,6 +15,7 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/api.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 class OlmManager {
   final Encryption encryption;

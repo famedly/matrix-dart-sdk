@@ -5,12 +5,11 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/matrix.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 class CrossSigning {
   final Encryption encryption;

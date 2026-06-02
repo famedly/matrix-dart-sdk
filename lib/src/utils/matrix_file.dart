@@ -10,9 +10,8 @@ import 'dart:typed_data';
 
 import 'package:blurhash_dart/blurhash_dart.dart';
 import 'package:image/image.dart';
-import 'package:mime/mime.dart';
-
 import 'package:matrix/matrix.dart';
+import 'package:mime/mime.dart';
 
 class MatrixFile {
   final Uint8List bytes;

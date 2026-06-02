@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
-import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 import '../fake_database.dart';
 
