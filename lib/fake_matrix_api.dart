@@ -2637,6 +2637,8 @@ class FakeMatrixApi extends BaseClient {
           },
       '/media/v3/upload?filename=file.jpeg': (var req) =>
           {'content_uri': 'mxc://example.com/AQwafuaFswefuhsfAFAgsw'},
+      '/media/v3/upload?filename=file.mp3': (var req) =>
+          {'content_uri': 'mxc://example.com/audioTestMxcUri'},
       '/client/v3/logout': (var reqI) => {},
       '/client/v3/pushers/set': (var reqI) => {},
       '/client/v3/join/1234': (var reqI) => {'room_id': '1234'},
