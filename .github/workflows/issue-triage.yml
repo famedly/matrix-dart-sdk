@@ -14,7 +14,7 @@ jobs:
     name: Add issue to project
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/add-to-project@v1.0.2
+      - uses: actions/add-to-project@v2.0.0
         with:
           # You can target a repository in a different organization
           # to the issue
