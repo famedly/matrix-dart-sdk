@@ -4129,6 +4129,7 @@ class Client extends MatrixApi {
             jsonEncode(crossSigningKey.toJson()),
             crossSigningKey.directVerified,
             crossSigningKey.blocked,
+            trustOnFirstUseSince: crossSigningKey.trustOnFirstUseSince,
           );
         }
       }
