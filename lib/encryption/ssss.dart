@@ -281,7 +281,7 @@ class SSSS {
             info: content.passphrase!,
           ),
         ),
-      ).timeout(Duration(seconds: 10));
+      ).timeout(Duration(seconds: 30));
     } else {
       // we need to just generate a new key from scratch
       privateKey = Uint8List.fromList(uc.secureRandomBytes(ssssKeyLength));
