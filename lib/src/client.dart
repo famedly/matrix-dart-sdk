@@ -2380,11 +2380,20 @@ class Client extends MatrixApi {
       try {
         await onSoftLogout(this);
         onLoginStateChanged.add(LoginState.loggedIn);
-      } catch (e, s) {
-        Logs().w('Unable to refresh session after soft logout', e, s);
-        // cannot logout without a token, so we just clear our database
+      } on MatrixException catch (e) {
+        Logs().w(
+          'Unable to refresh session after soft logout. Clearing session...',
+          e,
+        );
         await clear();
         rethrow;
+      } catch (e, s) {
+        Logs().e(
+          'Unable to refresh session after soft logout. Try again...',
+          e,
+          s,
+        );
+        return;
       }
     }();
     await _handleSoftLogoutFuture;
@@ -2504,7 +2513,14 @@ class Client extends MatrixApi {
         ),
       );
       if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
-        if (e.raw.tryGet<bool>('soft_logout') == true) {
+        // The server explicitely moved the session into soft logout state:
+        final isSoftLogoutState = e.raw.tryGet<bool>('soft_logout') == true;
+        // The access token is expired, so can assume from client side we
+        // are in soft logout state (Matrix Native OIDC):
+        final accessTokenExpired =
+            accessTokenExpiresAt?.isBefore(DateTime.now()) == true;
+
+        if (isSoftLogoutState || accessTokenExpired) {
           Logs().w(
             'The user has been soft logged out! Calling client.onSoftLogout() if present.',
           );
