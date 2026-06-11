@@ -3,6 +3,12 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+
+## [7.2.3] 11th June 2026
+- feat: Flag cross signing keys as tofu (Christian Kußowski)
+- chore: Increase timeout for create key (Christian Kußowski)
+- fix: Do not request keys when already logged out (Christian Kußowski)
+
 ## [7.2.2] 29th May 2026
 
 - fix: fail tests if they fail (#2348) (td)
