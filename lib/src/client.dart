@@ -3554,6 +3554,12 @@ class Client extends MatrixApi {
                 if (oldKey != null) {
                   // be sure to save the verification status
                   entry.setDirectVerified(oldKey.directVerified);
+                  if (oldKey.trustOnFirstUseSince != null) {
+                    entry.trustOnFirstUse(
+                      since: oldKey.trustOnFirstUseSince,
+                      updateInDatabase: false,
+                    );
+                  }
                   entry.blocked = oldKey.blocked;
                   entry.validSignatures = oldKey.validSignatures;
                 }
