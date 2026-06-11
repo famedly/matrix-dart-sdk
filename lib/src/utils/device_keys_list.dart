@@ -401,14 +401,19 @@ class CrossSigningKey extends SignableKey {
       keys.isNotEmpty &&
       ed25519Key != null;
 
-  Future<void> trustOnFirstUse({DateTime? since}) async {
+  Future<void> trustOnFirstUse({
+    DateTime? since,
+    bool updateInDatabase = true,
+  }) async {
     since ??= DateTime.now();
-    await client.database.setVerifiedUserCrossSigningKey(
-      verified,
-      userId,
-      publicKey!,
-      trustOnFirstUseSince: since,
-    );
+    if (updateInDatabase) {
+      await client.database.setVerifiedUserCrossSigningKey(
+        verified,
+        userId,
+        publicKey!,
+        trustOnFirstUseSince: since,
+      );
+    }
     _trustOnFirstUseSince = since;
   }
 
