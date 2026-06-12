@@ -445,6 +445,10 @@ class Event extends MatrixEvent {
           height: thumbnailInfoMap.tryGet<int>('h'),
         );
       }
+
+      // If a thumbnail does not exist, we should return null.
+      // Otherwise it sends the original file as a thumbnail back.
+      return null;
     }
 
     final fileBytes = await room.client.database.getFile(
@@ -514,7 +518,7 @@ class Event extends MatrixEvent {
       return await room.sendFileEvent(
         file,
         txid: txid ?? transactionId,
-        thumbnail: thumbnail as MatrixImageFile,
+        thumbnail: thumbnail as MatrixImageFile?,
         inReplyTo: inReplyTo,
         editEventId: credentials.editEventId,
         shrinkImageMaxDimension: credentials.shrinkImageMaxDimension,
