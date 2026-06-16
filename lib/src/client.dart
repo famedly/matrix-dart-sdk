@@ -3577,6 +3577,7 @@ class Client extends MatrixApi {
                   json.encode(entry.toJson()),
                   entry.directVerified,
                   entry.blocked,
+                  trustOnFirstUseSince: entry.trustOnFirstUseSince,
                 ),
               );
             }
