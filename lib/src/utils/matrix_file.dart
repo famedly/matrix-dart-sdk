@@ -200,7 +200,7 @@ class MatrixImageFile extends MatrixFile {
     final thumbnailFile = MatrixImageFile(
       bytes: resizedData.bytes,
       name: name,
-      mimeType: mimeType,
+      mimeType: resizedData.mimeType,
       width: resizedData.width,
       height: resizedData.height,
       blurhash: resizedData.blurhash,
@@ -220,6 +220,7 @@ class MatrixImageFile extends MatrixFile {
       bytes: bytes,
       width: image.width,
       height: image.height,
+      mimeType: null,
       blurhash: BlurHash.encode(
         image,
         numCompX: 4,
@@ -250,6 +251,7 @@ class MatrixImageFile extends MatrixFile {
       height: resized.height,
       originalHeight: image.height,
       originalWidth: image.width,
+      mimeType: lookupMimeType(arguments.fileName),
       blurhash: arguments.calcBlurhash
           ? BlurHash.encode(
               resized,
@@ -266,6 +268,7 @@ class MatrixImageFileResizedResponse {
   final int width;
   final int height;
   final String? blurhash;
+  final String? mimeType;
 
   final int? originalHeight;
   final int? originalWidth;
@@ -274,6 +277,7 @@ class MatrixImageFileResizedResponse {
     required this.bytes,
     required this.width,
     required this.height,
+    this.mimeType,
     this.originalHeight,
     this.originalWidth,
     this.blurhash,
@@ -288,6 +292,7 @@ class MatrixImageFileResizedResponse {
         ),
         width: json['width'],
         height: json['height'],
+        mimeType: json['mimeType'],
         originalHeight: json['originalHeight'],
         originalWidth: json['originalWidth'],
         blurhash: json['blurhash'],
@@ -297,6 +302,7 @@ class MatrixImageFileResizedResponse {
         'bytes': bytes,
         'width': width,
         'height': height,
+        if (mimeType != null) 'mimeType': mimeType,
         if (blurhash != null) 'blurhash': blurhash,
         if (originalHeight != null) 'originalHeight': originalHeight,
         if (originalWidth != null) 'originalWidth': originalWidth,
