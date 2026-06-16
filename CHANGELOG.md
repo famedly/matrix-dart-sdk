@@ -4,6 +4,10 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [7.2.4] 16th June 2026
+- chore: Follow up actually store updated tofu state in db (Christian Kußowski)
+- fix: Allow image resizer to return new mime type (Christian Kußowski)
+
 ## [7.2.3] 11th June 2026
 - feat: Flag cross signing keys as tofu (Christian Kußowski)
 - chore: Increase timeout for create key (Christian Kußowski)
