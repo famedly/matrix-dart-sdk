@@ -3935,7 +3935,7 @@ class Client extends MatrixApi {
     /// Whether to also decline all invites and leave DM rooms with this user.
     bool leaveRooms = true,
   }) async {
-    if (!userId.isValidMatrixId) {
+    if (!userId.isValidMatrixIdStrict()) {
       throw Exception('$userId is not a valid mxid!');
     }
 
@@ -3966,7 +3966,7 @@ class Client extends MatrixApi {
   /// Unignore a user. This will clear the local cached messages and request
   /// them again from the server to avoid gaps in the timeline.
   Future<void> unignoreUser(String userId) async {
-    if (!userId.isValidMatrixId) {
+    if (!userId.isValidMatrixIdStrict()) {
       throw Exception('$userId is not a valid mxid!');
     }
     if (!ignoredUsers.contains(userId)) {

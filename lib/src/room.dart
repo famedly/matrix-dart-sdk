@@ -352,7 +352,9 @@ class Room {
     final mxId = client.directChats.entries
         .firstWhereOrNull((e) => e.value.contains(id))
         ?.key;
-    if (mxId?.isValidMatrixId == true) return _cachedDirectChatMatrixId = mxId;
+    if (mxId?.isValidMatrixIdStrict() == true) {
+      return _cachedDirectChatMatrixId = mxId;
+    }
     return _cachedDirectChatMatrixId = null;
   }
 
@@ -750,7 +752,7 @@ class Room {
       potentialMentions = potentialMentions
           .map(
             (mention) =>
-                mention.isValidMatrixId ? mention : getMention(mention),
+                mention.isValidMatrixIdStrict() ? mention : getMention(mention),
           )
           .nonNulls
           .toSet() // Deduplicate
@@ -1892,7 +1894,7 @@ class Room {
     if (user != null) {
       return user.asUser(this);
     } else {
-      if (mxID.isValidMatrixId) {
+      if (mxID.isValidMatrixIdStrict()) {
         // ignore: discarded_futures
         requestUser(
           mxID,
@@ -2052,7 +2054,7 @@ class Room {
     bool requestState = true,
     bool requestProfile = true,
   }) async {
-    assert(mxID.isValidMatrixId);
+    assert(mxID.isValidMatrixIdStrict());
 
     final parameters = (
       mxID: mxID,
