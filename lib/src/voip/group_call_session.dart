@@ -129,7 +129,7 @@ class GroupCallSession {
 
     Logs().v('Entered group call $groupCallId');
 
-    if (shouldSendNotification) {
+    if (shouldSendNotification && !room.isDirectChat) {
       Logs().d(
         'Sending RTC notification for group call started with membership: $memberEventId',
       );
