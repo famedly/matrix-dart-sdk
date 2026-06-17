@@ -28,6 +28,11 @@ const String messageSendingStatusKey =
 const String fileSendingStatusKey =
     'com.famedly.famedlysdk.file_sending_status';
 
+// Matches full MXIDs (@user:server) and short forms (@room, @Name, @[Display Name]).
+final RegExp _mentionCandidateRegex = RegExp(
+  r'(@[^\s:@]+:(?:[^\s]+\.\w+|[\d\.]+|\[[a-fA-F0-9:]+\])(?::\d+)?|@(?:\[[^\]:]+\]|\w+)(?:#\w+)?)',
+);
+
 /// Represents a Matrix room.
 class Room {
   /// The full qualified Matrix ID for the room in the format '!localid:server.abc'.
@@ -696,6 +701,43 @@ class Room {
       .firstWhereOrNull((u) => u.mentionFragments.contains(mention))
       ?.id;
 
+  bool _hasMentionLeftBoundary(String message, int start) =>
+      start == 0 || message[start - 1].trim().isEmpty;
+
+  Map<String, dynamic> _mentionsMetadataForMessage(
+    String message, {
+    Event? inReplyTo,
+  }) {
+    final potentialMentions = <String>[];
+    var hasRoomMention = false;
+
+    for (final match in _mentionCandidateRegex.allMatches(message)) {
+      if (!_hasMentionLeftBoundary(message, match.start)) continue;
+
+      final mention = match[1]!;
+      if (mention == '@room') {
+        hasRoomMention = true;
+        continue;
+      }
+
+      final userId = mention.isValidMatrixId ? mention : getMention(mention);
+      if (userId != null) {
+        potentialMentions.add(userId);
+      }
+    }
+
+    // https://spec.matrix.org/v1.7/client-server-api/#mentioning-the-replied-to-user
+    if (inReplyTo != null) potentialMentions.add(inReplyTo.senderId);
+
+    final userIds = potentialMentions.toSet().toList()
+      ..remove(client.userID); // We should never mention ourself.
+
+    return {
+      if (hasRoomMention) 'room': true,
+      if (userIds.isNotEmpty) 'user_ids': userIds,
+    };
+  }
+
   /// Sends a normal text message to this room. Returns the event ID generated
   /// by the server for this message.
   Future<String?> sendTextEvent(
@@ -726,6 +768,7 @@ class Room {
         txid: txid,
         threadRootEventId: threadRootEventId,
         threadLastEventId: threadLastEventId,
+        addMentions: addMentions,
         stdout: commandStdout,
       );
     }
@@ -735,37 +778,8 @@ class Room {
     };
 
     if (addMentions) {
-      var potentialMentions = message
-          .split('@')
-          .map(
-            (text) => text.startsWith('[')
-                ? '@${text.split(']').first}]'
-                : '@${text.split(RegExp(r'\s+')).first}',
-          )
-          .toList()
-        ..removeAt(0);
-
-      final hasRoomMention = potentialMentions.remove('@room');
-
-      potentialMentions = potentialMentions
-          .map(
-            (mention) =>
-                mention.isValidMatrixId ? mention : getMention(mention),
-          )
-          .nonNulls
-          .toSet() // Deduplicate
-          .toList()
-        ..remove(client.userID); // We should never mention ourself.
-
-      // https://spec.matrix.org/v1.7/client-server-api/#mentioning-the-replied-to-user
-      if (inReplyTo != null) potentialMentions.add(inReplyTo.senderId);
-
-      if (hasRoomMention || potentialMentions.isNotEmpty) {
-        event['m.mentions'] = {
-          if (hasRoomMention) 'room': true,
-          if (potentialMentions.isNotEmpty) 'user_ids': potentialMentions,
-        };
-      }
+      event['m.mentions'] =
+          _mentionsMetadataForMessage(message, inReplyTo: inReplyTo);
     }
 
     if (parseMarkdown) {
@@ -1137,6 +1151,14 @@ class Room {
     }
   }
 
+  void _ensureMentionsMetadata(Map<String, dynamic> content, String type) {
+    if (type != EventTypes.Message || content['body'] is! String) {
+      return;
+    }
+    // Include empty metadata to opt out of legacy body-scanning mentions.
+    content['m.mentions'] ??= <String, dynamic>{};
+  }
+
   /// Sends an event to this room with this json as a content. Returns the
   /// event ID generated from the server.
   /// It uses list of completer to make sure events are sending in a row.
@@ -1215,6 +1237,8 @@ class Room {
         },
       };
     }
+
+    _ensureMentionsMetadata(content, type);
 
     if (editEventId != null) {
       final newContent = content.copy();

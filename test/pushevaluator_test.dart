@@ -358,6 +358,133 @@ void main() {
       _testNotMatch(ruleset, event);
     });
 
+    test('m.mentions disables default legacy mention rules', () async {
+      final event = Event.fromJson(jsonObj, room);
+      event.content['body'] = 'Hello deepbluev7 @room Nico';
+      (event.room.states[EventTypes.RoomMember] ??= {})[client.userID!] =
+          Event.fromJson(
+        {
+          'type': EventTypes.RoomMember,
+          'sender': senderID,
+          'state_key': client.userID,
+          'content': {'displayname': 'Nico', 'membership': 'join'},
+          'room_id': room.id,
+          'origin_server_ts': 5,
+        },
+        room,
+      );
+
+      EvaluatedPushRuleAction match(PushRuleSet ruleset) =>
+          PushruleEvaluator.fromRuleset(ruleset).match(event);
+
+      PushRule legacyRule(String ruleId, List<PushCondition>? conditions) =>
+          PushRule(
+            ruleId: ruleId,
+            default$: true,
+            enabled: true,
+            actions: [
+              'notify',
+              {'set_tweak': 'highlight', 'value': true},
+            ],
+            conditions: conditions,
+            pattern:
+                ruleId == '.m.rule.contains_user_name' ? 'deepbluev7' : null,
+          );
+
+      final legacyContentRuleset = PushRuleSet(
+        content: [
+          legacyRule('.m.rule.contains_user_name', null),
+        ],
+      );
+      final legacyDisplayNameRuleset = PushRuleSet(
+        underride: [
+          legacyRule(
+            '.m.rule.contains_display_name',
+            [PushCondition(kind: 'contains_display_name')],
+          ),
+        ],
+      );
+      final legacyRoomRuleset = PushRuleSet(
+        override: [
+          legacyRule(
+            '.m.rule.roomnotif',
+            [
+              PushCondition(
+                kind: 'event_match',
+                key: 'content.body',
+                pattern: '@room',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      expect(match(legacyContentRuleset).notify, true);
+      expect(match(legacyDisplayNameRuleset).notify, true);
+      expect(match(legacyRoomRuleset).notify, true);
+
+      event.content['m.mentions'] = {};
+
+      expect(match(legacyContentRuleset).notify, false);
+      expect(match(legacyDisplayNameRuleset).notify, false);
+      expect(match(legacyRoomRuleset).notify, false);
+
+      final customContentRuleset = PushRuleSet(
+        content: [
+          PushRule(
+            ruleId: 'custom.contains_user_name',
+            default$: false,
+            enabled: true,
+            actions: ['notify'],
+            pattern: 'deepbluev7',
+          ),
+        ],
+      );
+      expect(match(customContentRuleset).notify, true);
+
+      event.content['m.mentions'] = {
+        'user_ids': [client.userID],
+      };
+      final modernMentionRuleset = PushRuleSet(
+        override: [
+          PushRule(
+            ruleId: '.m.rule.is_user_mention',
+            default$: true,
+            enabled: true,
+            actions: ['notify'],
+            conditions: [
+              PushCondition(
+                kind: 'event_property_contains',
+                key: r'content.m\.mentions.user_ids',
+                value: client.userID,
+              ),
+            ],
+          ),
+        ],
+      );
+      expect(match(modernMentionRuleset).notify, true);
+
+      event.content['m.mentions'] = {'room': true};
+      final modernRoomMentionRuleset = PushRuleSet(
+        override: [
+          PushRule(
+            ruleId: '.m.rule.is_room_mention',
+            default$: true,
+            enabled: true,
+            actions: ['notify'],
+            conditions: [
+              PushCondition(
+                kind: 'event_property_is',
+                key: r'content.m\.mentions.room',
+                value: true,
+              ),
+            ],
+          ),
+        ],
+      );
+      expect(match(modernRoomMentionRuleset).notify, true);
+    });
+
     test('member_count rule', () async {
       final event = Event.fromJson(jsonObj, room);
       (event.room.states[EventTypes.RoomMember] ??= {})[client.userID!] =
