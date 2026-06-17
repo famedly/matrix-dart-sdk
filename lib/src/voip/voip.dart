@@ -1064,7 +1064,7 @@ class VoIP {
     // does not cause it.
     await room.postLoad();
 
-    if (!room.groupCallsEnabledForEveryone) {
+    if (!room.isDirectChat && !room.groupCallsEnabledForEveryone) {
       await room.enableGroupCalls();
     }
 
