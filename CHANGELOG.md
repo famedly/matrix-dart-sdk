@@ -30,6 +30,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - fix: Actually throw error on failed download (Christian Kußowski)
 - fix: Workaround that synapse's initial sync account data may not be up to date (Christian Kußowski)
 
+## [7.1.2] 12th May 2026
+- fix: do not send notify rtc event in direct chats (td)
+
 ## [7.1.1] 12th May 2026
 
 - fix: call delayed event canceller should not use application and actually remove it from local state on leave (td)
