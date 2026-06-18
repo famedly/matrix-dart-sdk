@@ -32,6 +32,74 @@ void main() {
       expect('@user:domain:8448'.localpart, 'user');
       expect('@user:domain:8448'.domain, 'domain:8448');
     });
+    test('isValidMatrixIdStrict', () {
+      // Identifiers which are valid in the strict variant.
+      const validIds = [
+        '@test:example.com',
+        '@test.user:example.com',
+        '@test-user_1=2/3+4:example.com',
+        '#test:example.com',
+        '#🦊:example.com',
+        '+test:example.com',
+        '!test:example.com',
+        '!opaqueRoomIdWithoutDomain',
+        '\$test:example.com',
+        '\$testevent',
+        // Various legal server names.
+        '@a:matrix.org:8888',
+        '@a:1.2.3.4',
+        '@a:1.2.3.4:1234',
+        '@a:[1234:5678::abcd]',
+        '@a:[1234:5678::abcd]:5678',
+      ];
+      for (final id in validIds) {
+        expect(id.isValidMatrixIdStrict, true, reason: '$id should be valid');
+      }
+
+      // Identifiers which are rejected by the strict variant.
+      const invalidIds = [
+        // The papercut from the original issue.
+        '@@test:fakeServer.notExisting',
+        // Missing sigil.
+        'test:example.com',
+        // Missing domain separator.
+        '@testexample.com',
+        // Empty localpart / domain.
+        '@:example.com',
+        '@test:',
+        '#:example.com',
+        '+:example.com',
+        '!:example.com',
+        '!',
+        '\$',
+        // Illegal characters in a user localpart (historical-only chars).
+        '@TestUser:example.com',
+        '@test user:example.com',
+        '@test^:example.com',
+        // Illegal server names.
+        '@test:exa mple.com',
+        '@test:example.com:notaport',
+        '@test:example.com:1234567',
+        '@test:[notipv6]:8448',
+        // Trailing junk after a valid looking id.
+        '@test:example.com ',
+        '@userid:domain:',
+        // Not a matrix id at all.
+        '',
+        'hello world',
+      ];
+      for (final id in invalidIds) {
+        expect(
+          id.isValidMatrixIdStrict,
+          false,
+          reason: '$id should be invalid',
+        );
+      }
+
+      // The lenient validator stays untouched and still accepts the papercut.
+      expect('@@test:fakeServer.notExisting'.isValidMatrixId, true);
+      expect('@:example.com'.isValidMatrixId, true);
+    });
     test('parseIdentifierIntoParts', () {
       var res = '#alias:beep'.parseIdentifierIntoParts()!;
       expect(res.primaryIdentifier, '#alias:beep');
