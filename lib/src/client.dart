@@ -1854,10 +1854,8 @@ class Client extends MatrixApi {
   /// Fetches the corresponding Event object from a notification including a
   /// full Room object with the sender User object in it. Returns null if this
   /// push notification is not corresponding to an existing event.
-  /// The client does **not** need to be initialized first. If it is not
-  /// initialized, it will only fetch the necessary parts of the database. This
-  /// should make it possible to run this parallel to another client with the
-  /// same client name.
+  /// The client **must** be initialized and looged in or will otherwise
+  /// throw an exception!
   /// This also checks if the given event has a readmarker and returns null
   /// in this case.
   Future<Event?> getEventByPushNotification(
@@ -1866,15 +1864,7 @@ class Client extends MatrixApi {
     Duration timeoutForServerRequests = const Duration(seconds: 8),
     bool returnNullIfSeen = true,
   }) async {
-    // Get access token if necessary:
-    if (!isLogged()) {
-      final clientInfoMap = await database.getClient(clientName);
-      final token = clientInfoMap?.tryGet<String>('token');
-      if (token == null) {
-        throw Exception('Client is not logged in.');
-      }
-      accessToken = token;
-    }
+    if (!isLogged()) throw Exception('Client is not logged in.');
 
     await ensureNotSoftLoggedOut();
 
