@@ -4,6 +4,10 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [7.3.0] 18th June 2026
+- feat: add isValidMatrixIdStrict for spec-compliant matrix id validation (Cursor Agent)
+- fix: return null when thumbnail was not found and make cast nullable (yurtemre7)
+
 ## [7.2.4] 16th June 2026
 - chore: Follow up actually store updated tofu state in db (Christian Kußowski)
 - fix: Allow image resizer to return new mime type (Christian Kußowski)
