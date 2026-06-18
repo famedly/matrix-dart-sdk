@@ -382,7 +382,7 @@ class CallSession {
     if (direction == CallDirection.kOutgoing) {
       setCallState(CallState.kConnecting);
       await pc!.setRemoteDescription(answer);
-      for (final candidate in _remoteCandidates) {
+      for (final candidate in _remoteCandidates.toList()) {
         await pc!.addCandidate(candidate);
       }
     }
@@ -864,7 +864,7 @@ class CallSession {
       setCallState(CallState.kCreateAnswer);
 
       final answer = await pc!.createAnswer({});
-      for (final candidate in _remoteCandidates) {
+      for (final candidate in _remoteCandidates.toList()) {
         await pc!.addCandidate(candidate);
       }
 
