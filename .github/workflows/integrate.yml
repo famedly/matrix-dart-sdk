@@ -62,7 +62,7 @@ jobs:
           scripts/integration-server-${{matrix.homeserver}}.sh 2>&1 > /dev/null &
           source scripts/integration-create-environment-variables.sh
           scripts/integration-prepare-homeserver.sh
-          dart pub get
+          dart pub get --no-example
           scripts/prepare_vodozemac.sh
           dart --define=HOMESERVER=$HOMESERVER --define=USER1_NAME=$USER1_NAME --define=USER2_NAME=$USER2_NAME --define=USER3_NAME=$USER3_NAME --define=USER1_PW=$USER1_PW --define=USER2_PW=$USER2_PW --define=USER3_PW=$USER3_PW test test_driver/matrixsdk_test.dart -p vm
 
@@ -166,7 +166,7 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
       - name: Run tests
         run: |
-          dart pub get
+          dart pub get --no-example
           dart test test/box_test.dart --platform chrome
 
   pub-dev-dry-run:
@@ -179,8 +179,45 @@ jobs:
           sdk: ${{ env.dart_version }}
       - name: pub.dev publish dry run
         run: |
-          dart pub get
+          dart pub get --no-example
           dart pub publish --dry-run
+
+  # Lint/analyze the example app so breaking SDK changes also enforce an
+  # example update.
+  example_analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: example
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: flutter analyze
+
+  # Build the example as a web app so it can be reviewed on any pull request.
+  example_build_web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: example
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter build web --base-href "/matrix-example-chat/"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: matrix-example-chat-web
+          path: example/build/web/
+          retention-days: 7
 
   # Call the publish workflow only when all tests pass and this is a tag push
   call_publish:

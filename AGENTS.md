@@ -17,14 +17,24 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 ## Cursor Cloud specific instructions
 
 This repo is the **Matrix Dart SDK** — a pure-Dart library (not a Flutter app). The
-"application" is the test suite plus the SDK's public API; `example/main.dart` is an
-illustrative Flutter snippet and is intentionally not compilable/runnable here.
+"application" is the test suite plus the SDK's public API. The `example/` folder is a
+small standalone Flutter app (single source file `example/lib/main.dart`) that depends
+on the SDK via a path dependency; it needs the Flutter SDK to analyze/build and is
+therefore excluded from the root `dart analyze` and linted/built separately by the
+`example_analyze` and `example_build_web` jobs in `.github/workflows/integrate.yml`.
+Flutter is **not** installed on this VM, so the example cannot be analyzed/built here.
+
+Because pub auto-resolves the `example/` folder, a plain `dart pub get` at the repo
+root fails (the example needs the Flutter SDK). Use `dart pub get --no-example` (or
+`flutter pub get`, which the shared `dart` CI template uses). All plain-dart CI jobs
+in `.github/workflows/integrate.yml` pass `--no-example`.
 
 Toolchain already provided by the VM snapshot (do not reinstall): Dart SDK 3.9.2 (on
 `PATH` as `dart`), the Rust toolchain (`cargo`), Docker, mikefarah `yq` (at
 `/usr/local/bin/yq` — required by `scripts/prepare_vodozemac.sh`; note the distro's
 `/usr/bin/yq` is the incompatible python `yq`), and `libsqlite3-dev`/`lcov`. The update
-script only runs `dart pub get`.
+script fetches dependencies with `dart pub get --no-example` (plain `dart pub get`
+fails on the Flutter example, see above).
 
 ### Lint / analyze
 - `dart analyze` (clean except pre-existing info-level deprecation hints). `dart format --output=none --set-exit-if-changed lib` enforces formatting in CI.

@@ -27,4 +27,6 @@ dart_code_linter:
 
 analyzer:
   exclude:
-    - example/main.dart
+    # The example is a standalone Flutter app with its own analysis_options.yaml
+    # and is linted separately in CI (see .github/workflows/example.yml).
+    - example/**
