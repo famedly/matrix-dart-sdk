@@ -4,6 +4,9 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [7.4.0] 23rd June 2026
+- feat: add skipScanner flag to download methods for per-call content scanner bypass (Khalil Amor)
+
 ## [7.3.0] 18th June 2026
 - feat: add isValidMatrixIdStrict for spec-compliant matrix id validation (Cursor Agent)
 - fix: return null when thumbnail was not found and make cast nullable (yurtemre7)
