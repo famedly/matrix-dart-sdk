@@ -639,8 +639,9 @@ void main() {
           return http.Response.bytes(payload, 200);
         });
 
-    test('inline preview only downloads the thumbnail, never the full file',
-        () async {
+    test(
+        'inline preview with a thumbnail downloads the thumbnail, bypassing '
+        'the scanner', () async {
       http.Request? downloadRequest;
       final payload = Uint8List.fromList([1, 2, 3]);
       final client = await _freshClient(
@@ -664,12 +665,17 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
 
-    test('inline preview without a thumbnail throws and never downloads',
-        () async {
-      var downloaded = false;
+    test(
+        'inline preview without a thumbnail shows the full file uncached so an '
+        'explicit download still scans', () async {
+      final requests = <String>[];
+      final payload = Uint8List.fromList([1, 2, 3]);
       final mockHttp = MockClient((req) async {
-        downloaded = true;
-        return http.Response.bytes(Uint8List.fromList([1]), 200);
+        if (req.url.path.endsWith('/_matrix/client/versions')) {
+          return http.Response(jsonEncode({'versions': <String>[]}), 200);
+        }
+        requests.add(req.url.toString());
+        return http.Response.bytes(payload, 200);
       });
       final client = await _freshClient(
         httpClient: mockHttp,
@@ -679,11 +685,21 @@ void main() {
       final room = Room(id: '!room:example.org', client: client);
       final event = buildUnencryptedEvent(room, withThumbnail: false);
 
-      await expectLater(
-        event.downloadAndDecryptAttachment(isInline: true),
-        throwsA(isA<String>()),
-      );
-      expect(downloaded, false);
+      // Inline preview falls back to the full file, fetched from the homeserver
+      // while bypassing the scanner.
+      final preview = await event.downloadAndDecryptAttachment(isInline: true);
+      expect(preview.bytes, payload);
+
+      // Explicit download must NOT be served the unscanned cached copy; it has
+      // to go through the scanner again.
+      final download =
+          await event.downloadAndDecryptAttachment(isInline: false);
+      expect(download.bytes, payload);
+
+      expect(requests, [
+        'https://home.example/_matrix/media/v3/download/example.org/abcd1234',
+        'https://scanner.example/_matrix/media_proxy/unstable/download/example.org/abcd1234',
+      ]);
 
       await client.dispose(closeDatabase: true);
     });

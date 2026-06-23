@@ -809,14 +809,16 @@ class Event extends MatrixEvent {
   ///
   /// Set [isInline] to true when the attachment is rendered inline (e.g. an
   /// image preview in the timeline) rather than explicitly downloaded by the
-  /// user. Inline previews only ever fetch the thumbnail, never the full file:
-  /// [getThumbnail] is forced to true and a [String] is thrown when the event
-  /// has no thumbnail to preview. The scanner is also only used for inline
-  /// previews when it advertises `scanBeforePreview`. Concretely, when a
-  /// scanner is configured:
+  /// user. Inline previews prefer the thumbnail ([getThumbnail] is forced) and
+  /// fall back to the full file only when the event has no thumbnail. The
+  /// scanner is only used for inline previews when it advertises
+  /// `scanBeforePreview`. Concretely, when a scanner is configured:
   /// - `scanBeforePreview == true`: always scan, regardless of [isInline].
   /// - `scanBeforePreview == false` and `isInline == true`: bypass the scanner
-  ///   and download the thumbnail directly from the homeserver.
+  ///   and download directly from the homeserver. When this ends up fetching
+  ///   the full file (no thumbnail) the bytes are **not** cached, so a later
+  ///   explicit download (`isInline == false`) still runs through the scanner
+  ///   instead of being served an unscanned cached copy.
   /// - `scanBeforePreview == false` and `isInline == false`: scan, since the
   ///   user is actually downloading the file.
   Future<MatrixFile> downloadAndDecryptAttachment({
@@ -832,11 +834,9 @@ class Event extends MatrixEvent {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
-    // Inline previews must only ever fetch the thumbnail, never the full file.
+    // Inline previews prefer the thumbnail; they only fall back to the full
+    // file when the event has no thumbnail.
     if (isInline) {
-      if (!hasThumbnail) {
-        throw "This event hasn't any thumbnail to preview inline.";
-      }
       getThumbnail = true;
     }
     if (!status.isSent) {
@@ -844,11 +844,7 @@ class Event extends MatrixEvent {
       if (localFile != null) return localFile;
     }
     final database = room.client.database;
-    // For inline previews always use the thumbnail mxc directly, skipping the
-    // size-based fallback to the full attachment in [attachmentOrThumbnailMxcUrl].
-    final mxcUrl = isInline
-        ? thumbnailMxcUrl
-        : attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
+    final mxcUrl = attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
     if (mxcUrl == null) {
       throw "This event hasn't any attachment or thumbnail.";
     }
@@ -901,7 +897,15 @@ class Event extends MatrixEvent {
           );
         }
       }
-      storeable = storeable && uint8list.lengthInBytes < database.maxFileSize;
+      // When a scanner is configured but bypassed for an inline preview that
+      // ended up fetching the full file (no thumbnail), don't cache it: a later
+      // explicit download must still go through the scanner rather than hit an
+      // unscanned cached copy.
+      final bypassedScannerForFullFile =
+          scanner != null && !useScanner && !getThumbnail;
+      storeable = storeable &&
+          uint8list.lengthInBytes < database.maxFileSize &&
+          !bypassedScannerForFullFile;
       if (storeable) {
         await database.storeFile(
           mxcUrl,
