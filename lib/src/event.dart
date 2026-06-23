@@ -672,6 +672,7 @@ class Event extends MatrixEvent {
     ThumbnailMethod method = ThumbnailMethod.scale,
     int minNoThumbSize = _minNoThumbSize,
     bool animated = false,
+    bool skipScanner = false,
   }) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
         !hasAttachment ||
@@ -703,9 +704,13 @@ class Event extends MatrixEvent {
         height: height,
         method: method,
         animated: animated,
+        skipScanner: skipScanner,
       );
     } else {
-      return await Uri.parse(thisMxcUrl).getDownloadUri(room.client);
+      return await Uri.parse(thisMxcUrl).getDownloadUri(
+        room.client,
+        skipScanner: skipScanner,
+      );
     }
   }
 
@@ -810,6 +815,7 @@ class Event extends MatrixEvent {
     bool getThumbnail = false,
     Future<Uint8List> Function(Uri)? downloadCallback,
     bool fromLocalStoreOnly = false,
+    bool skipScanner = false,
 
     /// Callback which gets triggered on progress containing the amount of
     /// downloaded bytes.
@@ -845,7 +851,7 @@ class Event extends MatrixEvent {
     }
 
     // Download the file
-    final scanner = room.client.contentScannerConfig;
+    final scanner = skipScanner ? null : room.client.contentScannerConfig;
     final useScannerForEncrypted = scanner != null && isEncrypted;
     final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
     if (canDownloadFileFromServer) {
@@ -860,7 +866,10 @@ class Event extends MatrixEvent {
           fileMap: fileMap,
         );
       } else {
-        final downloadUri = await mxcUrl.getDownloadUri(room.client);
+        final downloadUri = await mxcUrl.getDownloadUri(
+          room.client,
+          skipScanner: skipScanner,
+        );
         if (downloadCallback != null) {
           uint8list = await downloadCallback(downloadUri);
         } else {
