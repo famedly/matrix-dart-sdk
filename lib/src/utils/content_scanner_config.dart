@@ -73,6 +73,13 @@ class ContentScannerException implements Exception {
     required this.statusCode,
   });
 
+  static const reasonNotClean = 'MCS_MEDIA_NOT_CLEAN';
+  static const reasonMimeTypeForbidden = 'MCS_MIME_TYPE_FORBIDDEN';
+  static const reasonBadDecryption = 'MCS_BAD_DECRYPTION';
+  static const reasonFailedToDecrypt = 'MCS_MEDIA_FAILED_TO_DECRYPT';
+  static const reasonRequestFailed = 'MCS_MEDIA_REQUEST_FAILED';
+  static const reasonUnknown = 'M_UNKNOWN';
+
   @override
   String toString() => 'ContentScannerException($statusCode $reason): $info';
 }
