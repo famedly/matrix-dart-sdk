@@ -809,11 +809,14 @@ class Event extends MatrixEvent {
   ///
   /// Set [isInline] to true when the attachment is rendered inline (e.g. an
   /// image preview in the timeline) rather than explicitly downloaded by the
-  /// user. The scanner is then only used when the scanner advertises
-  /// `scanBeforePreview`. Concretely, when a scanner is configured:
+  /// user. Inline previews only ever fetch the thumbnail, never the full file:
+  /// [getThumbnail] is forced to true and a [String] is thrown when the event
+  /// has no thumbnail to preview. The scanner is also only used for inline
+  /// previews when it advertises `scanBeforePreview`. Concretely, when a
+  /// scanner is configured:
   /// - `scanBeforePreview == true`: always scan, regardless of [isInline].
   /// - `scanBeforePreview == false` and `isInline == true`: bypass the scanner
-  ///   and download directly from the homeserver.
+  ///   and download the thumbnail directly from the homeserver.
   /// - `scanBeforePreview == false` and `isInline == false`: scan, since the
   ///   user is actually downloading the file.
   Future<MatrixFile> downloadAndDecryptAttachment({
@@ -829,12 +832,23 @@ class Event extends MatrixEvent {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
+    // Inline previews must only ever fetch the thumbnail, never the full file.
+    if (isInline) {
+      if (!hasThumbnail) {
+        throw "This event hasn't any thumbnail to preview inline.";
+      }
+      getThumbnail = true;
+    }
     if (!status.isSent) {
       final localFile = await _getCachedFile(getThumbnail: getThumbnail);
       if (localFile != null) return localFile;
     }
     final database = room.client.database;
-    final mxcUrl = attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
+    // For inline previews always use the thumbnail mxc directly, skipping the
+    // size-based fallback to the full attachment in [attachmentOrThumbnailMxcUrl].
+    final mxcUrl = isInline
+        ? thumbnailMxcUrl
+        : attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
     if (mxcUrl == null) {
       throw "This event hasn't any attachment or thumbnail.";
     }

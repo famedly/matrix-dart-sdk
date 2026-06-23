@@ -551,7 +551,11 @@ void main() {
   });
 
   group('downloadAndDecryptAttachment + isInline / scanBeforePreview', () {
-    Event buildUnencryptedEvent(Room room) => Event.fromJson(
+    const thumbMxc = 'mxc://example.org/thumb5678';
+    const encryptedThumbMxc = 'mxc://example.com/thumbfile';
+
+    Event buildUnencryptedEvent(Room room, {bool withThumbnail = true}) =>
+        Event.fromJson(
           {
             'type': EventTypes.Message,
             'event_id': '\$inline-evt',
@@ -561,7 +565,14 @@ void main() {
               'msgtype': 'm.image',
               'body': 'pic.png',
               'filename': 'pic.png',
-              'info': {'mimetype': 'image/png', 'size': 3},
+              'info': {
+                'mimetype': 'image/png',
+                'size': 3,
+                if (withThumbnail) ...{
+                  'thumbnail_url': thumbMxc,
+                  'thumbnail_info': {'mimetype': 'image/png', 'size': 2},
+                },
+              },
               'url': _mxc,
             },
           },
@@ -578,7 +589,23 @@ void main() {
               'msgtype': 'm.image',
               'body': 'secret.png',
               'filename': 'secret.png',
-              'info': {'mimetype': 'image/png', 'size': 5},
+              'info': {
+                'mimetype': 'image/png',
+                'size': 5,
+                'thumbnail_file': {
+                  'v': 'v2',
+                  'url': encryptedThumbMxc,
+                  'key': {
+                    'alg': 'A256CTR',
+                    'ext': true,
+                    'key_ops': ['encrypt', 'decrypt'],
+                    'kty': 'oct',
+                    'k': _encryptedFileKey,
+                  },
+                  'iv': _encryptedFileIv,
+                  'hashes': {'sha256': _encryptedFileSha256},
+                },
+              },
               'file': {
                 'v': 'v2',
                 'url': _encryptedMxc,
@@ -612,7 +639,7 @@ void main() {
           return http.Response.bytes(payload, 200);
         });
 
-    test('inline preview bypasses scanner when scanBeforePreview is false',
+    test('inline preview only downloads the thumbnail, never the full file',
         () async {
       http.Request? downloadRequest;
       final payload = Uint8List.fromList([1, 2, 3]);
@@ -628,15 +655,40 @@ void main() {
 
       expect(file.bytes, payload);
       expect(downloadRequest, isNotNull);
+      // Thumbnail mxc, not the full attachment, and bypassing the scanner.
       expect(
         downloadRequest!.url.toString(),
-        'https://home.example/_matrix/media/v3/download/example.org/abcd1234',
+        'https://home.example/_matrix/media/v3/download/example.org/thumb5678',
       );
 
       await client.dispose(closeDatabase: true);
     });
 
-    test('inline preview uses scanner when scanBeforePreview is true',
+    test('inline preview without a thumbnail throws and never downloads',
+        () async {
+      var downloaded = false;
+      final mockHttp = MockClient((req) async {
+        downloaded = true;
+        return http.Response.bytes(Uint8List.fromList([1]), 200);
+      });
+      final client = await _freshClient(
+        httpClient: mockHttp,
+        scanner: _config(scanBeforePreview: false),
+      );
+      client.homeserver = Uri.parse('https://home.example');
+      final room = Room(id: '!room:example.org', client: client);
+      final event = buildUnencryptedEvent(room, withThumbnail: false);
+
+      await expectLater(
+        event.downloadAndDecryptAttachment(isInline: true),
+        throwsA(isA<String>()),
+      );
+      expect(downloaded, false);
+
+      await client.dispose(closeDatabase: true);
+    });
+
+    test('inline preview uses scanner for the thumbnail when scanBeforePreview',
         () async {
       http.BaseRequest? seenRequest;
       final payload = Uint8List.fromList([4, 5, 6]);
@@ -656,14 +708,13 @@ void main() {
       expect(file.bytes, payload);
       expect(
         seenRequest!.url.toString(),
-        'https://scanner.example/_matrix/media_proxy/unstable/download/example.org/abcd1234',
+        'https://scanner.example/_matrix/media_proxy/unstable/download/example.org/thumb5678',
       );
 
       await client.dispose(closeDatabase: true);
     });
 
-    test('explicit download uses scanner when scanBeforePreview is false',
-        () async {
+    test('explicit download fetches the full file via the scanner', () async {
       http.BaseRequest? seenRequest;
       final payload = Uint8List.fromList([7, 8, 9]);
       final mockHttp = MockClient((req) async {
@@ -688,8 +739,7 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
 
-    test(
-        'inline encrypted preview bypasses scanner and decrypts homeserver bytes',
+    test('inline encrypted preview downloads and decrypts only the thumbnail',
         () async {
       http.Request? downloadRequest;
       final encryptedBytes = Uint8List.fromList([0x3B, 0x6B, 0xB2, 0x8C, 0xAF]);
@@ -714,9 +764,10 @@ void main() {
       expect(file.bytes, decryptedBytes);
       expect(downloadRequest, isNotNull);
       expect(downloadRequest!.method, 'GET');
+      // Encrypted thumbnail mxc, not the full encrypted attachment.
       expect(
         downloadRequest!.url.toString(),
-        'https://home.example/_matrix/media/v3/download/example.com/file',
+        'https://home.example/_matrix/media/v3/download/example.com/thumbfile',
       );
       expect(nativeImplementations.seenFile, isNotNull);
       expect(nativeImplementations.seenFile!.data, encryptedBytes);
