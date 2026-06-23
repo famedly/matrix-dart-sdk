@@ -806,10 +806,21 @@ class Event extends MatrixEvent {
   /// With `Client.contentScannerConfig`, network downloads use the scanner.
   /// Scanner errors throw [ContentScannerException]. For encrypted scanner
   /// downloads, [downloadCallback] is ignored.
+  ///
+  /// Set [isInline] to true when the attachment is rendered inline (e.g. an
+  /// image preview in the timeline) rather than explicitly downloaded by the
+  /// user. The scanner is then only used when the scanner advertises
+  /// `scanBeforePreview`. Concretely, when a scanner is configured:
+  /// - `scanBeforePreview == true`: always scan, regardless of [isInline].
+  /// - `scanBeforePreview == false` and `isInline == true`: bypass the scanner
+  ///   and download directly from the homeserver.
+  /// - `scanBeforePreview == false` and `isInline == false`: scan, since the
+  ///   user is actually downloading the file.
   Future<MatrixFile> downloadAndDecryptAttachment({
     bool getThumbnail = false,
     Future<Uint8List> Function(Uri)? downloadCallback,
     bool fromLocalStoreOnly = false,
+    bool isInline = false,
 
     /// Callback which gets triggered on progress containing the amount of
     /// downloaded bytes.
@@ -846,7 +857,11 @@ class Event extends MatrixEvent {
 
     // Download the file
     final scanner = room.client.contentScannerConfig;
-    final useScannerForEncrypted = scanner != null && isEncrypted;
+    // Inline previews bypass the scanner unless it requires scanning before
+    // preview. Explicit downloads (and non-inline previews) always scan.
+    final useScanner =
+        scanner != null && (scanner.scanBeforePreview || !isInline);
+    final useScannerForEncrypted = useScanner && isEncrypted;
     final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
     if (canDownloadFileFromServer) {
       if (useScannerForEncrypted) {
@@ -860,13 +875,14 @@ class Event extends MatrixEvent {
           fileMap: fileMap,
         );
       } else {
-        final downloadUri = await mxcUrl.getDownloadUri(room.client);
+        final downloadUri =
+            await mxcUrl.getDownloadUri(room.client, useScanner: useScanner);
         if (downloadCallback != null) {
           uint8list = await downloadCallback(downloadUri);
         } else {
           uint8list = await _downloadAttachmentBytes(
             downloadUri,
-            scanner: scanner,
+            scanner: useScanner ? scanner : null,
             onDownloadProgress: onDownloadProgress,
           );
         }

@@ -15,11 +15,15 @@ extension MxcUriExtension on Uri {
   ///
   /// Scanner and authenticated media URLs may need an authorization header:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
-  Future<Uri> getDownloadUri(Client client) async {
+  ///
+  /// Set [useScanner] to `false` to download directly from the homeserver even
+  /// when a `Client.contentScannerConfig` is configured (e.g. for inline
+  /// previews that should bypass the scanner).
+  Future<Uri> getDownloadUri(Client client, {bool useScanner = true}) async {
     if (!isScheme('mxc')) return Uri();
 
     final scanner = client.contentScannerConfig;
-    if (scanner != null) {
+    if (useScanner && scanner != null) {
       return _appendMxcTo(scanner.downloadUri);
     }
 

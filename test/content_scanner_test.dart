@@ -549,4 +549,179 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
   });
+
+  group('downloadAndDecryptAttachment + isInline / scanBeforePreview', () {
+    Event buildUnencryptedEvent(Room room) => Event.fromJson(
+          {
+            'type': EventTypes.Message,
+            'event_id': '\$inline-evt',
+            'sender': '@alice:example.org',
+            'origin_server_ts': 0,
+            'content': {
+              'msgtype': 'm.image',
+              'body': 'pic.png',
+              'filename': 'pic.png',
+              'info': {'mimetype': 'image/png', 'size': 3},
+              'url': _mxc,
+            },
+          },
+          room,
+        );
+
+    Event buildEncryptedEvent(Room room) => Event.fromJson(
+          {
+            'type': EventTypes.Message,
+            'event_id': '\$inline-enc-evt',
+            'sender': '@alice:example.org',
+            'origin_server_ts': 0,
+            'content': {
+              'msgtype': 'm.image',
+              'body': 'secret.png',
+              'filename': 'secret.png',
+              'info': {'mimetype': 'image/png', 'size': 5},
+              'file': {
+                'v': 'v2',
+                'url': _encryptedMxc,
+                'key': {
+                  'alg': 'A256CTR',
+                  'ext': true,
+                  'key_ops': ['encrypt', 'decrypt'],
+                  'kty': 'oct',
+                  'k': _encryptedFileKey,
+                },
+                'iv': _encryptedFileIv,
+                'hashes': {'sha256': _encryptedFileSha256},
+              },
+            },
+          },
+          room,
+        );
+
+    // Routes /_matrix/client/versions to a legacy (non-authenticated-media)
+    // response and serves [payload] for any other (download) request, while
+    // recording the last non-versions request that was seen.
+    MockClient homeserverMock(
+      Uint8List payload,
+      void Function(http.Request) onDownload,
+    ) =>
+        MockClient((req) async {
+          if (req.url.path.endsWith('/_matrix/client/versions')) {
+            return http.Response(jsonEncode({'versions': <String>[]}), 200);
+          }
+          onDownload(req);
+          return http.Response.bytes(payload, 200);
+        });
+
+    test('inline preview bypasses scanner when scanBeforePreview is false',
+        () async {
+      http.Request? downloadRequest;
+      final payload = Uint8List.fromList([1, 2, 3]);
+      final client = await _freshClient(
+        httpClient: homeserverMock(payload, (req) => downloadRequest = req),
+        scanner: _config(scanBeforePreview: false),
+      );
+      client.homeserver = Uri.parse('https://home.example');
+      final room = Room(id: '!room:example.org', client: client);
+      final event = buildUnencryptedEvent(room);
+
+      final file = await event.downloadAndDecryptAttachment(isInline: true);
+
+      expect(file.bytes, payload);
+      expect(downloadRequest, isNotNull);
+      expect(
+        downloadRequest!.url.toString(),
+        'https://home.example/_matrix/media/v3/download/example.org/abcd1234',
+      );
+
+      await client.dispose(closeDatabase: true);
+    });
+
+    test('inline preview uses scanner when scanBeforePreview is true',
+        () async {
+      http.BaseRequest? seenRequest;
+      final payload = Uint8List.fromList([4, 5, 6]);
+      final mockHttp = MockClient((req) async {
+        seenRequest = req;
+        return http.Response.bytes(payload, 200);
+      });
+      final client = await _freshClient(
+        httpClient: mockHttp,
+        scanner: _config(scanBeforePreview: true),
+      );
+      final room = Room(id: '!room:example.org', client: client);
+      final event = buildUnencryptedEvent(room);
+
+      final file = await event.downloadAndDecryptAttachment(isInline: true);
+
+      expect(file.bytes, payload);
+      expect(
+        seenRequest!.url.toString(),
+        'https://scanner.example/_matrix/media_proxy/unstable/download/example.org/abcd1234',
+      );
+
+      await client.dispose(closeDatabase: true);
+    });
+
+    test('explicit download uses scanner when scanBeforePreview is false',
+        () async {
+      http.BaseRequest? seenRequest;
+      final payload = Uint8List.fromList([7, 8, 9]);
+      final mockHttp = MockClient((req) async {
+        seenRequest = req;
+        return http.Response.bytes(payload, 200);
+      });
+      final client = await _freshClient(
+        httpClient: mockHttp,
+        scanner: _config(scanBeforePreview: false),
+      );
+      final room = Room(id: '!room:example.org', client: client);
+      final event = buildUnencryptedEvent(room);
+
+      final file = await event.downloadAndDecryptAttachment(isInline: false);
+
+      expect(file.bytes, payload);
+      expect(
+        seenRequest!.url.toString(),
+        'https://scanner.example/_matrix/media_proxy/unstable/download/example.org/abcd1234',
+      );
+
+      await client.dispose(closeDatabase: true);
+    });
+
+    test(
+        'inline encrypted preview bypasses scanner and decrypts homeserver bytes',
+        () async {
+      http.Request? downloadRequest;
+      final encryptedBytes = Uint8List.fromList([0x3B, 0x6B, 0xB2, 0x8C, 0xAF]);
+      final decryptedBytes = Uint8List.fromList([0x74, 0x65, 0x73, 0x74, 0x0A]);
+      final nativeImplementations = _DecryptingNativeImplementations(
+        expectedEncryptedBytes: encryptedBytes,
+        decryptedBytes: decryptedBytes,
+      );
+      final client = await _freshClient(
+        httpClient:
+            homeserverMock(encryptedBytes, (req) => downloadRequest = req),
+        scanner: _config(scanBeforePreview: false),
+        nativeImplementations: nativeImplementations,
+        encryptionEnabled: true,
+      );
+      client.homeserver = Uri.parse('https://home.example');
+      final room = Room(id: '!room:example.org', client: client);
+      final event = buildEncryptedEvent(room);
+
+      final file = await event.downloadAndDecryptAttachment(isInline: true);
+
+      expect(file.bytes, decryptedBytes);
+      expect(downloadRequest, isNotNull);
+      expect(downloadRequest!.method, 'GET');
+      expect(
+        downloadRequest!.url.toString(),
+        'https://home.example/_matrix/media/v3/download/example.com/file',
+      );
+      expect(nativeImplementations.seenFile, isNotNull);
+      expect(nativeImplementations.seenFile!.data, encryptedBytes);
+
+      await client.dispose(closeDatabase: true);
+    });
+  });
 }
