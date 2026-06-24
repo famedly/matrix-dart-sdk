@@ -7,15 +7,30 @@ name: Publish to pub.dev
 on:
   workflow_call:
 
-# Publish using the reusable workflow from dart-lang.
 jobs:
+  # Inlined from famedly/frontend-ci-templates publish-pub.yml so we can pass
+  # `--no-example`: pub auto-resolves the Flutter `example/` package, which has
+  # no Flutter SDK on the publish runner and would fail `dart pub get`.
   publish:
+    environment: "pub.dev"
     permissions:
       contents: read
       id-token: write
-    uses: famedly/frontend-ci-templates/.github/workflows/publish-pub.yml@main
-    with:
-      env_file: ".github/workflows/versions.env"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read env file
+        run: cat .github/workflows/versions.env >> $GITHUB_ENV
+      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+        with:
+          sdk: ${{ env.dart_version || 'stable' }}
+      - name: Install dependencies
+        run: dart pub get --no-example
+      - name: Publish - dry run
+        run: dart pub publish --dry-run
+      - name: Publish to pub.dev
+        run: dart pub publish -f
 
   create_gh_release:
     env:
