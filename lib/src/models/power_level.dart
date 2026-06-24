@@ -17,10 +17,10 @@ extension type PowerLevel(int level) {
   PowerLevelRole get role => level == ownerPowerLevel
       ? PowerLevelRole.owner
       : level >= defaultAdminLevel
-          ? PowerLevelRole.admin
-          : level >= defaultModeratorLevel
-              ? PowerLevelRole.moderator
-              : PowerLevelRole.user;
+      ? PowerLevelRole.admin
+      : level >= defaultModeratorLevel
+      ? PowerLevelRole.moderator
+      : PowerLevelRole.user;
 
   bool operator <(PowerLevel other) => level < other.level;
   bool operator >(PowerLevel other) => level > other.level;

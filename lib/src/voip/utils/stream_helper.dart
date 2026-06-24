@@ -46,8 +46,9 @@ Future<void> updateMediaDevice(
   List<RTCRtpSender> userRtpSenders, [
   MediaStreamTrack? track,
 ]) async {
-  final sender = userRtpSenders
-      .firstWhereOrNull((element) => element.track!.kind == kind.name);
+  final sender = userRtpSenders.firstWhereOrNull(
+    (element) => element.track!.kind == kind.name,
+  );
   await sender?.track?.stop();
   if (track != null) {
     await sender?.replaceTrack(track);

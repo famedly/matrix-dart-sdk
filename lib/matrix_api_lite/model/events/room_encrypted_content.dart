@@ -18,20 +18,18 @@ class RoomEncryptedContent {
   Map<String, CiphertextInfo>? ciphertextOlm;
 
   RoomEncryptedContent.fromJson(Map<String, Object?> json)
-      : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',
-        senderKey = json.tryGet('sender_key', TryGet.required) ?? '',
-        deviceId = json.tryGet('device_id'),
-        sessionId = json.tryGet('session_id'),
-        ciphertextMegolm = json.tryGet('ciphertext', TryGet.silent),
-        // filter out invalid/incomplete CiphertextInfos
-        ciphertextOlm = json
-            .tryGet<Map<String, Object?>>('ciphertext', TryGet.silent)
-            ?.catchMap(
-              (k, v) => MapEntry(
-                k,
-                CiphertextInfo.fromJson(v as Map<String, Object?>),
-              ),
-            );
+    : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',
+      senderKey = json.tryGet('sender_key', TryGet.required) ?? '',
+      deviceId = json.tryGet('device_id'),
+      sessionId = json.tryGet('session_id'),
+      ciphertextMegolm = json.tryGet('ciphertext', TryGet.silent),
+      // filter out invalid/incomplete CiphertextInfos
+      ciphertextOlm = json
+          .tryGet<Map<String, Object?>>('ciphertext', TryGet.silent)
+          ?.catchMap(
+            (k, v) =>
+                MapEntry(k, CiphertextInfo.fromJson(v as Map<String, Object?>)),
+          );
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};
@@ -47,8 +45,9 @@ class RoomEncryptedContent {
       data['ciphertext'] = ciphertextMegolm;
     }
     if (ciphertextOlm != null) {
-      data['ciphertext'] =
-          ciphertextOlm!.map((k, v) => MapEntry(k, v.toJson()));
+      data['ciphertext'] = ciphertextOlm!.map(
+        (k, v) => MapEntry(k, v.toJson()),
+      );
       if (ciphertextMegolm != null) {
         Logs().wtf(
           'ciphertextOlm and ciphertextMegolm are both set, which should never happen!',
@@ -64,8 +63,8 @@ class CiphertextInfo {
   int type;
 
   CiphertextInfo.fromJson(Map<String, Object?> json)
-      : body = json['body'] as String,
-        type = json['type'] as int;
+    : body = json['body'] as String,
+      type = json['type'] as int;
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};

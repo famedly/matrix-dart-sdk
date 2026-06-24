@@ -9,7 +9,8 @@ class Presence extends BasicEventWithSender {
   PresenceContent presence;
 
   Presence.fromJson(super.json)
-      : presence =
-            PresenceContent.fromJson(json['content'] as Map<String, Object?>),
-        super.fromJson();
+    : presence = PresenceContent.fromJson(
+        json['content'] as Map<String, Object?>,
+      ),
+      super.fromJson();
 }

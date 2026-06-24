@@ -10,23 +10,27 @@ void main() {
   group('Matrix Localizations', () {
     test('Matrix Localizations', () {
       expect(
-        HistoryVisibility.invited
-            .getLocalizedString(MatrixDefaultLocalizations()),
+        HistoryVisibility.invited.getLocalizedString(
+          MatrixDefaultLocalizations(),
+        ),
         'From the invitation',
       );
       expect(
-        HistoryVisibility.joined
-            .getLocalizedString(MatrixDefaultLocalizations()),
+        HistoryVisibility.joined.getLocalizedString(
+          MatrixDefaultLocalizations(),
+        ),
         'From joining',
       );
       expect(
-        HistoryVisibility.shared
-            .getLocalizedString(MatrixDefaultLocalizations()),
+        HistoryVisibility.shared.getLocalizedString(
+          MatrixDefaultLocalizations(),
+        ),
         'Visible for all participants',
       );
       expect(
-        HistoryVisibility.worldReadable
-            .getLocalizedString(MatrixDefaultLocalizations()),
+        HistoryVisibility.worldReadable.getLocalizedString(
+          MatrixDefaultLocalizations(),
+        ),
         'Visible for everyone',
       );
       expect(

@@ -215,10 +215,7 @@ class GroupCallSession {
 
     // Copy permanent reactions to the new member event
     if (permanentReactions.isNotEmpty && newEventId != null) {
-      await _copyPermanentReactionsToNewEvent(
-        permanentReactions,
-        newEventId,
-      );
+      await _copyPermanentReactionsToNewEvent(permanentReactions, newEventId);
     }
 
     if (_resendMemberStateEventTimer != null) {
@@ -303,8 +300,9 @@ class GroupCallSession {
           await backend.onNewParticipant(this, nonLocalAnyJoined.toList());
         }
         _participants.addAll(anyJoined);
-        matrixRTCEventStream
-            .add(ParticipantsJoinEvent(participants: anyJoined.toList()));
+        matrixRTCEventStream.add(
+          ParticipantsJoinEvent(participants: anyJoined.toList()),
+        );
       }
       if (anyLeft.isNotEmpty) {
         if (anyLeft.contains(localParticipant) &&
@@ -325,8 +323,9 @@ class GroupCallSession {
             // because the server said you left, you don't actually have to cancel
             // the delayed event, the server already thinks it's cancelled
 
-            voip.delayedEventCancellers
-                .remove('${room.id}|$groupCallId|$scope');
+            voip.delayedEventCancellers.remove(
+              '${room.id}|$groupCallId|$scope',
+            );
           }
 
           // rejoin the call and share the key with the existing participants
@@ -344,8 +343,9 @@ class GroupCallSession {
           await backend.onLeftParticipant(this, nonLocalAnyLeft.toList());
         }
         _participants.removeAll(anyLeft);
-        matrixRTCEventStream
-            .add(ParticipantsLeftEvent(participants: anyLeft.toList()));
+        matrixRTCEventStream.add(
+          ParticipantsLeftEvent(participants: anyLeft.toList()),
+        );
       }
 
       // ignore: deprecated_member_use_from_same_package
@@ -372,8 +372,11 @@ class GroupCallSession {
 
     Logs().d('Group call reaction selected: $emoji');
 
-    final memberships =
-        room.getCallMembershipsForUser(client.userID!, client.deviceID!, voip);
+    final memberships = room.getCallMembershipsForUser(
+      client.userID!,
+      client.deviceID!,
+      voip,
+    );
     final membership = memberships.firstWhereOrNull(
       (m) =>
           m.callId == groupCallId &&
@@ -435,9 +438,7 @@ class GroupCallSession {
     final reactions = <MatrixEvent>[];
 
     final memberships = room
-        .getCallMembershipsFromRoom(
-          voip,
-        )
+        .getCallMembershipsFromRoom(voip)
         .values
         .expand((e) => e);
 
@@ -458,14 +459,13 @@ class GroupCallSession {
       // but turns our synapse does not rate limit these so should be fine?
       final eventsToProcess =
           (await client.getRelatingEventsWithRelTypeAndEventType(
-        room.id,
-        membership.eventId!,
-        RelationshipTypes.reference,
-        EventTypes.GroupCallMemberReaction,
-        recurse: false,
-        limit: 100,
-      ))
-              .chunk;
+            room.id,
+            membership.eventId!,
+            RelationshipTypes.reference,
+            EventTypes.GroupCallMemberReaction,
+            recurse: false,
+            limit: 100,
+          )).chunk;
 
       reactions.addAll(
         eventsToProcess.where((event) => event.content['key'] == emoji),
@@ -564,11 +564,7 @@ class GroupCallSession {
           '[VOIP] Copied permanent reaction $reactionKey to new member event $newEventId',
         );
       } catch (e, s) {
-        Logs().e(
-          '[VOIP] Failed to copy permanent reaction',
-          e,
-          s,
-        );
+        Logs().e('[VOIP] Failed to copy permanent reaction', e, s);
       }
     }
   }

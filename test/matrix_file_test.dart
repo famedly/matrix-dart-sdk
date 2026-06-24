@@ -36,10 +36,7 @@ void main() {
       );
 
       if (resp.statusCode == 200) {
-        final file = MatrixImageFile(
-          name: 'file.jpg',
-          bytes: resp.bodyBytes,
-        );
+        final file = MatrixImageFile(name: 'file.jpg', bytes: resp.bodyBytes);
         expect(file.bytes.isNotEmpty, true);
         expect(file.height, null);
         expect(file.width, null);

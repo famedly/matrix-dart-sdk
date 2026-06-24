@@ -36,9 +36,7 @@ void main() {
         false,
         reason: '$dbPath should not exist',
       );
-      clientOnPath = await getClient(
-        databasePath: dbPath,
-      );
+      clientOnPath = await getClient(databasePath: dbPath);
       await clientOnPath.abortSync();
       expect(await File(dbPath).exists(), true, reason: '$dbPath should exist');
     });
@@ -87,8 +85,9 @@ void main() {
       await client.login(
         LoginType.mLoginPassword,
         token: 'abcd',
-        identifier:
-            AuthenticationUserIdentifier(user: '@test:fakeServer.notExisting'),
+        identifier: AuthenticationUserIdentifier(
+          user: '@test:fakeServer.notExisting',
+        ),
         deviceId: 'GHTYAJCE',
         onInitStateChanged: initStates.add,
       );
@@ -109,8 +108,9 @@ void main() {
       await client.login(
         LoginType.mLoginPassword,
         token: 'abcd',
-        identifier:
-            AuthenticationUserIdentifier(user: '@test:fakeServer.notExisting'),
+        identifier: AuthenticationUserIdentifier(
+          user: '@test:fakeServer.notExisting',
+        ),
         deviceId: 'GHTYAJCE',
         onInitStateChanged: initStates.add,
       );
@@ -142,8 +142,9 @@ void main() {
       expect(matrix.homeserver, null);
 
       try {
-        await matrix
-            .checkHomeserver(Uri.parse('https://fakeserver.wrongaddress'));
+        await matrix.checkHomeserver(
+          Uri.parse('https://fakeserver.wrongaddress'),
+        );
       } catch (exception) {
         expect(exception.toString().isNotEmpty, true);
       }
@@ -202,17 +203,26 @@ void main() {
       );
       expect(
         matrix
-            .rooms[1].receiptState.global.otherUsers['@alice:example.com']?.ts,
+            .rooms[1]
+            .receiptState
+            .global
+            .otherUsers['@alice:example.com']
+            ?.ts,
         1436451550453,
       );
       expect(
-        matrix.rooms[1].receiptState.global.otherUsers['@alice:example.com']
+        matrix
+            .rooms[1]
+            .receiptState
+            .global
+            .otherUsers['@alice:example.com']
             ?.eventId,
         '\$7365636s6r6432:example.com',
       );
 
-      final inviteRoom = matrix.rooms
-          .singleWhere((room) => room.membership == Membership.invite);
+      final inviteRoom = matrix.rooms.singleWhere(
+        (room) => room.membership == Membership.invite,
+      );
       expect(inviteRoom.name, 'My Room Name');
       expect(inviteRoom.states[EventTypes.RoomMember]?.length, 1);
       expect(matrix.rooms.length, 3);
@@ -236,7 +246,9 @@ void main() {
       expect(matrix.userDeviceKeys['@alice:example.com']?.outdated, false);
       expect(matrix.userDeviceKeys['@alice:example.com']?.deviceKeys.length, 2);
       expect(
-        matrix.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS']
+        matrix
+            .userDeviceKeys['@alice:example.com']
+            ?.deviceKeys['JLAFKJWSCS']
             ?.verified,
         false,
       );
@@ -245,12 +257,8 @@ void main() {
         SyncUpdate.fromJson({
           'next_batch': 'fakesync',
           'device_lists': {
-            'changed': [
-              '@alice:example.com',
-            ],
-            'left': [
-              '@bob:example.com',
-            ],
+            'changed': ['@alice:example.com'],
+            'left': ['@bob:example.com'],
           },
         }),
       );
@@ -273,7 +281,7 @@ void main() {
                       'state_key': '',
                       'origin_server_ts': 1417731086799,
                       'event_id': '66697273743033:example.com',
-                    }
+                    },
                   ],
                 },
               },
@@ -374,9 +382,7 @@ void main() {
     });
 
     test('accountData', () async {
-      final content = {
-        'bla': 'blub',
-      };
+      final content = {'bla': 'blub'};
 
       const key = 'abc def!/_-';
       await matrix.setAccountData(matrix.userID!, key, content);
@@ -387,15 +393,14 @@ void main() {
     });
 
     test('roomAccountData', () async {
-      final content = {
-        'bla': 'blub',
-      };
+      final content = {'bla': 'blub'};
 
       const key = 'abc def!/_-';
       const roomId = '!726s6s6q:example.com';
       await matrix.setAccountDataPerRoom(matrix.userID!, roomId, key, content);
-      final roomFromList = (await matrix.database.getRoomList(matrix))
-          .firstWhere((room) => room.id == roomId);
+      final roomFromList = (await matrix.database.getRoomList(
+        matrix,
+      )).firstWhere((room) => room.id == roomId);
       final roomFromDb = await matrix.database.getSingleRoom(matrix, roomId);
 
       expect(
@@ -435,8 +440,9 @@ void main() {
       expect(matrix.homeserver, null);
 
       try {
-        await matrix
-            .checkHomeserver(Uri.parse('https://fakeserver.wrongaddress'));
+        await matrix.checkHomeserver(
+          Uri.parse('https://fakeserver.wrongaddress'),
+        );
       } catch (exception) {
         expect(exception.toString().isNotEmpty, true);
       }
@@ -616,7 +622,7 @@ void main() {
                       'state_key': '',
                       'origin_server_ts': 1417731086799,
                       'event_id': '66697273743033:example.com',
-                    }
+                    },
                   ],
                 },
               },
@@ -642,7 +648,7 @@ void main() {
                       'state_key': '',
                       'origin_server_ts': 1417731086799,
                       'event_id': '66697273743033:example.com',
-                    }
+                    },
                   ],
                 },
               },
@@ -670,7 +676,7 @@ void main() {
                       },
                       'origin_server_ts': 1417731086799,
                       'event_id': '\$last:example.com',
-                    }
+                    },
                   ],
                 },
               },
@@ -706,7 +712,7 @@ void main() {
                       },
                       'origin_server_ts': 1417731086799,
                       'event_id': '\$edit:example.com',
-                    }
+                    },
                   ],
                 },
               },
@@ -742,7 +748,7 @@ void main() {
                       },
                       'origin_server_ts': 1417731086799,
                       'event_id': '\$edit:example.com',
-                    }
+                    },
                   ],
                 },
               },
@@ -767,8 +773,9 @@ void main() {
                     senderId: '@alice:example.com',
                     eventId: 'oldEventId',
                     stateKey: '@alice:example.com',
-                    originServerTs:
-                        DateTime.now().subtract(const Duration(days: 365 * 30)),
+                    originServerTs: DateTime.now().subtract(
+                      const Duration(days: 365 * 30),
+                    ),
                   ),
                 ],
               ),
@@ -807,7 +814,7 @@ void main() {
                       },
                       'origin_server_ts': 1417731086799,
                       'event_id': '\$edit2:example.com',
-                    }
+                    },
                   ],
                 },
               },
@@ -968,8 +975,9 @@ void main() {
         ),
       );
       expect(matrix.onUserProfileUpdate.value, '@alice:example.com');
-      final cachedProfileFromDb =
-          await matrix.database.getUserProfile('@alice:example.com');
+      final cachedProfileFromDb = await matrix.database.getUserProfile(
+        '@alice:example.com',
+      );
       expect(cachedProfileFromDb?.outdated, true);
     });
     test('joinAfterInviteMembership', () async {
@@ -1000,8 +1008,9 @@ void main() {
         ),
       );
       //await client.handleSync(SyncUpdate.fromJson(jsonDecode('')));
-      final room = client
-          .getRoomById('!bWEUQDujMKwjxkCXYr:tim-alpha.staging.famedly.de')!;
+      final room = client.getRoomById(
+        '!bWEUQDujMKwjxkCXYr:tim-alpha.staging.famedly.de',
+      )!;
       await room.postLoad();
       final participants = await room.requestParticipants();
 
@@ -1038,9 +1047,7 @@ void main() {
                     type: EventTypes.RoomMember,
                     senderId: '@bob:example.com',
                     stateKey: client.userID,
-                    content: {
-                      'membership': 'invite',
-                    },
+                    content: {'membership': 'invite'},
                   ),
                 ],
               ),
@@ -1055,9 +1062,7 @@ void main() {
                     originServerTs: DateTime.now(),
                     eventId:
                         '\$abcdefwsjaskdfabsjfhabfsjgbahsjfkgbasjffsajfgsfd',
-                    content: {
-                      'membership': 'leave',
-                    },
+                    content: {'membership': 'leave'},
                   ),
                 ],
               ),
@@ -1096,13 +1101,10 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
 
       await matrix.sendToDeviceEncrypted(
-          matrix.userDeviceKeys['@alice:example.com']!.deviceKeys.values
-              .toList(),
-          'm.message',
-          {
-            'msgtype': 'm.text',
-            'body': 'Hello world',
-          });
+        matrix.userDeviceKeys['@alice:example.com']!.deviceKeys.values.toList(),
+        'm.message',
+        {'msgtype': 'm.text', 'body': 'Hello world'},
+      );
       expect(
         FakeMatrixApi.calledEndpoints.keys.any(
           (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
@@ -1113,13 +1115,10 @@ void main() {
     test('sendToDeviceEncryptedChunked', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await matrix.sendToDeviceEncryptedChunked(
-          matrix.userDeviceKeys['@alice:example.com']!.deviceKeys.values
-              .toList(),
-          'm.message',
-          {
-            'msgtype': 'm.text',
-            'body': 'Hello world',
-          });
+        matrix.userDeviceKeys['@alice:example.com']!.deviceKeys.values.toList(),
+        'm.message',
+        {'msgtype': 'm.text', 'body': 'Hello world'},
+      );
       await Future.delayed(Duration(milliseconds: 100));
       expect(
         FakeMatrixApi.calledEndpoints.keys
@@ -1148,12 +1147,11 @@ void main() {
             'ed25519:$deviceId': keys.ed25519.toBase64(),
           },
         };
-        final signature =
-            account.sign(String.fromCharCodes(canonicalJson.encode(keyObj)));
+        final signature = account.sign(
+          String.fromCharCodes(canonicalJson.encode(keyObj)),
+        );
         keyObj['signatures'] = {
-          userId: {
-            'ed25519:$deviceId': signature.toBase64(),
-          },
+          userId: {'ed25519:$deviceId': signature.toBase64()},
         };
         deviceKeys.add(DeviceKeys.fromJson(keyObj, matrix));
       }
@@ -1190,23 +1188,17 @@ void main() {
       FakeMatrixApi.failToDevice = true;
       final foxContent = {
         '@fox:example.org': {
-          '*': {
-            'fox': 'hole',
-          },
+          '*': {'fox': 'hole'},
         },
       };
       final raccoonContent = {
         '@fox:example.org': {
-          '*': {
-            'raccoon': 'mask',
-          },
+          '*': {'raccoon': 'mask'},
         },
       };
       final bunnyContent = {
         '@fox:example.org': {
-          '*': {
-            'bunny': 'burrow',
-          },
+          '*': {'bunny': 'burrow'},
         },
       };
       await client
@@ -1218,15 +1210,14 @@ void main() {
       expect(
         json.decode(
           FakeMatrixApi
-                  .calledEndpoints['/client/v3/sendToDevice/foxies/floof_txnid']
-              ?[0],
+              .calledEndpoints['/client/v3/sendToDevice/foxies/floof_txnid']?[0],
         )['messages'],
         foxContent,
       );
       expect(
         json.decode(
-          FakeMatrixApi.calledEndpoints[
-              '/client/v3/sendToDevice/raccoon/raccoon_txnid']?[0],
+          FakeMatrixApi
+              .calledEndpoints['/client/v3/sendToDevice/raccoon/raccoon_txnid']?[0],
         )['messages'],
         raccoonContent,
       );
@@ -1262,23 +1253,17 @@ void main() {
       FakeMatrixApi.failToDevice = true;
       final foxContent = {
         '@fox:example.org': {
-          '*': {
-            'fox': 'hole',
-          },
+          '*': {'fox': 'hole'},
         },
       };
       final raccoonContent = {
         '@fox:example.org': {
-          '*': {
-            'raccoon': 'mask',
-          },
+          '*': {'raccoon': 'mask'},
         },
       };
       final bunnyContent = {
         '@fox:example.org': {
-          '*': {
-            'bunny': 'burrow',
-          },
+          '*': {'bunny': 'burrow'},
         },
       };
       await client
@@ -1338,7 +1323,7 @@ void main() {
             {
               'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
               'type': 'm.room.encryption',
-            }
+            },
           ],
           'invite': ['@alice:example.com'],
           'is_direct': true,
@@ -1359,7 +1344,7 @@ void main() {
             {
               'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
               'type': 'm.room.encryption',
-            }
+            },
           ],
           'name': 'Testgroup',
           'preset': 'private_chat',
@@ -1382,7 +1367,7 @@ void main() {
             {
               'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
               'type': 'm.room.encryption',
-            }
+            },
           ],
           'name': 'Testgroup',
           'power_level_content_override': {
@@ -1412,7 +1397,7 @@ void main() {
             {
               'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
               'type': 'm.room.encryption',
-            }
+            },
           ],
           'name': 'Testgroup',
           'power_level_content_override': {
@@ -1438,7 +1423,7 @@ void main() {
             {
               'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
               'type': 'm.room.encryption',
-            }
+            },
           ],
           'name': 'Testgroup',
           'power_level_content_override': {
@@ -1510,9 +1495,7 @@ void main() {
       matrix.accountData['m.ignored_user_list'] = BasicEvent(
         type: 'm.ignored_user_list',
         content: {
-          'ignored_users': {
-            '@charley:stupid.abc': {},
-          },
+          'ignored_users': {'@charley:stupid.abc': {}},
         },
       );
       expect(matrix.ignoredUsers, ['@charley:stupid.abc']);
@@ -1567,10 +1550,14 @@ void main() {
     test('object equality', () async {
       final time1 = DateTime.fromMillisecondsSinceEpoch(1);
       final time2 = DateTime.fromMillisecondsSinceEpoch(0);
-      final user1 =
-          User('@user1:example.org', room: Room(id: '!room1', client: matrix));
-      final user2 =
-          User('@user2:example.org', room: Room(id: '!room1', client: matrix));
+      final user1 = User(
+        '@user1:example.org',
+        room: Room(id: '!room1', client: matrix),
+      );
+      final user2 = User(
+        '@user2:example.org',
+        room: Room(id: '!room1', client: matrix),
+      );
       // receipts
       expect(Receipt(user1, time1) == Receipt(user1, time1), true);
       expect(Receipt(user1, time1) == Receipt(user1, time2), false);
@@ -1672,16 +1659,18 @@ void main() {
     });
 
     test('getEventByPushNotification', () async {
-      final client = Client(
-        'testclient',
-        httpClient: FakeMatrixApi(),
-        database: await getDatabase(),
-      )
-        ..accessToken = '1234'
-        ..baseUri = Uri.parse('https://fakeserver.notexisting');
+      final client =
+          Client(
+              'testclient',
+              httpClient: FakeMatrixApi(),
+              database: await getDatabase(),
+            )
+            ..accessToken = '1234'
+            ..baseUri = Uri.parse('https://fakeserver.notexisting');
       Event? event;
-      event = await client
-          .getEventByPushNotification(PushNotification(devices: []));
+      event = await client.getEventByPushNotification(
+        PushNotification(devices: []),
+      );
       expect(event, null);
 
       event = await client.getEventByPushNotification(
@@ -1689,10 +1678,7 @@ void main() {
           devices: [],
           eventId: '123',
           roomId: '!localpart2:server.abc',
-          content: {
-            'msgtype': 'm.text',
-            'body': 'Hello world',
-          },
+          content: {'msgtype': 'm.text', 'body': 'Hello world'},
           roomAlias: '#testalias:blaaa',
           roomName: 'TestRoomName',
           sender: '@alicyy:example.com',
@@ -1709,8 +1695,10 @@ void main() {
       expect(event?.room.id, '!localpart2:server.abc');
       expect(event?.room.name, 'TestRoomName');
       expect(event?.room.canonicalAlias, '#testalias:blaaa');
-      final storedEvent =
-          await client.database.getEventById('123', event!.room);
+      final storedEvent = await client.database.getEventById(
+        '123',
+        event!.room,
+      );
       expect(storedEvent?.eventId, event.eventId);
 
       event = await client.getEventByPushNotification(
@@ -1725,8 +1713,10 @@ void main() {
       expect(event?.body, 'This is an example text message');
       expect(event?.messageType, 'm.text');
       expect(event?.type, 'm.room.message');
-      final storedEvent2 = await client.database
-          .getEventById('143273582443PhrSn:example.org', event!.room);
+      final storedEvent2 = await client.database.getEventById(
+        '143273582443PhrSn:example.org',
+        event!.room,
+      );
       expect(storedEvent2?.eventId, event.eventId);
     });
 
@@ -1779,85 +1769,73 @@ void main() {
       await client.dispose();
     });
 
-    test(
-      'Client Init Exception',
-      () async {
-        final customClient = Client(
-          'failclient',
-          database: await getMatrixSdkDatabase(),
+    test('Client Init Exception', () async {
+      final customClient = Client(
+        'failclient',
+        database: await getMatrixSdkDatabase(),
+      );
+      try {
+        await customClient.init(
+          newToken: 'testtoken',
+          newDeviceID: 'testdeviceid',
+          newDeviceName: 'testdevicename',
+          newHomeserver: Uri.parse('https://test.server'),
+          newOlmAccount: 'abcd',
+          newUserID: '@user:server',
         );
-        try {
-          await customClient.init(
-            newToken: 'testtoken',
-            newDeviceID: 'testdeviceid',
-            newDeviceName: 'testdevicename',
-            newHomeserver: Uri.parse('https://test.server'),
-            newOlmAccount: 'abcd',
-            newUserID: '@user:server',
-          );
-          throw Exception('No exception?');
-        } on ClientInitException catch (error) {
-          expect(error.accessToken, 'testtoken');
-          expect(error.deviceId, 'testdeviceid');
-          expect(error.deviceName, 'testdevicename');
-          expect(error.homeserver, Uri.parse('https://test.server'));
-          expect(error.olmAccount, 'abcd');
-          expect(error.userId, '@user:server');
-          expect(
-            error.originalException.runtimeType.toString(),
-            'AnyhowException',
-          );
-        }
-        await customClient.dispose(closeDatabase: true);
-      },
-    );
+        throw Exception('No exception?');
+      } on ClientInitException catch (error) {
+        expect(error.accessToken, 'testtoken');
+        expect(error.deviceId, 'testdeviceid');
+        expect(error.deviceName, 'testdevicename');
+        expect(error.homeserver, Uri.parse('https://test.server'));
+        expect(error.olmAccount, 'abcd');
+        expect(error.userId, '@user:server');
+        expect(
+          error.originalException.runtimeType.toString(),
+          'AnyhowException',
+        );
+      }
+      await customClient.dispose(closeDatabase: true);
+    });
 
     test('default and custom rooms sorter', () {
       final roomA = Room(id: '!roomA:example.com', client: matrix)
-        ..lastEvent = Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'event_id': '\$evt_a',
-            'sender': '@test:fakeServer.notExisting',
-            'origin_server_ts': 1000,
-            'content': {'msgtype': 'm.text', 'body': 'message a'},
-          },
-          Room(id: '!roomA:example.com', client: matrix),
-        );
+        ..lastEvent = Event.fromJson({
+          'type': 'm.room.message',
+          'event_id': '\$evt_a',
+          'sender': '@test:fakeServer.notExisting',
+          'origin_server_ts': 1000,
+          'content': {'msgtype': 'm.text', 'body': 'message a'},
+        }, Room(id: '!roomA:example.com', client: matrix));
 
       final roomB = Room(id: '!roomB:example.com', client: matrix)
-        ..lastEvent = Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'event_id': '\$evt_b',
-            'sender': '@test:fakeServer.notExisting',
-            'origin_server_ts': 3000,
-            'content': {'msgtype': 'm.text', 'body': 'message b'},
-          },
-          Room(id: '!roomB:example.com', client: matrix),
-        );
+        ..lastEvent = Event.fromJson({
+          'type': 'm.room.message',
+          'event_id': '\$evt_b',
+          'sender': '@test:fakeServer.notExisting',
+          'origin_server_ts': 3000,
+          'content': {'msgtype': 'm.text', 'body': 'message b'},
+        }, Room(id: '!roomB:example.com', client: matrix));
 
       final roomC = Room(id: '!roomC:example.com', client: matrix)
-        ..lastEvent = Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'event_id': '\$evt_c',
-            'sender': '@test:fakeServer.notExisting',
-            'origin_server_ts': 2000,
-            'content': {'msgtype': 'm.text', 'body': 'message c'},
-          },
-          Room(id: '!roomC:example.com', client: matrix),
-        );
+        ..lastEvent = Event.fromJson({
+          'type': 'm.room.message',
+          'event_id': '\$evt_c',
+          'sender': '@test:fakeServer.notExisting',
+          'origin_server_ts': 2000,
+          'content': {'msgtype': 'm.text', 'body': 'message c'},
+        }, Room(id: '!roomC:example.com', client: matrix));
 
       matrix.rooms.clear();
       matrix.rooms.addAll([roomA, roomB, roomC]);
 
       matrix.setCustomRoomSorter((a, b) => a.id.compareTo(b.id));
-      expect(
-        matrix.rooms,
-        [roomA, roomB, roomC],
-        reason: 'Rooms sorted by custom sorter (alphabetically)',
-      );
+      expect(matrix.rooms, [
+        roomA,
+        roomB,
+        roomC,
+      ], reason: 'Rooms sorted by custom sorter (alphabetically)');
 
       matrix.setCustomRoomSorter(null);
       expect(

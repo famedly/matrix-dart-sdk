@@ -22,20 +22,19 @@ const _encryptedFileSha256 = 'WgC7fw2alBC5t+xDx+PFlZxfFJXtIstQCg+j0WDaXxE';
 MatrixContentScannerConfig _config({
   bool withAuthHeader = true,
   bool scanBeforePreview = false,
-}) =>
-    MatrixContentScannerConfig(
-      downloadUri: Uri.parse(
-        'https://scanner.example/_matrix/media_proxy/unstable/download/',
-      ),
-      downloadThumbnailUri: Uri.parse(
-        'https://scanner.example/_matrix/media_proxy/unstable/thumbnail/',
-      ),
-      downloadEncryptedUri: Uri.parse(
-        'https://scanner.example/_matrix/media_proxy/unstable/download_encrypted',
-      ),
-      withAuthHeader: withAuthHeader,
-      scanBeforePreview: scanBeforePreview,
-    );
+}) => MatrixContentScannerConfig(
+  downloadUri: Uri.parse(
+    'https://scanner.example/_matrix/media_proxy/unstable/download/',
+  ),
+  downloadThumbnailUri: Uri.parse(
+    'https://scanner.example/_matrix/media_proxy/unstable/thumbnail/',
+  ),
+  downloadEncryptedUri: Uri.parse(
+    'https://scanner.example/_matrix/media_proxy/unstable/download_encrypted',
+  ),
+  withAuthHeader: withAuthHeader,
+  scanBeforePreview: scanBeforePreview,
+);
 
 class _ScannerTestClient extends Client {
   _ScannerTestClient({
@@ -45,12 +44,12 @@ class _ScannerTestClient extends Client {
     NativeImplementations nativeImplementations = NativeImplementations.dummy,
     this.encryptionEnabledForTest = false,
   }) : super(
-          'scanner-test',
-          database: database,
-          httpClient: httpClient,
-          contentScannerConfig: scanner,
-          nativeImplementations: nativeImplementations,
-        );
+         'scanner-test',
+         database: database,
+         httpClient: httpClient,
+         contentScannerConfig: scanner,
+         nativeImplementations: nativeImplementations,
+       );
 
   final bool encryptionEnabledForTest;
 
@@ -170,34 +169,37 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
 
-    test('getThumbnailUri routes through scanner and preserves query params',
-        () async {
-      final client = await _freshClient(
-        httpClient: MockClient((_) async => http.Response('', 404)),
-        scanner: _config(),
-      );
-      final uri = await Uri.parse(_mxc).getThumbnailUri(
-        client,
-        width: 80,
-        height: 60,
-        method: ThumbnailMethod.scale,
-        animated: true,
-      );
-      expect(
-        uri.toString(),
-        'https://scanner.example/_matrix/media_proxy/unstable/thumbnail/example.org/abcd1234'
-        '?width=80&height=60&method=scale&animated=true',
-      );
-      await client.dispose(closeDatabase: true);
-    });
+    test(
+      'getThumbnailUri routes through scanner and preserves query params',
+      () async {
+        final client = await _freshClient(
+          httpClient: MockClient((_) async => http.Response('', 404)),
+          scanner: _config(),
+        );
+        final uri = await Uri.parse(_mxc).getThumbnailUri(
+          client,
+          width: 80,
+          height: 60,
+          method: ThumbnailMethod.scale,
+          animated: true,
+        );
+        expect(
+          uri.toString(),
+          'https://scanner.example/_matrix/media_proxy/unstable/thumbnail/example.org/abcd1234'
+          '?width=80&height=60&method=scale&animated=true',
+        );
+        await client.dispose(closeDatabase: true);
+      },
+    );
 
     test('getDownloadUri preserves MXC port in server part', () async {
       final client = await _freshClient(
         httpClient: MockClient((_) async => http.Response('', 404)),
         scanner: _config(),
       );
-      final uri = await Uri.parse('mxc://example.org:8448/media123')
-          .getDownloadUri(client);
+      final uri = await Uri.parse(
+        'mxc://example.org:8448/media123',
+      ).getDownloadUri(client);
       expect(
         uri.toString(),
         'https://scanner.example/_matrix/media_proxy/unstable/download/example.org:8448/media123',
@@ -246,37 +248,33 @@ void main() {
   });
 
   group('downloadAndDecryptAttachment + scanner', () {
-    Event buildEncryptedEvent(Room room) => Event.fromJson(
-          {
-            'type': EventTypes.Message,
-            'event_id': '\$evt1',
-            'sender': '@alice:example.org',
-            'origin_server_ts': 0,
-            'content': {
-              'msgtype': 'm.file',
-              'body': 'secret.bin',
-              'filename': 'secret.bin',
-              'info': {'mimetype': 'application/octet-stream', 'size': 5},
-              'file': {
-                'v': 'v2',
-                'url': _encryptedMxc,
-                'key': {
-                  'alg': 'A256CTR',
-                  'ext': true,
-                  'key_ops': ['encrypt', 'decrypt'],
-                  'kty': 'oct',
-                  'k': _encryptedFileKey,
-                },
-                'iv': _encryptedFileIv,
-                'hashes': {'sha256': _encryptedFileSha256},
-              },
-            },
+    Event buildEncryptedEvent(Room room) => Event.fromJson({
+      'type': EventTypes.Message,
+      'event_id': '\$evt1',
+      'sender': '@alice:example.org',
+      'origin_server_ts': 0,
+      'content': {
+        'msgtype': 'm.file',
+        'body': 'secret.bin',
+        'filename': 'secret.bin',
+        'info': {'mimetype': 'application/octet-stream', 'size': 5},
+        'file': {
+          'v': 'v2',
+          'url': _encryptedMxc,
+          'key': {
+            'alg': 'A256CTR',
+            'ext': true,
+            'key_ops': ['encrypt', 'decrypt'],
+            'kty': 'oct',
+            'k': _encryptedFileKey,
           },
-          room,
-        );
+          'iv': _encryptedFileIv,
+          'hashes': {'sha256': _encryptedFileSha256},
+        },
+      },
+    }, room);
 
-    test('POSTs to download_encrypted with file JSON and auth header',
-        () async {
+    test('POSTs to download_encrypted with file JSON and auth header', () async {
       http.Request? seenRequest;
       final mockHttp = MockClient((req) async {
         seenRequest = req;
@@ -386,8 +384,7 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
 
-    test('unencrypted file GETs scanner download URL with auth header',
-        () async {
+    test('unencrypted file GETs scanner download URL with auth header', () async {
       http.BaseRequest? seenRequest;
       final payload = Uint8List.fromList([7, 7, 7]);
       final mockHttp = MockClient((req) async {
@@ -399,22 +396,19 @@ void main() {
         scanner: _config(),
       );
       final room = Room(id: '!room:example.org', client: client);
-      final event = Event.fromJson(
-        {
-          'type': EventTypes.Message,
-          'event_id': '\$evt2',
-          'sender': '@alice:example.org',
-          'origin_server_ts': 0,
-          'content': {
-            'msgtype': 'm.file',
-            'body': 'note.txt',
-            'filename': 'note.txt',
-            'info': {'mimetype': 'text/plain', 'size': 3},
-            'url': _mxc,
-          },
+      final event = Event.fromJson({
+        'type': EventTypes.Message,
+        'event_id': '\$evt2',
+        'sender': '@alice:example.org',
+        'origin_server_ts': 0,
+        'content': {
+          'msgtype': 'm.file',
+          'body': 'note.txt',
+          'filename': 'note.txt',
+          'info': {'mimetype': 'text/plain', 'size': 3},
+          'url': _mxc,
         },
-        room,
-      );
+      }, room);
 
       final file = await event.downloadAndDecryptAttachment();
       expect(file.bytes, payload);
@@ -428,21 +422,21 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
 
-    test('unencrypted file omits Authorization when withAuthHeader is false',
-        () async {
-      http.BaseRequest? seenRequest;
-      final payload = Uint8List.fromList([7, 7, 7]);
-      final mockHttp = MockClient((req) async {
-        seenRequest = req;
-        return http.Response.bytes(payload, 200);
-      });
-      final client = await _freshClient(
-        httpClient: mockHttp,
-        scanner: _config(withAuthHeader: false),
-      );
-      final room = Room(id: '!room:example.org', client: client);
-      final event = Event.fromJson(
-        {
+    test(
+      'unencrypted file omits Authorization when withAuthHeader is false',
+      () async {
+        http.BaseRequest? seenRequest;
+        final payload = Uint8List.fromList([7, 7, 7]);
+        final mockHttp = MockClient((req) async {
+          seenRequest = req;
+          return http.Response.bytes(payload, 200);
+        });
+        final client = await _freshClient(
+          httpClient: mockHttp,
+          scanner: _config(withAuthHeader: false),
+        );
+        final room = Room(id: '!room:example.org', client: client);
+        final event = Event.fromJson({
           'type': EventTypes.Message,
           'event_id': '\$evt3',
           'sender': '@alice:example.org',
@@ -454,36 +448,35 @@ void main() {
             'info': {'mimetype': 'text/plain', 'size': 3},
             'url': _mxc,
           },
-        },
-        room,
-      );
+        }, room);
 
-      final file = await event.downloadAndDecryptAttachment();
-      expect(file.bytes, payload);
-      expect(seenRequest!.method, 'GET');
-      expect(seenRequest!.headers.containsKey('authorization'), false);
+        final file = await event.downloadAndDecryptAttachment();
+        expect(file.bytes, payload);
+        expect(seenRequest!.method, 'GET');
+        expect(seenRequest!.headers.containsKey('authorization'), false);
 
-      await client.dispose(closeDatabase: true);
-    });
+        await client.dispose(closeDatabase: true);
+      },
+    );
 
-    test('unencrypted non-2xx response throws ContentScannerException',
-        () async {
-      final mockHttp = MockClient((req) async {
-        return http.Response(
-          jsonEncode({
-            'reason': 'MCS_MEDIA_NOT_CLEAN',
-            'info': 'virus detected',
-          }),
-          403,
+    test(
+      'unencrypted non-2xx response throws ContentScannerException',
+      () async {
+        final mockHttp = MockClient((req) async {
+          return http.Response(
+            jsonEncode({
+              'reason': 'MCS_MEDIA_NOT_CLEAN',
+              'info': 'virus detected',
+            }),
+            403,
+          );
+        });
+        final client = await _freshClient(
+          httpClient: mockHttp,
+          scanner: _config(),
         );
-      });
-      final client = await _freshClient(
-        httpClient: mockHttp,
-        scanner: _config(),
-      );
-      final room = Room(id: '!room:example.org', client: client);
-      final event = Event.fromJson(
-        {
+        final room = Room(id: '!room:example.org', client: client);
+        final event = Event.fromJson({
           'type': EventTypes.Message,
           'event_id': '\$evt4',
           'sender': '@alice:example.org',
@@ -495,22 +488,21 @@ void main() {
             'info': {'mimetype': 'text/plain', 'size': 3},
             'url': _mxc,
           },
-        },
-        room,
-      );
+        }, room);
 
-      await expectLater(
-        event.downloadAndDecryptAttachment(),
-        throwsA(
-          isA<ContentScannerException>()
-              .having((e) => e.reason, 'reason', 'MCS_MEDIA_NOT_CLEAN')
-              .having((e) => e.info, 'info', 'virus detected')
-              .having((e) => e.statusCode, 'statusCode', 403),
-        ),
-      );
+        await expectLater(
+          event.downloadAndDecryptAttachment(),
+          throwsA(
+            isA<ContentScannerException>()
+                .having((e) => e.reason, 'reason', 'MCS_MEDIA_NOT_CLEAN')
+                .having((e) => e.info, 'info', 'virus detected')
+                .having((e) => e.statusCode, 'statusCode', 403),
+          ),
+        );
 
-      await client.dispose(closeDatabase: true);
-    });
+        await client.dispose(closeDatabase: true);
+      },
+    );
 
     test('non-2xx response throws ContentScannerException', () async {
       final nativeImplementations = _DecryptingNativeImplementations(

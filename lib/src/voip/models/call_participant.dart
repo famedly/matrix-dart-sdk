@@ -9,11 +9,7 @@ class CallParticipant {
   final String userId;
   final String? deviceId;
 
-  CallParticipant(
-    this.voip, {
-    required this.userId,
-    this.deviceId,
-  });
+  CallParticipant(this.voip, {required this.userId, this.deviceId});
 
   bool get isLocal =>
       userId == voip.client.userID && deviceId == voip.client.deviceID;

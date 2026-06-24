@@ -11,11 +11,11 @@ class SpaceChild {
   final bool? suggested;
 
   SpaceChild.fromState(StrippedStateEvent state)
-      : assert(state.type == EventTypes.SpaceChild),
-        roomId = state.stateKey,
-        via = state.content.tryGetList<String>('via') ?? [],
-        order = state.content.tryGet<String>('order') ?? '',
-        suggested = state.content.tryGet<bool>('suggested');
+    : assert(state.type == EventTypes.SpaceChild),
+      roomId = state.stateKey,
+      via = state.content.tryGetList<String>('via') ?? [],
+      order = state.content.tryGet<String>('order') ?? '',
+      suggested = state.content.tryGet<bool>('suggested');
 }
 
 class SpaceParent {
@@ -24,8 +24,8 @@ class SpaceParent {
   final bool? canonical;
 
   SpaceParent.fromState(StrippedStateEvent state)
-      : assert(state.type == EventTypes.SpaceParent),
-        roomId = state.stateKey,
-        via = state.content.tryGetList<String>('via') ?? [],
-        canonical = state.content.tryGet<bool>('canonical');
+    : assert(state.type == EventTypes.SpaceParent),
+      roomId = state.stateKey,
+      via = state.content.tryGetList<String>('via') ?? [],
+      canonical = state.content.tryGet<bool>('canonical');
 }

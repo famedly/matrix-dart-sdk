@@ -15,8 +15,7 @@ class MockWebRTCDelegate implements WebRTCDelegate {
   Future<RTCPeerConnection> createPeerConnection(
     Map<String, dynamic> configuration, [
     Map<String, dynamic> constraints = const {},
-  ]) async =>
-      MockRTCPeerConnection();
+  ]) async => MockRTCPeerConnection();
 
   @override
   Future<void> registerListeners(CallSession session) async {
@@ -317,17 +316,11 @@ class MockRTCPeerConnection implements RTCPeerConnection {
     return [
       MockStatsReport(
         type: 'inbound-rtp',
-        values: {
-          'kind': 'audio',
-          'audioLevel': mockAudioLevel,
-        },
+        values: {'kind': 'audio', 'audioLevel': mockAudioLevel},
       ),
       MockStatsReport(
         type: 'media-source',
-        values: {
-          'kind': 'audio',
-          'audioLevel': mockAudioLevel,
-        },
+        values: {'kind': 'audio', 'audioLevel': mockAudioLevel},
       ),
     ];
   }
@@ -545,7 +538,7 @@ class MockRTCRtpSender implements RTCRtpSender {
 class MockRTCRtpReceiver implements RTCRtpReceiver {
   @override
   Function(RTCRtpReceiver rtpReceiver, RTCRtpMediaType mediaType)?
-      onFirstPacketReceived;
+  onFirstPacketReceived;
 
   @override
   Future<List<StatsReport>> getStats() {

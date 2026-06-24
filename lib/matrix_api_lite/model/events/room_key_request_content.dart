@@ -17,13 +17,12 @@ class RoomKeyRequestContent {
   String requestId;
 
   RoomKeyRequestContent.fromJson(Map<String, Object?> json)
-      : body = ((Map<String, Object?>? x) => x != null
-            ? RequestedKeyInfo.fromJson(x)
-            : null)(json.tryGet('body')),
-        action = json.tryGet('action', TryGet.required) ?? '',
-        requestingDeviceId =
-            json.tryGet('requesting_device_id', TryGet.required) ?? '',
-        requestId = json.tryGet('request_id', TryGet.required) ?? '';
+    : body = ((Map<String, Object?>? x) =>
+          x != null ? RequestedKeyInfo.fromJson(x) : null)(json.tryGet('body')),
+      action = json.tryGet('action', TryGet.required) ?? '',
+      requestingDeviceId =
+          json.tryGet('requesting_device_id', TryGet.required) ?? '',
+      requestId = json.tryGet('request_id', TryGet.required) ?? '';
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};
@@ -49,10 +48,10 @@ class RequestedKeyInfo {
   });
 
   RequestedKeyInfo.fromJson(Map<String, Object?> json)
-      : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',
-        roomId = json.tryGet('room_id', TryGet.required) ?? '',
-        sessionId = json.tryGet('session_id', TryGet.required) ?? '',
-        senderKey = json.tryGet('sender_key', TryGet.required) ?? '';
+    : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',
+      roomId = json.tryGet('room_id', TryGet.required) ?? '',
+      sessionId = json.tryGet('session_id', TryGet.required) ?? '',
+      senderKey = json.tryGet('sender_key', TryGet.required) ?? '';
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};

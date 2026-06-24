@@ -24,9 +24,7 @@ mixin DatabaseFileStorage {
         .map((entry) => '${entry.key}${entry.value}')
         .join('_');
     final fileName = '${host}_${path}_$query';
-    return File(
-      join(Directory.fromUri(fileStorageLocation!).path, fileName),
-    );
+    return File(join(Directory.fromUri(fileStorageLocation!).path, fileName));
   }
 
   Future<void> storeFile(Uri mxcUri, Uint8List bytes, int time) async {

@@ -158,10 +158,7 @@ class NativeImplementationsDummy extends NativeImplementations {
     final b = Uint8List(1);
 
     b[0] = 1;
-    final aesKey = CryptoUtils.hmac(
-      key: prk,
-      input: utf8.encode('') + b,
-    );
+    final aesKey = CryptoUtils.hmac(key: prk, input: utf8.encode('') + b);
 
     b[0] = 2;
     final hmacKey = CryptoUtils.hmac(
@@ -201,6 +198,7 @@ class NativeImplementationsIsolate extends NativeImplementations {
 
   NativeImplementationsIsolate(
     this.compute, {
+
     /// To generate upload keys, vodozemac needs to be initialized in the isolate.
     this.vodozemacInit,
   });
@@ -218,13 +216,12 @@ class NativeImplementationsIsolate extends NativeImplementations {
     EncryptedFile file, {
     bool retryInDummy = true,
   }) {
-    return runInBackground<Uint8List?, EncryptedFile>(
-      (EncryptedFile args) async {
-        await vodozemacInit?.call();
-        return NativeImplementations.dummy.decryptFile(args);
-      },
-      file,
-    );
+    return runInBackground<Uint8List?, EncryptedFile>((
+      EncryptedFile args,
+    ) async {
+      await vodozemacInit?.call();
+      return NativeImplementations.dummy.decryptFile(args);
+    }, file);
   }
 
   @override
@@ -232,13 +229,12 @@ class NativeImplementationsIsolate extends NativeImplementations {
     GenerateUploadKeysArgs args, {
     bool retryInDummy = true,
   }) async {
-    return runInBackground<RoomKeys, GenerateUploadKeysArgs>(
-      (GenerateUploadKeysArgs args) async {
-        await vodozemacInit?.call();
-        return NativeImplementations.dummy.generateUploadKeys(args);
-      },
-      args,
-    );
+    return runInBackground<RoomKeys, GenerateUploadKeysArgs>((
+      GenerateUploadKeysArgs args,
+    ) async {
+      await vodozemacInit?.call();
+      return NativeImplementations.dummy.generateUploadKeys(args);
+    }, args);
   }
 
   @override
@@ -246,13 +242,12 @@ class NativeImplementationsIsolate extends NativeImplementations {
     KeyFromPassphraseArgs args, {
     bool retryInDummy = true,
   }) {
-    return runInBackground<Uint8List, KeyFromPassphraseArgs>(
-      (KeyFromPassphraseArgs args) async {
-        await vodozemacInit?.call();
-        return NativeImplementations.dummy.keyFromPassphrase(args);
-      },
-      args,
-    );
+    return runInBackground<Uint8List, KeyFromPassphraseArgs>((
+      KeyFromPassphraseArgs args,
+    ) async {
+      await vodozemacInit?.call();
+      return NativeImplementations.dummy.keyFromPassphrase(args);
+    }, args);
   }
 
   @override
@@ -260,11 +255,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
     MatrixImageFileResizeArguments args, {
     bool retryInDummy = false,
   }) {
-    return runInBackground<MatrixImageFileResizedResponse?,
-        MatrixImageFileResizeArguments>(
-      NativeImplementations.dummy.shrinkImage,
-      args,
-    );
+    return runInBackground<
+      MatrixImageFileResizedResponse?,
+      MatrixImageFileResizeArguments
+    >(NativeImplementations.dummy.shrinkImage, args);
   }
 
   @override
@@ -280,12 +274,11 @@ class NativeImplementationsIsolate extends NativeImplementations {
 
   @override
   Future<bool> checkSecretStorageKey(CheckSecretStorageKeyArgs args) {
-    return runInBackground<bool, CheckSecretStorageKeyArgs>(
-      (CheckSecretStorageKeyArgs args) async {
-        await vodozemacInit?.call();
-        return NativeImplementations.dummy.checkSecretStorageKey(args);
-      },
-      args,
-    );
+    return runInBackground<bool, CheckSecretStorageKeyArgs>((
+      CheckSecretStorageKeyArgs args,
+    ) async {
+      await vodozemacInit?.call();
+      return NativeImplementations.dummy.checkSecretStorageKey(args);
+    }, args);
   }
 }

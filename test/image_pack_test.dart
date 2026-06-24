@@ -178,9 +178,7 @@ void main() {
         'type': 'im.ponies.user_emotes',
         'content': {
           'images': {
-            'user': {
-              'url': 'mxc://user',
-            },
+            'user': {'url': 'mxc://user'},
           },
         },
       });

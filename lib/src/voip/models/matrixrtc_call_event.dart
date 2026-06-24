@@ -81,10 +81,7 @@ final class CallReplacedEvent extends GroupCallChanged {
   CallReplacedEvent(this.existingCall, this.replacementCall);
 }
 
-enum GroupCallStreamType {
-  userMedia,
-  screenshare,
-}
+enum GroupCallStreamType { userMedia, screenshare }
 
 /// Group call stream added event
 final class GroupCallStreamAdded implements MatrixRTCCallEvent {
@@ -125,7 +122,7 @@ enum GroupCallState {
   entering,
   entered,
   leaving,
-  ended
+  ended,
 }
 
 /// Group call state changed event

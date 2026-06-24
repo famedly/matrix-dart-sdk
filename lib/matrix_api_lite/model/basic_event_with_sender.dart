@@ -14,8 +14,8 @@ class BasicEventWithSender extends BasicEvent {
   });
 
   BasicEventWithSender.fromJson(super.json)
-      : senderId = json['sender'] as String,
-        super.fromJson();
+    : senderId = json['sender'] as String,
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

@@ -102,14 +102,11 @@ void main() {
       await collection.close();
     });
 
-    test(
-      'Collection.deleteDatabase',
-      () async {
-        await collection.deleteDatabase(
-          db?.path ?? '',
-          isWeb ? null : databaseFactoryFfi,
-        );
-      },
-    );
+    test('Collection.deleteDatabase', () async {
+      await collection.deleteDatabase(
+        db?.path ?? '',
+        isWeb ? null : databaseFactoryFfi,
+      );
+    });
   });
 }

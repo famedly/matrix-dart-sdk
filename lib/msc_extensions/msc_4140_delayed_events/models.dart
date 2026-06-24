@@ -13,8 +13,9 @@ class ScheduledDelayedEventsResponse {
 
   factory ScheduledDelayedEventsResponse.fromJson(Map<String, dynamic> json) {
     final list = json['delayed_events'] ?? json['scheduled'] as List;
-    final scheduledEvents =
-        list.map((e) => ScheduledDelayedEvent.fromJson(e)).toList();
+    final scheduledEvents = list
+        .map((e) => ScheduledDelayedEvent.fromJson(e))
+        .toList();
 
     return ScheduledDelayedEventsResponse(
       scheduledEvents: List<ScheduledDelayedEvent>.from(scheduledEvents),

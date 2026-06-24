@@ -8,14 +8,11 @@ class BasicEvent {
   String type;
   Map<String, Object?> content;
 
-  BasicEvent({
-    required this.type,
-    required this.content,
-  });
+  BasicEvent({required this.type, required this.content});
 
   BasicEvent.fromJson(Map<String, Object?> json)
-      : type = json['type'] as String,
-        content = (json['content'] as Map<String, Object?>).copy();
+    : type = json['type'] as String,
+      content = (json['content'] as Map<String, Object?>).copy();
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};

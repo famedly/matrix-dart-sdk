@@ -75,8 +75,9 @@ class _PatternCondition {
     if (tempPat == null) {
       throw 'PushCondition is missing pattern';
     }
-    tempPat =
-        RegExp.escape(tempPat).replaceAll('\\*', '.*').replaceAll('\\?', '.');
+    tempPat = RegExp.escape(
+      tempPat,
+    ).replaceAll('\\*', '.*').replaceAll('\\?', '.');
 
     if (field == 'content.body') {
       pattern = RegExp('(^|\\W)$tempPat(\$|\\W)', caseSensitive: false);
@@ -140,13 +141,7 @@ class _EventPropertyCondition {
   }
 }
 
-enum _CountComparisonOp {
-  eq,
-  lt,
-  le,
-  ge,
-  gt,
-}
+enum _CountComparisonOp { eq, lt, le, ge, gt }
 
 class _MemberCountCondition {
   _CountComparisonOp op = _CountComparisonOp.eq;
@@ -224,8 +219,9 @@ class _OptimizedRules {
           break;
         case PushRuleConditions.eventPropertyIs:
         case PushRuleConditions.eventPropertyContains:
-          eventProperties
-              .add(_EventPropertyCondition.fromEventMatch(condition));
+          eventProperties.add(
+            _EventPropertyCondition.fromEventMatch(condition),
+          );
           break;
         case PushRuleConditions.containsDisplayName:
           matchDisplayname = true;
@@ -345,8 +341,9 @@ class PushruleEvaluator {
     }
     for (final r in ruleset.sender ?? <PushRule>[]) {
       if (r.enabled) {
-        _sender_rules[r.ruleId] =
-            EvaluatedPushRuleAction.fromActions(r.actions);
+        _sender_rules[r.ruleId] = EvaluatedPushRuleAction.fromActions(
+          r.actions,
+        );
       }
     }
   }
@@ -379,8 +376,12 @@ class PushruleEvaluator {
     flattenedEventJson['room_id'] = event.room.id;
 
     for (final o in _override) {
-      final actions =
-          o.match(flattenedEventJson, displayName, memberCount, event.room);
+      final actions = o.match(
+        flattenedEventJson,
+        displayName,
+        memberCount,
+        event.room,
+      );
       if (actions != null) {
         return actions;
       }
@@ -397,16 +398,24 @@ class PushruleEvaluator {
     }
 
     for (final o in _content_rules) {
-      final actions =
-          o.match(flattenedEventJson, displayName, memberCount, event.room);
+      final actions = o.match(
+        flattenedEventJson,
+        displayName,
+        memberCount,
+        event.room,
+      );
       if (actions != null) {
         return actions;
       }
     }
 
     for (final o in _underride) {
-      final actions =
-          o.match(flattenedEventJson, displayName, memberCount, event.room);
+      final actions = o.match(
+        flattenedEventJson,
+        displayName,
+        memberCount,
+        event.room,
+      );
       if (actions != null) {
         return actions;
       }

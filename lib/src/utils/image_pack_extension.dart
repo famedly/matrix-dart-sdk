@@ -28,16 +28,18 @@ extension ImagePackRoomExtension on Room {
           continue;
         }
         packs
-            .putIfAbsent(
-              finalSlug,
-              () => ImagePackContent.fromJson({})
-                ..pack.displayName = imagePack.pack.displayName ??
-                    room?.getLocalizedDisplayname() ??
-                    finalSlug
-                ..pack.avatarUrl = imagePack.pack.avatarUrl ?? room?.avatar
-                ..pack.attribution = imagePack.pack.attribution,
-            )
-            .images[entry.key] = image;
+                .putIfAbsent(
+                  finalSlug,
+                  () => ImagePackContent.fromJson({})
+                    ..pack.displayName =
+                        imagePack.pack.displayName ??
+                        room?.getLocalizedDisplayname() ??
+                        finalSlug
+                    ..pack.avatarUrl = imagePack.pack.avatarUrl ?? room?.avatar
+                    ..pack.attribution = imagePack.pack.attribution,
+                )
+                .images[entry.key] =
+            image;
         allMxcs.add(image.url);
       }
     }

@@ -44,41 +44,37 @@ void main() {
     });
 
     group('GroupCallStateChanged Events', () {
-      test('emits GroupCallStateChanged when transitioning through all states',
-          () async {
-        groupCall = GroupCallSession.withAutoGenId(
-          room,
-          voip,
-          backend,
-          'm.call',
-          'm.room',
-          'test-group-call-2',
-        );
+      test(
+        'emits GroupCallStateChanged when transitioning through all states',
+        () async {
+          groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            backend,
+            'm.call',
+            'm.room',
+            'test-group-call-2',
+          );
 
-        final events = <GroupCallStateChanged>[];
-        groupCall.matrixRTCEventStream.stream
-            .where((event) => event is GroupCallStateChanged)
-            .cast<GroupCallStateChanged>()
-            .listen(events.add);
+          final events = <GroupCallStateChanged>[];
+          groupCall.matrixRTCEventStream.stream
+              .where((event) => event is GroupCallStateChanged)
+              .cast<GroupCallStateChanged>()
+              .listen(events.add);
 
-        // Trigger state changes
-        groupCall.setState(GroupCallState.initializingLocalCallFeed);
-        groupCall.setState(GroupCallState.localCallFeedInitialized);
-        groupCall.setState(GroupCallState.entered);
+          // Trigger state changes
+          groupCall.setState(GroupCallState.initializingLocalCallFeed);
+          groupCall.setState(GroupCallState.localCallFeedInitialized);
+          groupCall.setState(GroupCallState.entered);
 
-        await pumpEventQueue();
+          await pumpEventQueue();
 
-        expect(events.length, 3);
-        expect(
-          events[0].state,
-          GroupCallState.initializingLocalCallFeed,
-        );
-        expect(
-          events[1].state,
-          GroupCallState.localCallFeedInitialized,
-        );
-        expect(events[2].state, GroupCallState.entered);
-      });
+          expect(events.length, 3);
+          expect(events[0].state, GroupCallState.initializingLocalCallFeed);
+          expect(events[1].state, GroupCallState.localCallFeedInitialized);
+          expect(events[2].state, GroupCallState.entered);
+        },
+      );
     });
 
     group('ParticipantsJoinEvent and ParticipantsLeftEvent', () {
@@ -235,9 +231,7 @@ void main() {
             type: EventTypes.GroupCallMember,
             senderId: '@remoteuser:example.com',
             stateKey: '@remoteuser:example.com',
-            content: {
-              'memberships': [],
-            },
+            content: {'memberships': []},
           ),
         );
 
@@ -560,55 +554,59 @@ void main() {
     });
 
     group('GroupCallStreamAdded, Removed, and Replaced Events', () {
-      test('emits GroupCallStreamAdded when user media stream is added',
-          () async {
-        groupCall = GroupCallSession.withAutoGenId(
-          room,
-          voip,
-          backend,
-          'm.call',
-          'm.room',
-          'test-group-call-10',
-        );
+      test(
+        'emits GroupCallStreamAdded when user media stream is added',
+        () async {
+          groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            backend,
+            'm.call',
+            'm.room',
+            'test-group-call-10',
+          );
 
-        final events = <GroupCallStreamAdded>[];
-        groupCall.matrixRTCEventStream.stream
-            .where((event) => event is GroupCallStreamAdded)
-            .cast<GroupCallStreamAdded>()
-            .listen(events.add);
+          final events = <GroupCallStreamAdded>[];
+          groupCall.matrixRTCEventStream.stream
+              .where((event) => event is GroupCallStreamAdded)
+              .cast<GroupCallStreamAdded>()
+              .listen(events.add);
 
-        await backend.initLocalStream(groupCall);
-        await pumpEventQueue();
+          await backend.initLocalStream(groupCall);
+          await pumpEventQueue();
 
-        expect(events.length, 1);
-        expect(events[0].type, GroupCallStreamType.userMedia);
-      });
+          expect(events.length, 1);
+          expect(events[0].type, GroupCallStreamType.userMedia);
+        },
+      );
 
-      test('emits GroupCallStreamAdded when screenshare stream is added',
-          () async {
-        groupCall = GroupCallSession.withAutoGenId(
-          room,
-          voip,
-          backend,
-          'm.call',
-          'm.room',
-          'test-group-call-11',
-        );
+      test(
+        'emits GroupCallStreamAdded when screenshare stream is added',
+        () async {
+          groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            backend,
+            'm.call',
+            'm.room',
+            'test-group-call-11',
+          );
 
-        final events = <GroupCallStreamAdded>[];
-        groupCall.matrixRTCEventStream.stream
-            .where((event) => event is GroupCallStreamAdded)
-            .cast<GroupCallStreamAdded>()
-            .listen(events.add);
+          final events = <GroupCallStreamAdded>[];
+          groupCall.matrixRTCEventStream.stream
+              .where((event) => event is GroupCallStreamAdded)
+              .cast<GroupCallStreamAdded>()
+              .listen(events.add);
 
-        await backend.initLocalStream(groupCall);
-        groupCall.setState(GroupCallState.entered);
+          await backend.initLocalStream(groupCall);
+          groupCall.setState(GroupCallState.entered);
 
-        await backend.setScreensharingEnabled(groupCall, true, '');
-        await pumpEventQueue();
+          await backend.setScreensharingEnabled(groupCall, true, '');
+          await pumpEventQueue();
 
-        expect(events.last.type, GroupCallStreamType.screenshare);
-      });
+          expect(events.last.type, GroupCallStreamType.screenshare);
+        },
+      );
 
       test('emits GroupCallStreamRemoved when stream is removed', () async {
         groupCall = GroupCallSession.withAutoGenId(
@@ -647,246 +645,256 @@ void main() {
     });
 
     group('GroupCallActiveSpeakerChanged Event', () {
-      test('emits GroupCallActiveSpeakerChanged when active speaker changes',
-          () async {
-        groupCall = GroupCallSession.withAutoGenId(
-          room,
-          voip,
-          backend,
-          'm.call',
-          'm.room',
-          'test-group-call-14',
-        );
+      test(
+        'emits GroupCallActiveSpeakerChanged when active speaker changes',
+        () async {
+          groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            backend,
+            'm.call',
+            'm.room',
+            'test-group-call-14',
+          );
 
-        final events = <GroupCallActiveSpeakerChanged>[];
-        groupCall.matrixRTCEventStream.stream
-            .where((event) => event is GroupCallActiveSpeakerChanged)
-            .cast<GroupCallActiveSpeakerChanged>()
-            .listen(events.add);
+          final events = <GroupCallActiveSpeakerChanged>[];
+          groupCall.matrixRTCEventStream.stream
+              .where((event) => event is GroupCallActiveSpeakerChanged)
+              .cast<GroupCallActiveSpeakerChanged>()
+              .listen(events.add);
 
-        room.setState(
-          Event(
-            room: room,
-            eventId: 'local-membership',
-            originServerTs: DateTime.now(),
-            type: EventTypes.GroupCallMember,
-            senderId: room.client.userID!,
-            stateKey: room.client.userID,
-            content: {
-              'memberships': [
-                CallMembership(
-                  userId: room.client.userID!,
-                  roomId: room.id,
-                  callId: groupCall.groupCallId,
-                  application: groupCall.application,
-                  scope: groupCall.scope,
-                  backend: backend,
-                  deviceId: room.client.deviceID!,
-                  expiresTs: DateTime.now()
-                      .add(Duration(hours: 1))
-                      .millisecondsSinceEpoch,
-                  membershipId: 'local-session-id',
-                  feeds: [],
-                  voip: voip,
-                ).toJson(),
-              ],
-            },
-          ),
-        );
-
-        const remoteUserId = '@zach:example.com';
-        const remoteDeviceId = 'ZACHDEVICE';
-
-        room.setState(
-          Event(
-            room: room,
-            eventId: 'remote-member-1',
-            originServerTs: DateTime.now(),
-            type: EventTypes.GroupCallMember,
-            senderId: remoteUserId,
-            stateKey: remoteUserId,
-            content: {
-              'memberships': [
-                CallMembership(
-                  userId: remoteUserId,
-                  roomId: room.id,
-                  callId: groupCall.groupCallId,
-                  application: groupCall.application,
-                  scope: groupCall.scope,
-                  backend: backend,
-                  deviceId: remoteDeviceId,
-                  expiresTs: DateTime.now()
-                      .add(Duration(hours: 1))
-                      .millisecondsSinceEpoch,
-                  membershipId: 'remote-session-id-1',
-                  feeds: [],
-                  voip: voip,
-                ).toJson(),
-              ],
-            },
-          ),
-        );
-
-        await groupCall.enter();
-        await pumpEventQueue();
-
-        final call = voip.calls.values.firstWhere(
-          (c) =>
-              c.remoteUserId == remoteUserId &&
-              c.groupCallId == groupCall.groupCallId,
-        );
-
-        await call.onSDPStreamMetadataReceived(
-          SDPStreamMetadata({
-            'remote-stream-id': SDPStreamPurpose(
-              purpose: SDPStreamMetadataPurpose.Usermedia,
-              audio_muted: false,
-              video_muted: false,
-            ),
-          }),
-        );
-
-        final mockRemoteStream = MockMediaStream('remote-stream-id', 'remote');
-        final mockPeerConnection = call.pc as MockRTCPeerConnection;
-        mockPeerConnection.mockAudioLevel = 0.8;
-
-        if (mockPeerConnection.onTrack != null) {
-          mockPeerConnection.onTrack!(
-            MockRTCTrackEvent(
-              track: MockMediaStreamTrack(),
-              streams: [mockRemoteStream],
+          room.setState(
+            Event(
+              room: room,
+              eventId: 'local-membership',
+              originServerTs: DateTime.now(),
+              type: EventTypes.GroupCallMember,
+              senderId: room.client.userID!,
+              stateKey: room.client.userID,
+              content: {
+                'memberships': [
+                  CallMembership(
+                    userId: room.client.userID!,
+                    roomId: room.id,
+                    callId: groupCall.groupCallId,
+                    application: groupCall.application,
+                    scope: groupCall.scope,
+                    backend: backend,
+                    deviceId: room.client.deviceID!,
+                    expiresTs: DateTime.now()
+                        .add(Duration(hours: 1))
+                        .millisecondsSinceEpoch,
+                    membershipId: 'local-session-id',
+                    feeds: [],
+                    voip: voip,
+                  ).toJson(),
+                ],
+              },
             ),
           );
-        }
 
-        await pumpEventQueue();
-        // Keep the 6-second delay as it's likely testing timer-based active speaker detection
-        await Future.delayed(Duration(seconds: 6));
+          const remoteUserId = '@zach:example.com';
+          const remoteDeviceId = 'ZACHDEVICE';
 
-        expect(events.length, 1);
-        expect(events[0].participant.userId, remoteUserId);
-        expect(events[0].participant.deviceId, remoteDeviceId);
-      });
+          room.setState(
+            Event(
+              room: room,
+              eventId: 'remote-member-1',
+              originServerTs: DateTime.now(),
+              type: EventTypes.GroupCallMember,
+              senderId: remoteUserId,
+              stateKey: remoteUserId,
+              content: {
+                'memberships': [
+                  CallMembership(
+                    userId: remoteUserId,
+                    roomId: room.id,
+                    callId: groupCall.groupCallId,
+                    application: groupCall.application,
+                    scope: groupCall.scope,
+                    backend: backend,
+                    deviceId: remoteDeviceId,
+                    expiresTs: DateTime.now()
+                        .add(Duration(hours: 1))
+                        .millisecondsSinceEpoch,
+                    membershipId: 'remote-session-id-1',
+                    feeds: [],
+                    voip: voip,
+                  ).toJson(),
+                ],
+              },
+            ),
+          );
+
+          await groupCall.enter();
+          await pumpEventQueue();
+
+          final call = voip.calls.values.firstWhere(
+            (c) =>
+                c.remoteUserId == remoteUserId &&
+                c.groupCallId == groupCall.groupCallId,
+          );
+
+          await call.onSDPStreamMetadataReceived(
+            SDPStreamMetadata({
+              'remote-stream-id': SDPStreamPurpose(
+                purpose: SDPStreamMetadataPurpose.Usermedia,
+                audio_muted: false,
+                video_muted: false,
+              ),
+            }),
+          );
+
+          final mockRemoteStream = MockMediaStream(
+            'remote-stream-id',
+            'remote',
+          );
+          final mockPeerConnection = call.pc as MockRTCPeerConnection;
+          mockPeerConnection.mockAudioLevel = 0.8;
+
+          if (mockPeerConnection.onTrack != null) {
+            mockPeerConnection.onTrack!(
+              MockRTCTrackEvent(
+                track: MockMediaStreamTrack(),
+                streams: [mockRemoteStream],
+              ),
+            );
+          }
+
+          await pumpEventQueue();
+          // Keep the 6-second delay as it's likely testing timer-based active speaker detection
+          await Future.delayed(Duration(seconds: 6));
+
+          expect(events.length, 1);
+          expect(events[0].participant.userId, remoteUserId);
+          expect(events[0].participant.deviceId, remoteDeviceId);
+        },
+      );
     });
 
     group('GroupCallLocalMutedChanged Event', () {
-      test('emits GroupCallLocalMutedChanged for audio and video mute/unmute',
-          () async {
-        groupCall = GroupCallSession.withAutoGenId(
-          room,
-          voip,
-          backend,
-          'm.call',
-          'm.room',
-          'test-group-call-15',
-        );
+      test(
+        'emits GroupCallLocalMutedChanged for audio and video mute/unmute',
+        () async {
+          groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            backend,
+            'm.call',
+            'm.room',
+            'test-group-call-15',
+          );
 
-        final events = <GroupCallLocalMutedChanged>[];
-        groupCall.matrixRTCEventStream.stream
-            .where((event) => event is GroupCallLocalMutedChanged)
-            .cast<GroupCallLocalMutedChanged>()
-            .listen(events.add);
+          final events = <GroupCallLocalMutedChanged>[];
+          groupCall.matrixRTCEventStream.stream
+              .where((event) => event is GroupCallLocalMutedChanged)
+              .cast<GroupCallLocalMutedChanged>()
+              .listen(events.add);
 
-        await backend.initLocalStream(groupCall);
-        groupCall.setState(GroupCallState.entered);
+          await backend.initLocalStream(groupCall);
+          groupCall.setState(GroupCallState.entered);
 
-        // Test audio muting
-        await backend.setDeviceMuted(
-          groupCall,
-          true,
-          MediaInputKind.audioinput,
-        );
-        await pumpEventQueue();
+          // Test audio muting
+          await backend.setDeviceMuted(
+            groupCall,
+            true,
+            MediaInputKind.audioinput,
+          );
+          await pumpEventQueue();
 
-        expect(events.length, 1);
-        expect(events[0].muted, true);
-        expect(events[0].kind, MediaInputKind.audioinput);
+          expect(events.length, 1);
+          expect(events[0].muted, true);
+          expect(events[0].kind, MediaInputKind.audioinput);
 
-        // Test video muting
-        await backend.setDeviceMuted(
-          groupCall,
-          true,
-          MediaInputKind.videoinput,
-        );
-        await pumpEventQueue();
+          // Test video muting
+          await backend.setDeviceMuted(
+            groupCall,
+            true,
+            MediaInputKind.videoinput,
+          );
+          await pumpEventQueue();
 
-        expect(events.length, 2);
-        expect(events[1].muted, true);
-        expect(events[1].kind, MediaInputKind.videoinput);
+          expect(events.length, 2);
+          expect(events[1].muted, true);
+          expect(events[1].kind, MediaInputKind.videoinput);
 
-        // Test audio unmuting
-        await backend.setDeviceMuted(
-          groupCall,
-          false,
-          MediaInputKind.audioinput,
-        );
-        await pumpEventQueue();
+          // Test audio unmuting
+          await backend.setDeviceMuted(
+            groupCall,
+            false,
+            MediaInputKind.audioinput,
+          );
+          await pumpEventQueue();
 
-        expect(events.length, 3);
-        expect(events[2].muted, false);
-        expect(events[2].kind, MediaInputKind.audioinput);
+          expect(events.length, 3);
+          expect(events[2].muted, false);
+          expect(events[2].kind, MediaInputKind.audioinput);
 
-        // Test video unmuting
-        await backend.setDeviceMuted(
-          groupCall,
-          false,
-          MediaInputKind.videoinput,
-        );
-        await pumpEventQueue();
+          // Test video unmuting
+          await backend.setDeviceMuted(
+            groupCall,
+            false,
+            MediaInputKind.videoinput,
+          );
+          await pumpEventQueue();
 
-        expect(events.length, 4);
-        expect(events[3].muted, false);
-        expect(events[3].kind, MediaInputKind.videoinput);
+          expect(events.length, 4);
+          expect(events[3].muted, false);
+          expect(events[3].kind, MediaInputKind.videoinput);
 
-        // Verify all events have correct MediaInputKind
-        final audioEvents =
-            events.where((e) => e.kind == MediaInputKind.audioinput).toList();
-        final videoEvents =
-            events.where((e) => e.kind == MediaInputKind.videoinput).toList();
+          // Verify all events have correct MediaInputKind
+          final audioEvents = events
+              .where((e) => e.kind == MediaInputKind.audioinput)
+              .toList();
+          final videoEvents = events
+              .where((e) => e.kind == MediaInputKind.videoinput)
+              .toList();
 
-        expect(audioEvents.length, 2);
-        expect(videoEvents.length, 2);
-        expect(audioEvents[0].muted, true);
-        expect(audioEvents[1].muted, false);
-        expect(videoEvents[0].muted, true);
-        expect(videoEvents[1].muted, false);
-      });
+          expect(audioEvents.length, 2);
+          expect(videoEvents.length, 2);
+          expect(audioEvents[0].muted, true);
+          expect(audioEvents[1].muted, false);
+          expect(videoEvents[0].muted, true);
+          expect(videoEvents[1].muted, false);
+        },
+      );
     });
 
     group('GroupCallLocalScreenshareStateChanged Event', () {
       test(
-          'emits GroupCallLocalScreenshareStateChanged when screenshare is enabled and disabled',
-          () async {
-        groupCall = GroupCallSession.withAutoGenId(
-          room,
-          voip,
-          backend,
-          'm.call',
-          'm.room',
-          'test-group-call-19',
-        );
+        'emits GroupCallLocalScreenshareStateChanged when screenshare is enabled and disabled',
+        () async {
+          groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            backend,
+            'm.call',
+            'm.room',
+            'test-group-call-19',
+          );
 
-        final events = <GroupCallLocalScreenshareStateChanged>[];
-        groupCall.matrixRTCEventStream.stream
-            .where((event) => event is GroupCallLocalScreenshareStateChanged)
-            .cast<GroupCallLocalScreenshareStateChanged>()
-            .listen(events.add);
+          final events = <GroupCallLocalScreenshareStateChanged>[];
+          groupCall.matrixRTCEventStream.stream
+              .where((event) => event is GroupCallLocalScreenshareStateChanged)
+              .cast<GroupCallLocalScreenshareStateChanged>()
+              .listen(events.add);
 
-        await backend.initLocalStream(groupCall);
-        groupCall.setState(GroupCallState.entered);
+          await backend.initLocalStream(groupCall);
+          groupCall.setState(GroupCallState.entered);
 
-        await backend.setScreensharingEnabled(groupCall, true, '');
-        await pumpEventQueue();
+          await backend.setScreensharingEnabled(groupCall, true, '');
+          await pumpEventQueue();
 
-        expect(events.length, 1);
-        expect(events[0].screensharing, true);
+          expect(events.length, 1);
+          expect(events[0].screensharing, true);
 
-        await backend.setScreensharingEnabled(groupCall, false, '');
-        await pumpEventQueue();
+          await backend.setScreensharingEnabled(groupCall, false, '');
+          await pumpEventQueue();
 
-        expect(events.length, 2);
-        expect(events[1].screensharing, false);
-      });
+          expect(events.length, 2);
+          expect(events[1].screensharing, false);
+        },
+      );
     });
 
     group('Event Stream Integration Tests', () {
@@ -919,12 +927,15 @@ void main() {
 
         expect(allEvents.length, 6);
 
-        final stateChangedEvents =
-            allEvents.whereType<GroupCallStateChanged>().toList();
-        final streamAddedEvents =
-            allEvents.whereType<GroupCallStreamAdded>().toList();
-        final mutedChangedEvents =
-            allEvents.whereType<GroupCallLocalMutedChanged>().toList();
+        final stateChangedEvents = allEvents
+            .whereType<GroupCallStateChanged>()
+            .toList();
+        final streamAddedEvents = allEvents
+            .whereType<GroupCallStreamAdded>()
+            .toList();
+        final mutedChangedEvents = allEvents
+            .whereType<GroupCallLocalMutedChanged>()
+            .toList();
 
         expect(stateChangedEvents.length, 3);
         expect(streamAddedEvents.length, 1);
@@ -965,73 +976,71 @@ void main() {
       });
 
       test(
-          'event stream supports multiple listeners and filtering by event type',
-          () async {
-        groupCall = GroupCallSession.withAutoGenId(
-          room,
-          voip,
-          backend,
-          'm.call',
-          'm.room',
-          'test-group-call-24',
-        );
+        'event stream supports multiple listeners and filtering by event type',
+        () async {
+          groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            backend,
+            'm.call',
+            'm.room',
+            'test-group-call-24',
+          );
 
-        final allEvents1 = <MatrixRTCCallEvent>[];
-        final allEvents2 = <MatrixRTCCallEvent>[];
-        final stateChangedEvents = <GroupCallStateChanged>[];
-        final streamAddedEvents = <GroupCallStreamAdded>[];
-        final mutedChangedEvents = <GroupCallLocalMutedChanged>[];
+          final allEvents1 = <MatrixRTCCallEvent>[];
+          final allEvents2 = <MatrixRTCCallEvent>[];
+          final stateChangedEvents = <GroupCallStateChanged>[];
+          final streamAddedEvents = <GroupCallStreamAdded>[];
+          final mutedChangedEvents = <GroupCallLocalMutedChanged>[];
 
-        groupCall.matrixRTCEventStream.stream.listen(allEvents1.add);
-        groupCall.matrixRTCEventStream.stream.listen(allEvents2.add);
+          groupCall.matrixRTCEventStream.stream.listen(allEvents1.add);
+          groupCall.matrixRTCEventStream.stream.listen(allEvents2.add);
 
-        groupCall.matrixRTCEventStream.stream
-            .where((e) => e is GroupCallStateChanged)
-            .cast<GroupCallStateChanged>()
-            .listen(stateChangedEvents.add);
-        groupCall.matrixRTCEventStream.stream
-            .where((e) => e is GroupCallStreamAdded)
-            .cast<GroupCallStreamAdded>()
-            .listen(streamAddedEvents.add);
-        groupCall.matrixRTCEventStream.stream
-            .where((e) => e is GroupCallLocalMutedChanged)
-            .cast<GroupCallLocalMutedChanged>()
-            .listen(mutedChangedEvents.add);
+          groupCall.matrixRTCEventStream.stream
+              .where((e) => e is GroupCallStateChanged)
+              .cast<GroupCallStateChanged>()
+              .listen(stateChangedEvents.add);
+          groupCall.matrixRTCEventStream.stream
+              .where((e) => e is GroupCallStreamAdded)
+              .cast<GroupCallStreamAdded>()
+              .listen(streamAddedEvents.add);
+          groupCall.matrixRTCEventStream.stream
+              .where((e) => e is GroupCallLocalMutedChanged)
+              .cast<GroupCallLocalMutedChanged>()
+              .listen(mutedChangedEvents.add);
 
-        await backend.initLocalStream(groupCall);
-        groupCall.setState(GroupCallState.entered);
-        await backend.setDeviceMuted(
-          groupCall,
-          true,
-          MediaInputKind.audioinput,
-        );
-        await pumpEventQueue();
+          await backend.initLocalStream(groupCall);
+          groupCall.setState(GroupCallState.entered);
+          await backend.setDeviceMuted(
+            groupCall,
+            true,
+            MediaInputKind.audioinput,
+          );
+          await pumpEventQueue();
 
-        expect(allEvents1.length, 5);
-        expect(allEvents2.length, 5);
-        expect(stateChangedEvents.length, 3);
-        expect(streamAddedEvents.length, 1);
-        expect(mutedChangedEvents.length, 1);
+          expect(allEvents1.length, 5);
+          expect(allEvents2.length, 5);
+          expect(stateChangedEvents.length, 3);
+          expect(streamAddedEvents.length, 1);
+          expect(mutedChangedEvents.length, 1);
 
-        expect(
-          stateChangedEvents.length +
-              streamAddedEvents.length +
-              mutedChangedEvents.length,
-          allEvents1.length,
-        );
+          expect(
+            stateChangedEvents.length +
+                streamAddedEvents.length +
+                mutedChangedEvents.length,
+            allEvents1.length,
+          );
 
-        expect(
-          stateChangedEvents.map((e) => e.state).toList(),
-          [
+          expect(stateChangedEvents.map((e) => e.state).toList(), [
             GroupCallState.initializingLocalCallFeed,
             GroupCallState.localCallFeedInitialized,
             GroupCallState.entered,
-          ],
-        );
-        expect(streamAddedEvents[0].type, GroupCallStreamType.userMedia);
-        expect(mutedChangedEvents[0].kind, MediaInputKind.audioinput);
-        expect(mutedChangedEvents[0].muted, true);
-      });
+          ]);
+          expect(streamAddedEvents[0].type, GroupCallStreamType.userMedia);
+          expect(mutedChangedEvents[0].kind, MediaInputKind.audioinput);
+          expect(mutedChangedEvents[0].muted, true);
+        },
+      );
     });
   });
 }

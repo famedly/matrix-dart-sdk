@@ -41,9 +41,11 @@ extension CryptoSetupExtension on Client {
     }
 
     return (
-      initialized: (encryption?.keyManager.enabled ?? false) &&
+      initialized:
+          (encryption?.keyManager.enabled ?? false) &&
           (encryption?.crossSigning.enabled ?? false),
-      connected: ((await encryption?.keyManager.isCached()) ?? false) &&
+      connected:
+          ((await encryption?.keyManager.isCached()) ?? false) &&
           ((await encryption?.crossSigning.isCached()) ?? false),
     );
   }
@@ -96,8 +98,9 @@ extension CryptoSetupExtension on Client {
               bootstrap.ignoreBadSecrets(false);
               break;
             case BootstrapState.openExistingSsss:
-              await bootstrap.newSsssKey!
-                  .unlock(keyOrPassphrase: keyOrPassphrase);
+              await bootstrap.newSsssKey!.unlock(
+                keyOrPassphrase: keyOrPassphrase,
+              );
               await bootstrap.openExistingSsss();
               if (selfSign) {
                 await bootstrap.client.encryption!.crossSigning.selfSign(

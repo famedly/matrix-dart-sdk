@@ -74,7 +74,7 @@ void main() {
           'flows': [
             {
               'stages': ['m.login.password'],
-            }
+            },
           ],
           'session': 'uia_session_id',
         },
