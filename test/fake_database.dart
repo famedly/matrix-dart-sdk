@@ -12,9 +12,7 @@ Future<DatabaseApi> getDatabase({String? databasePath}) =>
     getMatrixSdkDatabase(path: databasePath);
 
 // ignore: deprecated_member_use_from_same_package
-Future<MatrixSdkDatabase> getMatrixSdkDatabase({
-  String? path,
-}) async {
+Future<MatrixSdkDatabase> getMatrixSdkDatabase({String? path}) async {
   final directory = await Directory(
     path_joiner.join(
       Directory.current.path,

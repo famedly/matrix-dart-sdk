@@ -41,8 +41,9 @@ extension MxcUriExtension on Uri {
 
   Uri _appendMxcTo(Uri base) {
     final reference = '$host${hasPort ? ':$port' : ''}$path';
-    final trimmed =
-        reference.startsWith('/') ? reference.substring(1) : reference;
+    final trimmed = reference.startsWith('/')
+        ? reference.substring(1)
+        : reference;
     final basePath = base.path.endsWith('/') ? base.path : '${base.path}/';
     return base.replace(path: '$basePath$trimmed');
   }
@@ -78,8 +79,9 @@ extension MxcUriExtension on Uri {
 
     final scanner = skipScanner ? null : client.contentScannerConfig;
     if (scanner != null) {
-      return _appendMxcTo(scanner.downloadThumbnailUri)
-          .replace(queryParameters: queryParameters);
+      return _appendMxcTo(
+        scanner.downloadThumbnailUri,
+      ).replace(queryParameters: queryParameters);
     }
 
     final homeserver = client.homeserver;
@@ -110,11 +112,11 @@ extension MxcUriExtension on Uri {
   )
   Uri getDownloadLink(Client matrix) => isScheme('mxc')
       ? matrix.homeserver != null
-          ? matrix.homeserver?.resolve(
-                '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path',
-              ) ??
-              Uri()
-          : Uri()
+            ? matrix.homeserver?.resolve(
+                    '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path',
+                  ) ??
+                  Uri()
+            : Uri()
       : Uri();
 
   /// Returns a scaled thumbnail link to this content with the given `width` and

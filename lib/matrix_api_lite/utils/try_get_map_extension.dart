@@ -20,8 +20,8 @@ class _RequiredLog implements TryGet {
   const _RequiredLog();
   @override
   void call(String key, Type expected, Type actual) => Logs().w(
-        'Expected required "$expected" in event content for the Key "$key" but got "$actual" at ${StackTrace.current.firstLine}',
-      );
+    'Expected required "$expected" in event content for the Key "$key" but got "$actual" at ${StackTrace.current.firstLine}',
+  );
 }
 
 class _OptionalLog implements TryGet {
@@ -103,7 +103,7 @@ extension on StackTrace {
     return lines.length >= 3
         ? lines[2].replaceFirst('#2      ', '')
         : lines.isNotEmpty
-            ? lines.first
-            : '(unknown position)';
+        ? lines.first
+        : '(unknown position)';
   }
 }

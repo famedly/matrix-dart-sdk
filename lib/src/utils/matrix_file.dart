@@ -25,11 +25,11 @@ class MatrixFile {
   }
 
   MatrixFile({required this.bytes, required String name, String? mimeType})
-      : mimeType = mimeType != null && mimeType.isNotEmpty
-            ? mimeType
-            : lookupMimeType(name, headerBytes: bytes) ??
+    : mimeType = mimeType != null && mimeType.isNotEmpty
+          ? mimeType
+          : lookupMimeType(name, headerBytes: bytes) ??
                 'application/octet-stream',
-        name = name.split('/').last;
+      name = name.split('/').last;
 
   /// derivatives the MIME type from the [bytes] and correspondingly creates a
   /// [MatrixFile], [MatrixImageFile], [MatrixAudioFile] or a [MatrixVideoFile]
@@ -61,10 +61,7 @@ class MatrixFile {
     return msgTypeFromMime(mimeType);
   }
 
-  Map<String, dynamic> get info => ({
-        'mimetype': mimeType,
-        'size': size,
-      });
+  Map<String, dynamic> get info => ({'mimetype': mimeType, 'size': size});
 
   static String msgTypeFromMime(String mimeType) {
     if (mimeType.toLowerCase().startsWith('image/')) {
@@ -88,8 +85,8 @@ class MatrixImageFile extends MatrixFile {
     int? width,
     int? height,
     this.blurhash,
-  })  : _width = width,
-        _height = height;
+  }) : _width = width,
+       _height = height;
 
   /// Creates a new image file and calculates the width, height and blurhash.
   static Future<MatrixImageFile> create({
@@ -120,7 +117,8 @@ class MatrixImageFile extends MatrixFile {
     String? mimeType,
     Future<MatrixImageFileResizedResponse?> Function(
       MatrixImageFileResizeArguments,
-    )? customImageResizer,
+    )?
+    customImageResizer,
     NativeImplementations nativeImplementations = NativeImplementations.dummy,
   }) async {
     final image = MatrixImageFile(name: name, mimeType: mimeType, bytes: bytes);
@@ -157,11 +155,11 @@ class MatrixImageFile extends MatrixFile {
 
   @override
   Map<String, dynamic> get info => ({
-        ...super.info,
-        if (width != null) 'w': width,
-        if (height != null) 'h': height,
-        if (blurhash != null) 'xyz.amorgan.blurhash': blurhash,
-      });
+    ...super.info,
+    if (width != null) 'w': width,
+    if (height != null) 'h': height,
+    if (blurhash != null) 'xyz.amorgan.blurhash': blurhash,
+  });
 
   /// Computes a thumbnail for the image.
   /// Also sets height and width on the original image if they were unset.
@@ -169,7 +167,8 @@ class MatrixImageFile extends MatrixFile {
     int dimension = Client.defaultThumbnailSize,
     Future<MatrixImageFileResizedResponse?> Function(
       MatrixImageFileResizeArguments,
-    )? customImageResizer,
+    )?
+    customImageResizer,
     NativeImplementations nativeImplementations = NativeImplementations.dummy,
   }) async {
     final arguments = MatrixImageFileResizeArguments(
@@ -221,11 +220,7 @@ class MatrixImageFile extends MatrixFile {
       width: image.width,
       height: image.height,
       mimeType: null,
-      blurhash: BlurHash.encode(
-        image,
-        numCompX: 4,
-        numCompY: 3,
-      ).hash,
+      blurhash: BlurHash.encode(image, numCompX: 4, numCompY: 3).hash,
     );
   }
 
@@ -253,11 +248,7 @@ class MatrixImageFile extends MatrixFile {
       originalWidth: image.width,
       mimeType: lookupMimeType(arguments.fileName),
       blurhash: arguments.calcBlurhash
-          ? BlurHash.encode(
-              resized,
-              numCompX: 4,
-              numCompY: 3,
-            ).hash
+          ? BlurHash.encode(resized, numCompX: 4, numCompY: 3).hash
           : null,
     );
   }
@@ -283,9 +274,7 @@ class MatrixImageFileResizedResponse {
     this.blurhash,
   });
 
-  factory MatrixImageFileResizedResponse.fromJson(
-    Map<String, dynamic> json,
-  ) =>
+  factory MatrixImageFileResizedResponse.fromJson(Map<String, dynamic> json) =>
       MatrixImageFileResizedResponse(
         bytes: Uint8List.fromList(
           (json['bytes'] as Iterable<dynamic>).whereType<int>().toList(),
@@ -299,14 +288,14 @@ class MatrixImageFileResizedResponse {
       );
 
   Map<String, dynamic> toJson() => {
-        'bytes': bytes,
-        'width': width,
-        'height': height,
-        if (mimeType != null) 'mimeType': mimeType,
-        if (blurhash != null) 'blurhash': blurhash,
-        if (originalHeight != null) 'originalHeight': originalHeight,
-        if (originalWidth != null) 'originalWidth': originalWidth,
-      };
+    'bytes': bytes,
+    'width': width,
+    'height': height,
+    if (mimeType != null) 'mimeType': mimeType,
+    if (blurhash != null) 'blurhash': blurhash,
+    if (originalHeight != null) 'originalHeight': originalHeight,
+    if (originalWidth != null) 'originalWidth': originalWidth,
+  };
 }
 
 class MatrixImageFileResizeArguments {
@@ -331,11 +320,11 @@ class MatrixImageFileResizeArguments {
       );
 
   Map<String, Object> toJson() => {
-        'bytes': bytes,
-        'maxDimension': maxDimension,
-        'fileName': fileName,
-        'calcBlurhash': calcBlurhash,
-      };
+    'bytes': bytes,
+    'maxDimension': maxDimension,
+    'fileName': fileName,
+    'calcBlurhash': calcBlurhash,
+  };
 }
 
 class MatrixVideoFile extends MatrixFile {
@@ -357,11 +346,11 @@ class MatrixVideoFile extends MatrixFile {
 
   @override
   Map<String, dynamic> get info => ({
-        ...super.info,
-        if (width != null) 'w': width,
-        if (height != null) 'h': height,
-        if (duration != null) 'duration': duration,
-      });
+    ...super.info,
+    if (width != null) 'w': width,
+    if (height != null) 'h': height,
+    if (duration != null) 'duration': duration,
+  });
 }
 
 class MatrixAudioFile extends MatrixFile {
@@ -378,10 +367,8 @@ class MatrixAudioFile extends MatrixFile {
   String get msgType => 'm.audio';
 
   @override
-  Map<String, dynamic> get info => ({
-        ...super.info,
-        if (duration != null) 'duration': duration,
-      });
+  Map<String, dynamic> get info =>
+      ({...super.info, if (duration != null) 'duration': duration});
 }
 
 extension ToMatrixFile on EncryptedFile {

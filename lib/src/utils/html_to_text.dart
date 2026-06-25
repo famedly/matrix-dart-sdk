@@ -35,9 +35,11 @@ class HtmlToText {
 
   static String _parsePreContent(_ConvertOpts opts, Element node) {
     var text = node.innerHtml;
-    final match =
-        RegExp(r'^<code([^>]*)>', multiLine: false, caseSensitive: false)
-            .firstMatch(text);
+    final match = RegExp(
+      r'^<code([^>]*)>',
+      multiLine: false,
+      caseSensitive: false,
+    ).firstMatch(text);
     if (match == null) {
       text = HtmlUnescape().convert(text);
       if (text.isNotEmpty) {
@@ -66,9 +68,11 @@ class HtmlToText {
         text += '\n';
       }
     }
-    final language =
-        RegExp(r'language-(\w+)', multiLine: false, caseSensitive: false)
-            .firstMatch(match.group(1)!);
+    final language = RegExp(
+      r'language-(\w+)',
+      multiLine: false,
+      caseSensitive: false,
+    ).firstMatch(match.group(1)!);
     if (language != null) {
       text = language.group(1)! + text;
     }
@@ -113,7 +117,8 @@ class HtmlToText {
     final entries = _listChildNodes(opts, node, {'li'});
     opts.listDepth--;
     final startStr = node.attributes['start'];
-    final start = (startStr is String &&
+    final start =
+        (startStr is String &&
             RegExp(r'^[0-9]+$', multiLine: false).hasMatch(startStr))
         ? int.parse(startStr)
         : 1;

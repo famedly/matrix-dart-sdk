@@ -30,8 +30,9 @@ class MatrixApi extends Api {
   Never unexpectedResponse(http.BaseResponse response, Uint8List body) {
     MatrixException? matrixException;
     try {
-      matrixException =
-          MatrixException.fromJson(json.decode(utf8.decode(body)));
+      matrixException = MatrixException.fromJson(
+        json.decode(utf8.decode(body)),
+      );
     } catch (_) {} // Is not a MatrixException!
 
     // Throw MatrixException if response contains 'errcode' (error) or
@@ -51,11 +52,8 @@ class MatrixApi extends Api {
     throw EventTooLarge(expected, actual);
   }
 
-  MatrixApi({
-    Uri? homeserver,
-    String? accessToken,
-    super.httpClient,
-  }) : super(baseUri: homeserver, bearerToken: accessToken);
+  MatrixApi({Uri? homeserver, String? accessToken, super.httpClient})
+    : super(baseUri: homeserver, bearerToken: accessToken);
 
   /// Used for all Matrix json requests using the [c2s API](https://matrix.org/docs/spec/client_server/r0.6.0.html).
   ///
@@ -89,8 +87,9 @@ class MatrixApi extends Api {
     (data is! String) ? json = jsonEncode(data) : json = data;
     if (data is List<int> || action.startsWith('/media/v3/upload')) json = data;
 
-    final url = homeserver!
-        .resolveUri(Uri(path: '_matrix$action', queryParameters: query));
+    final url = homeserver!.resolveUri(
+      Uri(path: '_matrix$action', queryParameters: query),
+    );
 
     final headers = <String, String>{};
     if (type == RequestType.PUT || type == RequestType.POST) {
@@ -130,8 +129,9 @@ class MatrixApi extends Api {
     if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
       jsonString = '{"chunk":$jsonString}';
     }
-    jsonResp = jsonDecode(jsonString)
-        as Map<String, Object?>?; // May throw FormatException
+    jsonResp =
+        jsonDecode(jsonString)
+            as Map<String, Object?>?; // May throw FormatException
 
     if (resp.statusCode >= 400 && resp.statusCode < 500) {
       throw MatrixException(resp);
@@ -152,11 +152,7 @@ class MatrixApi extends Api {
     if (append != null) {
       data['append'] = append;
     }
-    await request(
-      RequestType.POST,
-      '/client/v3/pushers/set',
-      data: data,
-    );
+    await request(RequestType.POST, '/client/v3/pushers/set', data: data);
     return;
   }
 
@@ -166,11 +162,7 @@ class MatrixApi extends Api {
   Future<void> deletePusher(PusherId pusher) async {
     final data = PusherData.fromJson(pusher.toJson()).toJson();
     data['kind'] = null;
-    await request(
-      RequestType.POST,
-      '/client/v3/pushers/set',
-      data: data,
-    );
+    await request(RequestType.POST, '/client/v3/pushers/set', data: data);
     return;
   }
 

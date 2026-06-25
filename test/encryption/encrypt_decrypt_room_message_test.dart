@@ -19,10 +19,7 @@ void main() {
     final now = DateTime.now();
 
     setUpAll(() async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
+      await vod.init(wasmPath: './pkg/', libraryPath: './rust/target/debug/');
 
       client = await getClient();
       room = client.getRoomById(roomId)!;
@@ -49,8 +46,9 @@ void main() {
         eventId: '\$event',
         senderId: client.userID!,
       );
-      final decryptedEvent =
-          await client.encryption!.decryptRoomEvent(encryptedEvent);
+      final decryptedEvent = await client.encryption!.decryptRoomEvent(
+        encryptedEvent,
+      );
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
@@ -68,8 +66,9 @@ void main() {
         eventId: '\$event',
         senderId: client.userID!,
       );
-      final decryptedEvent =
-          await client.encryption!.decryptRoomEvent(encryptedEvent);
+      final decryptedEvent = await client.encryption!.decryptRoomEvent(
+        encryptedEvent,
+      );
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
@@ -86,8 +85,9 @@ void main() {
         eventId: '\$event',
         senderId: '@alice:example.com',
       );
-      final decryptedEvent =
-          await client.encryption!.decryptRoomEvent(encryptedEvent);
+      final decryptedEvent = await client.encryption!.decryptRoomEvent(
+        encryptedEvent,
+      );
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');

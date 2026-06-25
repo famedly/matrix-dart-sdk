@@ -29,3 +29,4 @@ analyzer:
     # The example is a standalone Flutter app with its own analysis_options.yaml
     # and is linted separately in CI (see .github/workflows/example.yml).
     - example/**
+    - lib/matrix_api_lite/generated/**

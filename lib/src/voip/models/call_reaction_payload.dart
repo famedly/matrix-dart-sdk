@@ -25,10 +25,7 @@ final class ReactionPayload {
       'is_ephemeral': isEphemeral,
       'call_id': callId,
       'device_id': deviceId,
-      'm.relates_to': {
-        'rel_type': relType,
-        'event_id': eventId,
-      },
+      'm.relates_to': {'rel_type': relType, 'event_id': eventId},
     };
   }
 

@@ -94,12 +94,16 @@ class DeviceKeysList {
           waitForSync: false,
           skipExistingChat: true, // to create a new room directly
         );
-        room = client.getRoomById(newRoomId) ??
+        room =
+            client.getRoomById(newRoomId) ??
             Room(id: newRoomId, client: client);
       }
 
-      final request =
-          KeyVerification(encryption: encryption, room: room, userId: userId);
+      final request = KeyVerification(
+        encryption: encryption,
+        room: room,
+        userId: userId,
+      );
       await request.start();
       // no need to add to the request client object. As we are doing a room
       // verification request that'll happen automatically once we know the transaction id
@@ -155,7 +159,7 @@ class SimpleSignableKey extends MatrixSignableKey {
   String? identifier;
 
   SimpleSignableKey.fromJson(Map<String, dynamic> super.json)
-      : super.fromJson();
+    : super.fromJson();
 }
 
 abstract class SignableKey extends MatrixSignableKey {
@@ -197,7 +201,7 @@ abstract class SignableKey extends MatrixSignableKey {
   bool get signed => hasValidSignatureChain(verifiedOnly: false);
 
   SignableKey.fromJson(Map<String, dynamic> super.json, this.client)
-      : super.fromJson() {
+    : super.fromJson() {
     _verified = false;
     _blocked = false;
   }
@@ -283,7 +287,8 @@ abstract class SignableKey extends MatrixSignableKey {
           continue;
         }
 
-        final key = client.userDeviceKeys[otherUserId]?.deviceKeys[keyId] ??
+        final key =
+            client.userDeviceKeys[otherUserId]?.deviceKeys[keyId] ??
             client.userDeviceKeys[otherUserId]?.crossSigningKeys[keyId];
         if (key == null) {
           continue;
@@ -376,7 +381,8 @@ abstract class SignableKey extends MatrixSignableKey {
   String toString() => json.encode(toJson());
 
   @override
-  bool operator ==(Object other) => (other is SignableKey &&
+  bool operator ==(Object other) =>
+      (other is SignableKey &&
       other.userId == userId &&
       other.identifier == identifier);
 
@@ -437,8 +443,11 @@ class CrossSigningKey extends SignableKey {
       throw Exception('setBlocked called on invalid key');
     }
     _blocked = newBlocked;
-    await client.database
-        .setBlockedUserCrossSigningKey(newBlocked, userId, publicKey!);
+    await client.database.setBlockedUserCrossSigningKey(
+      newBlocked,
+      userId,
+      publicKey!,
+    );
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(
@@ -454,7 +463,7 @@ class CrossSigningKey extends SignableKey {
   }
 
   CrossSigningKey.fromDbJson(Map<String, dynamic> dbEntry, Client client)
-      : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
+    : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
     final json = toJson();
     identifier = dbEntry['public_key'];
     usage = json['usage'].cast<String>();
@@ -466,7 +475,7 @@ class CrossSigningKey extends SignableKey {
   }
 
   CrossSigningKey.fromJson(Map<String, dynamic> json, Client client)
-      : super.fromJson(json.copy(), client) {
+    : super.fromJson(json.copy(), client) {
     final json = toJson();
     usage = json['usage'].cast<String>();
     _trustOnFirstUseSince = json['tofu'] == null
@@ -493,7 +502,8 @@ class DeviceKeys extends SignableKey {
   bool? _validSelfSignature;
   bool get selfSigned =>
       _validSelfSignature ??
-      (_validSelfSignature = deviceId != null &&
+      (_validSelfSignature =
+          deviceId != null &&
           signatures
                   ?.tryGetMap<String, Object?>(userId)
                   ?.tryGet<String>('ed25519:$deviceId') !=
@@ -522,8 +532,11 @@ class DeviceKeys extends SignableKey {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database
-        .setVerifiedUserDeviceKey(newVerified, userId, deviceId!);
+    await client.database.setVerifiedUserDeviceKey(
+      newVerified,
+      userId,
+      deviceId!,
+    );
   }
 
   @override
@@ -532,8 +545,11 @@ class DeviceKeys extends SignableKey {
       throw Exception('setBlocked called on invalid key');
     }
     _blocked = newBlocked;
-    await client.database
-        .setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
+    await client.database.setBlockedUserDeviceKey(
+      newBlocked,
+      userId,
+      deviceId!,
+    );
   }
 
   DeviceKeys.fromMatrixDeviceKeys(
@@ -548,18 +564,19 @@ class DeviceKeys extends SignableKey {
   }
 
   DeviceKeys.fromDb(Map<String, dynamic> dbEntry, Client client)
-      : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
+    : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
     final json = toJson();
     identifier = dbEntry['device_id'];
     algorithms = json['algorithms'].cast<String>();
     _verified = dbEntry['verified'];
     _blocked = dbEntry['blocked'];
-    lastActive =
-        DateTime.fromMillisecondsSinceEpoch(dbEntry['last_active'] ?? 0);
+    lastActive = DateTime.fromMillisecondsSinceEpoch(
+      dbEntry['last_active'] ?? 0,
+    );
   }
 
   DeviceKeys.fromJson(Map<String, dynamic> json, Client client)
-      : super.fromJson(json.copy(), client) {
+    : super.fromJson(json.copy(), client) {
     final json = toJson();
     identifier = json['device_id'];
     algorithms = json['algorithms'].cast<String>();

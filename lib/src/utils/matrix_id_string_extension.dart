@@ -131,11 +131,12 @@ extension MatrixIdExtension on String {
       );
     } else {
       return Uri(
-        pathSegments: RegExp(r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?')
-            .allMatches('/$this')
-            .map((m) => m[1]!),
-        query: RegExp(r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)')
-            .firstMatch('/$this')?[1],
+        pathSegments: RegExp(
+          r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?',
+        ).allMatches('/$this').map((m) => m[1]!),
+        query: RegExp(
+          r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)',
+        ).firstMatch('/$this')?[1],
       );
     }
   }

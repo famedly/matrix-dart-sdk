@@ -14,17 +14,19 @@ extension FamedlyCallMemberEventsExtension on Room {
   /// returns sorted according to originTs (oldest to newest)
   Map<String, FamedlyCallMemberEvent> getFamedlyCallEvents(VoIP voip) {
     final mappedEvents = <String, FamedlyCallMemberEvent>{};
-    final famedlyCallMemberStates =
-        states.tryGetMap<String, Event>(EventTypes.GroupCallMember);
+    final famedlyCallMemberStates = states.tryGetMap<String, Event>(
+      EventTypes.GroupCallMember,
+    );
 
     if (famedlyCallMemberStates == null) return {};
-    final sortedEvents = famedlyCallMemberStates.values
-        .sorted((a, b) => a.originServerTs.compareTo(b.originServerTs));
+    final sortedEvents = famedlyCallMemberStates.values.sorted(
+      (a, b) => a.originServerTs.compareTo(b.originServerTs),
+    );
 
     for (final element in sortedEvents) {
-      mappedEvents.addAll(
-        {element.stateKey!: FamedlyCallMemberEvent.fromJson(element, voip)},
-      );
+      mappedEvents.addAll({
+        element.stateKey!: FamedlyCallMemberEvent.fromJson(element, voip),
+      });
     }
     return mappedEvents;
   }
@@ -51,8 +53,8 @@ extension FamedlyCallMemberEventsExtension on Room {
     final stateKey = voip.useUnprotectedPerDeviceStateKeys
         ? '${deviceId}_$userId'
         : useMSC3757
-            ? '${userId}_$deviceId'
-            : userId;
+        ? '${userId}_$deviceId'
+        : userId;
     final parsedMemberEvents = getCallMembershipsFromRoom(voip);
     final mem = parsedMemberEvents.tryGet<List<CallMembership>>(stateKey);
     return mem ?? [];
@@ -60,10 +62,7 @@ extension FamedlyCallMemberEventsExtension on Room {
 
   /// returns the user count (not sessions, yet) for the group call with id: `groupCallId`.
   /// returns 0 if group call not found
-  int groupCallParticipantCount(
-    String groupCallId,
-    VoIP voip,
-  ) {
+  int groupCallParticipantCount(String groupCallId, VoIP voip) {
     var participantCount = 0;
     // userid:membership
     final memberships = getCallMembershipsFromRoom(voip);
@@ -114,8 +113,9 @@ extension FamedlyCallMemberEventsExtension on Room {
 
     // do not bother removing other deviceId expired events because we have no
     // ownership over them
-    ownMemberships
-        .removeWhere((element) => client.deviceID! == element.deviceId);
+    ownMemberships.removeWhere(
+      (element) => client.deviceID! == element.deviceId,
+    );
 
     ownMemberships.removeWhere((e) => e == callMembership);
 
@@ -196,10 +196,11 @@ extension FamedlyCallMemberEventsExtension on Room {
       final stateKey = voip.useUnprotectedPerDeviceStateKeys
           ? '${client.deviceID!}_${client.userID!}'
           : useMSC3757
-              ? '${client.userID!}_${client.deviceID!}'
-              : client.userID!;
+          ? '${client.userID!}_${client.deviceID!}'
+          : client.userID!;
 
-      final useDelayedEvents = (await client.getVersions())
+      final useDelayedEvents =
+          (await client.getVersions())
               .unstableFeatures?['org.matrix.msc4140'] ??
           false;
 
@@ -215,9 +216,7 @@ extension FamedlyCallMemberEventsExtension on Room {
         nextBatch = sEvents.nextBatch;
         while (nextBatch != null || (nextBatch?.isNotEmpty ?? false)) {
           final res = await client.getScheduledDelayedEvents();
-          alreadyScheduledEvents.addAll(
-            res.scheduledEvents,
-          );
+          alreadyScheduledEvents.addAll(res.scheduledEvents);
           nextBatch = res.nextBatch;
         }
 
@@ -229,10 +228,10 @@ extension FamedlyCallMemberEventsExtension on Room {
           // stateKey is the same regardless of application/scope, so any
           // existing local canceller (e.g. from a different application) must
           // have its restart timer stopped and be removed from the map here.
-          final matchingEntry =
-              voip.delayedEventCancellers.entries.firstWhereOrNull(
-            (e) => e.value.delayedEventId == toCancelEvent.delayId,
-          );
+          final matchingEntry = voip.delayedEventCancellers.entries
+              .firstWhereOrNull(
+                (e) => e.value.delayedEventId == toCancelEvent.delayId,
+              );
 
           if (matchingEntry != null) {
             matchingEntry.value.restartTimer.cancel();
@@ -248,9 +247,7 @@ extension FamedlyCallMemberEventsExtension on Room {
         Map<String, List> newContent;
         if (useMSC3757 || voip.useUnprotectedPerDeviceStateKeys) {
           // scoped to deviceIds so clear the whole mems list
-          newContent = {
-            'memberships': [],
-          };
+          newContent = {'memberships': []};
         } else {
           // only clear our own deviceId
           final ownMemberships = getCallMembershipsForUser(
@@ -282,8 +279,9 @@ extension FamedlyCallMemberEventsExtension on Room {
         final restartDelayedLeaveEventTimer = Timer.periodic(
           voip.timeouts!.delayedEventRestart,
           ((timer) async {
-            Logs()
-                .v('[_restartDelayedLeaveEventTimer] heartbeat delayed event');
+            Logs().v(
+              '[_restartDelayedLeaveEventTimer] heartbeat delayed event',
+            );
             await client.manageDelayedEvent(
               delayedLeaveEventId,
               DelayedEventAction.restart,
@@ -293,9 +291,9 @@ extension FamedlyCallMemberEventsExtension on Room {
 
         voip.delayedEventCancellers['$id|$groupCallId|$scope'] =
             DelayedEventCanceller(
-          delayedEventId: delayedLeaveEventId,
-          restartTimer: restartDelayedLeaveEventTimer,
-        );
+              delayedEventId: delayedLeaveEventId,
+              restartTimer: restartDelayedLeaveEventTimer,
+            );
       }
 
       return await client.setRoomStateWithKey(
@@ -305,16 +303,14 @@ extension FamedlyCallMemberEventsExtension on Room {
         newContent,
       );
     } else {
-      throw MatrixSDKVoipException(
-        '''
+      throw MatrixSDKVoipException('''
         User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room $id,
         canJoinGroupCall: $canJoinGroupCall,
         groupCallsEnabledForEveryone: $groupCallsEnabledForEveryone,
         needed: ${powerForChangingStateEvent(EventTypes.GroupCallMember)},
         own: $ownPowerLevel}
         plMap: ${getState(EventTypes.RoomPowerLevels)?.content}
-        ''',
-      );
+        ''');
     }
   }
 
@@ -358,8 +354,9 @@ bool isValidMemEvent(Map<String, Object?> event) {
       event['foci_active'] is List) {
     return true;
   } else {
-    Logs()
-        .v('[VOIP] FamedlyCallMemberEvent ignoring unclean membership $event');
+    Logs().v(
+      '[VOIP] FamedlyCallMemberEvent ignoring unclean membership $event',
+    );
     return false;
   }
 }

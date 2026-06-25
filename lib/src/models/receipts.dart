@@ -30,7 +30,8 @@ class Receipt {
   const Receipt(this.user, this.time);
 
   @override
-  bool operator ==(Object other) => (other is Receipt &&
+  bool operator ==(Object other) =>
+      (other is Receipt &&
       other.user == user &&
       other.time.millisecondsSinceEpoch == time.millisecondsSinceEpoch);
 
@@ -133,10 +134,10 @@ class LatestReceiptStateData {
   }
 
   Map<String, dynamic> toJson() => {
-        // abbreviated names, because we will store a lot of these.
-        'e': eventId,
-        'ts': ts,
-      };
+    // abbreviated names, because we will store a lot of these.
+    'e': eventId,
+    'ts': ts,
+  };
 }
 
 class LatestReceiptStateForTimeline {
@@ -167,27 +168,32 @@ class LatestReceiptStateForTimeline {
     final latest = json['latest'];
     final Map<String, dynamic>? others = json['others'];
 
-    final byUser = others
-            ?.map((k, v) => MapEntry(k, LatestReceiptStateData.fromJson(v))) ??
+    final byUser =
+        others?.map(
+          (k, v) => MapEntry(k, LatestReceiptStateData.fromJson(v)),
+        ) ??
         {};
 
     return LatestReceiptStateForTimeline(
-      ownPrivate:
-          private != null ? LatestReceiptStateData.fromJson(private) : null,
-      ownPublic:
-          public != null ? LatestReceiptStateData.fromJson(public) : null,
-      latestOwnReceipt:
-          latest != null ? LatestReceiptStateData.fromJson(latest) : null,
+      ownPrivate: private != null
+          ? LatestReceiptStateData.fromJson(private)
+          : null,
+      ownPublic: public != null
+          ? LatestReceiptStateData.fromJson(public)
+          : null,
+      latestOwnReceipt: latest != null
+          ? LatestReceiptStateData.fromJson(latest)
+          : null,
       otherUsers: byUser,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        if (ownPrivate != null) 'private': ownPrivate!.toJson(),
-        if (ownPublic != null) 'public': ownPublic!.toJson(),
-        if (latestOwnReceipt != null) 'latest': latestOwnReceipt!.toJson(),
-        'others': otherUsers.map((k, v) => MapEntry(k, v.toJson())),
-      };
+    if (ownPrivate != null) 'private': ownPrivate!.toJson(),
+    if (ownPublic != null) 'public': ownPublic!.toJson(),
+    if (latestOwnReceipt != null) 'latest': latestOwnReceipt!.toJson(),
+    'others': otherUsers.map((k, v) => MapEntry(k, v.toJson())),
+  };
 }
 
 class LatestReceiptState {
@@ -218,8 +224,9 @@ class LatestReceiptState {
 
     return LatestReceiptState(
       global: LatestReceiptStateForTimeline.fromJson(global),
-      mainThread:
-          main.isNotEmpty ? LatestReceiptStateForTimeline.fromJson(main) : null,
+      mainThread: main.isNotEmpty
+          ? LatestReceiptStateForTimeline.fromJson(main)
+          : null,
       byThread: byThread.map(
         (k, v) => MapEntry(k, LatestReceiptStateForTimeline.fromJson(v)),
       ),
@@ -227,16 +234,13 @@ class LatestReceiptState {
   }
 
   Map<String, dynamic> toJson() => {
-        'global': global.toJson(),
-        if (mainThread != null) 'main': mainThread!.toJson(),
-        if (byThread.isNotEmpty)
-          'thread': byThread.map((k, v) => MapEntry(k, v.toJson())),
-      };
+    'global': global.toJson(),
+    if (mainThread != null) 'main': mainThread!.toJson(),
+    if (byThread.isNotEmpty)
+      'thread': byThread.map((k, v) => MapEntry(k, v.toJson())),
+  };
 
-  Future<void> update(
-    ReceiptEventContent content,
-    Room room,
-  ) async {
+  Future<void> update(ReceiptEventContent content, Room room) async {
     final updatedTimelines = <LatestReceiptStateForTimeline>[];
     final ownUserid = room.client.userID!;
 
@@ -248,14 +252,16 @@ class LatestReceiptState {
           if (threadId == 'main') {
             timeline = (mainThread ??= LatestReceiptStateForTimeline.empty());
           } else if (threadId != null) {
-            timeline =
-                (byThread[threadId] ??= LatestReceiptStateForTimeline.empty());
+            timeline = (byThread[threadId] ??=
+                LatestReceiptStateForTimeline.empty());
           } else {
             timeline = global;
           }
 
-          final receiptData =
-              LatestReceiptStateData(eventId, receipt.originServerTs);
+          final receiptData = LatestReceiptStateData(
+            eventId,
+            receipt.originServerTs,
+          );
           if (user == ownUserid) {
             if (receiptType == ReceiptType.mReadPrivate) {
               timeline.ownPrivate = receiptData;

@@ -10,12 +10,12 @@ class AuthenticationPhoneIdentifier extends AuthenticationIdentifier {
   String phone;
 
   AuthenticationPhoneIdentifier({required this.country, required this.phone})
-      : super(type: AuthenticationIdentifierTypes.phone);
+    : super(type: AuthenticationIdentifierTypes.phone);
 
   AuthenticationPhoneIdentifier.fromJson(super.json)
-      : country = json['country'] as String,
-        phone = json['phone'] as String,
-        super.fromJson();
+    : country = json['country'] as String,
+      phone = json['phone'] as String,
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

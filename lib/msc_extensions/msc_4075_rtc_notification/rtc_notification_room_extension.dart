@@ -38,15 +38,9 @@ extension RtcNotificationRoomExtension on Room {
           if (userIds != null && userIds.isNotEmpty) 'user_ids': userIds,
         },
       if (memberEventId != null)
-        'm.relates_to': {
-          'rel_type': 'm.reference',
-          'event_id': memberEventId,
-        },
+        'm.relates_to': {'rel_type': 'm.reference', 'event_id': memberEventId},
     };
 
-    return sendEvent(
-      content,
-      type: RtcNotificationContent.eventType,
-    );
+    return sendEvent(content, type: RtcNotificationContent.eventType);
   }
 }

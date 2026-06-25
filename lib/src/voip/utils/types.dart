@@ -179,5 +179,5 @@ enum GroupCallStateChange {
   localScreenshareStateChanged,
   localMuteStateChanged,
   participantsChanged,
-  error
+  error,
 }

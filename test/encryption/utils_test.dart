@@ -17,15 +17,17 @@ void main() {
     test('base64 padded', () {
       final paddedBase64 = base64.encode(base64input.codeUnits);
 
-      final decodedPadded =
-          utf8codec.decode(base64decodeUnpadded(paddedBase64));
+      final decodedPadded = utf8codec.decode(
+        base64decodeUnpadded(paddedBase64),
+      );
       expect(decodedPadded, base64input, reason: 'Padded base64 decode');
     });
 
     test('base64 unpadded', () {
       const unpaddedBase64 = 'Zm9vYmFy';
-      final decodedUnpadded =
-          utf8codec.decode(base64decodeUnpadded(unpaddedBase64));
+      final decodedUnpadded = utf8codec.decode(
+        base64decodeUnpadded(unpaddedBase64),
+      );
       expect(decodedUnpadded, base64input, reason: 'Unpadded base64 decode');
     });
   });

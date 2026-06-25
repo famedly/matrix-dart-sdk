@@ -41,8 +41,9 @@ extension Msc2964OidcLoginFlow on Client {
         : OidcResponseMode.query;
 
     final state = base64UrlEncodeNoPadding(secureRandomBytes(32));
-    final codeVerifier =
-        base64UrlEncodeNoPadding(secureRandomBytes(codeVerifierBytesLength));
+    final codeVerifier = base64UrlEncodeNoPadding(
+      secureRandomBytes(codeVerifierBytesLength),
+    );
     final codeChallenge = base64UrlEncodeNoPadding(
       vod.CryptoUtils.sha256(input: ascii.encode(codeVerifier)),
     );
@@ -56,7 +57,7 @@ extension Msc2964OidcLoginFlow on Client {
         'code_challenge_method': 'S256',
         'response_mode': responseMode.name,
         'state': state,
-        if (prompt != null) 'prompt': prompt,
+        'prompt': ?prompt,
       },
     );
 
@@ -96,21 +97,20 @@ extension Msc2964OidcLoginFlow on Client {
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
     if (response.statusCode != 200) {
-      unexpectedResponse(
-        response,
-        response.bodyBytes,
-      );
+      unexpectedResponse(response, response.bodyBytes);
     }
     final responseString = utf8.decode(response.bodyBytes);
-    final oidcAuthResponse =
-        OidcAuthResponse.fromJson(jsonDecode(responseString));
+    final oidcAuthResponse = OidcAuthResponse.fromJson(
+      jsonDecode(responseString),
+    );
     final expiresIn = oidcAuthResponse.expiresIn;
     await init(
       newHomeserver: homeserver,
       newToken: oidcAuthResponse.accessToken,
       newRefreshToken: oidcAuthResponse.refreshToken,
-      newTokenExpiresAt:
-          expiresIn == null ? null : DateTime.now().add(expiresIn),
+      newTokenExpiresAt: expiresIn == null
+          ? null
+          : DateTime.now().add(expiresIn),
       newOidcClientId: session.oidcClientData.clientId,
     );
   }
@@ -130,10 +130,7 @@ extension Msc2964OidcLoginFlow on Client {
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
     if (response.statusCode != 200) {
-      unexpectedResponse(
-        response,
-        response.bodyBytes,
-      );
+      unexpectedResponse(response, response.bodyBytes);
     }
     final responseString = utf8.decode(response.bodyBytes);
     return OidcAuthResponse.fromJson(jsonDecode(responseString));
@@ -155,10 +152,7 @@ extension Msc2964OidcLoginFlow on Client {
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
     if (response.statusCode != 200) {
-      unexpectedResponse(
-        response,
-        response.bodyBytes,
-      );
+      unexpectedResponse(response, response.bodyBytes);
     }
   }
 }
@@ -211,6 +205,8 @@ String base64UrlEncodeNoPadding(List<int> bytes) {
 String generateRandomDeviceId() {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   final random = Random.secure();
-  return List.generate(10, (_) => letters[random.nextInt(letters.length)])
-      .join();
+  return List.generate(
+    10,
+    (_) => letters[random.nextInt(letters.length)],
+  ).join();
 }

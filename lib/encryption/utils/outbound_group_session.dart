@@ -41,8 +41,9 @@ class OutboundGroupSession {
       return;
     }
 
-    creationTime =
-        DateTime.fromMillisecondsSinceEpoch(dbEntry['creation_time']);
+    creationTime = DateTime.fromMillisecondsSinceEpoch(
+      dbEntry['creation_time'],
+    );
 
     try {
       outboundGroupSession = vod.GroupSession.fromPickleEncrypted(

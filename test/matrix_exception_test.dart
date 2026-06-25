@@ -22,10 +22,9 @@ void main() {
       expect(flows?.length, 1);
       expect(flows?.first.stages.length, 1);
       expect(flows?.first.stages.first, 'example.type.foo');
-      expect(
-        matrixException.authenticationParams?['example.type.baz'],
-        {'example_key': 'foobar'},
-      );
+      expect(matrixException.authenticationParams?['example.type.baz'], {
+        'example_key': 'foobar',
+      });
       expect(matrixException.completedAuthenticationFlows.length, 1);
       expect(
         matrixException.completedAuthenticationFlows.first,
@@ -45,10 +44,7 @@ void main() {
     });
     test('Missing Exception', () async {
       final matrixException = MatrixException(
-        Response(
-          '{"error":"HAHA"}',
-          420,
-        ),
+        Response('{"error":"HAHA"}', 420),
       );
       expect(matrixException.error, MatrixError.M_UNKNOWN);
     });

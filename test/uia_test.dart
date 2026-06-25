@@ -37,7 +37,7 @@ void main() {
             'flows': [
               <String, dynamic>{
                 'stages': ['stage1', 'stage2'],
-              }
+              },
             ],
             'params': <String, dynamic>{},
           };
@@ -60,8 +60,9 @@ void main() {
       expect(request.nextStages.length, 1);
       expect(updated, 3);
       expect(finished, false);
-      final res =
-          await request.completeStage(AuthenticationData(type: 'stage2'));
+      final res = await request.completeStage(
+        AuthenticationData(type: 'stage2'),
+      );
       expect(res, 'FOXIES ARE FLOOOOOFY!!!!!');
       expect(request.result, 'FOXIES ARE FLOOOOOFY!!!!!');
       expect(request.state, UiaRequestState.done);

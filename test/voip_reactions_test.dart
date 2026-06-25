@@ -43,8 +43,9 @@ void main() {
         callId: 'test_call_reactions',
         backend: MeshBackend(),
         deviceId: 'device123',
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -78,8 +79,9 @@ void main() {
 
       // Listen for reaction events
       final reactionEvents = <CallReactionEvent>[];
-      final subscription =
-          groupCall.matrixRTCEventStream.stream.listen((event) {
+      final subscription = groupCall.matrixRTCEventStream.stream.listen((
+        event,
+      ) {
         if (event is CallReactionEvent) {
           reactionEvents.add(event);
         }
@@ -141,8 +143,9 @@ void main() {
         callId: 'test_call_redaction',
         backend: MeshBackend(),
         deviceId: 'device123',
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -176,8 +179,9 @@ void main() {
 
       // Listen for reaction events
       final reactionEvents = <CallReactionEvent>[];
-      final subscription =
-          groupCall.matrixRTCEventStream.stream.listen((event) {
+      final subscription = groupCall.matrixRTCEventStream.stream.listen((
+        event,
+      ) {
         if (event is CallReactionEvent) {
           reactionEvents.add(event);
         }
@@ -275,8 +279,9 @@ void main() {
         callId: 'test_call_multi_reactions',
         backend: MeshBackend(),
         deviceId: 'device1',
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -288,8 +293,9 @@ void main() {
         callId: 'test_call_multi_reactions',
         backend: MeshBackend(),
         deviceId: 'device2',
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -330,8 +336,10 @@ void main() {
       await voip.createGroupCallFromRoomStateEvent(membership2);
 
       // Get the group call session
-      final groupCall =
-          voip.getGroupCallById(room.id, 'test_call_multi_reactions');
+      final groupCall = voip.getGroupCallById(
+        room.id,
+        'test_call_multi_reactions',
+      );
       expect(groupCall, isNotNull);
 
       // Enter the group call so it can process reactions
@@ -339,8 +347,9 @@ void main() {
 
       // Listen for reaction events
       final reactionEvents = <CallReactionEvent>[];
-      final subscription =
-          groupCall.matrixRTCEventStream.stream.listen((event) {
+      final subscription = groupCall.matrixRTCEventStream.stream.listen((
+        event,
+      ) {
         if (event is CallReactionEvent) {
           reactionEvents.add(event);
         }
@@ -425,8 +434,9 @@ void main() {
         callId: 'test_call_own_reactions',
         backend: MeshBackend(),
         deviceId: matrix.deviceID!,
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -452,8 +462,10 @@ void main() {
       await voip.createGroupCallFromRoomStateEvent(membership);
 
       // Get the group call session
-      final groupCall =
-          voip.getGroupCallById(room.id, 'test_call_own_reactions');
+      final groupCall = voip.getGroupCallById(
+        room.id,
+        'test_call_own_reactions',
+      );
       expect(groupCall, isNotNull);
 
       // Enter the group call so it can process reactions
@@ -461,8 +473,9 @@ void main() {
 
       // Listen for reaction events
       final reactionEvents = <CallReactionEvent>[];
-      final subscription =
-          groupCall.matrixRTCEventStream.stream.listen((event) {
+      final subscription = groupCall.matrixRTCEventStream.stream.listen((
+        event,
+      ) {
         if (event is CallReactionEvent) {
           reactionEvents.add(event);
         }
@@ -524,8 +537,9 @@ void main() {
         callId: 'test_call_send_reaction',
         backend: MeshBackend(),
         deviceId: matrix.deviceID!,
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -551,8 +565,10 @@ void main() {
       await voip.createGroupCallFromRoomStateEvent(membership);
 
       // Get the group call session
-      final groupCall =
-          voip.getGroupCallById(room.id, 'test_call_send_reaction');
+      final groupCall = voip.getGroupCallById(
+        room.id,
+        'test_call_send_reaction',
+      );
       expect(groupCall, isNotNull);
 
       // Enter the group call so it can process reactions
@@ -578,8 +594,9 @@ void main() {
         callId: 'test_call_get_all',
         backend: MeshBackend(),
         deviceId: matrix.deviceID!,
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -591,8 +608,9 @@ void main() {
         callId: 'test_call_get_all',
         backend: MeshBackend(),
         deviceId: 'other_device',
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -656,8 +674,9 @@ void main() {
         callId: 'test_call_invalid_reactions',
         backend: MeshBackend(),
         deviceId: 'device123',
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -683,8 +702,10 @@ void main() {
       await voip.createGroupCallFromRoomStateEvent(membership);
 
       // Get the group call session
-      final groupCall =
-          voip.getGroupCallById(room.id, 'test_call_invalid_reactions');
+      final groupCall = voip.getGroupCallById(
+        room.id,
+        'test_call_invalid_reactions',
+      );
       expect(groupCall, isNotNull);
 
       // Enter the group call so it can process reactions
@@ -692,8 +713,9 @@ void main() {
 
       // Listen for reaction events
       final reactionEvents = <CallReactionEvent>[];
-      final subscription =
-          groupCall.matrixRTCEventStream.stream.listen((event) {
+      final subscription = groupCall.matrixRTCEventStream.stream.listen((
+        event,
+      ) {
         if (event is CallReactionEvent) {
           reactionEvents.add(event);
         }
@@ -783,8 +805,9 @@ void main() {
         callId: 'test_call_invalid_redactions',
         backend: MeshBackend(),
         deviceId: 'device123',
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -810,8 +833,10 @@ void main() {
       await voip.createGroupCallFromRoomStateEvent(membership);
 
       // Get the group call session
-      final groupCall =
-          voip.getGroupCallById(room.id, 'test_call_invalid_redactions');
+      final groupCall = voip.getGroupCallById(
+        room.id,
+        'test_call_invalid_redactions',
+      );
       expect(groupCall, isNotNull);
 
       // Enter the group call so it can process reactions
@@ -819,8 +844,9 @@ void main() {
 
       // Listen for reaction events
       final reactionEvents = <CallReactionEvent>[];
-      final subscription =
-          groupCall.matrixRTCEventStream.stream.listen((event) {
+      final subscription = groupCall.matrixRTCEventStream.stream.listen((
+        event,
+      ) {
         if (event is CallReactionEvent) {
           reactionEvents.add(event);
         }
@@ -878,8 +904,9 @@ void main() {
         callId: 'test_call_emoji_variety',
         backend: MeshBackend(),
         deviceId: 'device123',
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -905,8 +932,10 @@ void main() {
       await voip.createGroupCallFromRoomStateEvent(membership);
 
       // Get the group call session
-      final groupCall =
-          voip.getGroupCallById(room.id, 'test_call_emoji_variety');
+      final groupCall = voip.getGroupCallById(
+        room.id,
+        'test_call_emoji_variety',
+      );
       expect(groupCall, isNotNull);
 
       // Enter the group call so it can process reactions
@@ -914,8 +943,9 @@ void main() {
 
       // Listen for reaction events
       final reactionEvents = <CallReactionEvent>[];
-      final subscription =
-          groupCall.matrixRTCEventStream.stream.listen((event) {
+      final subscription = groupCall.matrixRTCEventStream.stream.listen((
+        event,
+      ) {
         if (event is CallReactionEvent) {
           reactionEvents.add(event);
         }
@@ -990,8 +1020,9 @@ void main() {
         callId: 'test_call_ephemeral_permanent',
         backend: MeshBackend(),
         deviceId: 'device123',
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -1017,8 +1048,10 @@ void main() {
       await voip.createGroupCallFromRoomStateEvent(membership);
 
       // Get the group call session
-      final groupCall =
-          voip.getGroupCallById(room.id, 'test_call_ephemeral_permanent');
+      final groupCall = voip.getGroupCallById(
+        room.id,
+        'test_call_ephemeral_permanent',
+      );
       expect(groupCall, isNotNull);
 
       // Enter the group call so it can process reactions
@@ -1026,8 +1059,9 @@ void main() {
 
       // Listen for reaction events
       final reactionEvents = <CallReactionEvent>[];
-      final subscription =
-          groupCall.matrixRTCEventStream.stream.listen((event) {
+      final subscription = groupCall.matrixRTCEventStream.stream.listen((
+        event,
+      ) {
         if (event is CallReactionEvent) {
           reactionEvents.add(event);
         }
@@ -1119,8 +1153,9 @@ void main() {
         callId: 'test_call_ephemeral_timeout',
         backend: MeshBackend(),
         deviceId: 'device123',
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
         roomId: room.id,
         membershipId: voip.currentSessionId,
         voip: voip,
@@ -1146,8 +1181,10 @@ void main() {
       await voip.createGroupCallFromRoomStateEvent(membership);
 
       // Get the group call session
-      final groupCall =
-          voip.getGroupCallById(room.id, 'test_call_ephemeral_timeout');
+      final groupCall = voip.getGroupCallById(
+        room.id,
+        'test_call_ephemeral_timeout',
+      );
       expect(groupCall, isNotNull);
 
       // Enter the group call so it can process reactions
@@ -1155,8 +1192,9 @@ void main() {
 
       // Listen for reaction events
       final reactionEvents = <CallReactionEvent>[];
-      final subscription =
-          groupCall.matrixRTCEventStream.stream.listen((event) {
+      final subscription = groupCall.matrixRTCEventStream.stream.listen((
+        event,
+      ) {
         if (event is CallReactionEvent) {
           reactionEvents.add(event);
         }
@@ -1266,81 +1304,88 @@ void main() {
 
       // Should NOT have old ephemeral hand raise
       expect(
-        processedReactions
-            .any((event) => event.reactionKey == testEmojis[0]['emoji']),
+        processedReactions.any(
+          (event) => event.reactionKey == testEmojis[0]['emoji'],
+        ),
         false,
       );
 
       await subscription.cancel();
     });
 
-    test('Test sending different emoji types through GroupCallSession',
-        () async {
-      // Set up a group call membership for the current user
-      final membership = CallMembership(
-        userId: matrix.userID!,
-        callId: 'test_call_send_emojis',
-        backend: MeshBackend(),
-        deviceId: matrix.deviceID!,
-        expiresTs:
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
-        roomId: room.id,
-        membershipId: voip.currentSessionId,
-        voip: voip,
-        eventId: 'send_emojis_membership_event',
-      );
-
-      // Set up the room state with the membership
-      room.setState(
-        Event(
-          content: {
-            'memberships': [membership.toJson()],
-          },
-          type: EventTypes.GroupCallMember,
+    test(
+      'Test sending different emoji types through GroupCallSession',
+      () async {
+        // Set up a group call membership for the current user
+        final membership = CallMembership(
+          userId: matrix.userID!,
+          callId: 'test_call_send_emojis',
+          backend: MeshBackend(),
+          deviceId: matrix.deviceID!,
+          expiresTs: DateTime.now()
+              .add(Duration(hours: 1))
+              .millisecondsSinceEpoch,
+          roomId: room.id,
+          membershipId: voip.currentSessionId,
+          voip: voip,
           eventId: 'send_emojis_membership_event',
-          senderId: matrix.userID!,
-          originServerTs: DateTime.now(),
-          room: room,
-          stateKey: matrix.userID,
-        ),
-      );
-
-      // Manually create the group call session
-      await voip.createGroupCallFromRoomStateEvent(membership);
-
-      // Get the group call session
-      final groupCall = voip.getGroupCallById(room.id, 'test_call_send_emojis');
-      expect(groupCall, isNotNull);
-
-      // Enter the group call so it can process reactions
-      await groupCall!.enter();
-
-      // Test sending different emoji reactions using all test emojis
-      for (final emojiData in testEmojis) {
-        // Test ephemeral reaction
-        final ephemeralEventId = await groupCall.sendReactionEvent(
-          emoji: emojiData['emoji']!,
-          isEphemeral: true,
         );
-        expect(ephemeralEventId, isNotNull);
 
-        // Test permanent reaction
-        final permanentEventId = await groupCall.sendReactionEvent(
-          emoji: emojiData['emoji']!,
-          isEphemeral: false,
+        // Set up the room state with the membership
+        room.setState(
+          Event(
+            content: {
+              'memberships': [membership.toJson()],
+            },
+            type: EventTypes.GroupCallMember,
+            eventId: 'send_emojis_membership_event',
+            senderId: matrix.userID!,
+            originServerTs: DateTime.now(),
+            room: room,
+            stateKey: matrix.userID,
+          ),
         );
-        expect(permanentEventId, isNotNull);
 
-        // Small delay between sends
-        await Future.delayed(Duration(milliseconds: 10));
-      }
+        // Manually create the group call session
+        await voip.createGroupCallFromRoomStateEvent(membership);
 
-      // Test removing reactions (will work with fake client)
-      await room.redactEvent('fake_reaction_id_1');
-      await room.redactEvent('fake_reaction_id_2');
+        // Get the group call session
+        final groupCall = voip.getGroupCallById(
+          room.id,
+          'test_call_send_emojis',
+        );
+        expect(groupCall, isNotNull);
 
-      // The test passes if we reach here without crashing
-      expect(true, true);
-    });
+        // Enter the group call so it can process reactions
+        await groupCall!.enter();
+
+        // Test sending different emoji reactions using all test emojis
+        for (final emojiData in testEmojis) {
+          // Test ephemeral reaction
+          final ephemeralEventId = await groupCall.sendReactionEvent(
+            emoji: emojiData['emoji']!,
+            isEphemeral: true,
+          );
+          expect(ephemeralEventId, isNotNull);
+
+          // Test permanent reaction
+          final permanentEventId = await groupCall.sendReactionEvent(
+            emoji: emojiData['emoji']!,
+            isEphemeral: false,
+          );
+          expect(permanentEventId, isNotNull);
+
+          // Small delay between sends
+          await Future.delayed(Duration(milliseconds: 10));
+        }
+
+        // Test removing reactions (will work with fake client)
+        await room.redactEvent('fake_reaction_id_1');
+        await room.redactEvent('fake_reaction_id_2');
+
+        // The test passes if we reach here without crashing
+        expect(true, true);
+      },
+    );
   });
 }

@@ -27,7 +27,7 @@ class OlmSession {
   });
 
   OlmSession.fromJson(Map<String, Object?> dbEntry, this.key)
-      : identityKey = dbEntry.tryGet<String>('identity_key') ?? '' {
+    : identityKey = dbEntry.tryGet<String>('identity_key') ?? '' {
     try {
       try {
         session = vod.Session.fromPickleEncrypted(

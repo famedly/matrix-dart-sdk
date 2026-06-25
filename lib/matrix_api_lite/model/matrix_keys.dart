@@ -19,29 +19,28 @@ abstract class MatrixSignableKey {
   Map<String, Object?>? _json;
 
   MatrixSignableKey.fromJson(Map<String, Object?> json)
-      : _json = json,
-        userId = json['user_id'] as String,
-        keys = Map<String, String>.from(json['keys'] as Map<String, Object?>),
-        // we need to manually copy to ensure that our map is Map<String, Map<String, String>>
-        signatures = (() {
-          final orig = json.tryGetMap<String, Object?>('signatures');
-          final res = <String, Map<String, String>>{};
-          for (final entry
-              in (orig?.entries ?? <MapEntry<String, Object?>>[])) {
-            final deviceSigs = entry.value;
-            if (deviceSigs is Map<String, Object?>) {
-              for (final nestedEntry in deviceSigs.entries) {
-                final nestedValue = nestedEntry.value;
-                if (nestedValue is String) {
-                  (res[entry.key] ??= <String, String>{})[nestedEntry.key] =
-                      nestedValue;
-                }
+    : _json = json,
+      userId = json['user_id'] as String,
+      keys = Map<String, String>.from(json['keys'] as Map<String, Object?>),
+      // we need to manually copy to ensure that our map is Map<String, Map<String, String>>
+      signatures = (() {
+        final orig = json.tryGetMap<String, Object?>('signatures');
+        final res = <String, Map<String, String>>{};
+        for (final entry in (orig?.entries ?? <MapEntry<String, Object?>>[])) {
+          final deviceSigs = entry.value;
+          if (deviceSigs is Map<String, Object?>) {
+            for (final nestedEntry in deviceSigs.entries) {
+              final nestedValue = nestedEntry.value;
+              if (nestedValue is String) {
+                (res[entry.key] ??= <String, String>{})[nestedEntry.key] =
+                    nestedValue;
               }
             }
           }
-          return res;
-        }()),
-        unsigned = json.tryGetMap<String, Object?>('unsigned')?.copy();
+        }
+        return res;
+      }()),
+      unsigned = json.tryGetMap<String, Object?>('unsigned')?.copy();
 
   Map<String, Object?> toJson() {
     final data = _json ?? <String, Object?>{};
@@ -75,8 +74,8 @@ class MatrixCrossSigningKey extends MatrixSignableKey {
   String? get identifier => keys.values.first;
 
   MatrixCrossSigningKey.fromJson(super.json)
-      : usage = json.tryGetList<String>('usage') ?? [],
-        super.fromJson();
+    : usage = json.tryGetList<String>('usage') ?? [],
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {
@@ -106,9 +105,9 @@ class MatrixDeviceKeys extends MatrixSignableKey {
   String? get identifier => deviceId;
 
   MatrixDeviceKeys.fromJson(super.json)
-      : algorithms = json.tryGetList<String>('algorithms') ?? [],
-        deviceId = json['device_id'] as String,
-        super.fromJson();
+    : algorithms = json.tryGetList<String>('algorithms') ?? [],
+      deviceId = json['device_id'] as String,
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

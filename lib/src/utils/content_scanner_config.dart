@@ -29,26 +29,27 @@ class MatrixContentScannerConfig {
     required this.downloadEncryptedUri,
     this.withAuthHeader = true,
     this.scanBeforePreview = false,
-  })  : downloadUri = _ensureTrailingSlash(downloadUri),
-        downloadThumbnailUri = _ensureTrailingSlash(downloadThumbnailUri);
+  }) : downloadUri = _ensureTrailingSlash(downloadUri),
+       downloadThumbnailUri = _ensureTrailingSlash(downloadThumbnailUri);
 
   factory MatrixContentScannerConfig.fromJson(Map<String, Object?> json) =>
       MatrixContentScannerConfig(
         downloadUri: Uri.parse(json['download_uri']! as String),
-        downloadThumbnailUri:
-            Uri.parse(json['download_thumbnail_uri']! as String),
+        downloadThumbnailUri: Uri.parse(
+          json['download_thumbnail_uri']! as String,
+        ),
         downloadEncryptedUri: Uri.parse(json['download_encrypted']! as String),
         withAuthHeader: (json['with_auth_header'] as bool?) ?? true,
         scanBeforePreview: (json['scan_before_preview'] as bool?) ?? false,
       );
 
   Map<String, Object?> toJson() => {
-        'download_uri': downloadUri.toString(),
-        'download_thumbnail_uri': downloadThumbnailUri.toString(),
-        'download_encrypted': downloadEncryptedUri.toString(),
-        'with_auth_header': withAuthHeader,
-        'scan_before_preview': scanBeforePreview,
-      };
+    'download_uri': downloadUri.toString(),
+    'download_thumbnail_uri': downloadThumbnailUri.toString(),
+    'download_encrypted': downloadEncryptedUri.toString(),
+    'with_auth_header': withAuthHeader,
+    'scan_before_preview': scanBeforePreview,
+  };
 
   static Uri _ensureTrailingSlash(Uri uri) {
     if (uri.path.endsWith('/')) return uri;

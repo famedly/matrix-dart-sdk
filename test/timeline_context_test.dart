@@ -129,18 +129,15 @@ void main() {
 
       const eventId = '1844295642248BcDkn:example.org';
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'test'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.synced.intValue,
-            'event_id': eventId,
-            'unsigned': {'transaction_id': '1234'},
-            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'test'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.synced.intValue,
+          'event_id': eventId,
+          'unsigned': {'transaction_id': '1234'},
+          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        }, room),
       ); // just assume that it was on the server for this call but not for the following.
 
       expect(updateCount, 0);
@@ -194,18 +191,15 @@ void main() {
       expect(timeline.events[0].status, EventStatus.sent);
 
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'test'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.synced.intValue,
-            'event_id': eventId,
-            'unsigned': {'transaction_id': '1234'},
-            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'test'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.synced.intValue,
+          'event_id': eventId,
+          'unsigned': {'transaction_id': '1234'},
+          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        }, room),
       );
 
       await waitForCount(9);
@@ -223,17 +217,14 @@ void main() {
       await waitForCount(6);
 
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.sending.intValue,
-            'event_id': 'abc',
-            'origin_server_ts': testTimeStamp,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.sending.intValue,
+          'event_id': 'abc',
+          'origin_server_ts': testTimeStamp,
+        }, room),
       );
 
       await waitForCount(7);
@@ -280,17 +271,14 @@ void main() {
       await timeline.requestFuture();
       // send a failed message
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.sending.intValue,
-            'event_id': 'abc',
-            'origin_server_ts': testTimeStamp,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.sending.intValue,
+          'event_id': 'abc',
+          'origin_server_ts': testTimeStamp,
+        }, room),
       );
       await waitForCount(7);
 
@@ -310,17 +298,14 @@ void main() {
       await timeline.requestFuture();
       await timeline.requestFuture();
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.sending.intValue,
-            'event_id': 'abc',
-            'origin_server_ts': testTimeStamp,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.sending.intValue,
+          'event_id': 'abc',
+          'origin_server_ts': testTimeStamp,
+        }, room),
       );
       await waitForCount(7);
       var event = await timeline.getEventById('abc');
@@ -342,18 +327,15 @@ void main() {
       await timeline.requestFuture();
       await timeline.requestFuture();
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.error.intValue,
-            'event_id': 'new-test-event',
-            'origin_server_ts': testTimeStamp,
-            'unsigned': {'transaction_id': 'newresend'},
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.error.intValue,
+          'event_id': 'new-test-event',
+          'origin_server_ts': testTimeStamp,
+          'unsigned': {'transaction_id': 'newresend'},
+        }, room),
       );
       await waitForCount(7);
       expect(timeline.events[0].status, EventStatus.error);
@@ -396,8 +378,9 @@ void main() {
                       type: 'm.room.message',
                       content: {'msgtype': 'm.text', 'body': 'Testcase'},
                       senderId: '@alice:example.com',
-                      originServerTs:
-                          DateTime.fromMillisecondsSinceEpoch(testTimeStamp),
+                      originServerTs: DateTime.fromMillisecondsSinceEpoch(
+                        testTimeStamp,
+                      ),
                     ),
                   ],
                 ),
@@ -419,30 +402,24 @@ void main() {
       await timeline.requestFuture();
       await timeline.requestFuture();
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.error.intValue,
-            'event_id': 'abc',
-            'origin_server_ts': testTimeStamp,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.error.intValue,
+          'event_id': 'abc',
+          'origin_server_ts': testTimeStamp,
+        }, room),
       );
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.synced.intValue,
-            'event_id': 'def',
-            'origin_server_ts': testTimeStamp + 5,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.synced.intValue,
+          'event_id': 'def',
+          'origin_server_ts': testTimeStamp + 5,
+        }, room),
       );
       await waitForCount(8);
       expect(timeline.events[0].status, EventStatus.error);
@@ -454,33 +431,27 @@ void main() {
       await timeline.requestFuture();
       await timeline.requestFuture();
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.sending.intValue,
-            'event_id': 'will-fail',
-            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.sending.intValue,
+          'event_id': 'will-fail',
+          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        }, room),
       );
       await waitForCount(7);
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 4);
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.error.intValue,
-            'event_id': 'will-fail',
-            'origin_server_ts': testTimeStamp,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.error.intValue,
+          'event_id': 'will-fail',
+          'origin_server_ts': testTimeStamp,
+        }, room),
       );
       await waitForCount(8);
       expect(timeline.events[0].status, EventStatus.error);
@@ -490,17 +461,14 @@ void main() {
       await timeline.requestFuture();
       await timeline.requestFuture();
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.synced.intValue,
-            'event_id': 'will-work',
-            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.synced.intValue,
+          'event_id': 'will-work',
+          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        }, room),
       );
       await waitForCount(7);
 
@@ -508,31 +476,28 @@ void main() {
       await timeline.setReadMarker();
       //expect(room.notificationCount, 0);
     });
-    test('sending an event and the http request finishes first, 0 -> 1 -> 2',
-        () async {
-      timeline.events.clear();
-      await timeline.requestFuture();
-      await timeline.requestFuture();
+    test(
+      'sending an event and the http request finishes first, 0 -> 1 -> 2',
+      () async {
+        timeline.events.clear();
+        await timeline.requestFuture();
+        await timeline.requestFuture();
 
-      client.onTimelineEvent.add(
-        Event.fromJson(
-          {
+        client.onTimelineEvent.add(
+          Event.fromJson({
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
             'status': EventStatus.sending.intValue,
             'event_id': 'transaction',
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          },
-          room,
-        ),
-      );
-      await waitForCount(7);
-      expect(timeline.events[0].status, EventStatus.sending);
-      expect(timeline.events.length, 4);
-      client.onTimelineEvent.add(
-        Event.fromJson(
-          {
+          }, room),
+        );
+        await waitForCount(7);
+        expect(timeline.events[0].status, EventStatus.sending);
+        expect(timeline.events.length, 4);
+        client.onTimelineEvent.add(
+          Event.fromJson({
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -540,16 +505,13 @@ void main() {
             'event_id': '\$event',
             'origin_server_ts': testTimeStamp,
             'unsigned': {'transaction_id': 'transaction'},
-          },
-          room,
-        ),
-      );
-      await waitForCount(8);
-      expect(timeline.events[0].status, EventStatus.sent);
-      expect(timeline.events.length, 4);
-      client.onTimelineEvent.add(
-        Event.fromJson(
-          {
+          }, room),
+        );
+        await waitForCount(8);
+        expect(timeline.events[0].status, EventStatus.sent);
+        expect(timeline.events.length, 4);
+        client.onTimelineEvent.add(
+          Event.fromJson({
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -557,23 +519,22 @@ void main() {
             'event_id': '\$event',
             'origin_server_ts': testTimeStamp,
             'unsigned': {'transaction_id': 'transaction'},
-          },
-          room,
-        ),
-      );
-      await waitForCount(9);
-      expect(timeline.events[0].status, EventStatus.synced);
-      expect(timeline.events.length, 4);
-    });
-    test('sending an event where the sync reply arrives first, 0 -> 2 -> 1',
-        () async {
-      timeline.events.clear();
-      await timeline.requestFuture();
-      await timeline.requestFuture();
+          }, room),
+        );
+        await waitForCount(9);
+        expect(timeline.events[0].status, EventStatus.synced);
+        expect(timeline.events.length, 4);
+      },
+    );
+    test(
+      'sending an event where the sync reply arrives first, 0 -> 2 -> 1',
+      () async {
+        timeline.events.clear();
+        await timeline.requestFuture();
+        await timeline.requestFuture();
 
-      client.onTimelineEvent.add(
-        Event.fromJson(
-          {
+        client.onTimelineEvent.add(
+          Event.fromJson({
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -583,16 +544,13 @@ void main() {
               messageSendingStatusKey: EventStatus.sending.intValue,
               'transaction_id': 'transaction',
             },
-          },
-          room,
-        ),
-      );
-      await waitForCount(7);
-      expect(timeline.events[0].status, EventStatus.sending);
-      expect(timeline.events.length, 4);
-      client.onTimelineEvent.add(
-        Event.fromJson(
-          {
+          }, room),
+        );
+        await waitForCount(7);
+        expect(timeline.events[0].status, EventStatus.sending);
+        expect(timeline.events.length, 4);
+        client.onTimelineEvent.add(
+          Event.fromJson({
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -602,16 +560,13 @@ void main() {
               'transaction_id': 'transaction',
               messageSendingStatusKey: EventStatus.synced.intValue,
             },
-          },
-          room,
-        ),
-      );
-      await waitForCount(8);
-      expect(timeline.events[0].status, EventStatus.synced);
-      expect(timeline.events.length, 4);
-      client.onTimelineEvent.add(
-        Event.fromJson(
-          {
+          }, room),
+        );
+        await waitForCount(8);
+        expect(timeline.events[0].status, EventStatus.synced);
+        expect(timeline.events.length, 4);
+        client.onTimelineEvent.add(
+          Event.fromJson({
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
@@ -621,64 +576,54 @@ void main() {
               'transaction_id': 'transaction',
               messageSendingStatusKey: EventStatus.sent.intValue,
             },
-          },
-          room,
-        ),
-      );
-      await waitForCount(9);
-      expect(timeline.events[0].status, EventStatus.synced);
-      expect(timeline.events.length, 4);
-    });
+          }, room),
+        );
+        await waitForCount(9);
+        expect(timeline.events[0].status, EventStatus.synced);
+        expect(timeline.events.length, 4);
+      },
+    );
     test('sending an event 0 -> -1 -> 2', () async {
       timeline.events.clear();
       await timeline.requestFuture();
       await timeline.requestFuture();
 
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.sending.intValue,
-            'event_id': 'transaction',
-            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.sending.intValue,
+          'event_id': 'transaction',
+          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        }, room),
       );
       await waitForCount(7);
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 4);
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.error.intValue,
-            'origin_server_ts': testTimeStamp,
-            'unsigned': {'transaction_id': 'transaction'},
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.error.intValue,
+          'origin_server_ts': testTimeStamp,
+          'unsigned': {'transaction_id': 'transaction'},
+        }, room),
       );
       await waitForCount(8);
       expect(timeline.events[0].status, EventStatus.error);
       expect(timeline.events.length, 4);
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.synced.intValue,
-            'event_id': '\$event',
-            'origin_server_ts': testTimeStamp,
-            'unsigned': {'transaction_id': 'transaction'},
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.synced.intValue,
+          'event_id': '\$event',
+          'origin_server_ts': testTimeStamp,
+          'unsigned': {'transaction_id': 'transaction'},
+        }, room),
       );
       await waitForCount(9);
       expect(timeline.events[0].status, EventStatus.synced);
@@ -690,50 +635,41 @@ void main() {
       await timeline.requestFuture();
 
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.sending.intValue,
-            'event_id': 'transaction',
-            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.sending.intValue,
+          'event_id': 'transaction',
+          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        }, room),
       );
       await waitForCount(7);
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 4);
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.synced.intValue,
-            'event_id': '\$event',
-            'origin_server_ts': testTimeStamp,
-            'unsigned': {'transaction_id': 'transaction'},
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.synced.intValue,
+          'event_id': '\$event',
+          'origin_server_ts': testTimeStamp,
+          'unsigned': {'transaction_id': 'transaction'},
+        }, room),
       );
       await waitForCount(8);
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 4);
       client.onTimelineEvent.add(
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': EventStatus.error.intValue,
-            'origin_server_ts': testTimeStamp,
-            'unsigned': {'transaction_id': 'transaction'},
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.error.intValue,
+          'origin_server_ts': testTimeStamp,
+          'unsigned': {'transaction_id': 'transaction'},
+        }, room),
       );
       await waitForCount(9);
       expect(timeline.events[0].status, EventStatus.synced);

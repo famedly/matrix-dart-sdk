@@ -23,10 +23,10 @@ class RoomKeyContent {
   });
 
   RoomKeyContent.fromJson(Map<String, Object?> json)
-      : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',
-        roomId = json.tryGet('room_id', TryGet.required) ?? '',
-        sessionId = json.tryGet('session_id', TryGet.required) ?? '',
-        sessionKey = json.tryGet('session_key', TryGet.required) ?? '';
+    : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',
+      roomId = json.tryGet('room_id', TryGet.required) ?? '',
+      sessionId = json.tryGet('session_id', TryGet.required) ?? '',
+      sessionKey = json.tryGet('session_key', TryGet.required) ?? '';
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};

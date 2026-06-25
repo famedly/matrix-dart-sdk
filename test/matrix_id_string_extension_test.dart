@@ -37,9 +37,9 @@ void main() {
     });
     test('isValidMatrixIdStrict with strict options', () {
       bool strict(String id) => id.isValidMatrixIdStrict(
-            allowHistoricalUserIds: false,
-            strictDomainCheck: true,
-          );
+        allowHistoricalUserIds: false,
+        strictDomainCheck: true,
+      );
 
       const validIds = [
         '@test:example.com',
@@ -94,8 +94,9 @@ void main() {
       // historical ids and unchecked domains are only rejected when opted in
       expect('@TestUser:example.com'.isValidMatrixIdStrict(), true);
       expect(
-        '@TestUser:example.com'
-            .isValidMatrixIdStrict(allowHistoricalUserIds: false),
+        '@TestUser:example.com'.isValidMatrixIdStrict(
+          allowHistoricalUserIds: false,
+        ),
         false,
       );
       expect('@test:exa mple.com'.isValidMatrixIdStrict(), true);

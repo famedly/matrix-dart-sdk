@@ -15,10 +15,7 @@ void main() {
       final database = await getDatabase();
       room = Room(
         id: '!room:blubb',
-        client: Client(
-          'testclient',
-          database: database,
-        ),
+        client: Client('testclient', database: database),
       );
       await database.insertClient(
         'testclient',
@@ -41,15 +38,13 @@ void main() {
       // store a simple update
       await database.storeEventUpdate(
         room.id,
-        MatrixEvent.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': <String, dynamic>{'blah': 'blubb'},
-            'event_id': '\$event-1',
-            'sender': '@blah:blubb',
-          },
-        ),
+        MatrixEvent.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': <String, dynamic>{'blah': 'blubb'},
+          'event_id': '\$event-1',
+          'sender': '@blah:blubb',
+        }),
         EventUpdateType.timeline,
         client,
       );
@@ -59,17 +54,14 @@ void main() {
       // insert a transaction id
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': <String, dynamic>{'blah': 'blubb'},
-            'event_id': 'transaction-1',
-            'sender': '@blah:blubb',
-            'status': EventStatus.sending.intValue,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': <String, dynamic>{'blah': 'blubb'},
+          'event_id': 'transaction-1',
+          'sender': '@blah:blubb',
+          'status': EventStatus.sending.intValue,
+        }, room),
         EventUpdateType.timeline,
         client,
       );
@@ -78,20 +70,15 @@ void main() {
 
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': <String, dynamic>{'blah': 'blubb'},
-            'event_id': '\$event-2',
-            'sender': '@blah:blubb',
-            'unsigned': <String, dynamic>{
-              'transaction_id': 'transaction-1',
-            },
-            'status': EventStatus.sent.intValue,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': <String, dynamic>{'blah': 'blubb'},
+          'event_id': '\$event-2',
+          'sender': '@blah:blubb',
+          'unsigned': <String, dynamic>{'transaction_id': 'transaction-1'},
+          'status': EventStatus.sent.intValue,
+        }, room),
         EventUpdateType.timeline,
         client,
       );
@@ -102,17 +89,14 @@ void main() {
       // insert a transaction id if the event id for it already exists
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': {'blah': 'blubb'},
-            'event_id': '\$event-3',
-            'sender': '@blah:blubb',
-            'status': EventStatus.sending.intValue,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': {'blah': 'blubb'},
+          'event_id': '\$event-3',
+          'sender': '@blah:blubb',
+          'status': EventStatus.sending.intValue,
+        }, room),
         EventUpdateType.timeline,
         client,
       );
@@ -121,20 +105,15 @@ void main() {
 
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': {'blah': 'blubb'},
-            'event_id': '\$event-3',
-            'sender': '@blah:blubb',
-            'status': EventStatus.sent.intValue,
-            'unsigned': <String, dynamic>{
-              'transaction_id': 'transaction-2',
-            },
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': {'blah': 'blubb'},
+          'event_id': '\$event-3',
+          'sender': '@blah:blubb',
+          'status': EventStatus.sent.intValue,
+          'unsigned': <String, dynamic>{'transaction_id': 'transaction-2'},
+        }, room),
         EventUpdateType.timeline,
         client,
       );
@@ -147,17 +126,14 @@ void main() {
       // insert transaction id and not update status
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': {'blah': 'blubb'},
-            'event_id': '\$event-4',
-            'sender': '@blah:blubb',
-            'status': EventStatus.synced.intValue,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': {'blah': 'blubb'},
+          'event_id': '\$event-4',
+          'sender': '@blah:blubb',
+          'status': EventStatus.synced.intValue,
+        }, room),
         EventUpdateType.timeline,
         client,
       );
@@ -166,20 +142,15 @@ void main() {
 
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': {'blah': 'blubb'},
-            'event_id': '\$event-4',
-            'sender': '@blah:blubb',
-            'status': EventStatus.sent.intValue,
-            'unsigned': <String, dynamic>{
-              'transaction_id': 'transaction-3',
-            },
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': {'blah': 'blubb'},
+          'event_id': '\$event-4',
+          'sender': '@blah:blubb',
+          'status': EventStatus.sent.intValue,
+          'unsigned': <String, dynamic>{'transaction_id': 'transaction-3'},
+        }, room),
         EventUpdateType.timeline,
         client,
       );

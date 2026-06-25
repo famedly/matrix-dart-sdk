@@ -148,16 +148,16 @@ class CallMembership {
 
   @override
   int get hashCode => Object.hash(
-        userId.hashCode,
-        roomId.hashCode,
-        callId.hashCode,
-        application.hashCode,
-        scope.hashCode,
-        backend.type.hashCode,
-        deviceId.hashCode,
-        eventId.hashCode,
-        membershipId.hashCode,
-      );
+    userId.hashCode,
+    roomId.hashCode,
+    callId.hashCode,
+    application.hashCode,
+    scope.hashCode,
+    backend.type.hashCode,
+    deviceId.hashCode,
+    eventId.hashCode,
+    membershipId.hashCode,
+  );
 
   // with a buffer of 1 minute just incase we were slow to process a
   // call event, if the device is actually dead it should

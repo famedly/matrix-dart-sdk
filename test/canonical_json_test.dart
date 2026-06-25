@@ -16,18 +16,18 @@ void main() {
       '{"a":"1","b":"2"}': {'b': '2', 'a': '1'},
       '{"auth":{"mxid":"@john.doe:example.com","profile":{"display_name":"John Doe","three_pids":[{"address":"john.doe@example.org","medium":"email"},{"address":"123456789","medium":"msisdn"}]},"success":true}}':
           {
-        'auth': {
-          'success': true,
-          'mxid': '@john.doe:example.com',
-          'profile': {
-            'display_name': 'John Doe',
-            'three_pids': [
-              {'medium': 'email', 'address': 'john.doe@example.org'},
-              {'medium': 'msisdn', 'address': '123456789'},
-            ],
+            'auth': {
+              'success': true,
+              'mxid': '@john.doe:example.com',
+              'profile': {
+                'display_name': 'John Doe',
+                'three_pids': [
+                  {'medium': 'email', 'address': 'john.doe@example.org'},
+                  {'medium': 'msisdn', 'address': '123456789'},
+                ],
+              },
+            },
           },
-        },
-      },
       '{"a":null}': {'a': null},
     };
     for (final entry in textMap.entries) {

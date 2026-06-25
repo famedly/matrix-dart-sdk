@@ -138,7 +138,7 @@ void main() async {
                 'sender': '@alice:example.com',
                 'type': 'm.presence',
                 'content': {'presence': 'online'},
-              }
+              },
             ],
           },
         }),

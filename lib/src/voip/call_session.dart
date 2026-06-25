@@ -222,8 +222,10 @@ class CallSession {
                 '[glare] new call $callId needs to be canceled because the older one ${prevCall.callId} has a smaller lex',
               );
               await hangup(reason: CallErrorCode.unknownError);
-              voip.currentCID =
-                  VoipId(roomId: room.id, callId: prevCall.callId);
+              voip.currentCID = VoipId(
+                roomId: room.id,
+                callId: prevCall.callId,
+              );
             } else {
               Logs().d(
                 '[glare] nice, lex of newer call $callId is smaller auto accept this here',
@@ -405,7 +407,8 @@ class CallSession {
 
     // Here we follow the perfect negotiation logic from
     // https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Perfect_negotiation
-    final offerCollision = ((description.type == 'offer') &&
+    final offerCollision =
+        ((description.type == 'offer') &&
         (_makingOffer ||
             pc!.signalingState != RTCSignalingState.RTCSignalingStateStable));
 
@@ -456,22 +459,16 @@ class CallSession {
   }
 
   Future<void> updateMediaDeviceForCall() async {
-    await updateMediaDevice(
-      voip.delegate,
-      MediaKind.audio,
-      _usermediaSenders,
-    );
-    await updateMediaDevice(
-      voip.delegate,
-      MediaKind.video,
-      _usermediaSenders,
-    );
+    await updateMediaDevice(voip.delegate, MediaKind.audio, _usermediaSenders);
+    await updateMediaDevice(voip.delegate, MediaKind.video, _usermediaSenders);
   }
 
   void _updateRemoteSDPStreamMetadata(SDPStreamMetadata metadata) {
     _remoteSDPStreamMetadata = metadata;
-    _remoteSDPStreamMetadata?.sdpStreamMetadatas
-        .forEach((streamId, sdpStreamMetadata) {
+    _remoteSDPStreamMetadata?.sdpStreamMetadatas.forEach((
+      streamId,
+      sdpStreamMetadata,
+    ) {
       Logs().i(
         'Stream purpose update: \nid = "$streamId", \npurpose = "${sdpStreamMetadata.purpose}",  \naudio_muted = ${sdpStreamMetadata.audio_muted}, \nvideo_muted = ${sdpStreamMetadata.video_muted}',
       );
@@ -480,10 +477,12 @@ class CallSession {
       final streamId = wpstream.stream!.id;
       final purpose = metadata.sdpStreamMetadatas[streamId];
       if (purpose != null) {
-        wpstream
-            .setAudioMuted(metadata.sdpStreamMetadatas[streamId]!.audio_muted);
-        wpstream
-            .setVideoMuted(metadata.sdpStreamMetadatas[streamId]!.video_muted);
+        wpstream.setAudioMuted(
+          metadata.sdpStreamMetadatas[streamId]!.audio_muted,
+        );
+        wpstream.setVideoMuted(
+          metadata.sdpStreamMetadatas[streamId]!.video_muted,
+        );
         wpstream.purpose = metadata.sdpStreamMetadatas[streamId]!.purpose;
       } else {
         Logs().i('Not found purpose for remote stream $streamId, remove it?');
@@ -597,8 +596,9 @@ class CallSession {
     String purpose, {
     bool addToPeerConnection = true,
   }) async {
-    final existingStream =
-        getLocalStreams.where((element) => element.purpose == purpose);
+    final existingStream = getLocalStreams.where(
+      (element) => element.purpose == purpose,
+    );
     if (existingStream.isNotEmpty) {
       existingStream.first.setNewStream(stream);
     } else {
@@ -658,8 +658,9 @@ class CallSession {
 
     // Try to find a feed with the same purpose as the new stream,
     // if we find it replace the old stream with the new one
-    final existingStream =
-        getRemoteStreams.where((element) => element.purpose == purpose);
+    final existingStream = getRemoteStreams.where(
+      (element) => element.purpose == purpose,
+    );
     if (existingStream.isNotEmpty) {
       existingStream.first.setNewStream(stream);
     } else {
@@ -697,8 +698,9 @@ class CallSession {
   }
 
   Future<void> deleteFeedByStream(MediaStream stream) async {
-    final index =
-        _streams.indexWhere((element) => element.stream!.id == stream.id);
+    final index = _streams.indexWhere(
+      (element) => element.stream!.id == stream.id,
+    );
     if (index == -1) {
       Logs().w('Didn\'t find the feed with stream id ${stream.id} to delete');
       return;
@@ -801,7 +803,8 @@ class CallSession {
             await oldSender.replaceTrack(newTrack);
             await transceiver.setDirection(
               await transceiver.getDirection() ==
-                      TransceiverDirection.Inactive // upgrade, send now
+                      TransceiverDirection
+                          .Inactive // upgrade, send now
                   ? TransceiverDirection.SendOnly
                   : TransceiverDirection.SendRecv,
             );
@@ -812,8 +815,9 @@ class CallSession {
           }
         }
         // for renderer to be able to show new video track
-        localUserMediaStream?.onStreamChanged
-            .add(localUserMediaStream!.stream!);
+        localUserMediaStream?.onStreamChanged.add(
+          localUserMediaStream!.stream!,
+        );
       }
     }
   }
@@ -844,7 +848,8 @@ class CallSession {
     final transceivers = await pc!.getTransceivers();
     for (final transceiver in transceivers) {
       final currentDirection = await transceiver.getCurrentDirection();
-      final trackOnHold = (currentDirection == TransceiverDirection.Inactive ||
+      final trackOnHold =
+          (currentDirection == TransceiverDirection.Inactive ||
           currentDirection == TransceiverDirection.RecvOnly);
       if (!trackOnHold) {
         callOnHold = false;
@@ -936,8 +941,12 @@ class CallSession {
     setCallState(CallState.kEnding);
     await terminate(CallParty.kLocal, reason, shouldEmit);
     try {
-      final res =
-          await sendHangupCall(room, callId, localPartyId, 'userHangup');
+      final res = await sendHangupCall(
+        room,
+        callId,
+        localPartyId,
+        'userHangup',
+      );
       Logs().v('[VOIP] hangup res => $res');
     } catch (e) {
       Logs().v('[VOIP] hangup error => $e');
@@ -962,10 +971,7 @@ class CallSession {
     bool shouldEmit,
   ) async {
     if (state == CallState.kConnected) {
-      await hangup(
-        reason: CallErrorCode.userHangup,
-        shouldEmit: true,
-      );
+      await hangup(reason: CallErrorCode.userHangup, shouldEmit: true);
       return;
     }
 
@@ -1019,7 +1025,8 @@ class CallSession {
     Logs().v('[VOIP] Reject received for call ID $callId');
     // No need to check party_id for reject because if we'd received either
     // an answer or reject, we wouldn't be in state InviteSent
-    final shouldTerminate = (state == CallState.kFledgling &&
+    final shouldTerminate =
+        (state == CallState.kFledgling &&
             direction == CallDirection.kIncoming) ||
         CallState.kInviteSent == state ||
         CallState.kRinging == state;
@@ -1225,10 +1232,12 @@ class CallSession {
   }
 
   Future<void> updateMuteStatus() async {
-    final micShouldBeMuted = (localUserMediaStream != null &&
+    final micShouldBeMuted =
+        (localUserMediaStream != null &&
             localUserMediaStream!.isAudioMuted()) ||
         _remoteOnHold;
-    final vidShouldBeMuted = (localUserMediaStream != null &&
+    final vidShouldBeMuted =
+        (localUserMediaStream != null &&
             localUserMediaStream!.isVideoMuted()) ||
         _remoteOnHold;
 
@@ -1296,8 +1305,9 @@ class CallSession {
 
   Future<MediaStream?> _getDisplayMedia() async {
     try {
-      return await voip.delegate.mediaDevices
-          .getDisplayMedia(UserMediaConstraints.screenMediaConstraints);
+      return await voip.delegate.mediaDevices.getDisplayMedia(
+        UserMediaConstraints.screenMediaConstraints,
+      );
     } catch (e) {
       await _getUserMediaFailed(e);
     }
@@ -1340,8 +1350,9 @@ class CallSession {
         removedStreams[stream.stream!.id] = stream;
       }
     }
-    _streams
-        .removeWhere((stream) => removedStreams.containsKey(stream.stream!.id));
+    _streams.removeWhere(
+      (stream) => removedStreams.containsKey(stream.stream!.id),
+    );
     for (final element in removedStreams.entries) {
       await _removeStream(element.value.stream!);
     }
@@ -1490,14 +1501,13 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId!,
+      'conf_id': ?groupCallId,
       'version': version,
       'lifetime': lifetime,
       'offer': {'sdp': sdp, 'type': type},
-      if (remoteUserId != null)
-        'invitee':
-            remoteUserId!, // TODO: rename this to invitee_user_id? breaks spec though
-      if (remoteDeviceId != null) 'invitee_device_id': remoteDeviceId!,
+      'invitee':
+          ?remoteUserId, // TODO: rename this to invitee_user_id? breaks spec though
+      'invitee_device_id': ?remoteDeviceId,
       if (remoteDeviceId != null)
         'device_id': client
             .deviceID!, // Having a remoteDeviceId means you are doing to-device events, so you want to send your deviceId too
@@ -1532,7 +1542,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId!,
+      'conf_id': ?groupCallId,
       'version': version,
       'selected_party_id': selected_party_id,
     };
@@ -1561,7 +1571,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId!,
+      'conf_id': ?groupCallId,
       'version': version,
     };
 
@@ -1593,7 +1603,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId!,
+      'conf_id': ?groupCallId,
       'version': version,
       'lifetime': lifetime,
       'description': {'sdp': sdp, 'type': type},
@@ -1641,7 +1651,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId!,
+      'conf_id': ?groupCallId,
       'version': version,
       'candidates': candidates,
     };
@@ -1675,7 +1685,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId!,
+      'conf_id': ?groupCallId,
       'version': version,
       'answer': {'sdp': sdp, 'type': type},
       if (capabilities != null) 'capabilities': capabilities.toJson(),
@@ -1704,9 +1714,9 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId!,
+      'conf_id': ?groupCallId,
       'version': version,
-      if (hangupCause != null) 'reason': hangupCause,
+      'reason': ?hangupCause,
     };
     return await _sendContent(
       room,
@@ -1741,7 +1751,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId!,
+      'conf_id': ?groupCallId,
       'version': version,
       sdpStreamMetadataKey: metadata.toJson(),
     };
@@ -1772,7 +1782,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId!,
+      'conf_id': ?groupCallId,
       'version': version,
       ...callReplaces.toJson(),
     };
@@ -1803,7 +1813,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId!,
+      'conf_id': ?groupCallId,
       'version': version,
       'asserted_identity': assertedIdentity.toJson(),
     };
@@ -1834,7 +1844,7 @@ class CallSession {
       final data = <String, Object>{
         ...content,
         'seq': toDeviceSeq,
-        if (remoteSessionId != null) 'dest_session_id': remoteSessionId!,
+        'dest_session_id': ?remoteSessionId,
         'sender_session_id': voip.currentSessionId,
         'room_id': room.id,
       };
@@ -1844,9 +1854,7 @@ class CallSession {
         if (client.userDeviceKeys[remoteUserId]?.deviceKeys[remoteDeviceId] !=
             null) {
           await client.sendToDeviceEncrypted(
-            [
-              client.userDeviceKeys[remoteUserId]!.deviceKeys[remoteDeviceId]!,
-            ],
+            [client.userDeviceKeys[remoteUserId]!.deviceKeys[remoteDeviceId]!],
             type,
             data,
           );
@@ -1856,19 +1864,18 @@ class CallSession {
           );
         }
       } else {
-        await client.sendToDevice(
-          type,
-          txid,
-          {
-            remoteUserId!: {remoteDeviceId!: data},
-          },
-        );
+        await client.sendToDevice(type, txid, {
+          remoteUserId!: {remoteDeviceId!: data},
+        });
       }
       return '';
     } else {
       final sendMessageContent = mustEncrypt
-          ? await client.encryption!
-              .encryptGroupMessagePayload(room.id, content, type: type)
+          ? await client.encryption!.encryptGroupMessagePayload(
+              room.id,
+              content,
+              type: type,
+            )
           : content;
       return await client.sendMessage(
         room.id,

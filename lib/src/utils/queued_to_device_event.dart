@@ -29,9 +29,9 @@ class QueuedToDeviceEvent {
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'type': type,
-        'txn_id': txnId,
-        'content': content,
-      };
+    'id': id,
+    'type': type,
+    'txn_id': txnId,
+    'content': content,
+  };
 }
