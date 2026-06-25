@@ -6,12 +6,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/key_manager.dart';
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/matrix.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 enum BootstrapState {
   /// Is loading.

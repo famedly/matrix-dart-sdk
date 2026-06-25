@@ -5,10 +5,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:matrix/matrix.dart';
 import 'package:path/path.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 
 void main() {

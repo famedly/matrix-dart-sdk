@@ -9,13 +9,12 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
-import 'package:mime/mime.dart';
-
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
 import 'package:matrix/src/utils/html_to_text.dart';
 import 'package:matrix/src/utils/markdown.dart';
 import 'package:matrix/src/utils/multipart_request_progress.dart';
+import 'package:mime/mime.dart';
 
 abstract class RelationshipTypes {
   static const String edit = 'm.replace';
@@ -446,6 +445,10 @@ class Event extends MatrixEvent {
           height: thumbnailInfoMap.tryGet<int>('h'),
         );
       }
+
+      // If a thumbnail does not exist, we should return null.
+      // Otherwise it sends the original file as a thumbnail back.
+      return null;
     }
 
     final fileBytes = await room.client.database.getFile(
@@ -515,7 +518,7 @@ class Event extends MatrixEvent {
       return await room.sendFileEvent(
         file,
         txid: txid ?? transactionId,
-        thumbnail: thumbnail as MatrixImageFile,
+        thumbnail: thumbnail as MatrixImageFile?,
         inReplyTo: inReplyTo,
         editEventId: credentials.editEventId,
         shrinkImageMaxDimension: credentials.shrinkImageMaxDimension,
@@ -669,6 +672,7 @@ class Event extends MatrixEvent {
     ThumbnailMethod method = ThumbnailMethod.scale,
     int minNoThumbSize = _minNoThumbSize,
     bool animated = false,
+    bool skipScanner = false,
   }) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
         !hasAttachment ||
@@ -700,9 +704,13 @@ class Event extends MatrixEvent {
         height: height,
         method: method,
         animated: animated,
+        skipScanner: skipScanner,
       );
     } else {
-      return await Uri.parse(thisMxcUrl).getDownloadUri(room.client);
+      return await Uri.parse(thisMxcUrl).getDownloadUri(
+        room.client,
+        skipScanner: skipScanner,
+      );
     }
   }
 
@@ -807,6 +815,7 @@ class Event extends MatrixEvent {
     bool getThumbnail = false,
     Future<Uint8List> Function(Uri)? downloadCallback,
     bool fromLocalStoreOnly = false,
+    bool skipScanner = false,
 
     /// Callback which gets triggered on progress containing the amount of
     /// downloaded bytes.
@@ -842,7 +851,7 @@ class Event extends MatrixEvent {
     }
 
     // Download the file
-    final scanner = room.client.contentScannerConfig;
+    final scanner = skipScanner ? null : room.client.contentScannerConfig;
     final useScannerForEncrypted = scanner != null && isEncrypted;
     final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
     if (canDownloadFileFromServer) {
@@ -857,7 +866,10 @@ class Event extends MatrixEvent {
           fileMap: fileMap,
         );
       } else {
-        final downloadUri = await mxcUrl.getDownloadUri(room.client);
+        final downloadUri = await mxcUrl.getDownloadUri(
+          room.client,
+          skipScanner: skipScanner,
+        );
         if (downloadCallback != null) {
           uint8list = await downloadCallback(downloadUri);
         } else {

@@ -15,10 +15,10 @@ extension MxcUriExtension on Uri {
   ///
   /// Scanner and authenticated media URLs may need an authorization header:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
-  Future<Uri> getDownloadUri(Client client) async {
+  Future<Uri> getDownloadUri(Client client, {bool skipScanner = false}) async {
     if (!isScheme('mxc')) return Uri();
 
-    final scanner = client.contentScannerConfig;
+    final scanner = skipScanner ? null : client.contentScannerConfig;
     if (scanner != null) {
       return _appendMxcTo(scanner.downloadUri);
     }
@@ -65,6 +65,7 @@ extension MxcUriExtension on Uri {
     num? height,
     ThumbnailMethod? method = ThumbnailMethod.crop,
     bool? animated = false,
+    bool skipScanner = false,
   }) async {
     if (!isScheme('mxc')) return Uri();
 
@@ -75,7 +76,7 @@ extension MxcUriExtension on Uri {
       if (animated != null) 'animated': animated.toString(),
     };
 
-    final scanner = client.contentScannerConfig;
+    final scanner = skipScanner ? null : client.contentScannerConfig;
     if (scanner != null) {
       return _appendMxcTo(scanner.downloadThumbnailUri)
           .replace(queryParameters: queryParameters);

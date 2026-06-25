@@ -4,7 +4,28 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [7.4.0] 23rd June 2026
+- feat: add skipScanner flag to download methods for per-call content scanner bypass (Khalil Amor)
+
+## [7.3.0] 18th June 2026
+- feat: add isValidMatrixIdStrict for spec-compliant matrix id validation (Cursor Agent)
+- fix: return null when thumbnail was not found and make cast nullable (yurtemre7)
+
+## [7.2.4] 16th June 2026
+- chore: Follow up actually store updated tofu state in db (Christian Kußowski)
+- fix: Allow image resizer to return new mime type (Christian Kußowski)
+
+## [7.2.3] 11th June 2026
+- feat: Flag cross signing keys as tofu (Christian Kußowski)
+- chore: Increase timeout for create key (Christian Kußowski)
+- fix: Do not request keys when already logged out (Christian Kußowski)
+
+## [7.2.2] 29th May 2026
+
+- fix: fail tests if they fail (#2348) (td)
+
 ## [7.2.1] 28th May 2026
+
 - feat: update ssss to centralise key logic (Abrish Sabri)
 - fix: Account data not existing throws exception while function expects empty json object (Christian Kußowski)
 - fix: encryption loop iteration (Abrish Sabri)
@@ -15,6 +36,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - feat: add matrix content scanner support (Khalil)
 - fix: Actually throw error on failed download (Christian Kußowski)
 - fix: Workaround that synapse's initial sync account data may not be up to date (Christian Kußowski)
+
+## [7.1.2] 12th May 2026
+- fix: do not send notify rtc event in direct chats (td)
 
 ## [7.1.1] 12th May 2026
 

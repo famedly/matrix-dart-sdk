@@ -10,10 +10,6 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
-import 'package:mime/mime.dart';
-import 'package:random_string/random_string.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/matrix_api_lite/generated/fixed_model.dart';
@@ -28,6 +24,9 @@ import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:matrix/src/utils/try_get_push_rule.dart';
 import 'package:matrix/src/utils/versions_comparator.dart';
+import 'package:mime/mime.dart';
+import 'package:random_string/random_string.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -3396,6 +3395,7 @@ class Client extends MatrixApi {
       }
 
       if (outdatedLists.isNotEmpty) {
+        if (!isLogged()) return;
         // Request the missing device key lists from the server.
         final response = await queryKeys(outdatedLists, timeout: 10000);
         if (!isLogged()) return;
@@ -3554,6 +3554,12 @@ class Client extends MatrixApi {
                 if (oldKey != null) {
                   // be sure to save the verification status
                   entry.setDirectVerified(oldKey.directVerified);
+                  if (oldKey.trustOnFirstUseSince != null) {
+                    entry.trustOnFirstUse(
+                      since: oldKey.trustOnFirstUseSince,
+                      updateInDatabase: false,
+                    );
+                  }
                   entry.blocked = oldKey.blocked;
                   entry.validSignatures = oldKey.validSignatures;
                 }
@@ -3571,6 +3577,7 @@ class Client extends MatrixApi {
                   json.encode(entry.toJson()),
                   entry.directVerified,
                   entry.blocked,
+                  trustOnFirstUseSince: entry.trustOnFirstUseSince,
                 ),
               );
             }
@@ -3928,7 +3935,7 @@ class Client extends MatrixApi {
     /// Whether to also decline all invites and leave DM rooms with this user.
     bool leaveRooms = true,
   }) async {
-    if (!userId.isValidMatrixId) {
+    if (!userId.isValidMatrixIdStrict()) {
       throw Exception('$userId is not a valid mxid!');
     }
 
@@ -3959,7 +3966,7 @@ class Client extends MatrixApi {
   /// Unignore a user. This will clear the local cached messages and request
   /// them again from the server to avoid gaps in the timeline.
   Future<void> unignoreUser(String userId) async {
-    if (!userId.isValidMatrixId) {
+    if (!userId.isValidMatrixIdStrict()) {
       throw Exception('$userId is not a valid mxid!');
     }
     if (!ignoredUsers.contains(userId)) {
@@ -4129,6 +4136,7 @@ class Client extends MatrixApi {
             jsonEncode(crossSigningKey.toJson()),
             crossSigningKey.directVerified,
             crossSigningKey.blocked,
+            trustOnFirstUseSince: crossSigningKey.trustOnFirstUseSince,
           );
         }
       }

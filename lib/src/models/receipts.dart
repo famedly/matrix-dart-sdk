@@ -100,7 +100,7 @@ class ReceiptEventContent {
           final receiptContent = userIdEntry.value;
 
           if (userId is! String ||
-              !userId.isValidMatrixId ||
+              !userId.isValidMatrixIdStrict() ||
               receiptContent is! Map) {
             continue;
           }

@@ -9,14 +9,13 @@ import 'dart:typed_data';
 
 import 'package:base58check/base58.dart';
 import 'package:collection/collection.dart';
-import 'package:vodozemac/vodozemac.dart';
-
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart' as uc;
+import 'package:vodozemac/vodozemac.dart';
 
 const cacheTypes = <String>{
   EventTypes.CrossSigningSelfSigning,
@@ -282,7 +281,7 @@ class SSSS {
             info: content.passphrase!,
           ),
         ),
-      ).timeout(Duration(seconds: 10));
+      ).timeout(Duration(seconds: 30));
     } else {
       // we need to just generate a new key from scratch
       privateKey = Uint8List.fromList(uc.secureRandomBytes(ssssKeyLength));

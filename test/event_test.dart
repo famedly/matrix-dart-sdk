@@ -5,12 +5,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:test/test.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
+import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
+
 import 'fake_client.dart';
 import 'fake_database.dart';
 
@@ -301,16 +301,50 @@ void main() async {
         password: '1234',
       );
 
-      final event = Event.fromJson(
-        jsonObj,
-        Room(id: '!1234:example.com', client: matrix),
-      );
+      final room = Room(id: '!1234:example.com', client: matrix);
+
+      final event = Event.fromJson(jsonObj, room);
+      // Returns null when status is not error.
       final resp1 = await event.sendAgain();
+      expect(resp1, null);
+      
       event.status = EventStatus.error;
       final resp2 = await event.sendAgain(txid: '1234');
-      expect(resp1, null);
       expect(resp2?.startsWith('\$event'), true);
 
+      // Test re-sending an audio file: file must be cached for sendAgain to work.
+      const audioTxId = 'testtxid';
+      const audioFilename = 'file.mp3';
+
+      await matrix.database.storeFile(
+        Uri(scheme: 'cache', host: 'file', path: audioTxId),
+        Uint8List.fromList([1, 2, 3]),
+        DateTime.now().millisecondsSinceEpoch,
+      );
+
+      final audioEventData = <String, dynamic>{
+        'event_id': audioTxId,
+        'sender': '@test:fakeServer.notExisting',
+        'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        'type': 'm.room.message',
+        'room_id': '!1234:example.com',
+        'content': {
+          'msgtype': 'm.audio',
+          'body': audioFilename,
+          'filename': audioFilename,
+          'info': {'duration': 1000, 'mimetype': 'audio/mpeg'},
+        },
+        'unsigned': {'transaction_id': audioTxId},
+      };
+
+      final audioEvent = Event.fromJson(audioEventData, room);
+      // Returns null when status is not error.
+      final resp3 = await audioEvent.sendAgain();
+      expect(resp3, null);
+
+      audioEvent.status = EventStatus.error;
+      final resp4 = await audioEvent.sendAgain(txid: '1234');
+      expect(resp4?.startsWith('\$event'), true);
       await matrix.dispose(closeDatabase: true);
     });
 

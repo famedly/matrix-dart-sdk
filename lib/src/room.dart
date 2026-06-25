@@ -352,7 +352,9 @@ class Room {
     final mxId = client.directChats.entries
         .firstWhereOrNull((e) => e.value.contains(id))
         ?.key;
-    if (mxId?.isValidMatrixId == true) return _cachedDirectChatMatrixId = mxId;
+    if (mxId?.isValidMatrixIdStrict() == true) {
+      return _cachedDirectChatMatrixId = mxId;
+    }
     return _cachedDirectChatMatrixId = null;
   }
 
@@ -750,7 +752,7 @@ class Room {
       potentialMentions = potentialMentions
           .map(
             (mention) =>
-                mention.isValidMatrixId ? mention : getMention(mention),
+                mention.isValidMatrixIdStrict() ? mention : getMention(mention),
           )
           .nonNulls
           .toSet() // Deduplicate
@@ -1892,7 +1894,7 @@ class Room {
     if (user != null) {
       return user.asUser(this);
     } else {
-      if (mxID.isValidMatrixId) {
+      if (mxID.isValidMatrixIdStrict()) {
         // ignore: discarded_futures
         requestUser(
           mxID,
@@ -2052,7 +2054,7 @@ class Room {
     bool requestState = true,
     bool requestProfile = true,
   }) async {
-    assert(mxID.isValidMatrixId);
+    assert(mxID.isValidMatrixIdStrict());
 
     final parameters = (
       mxID: mxID,
@@ -2151,7 +2153,13 @@ class Room {
   }
 
   /// Returns the user's own power level.
-  PowerLevel get ownPowerLevel => getPowerLevelByUserId(client.userID!);
+  PowerLevel get ownPowerLevel {
+    final userId = client.userID;
+    // This makes sure we don't run into null check exceptions if by any reason
+    // the client of the room object doesn't have the userId
+    if (userId == null) return PowerLevel.user;
+    return getPowerLevelByUserId(userId);
+  }
 
   /// Returns the power levels from all users for this room or null if not given.
   @Deprecated('Use `getPowerLevelByUserId(String userId)` instead')

@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Check licenses
         uses: fsfe/reuse-action@v6
 
@@ -49,7 +49,7 @@ jobs:
       # since the dendrite job is optional, actually run all tests to the end instead of failing on first error.
       fail-fast: false
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -62,7 +62,7 @@ jobs:
           scripts/integration-server-${{matrix.homeserver}}.sh 2>&1 > /dev/null &
           source scripts/integration-create-environment-variables.sh
           scripts/integration-prepare-homeserver.sh
-          dart pub get
+          dart pub get --no-example
           scripts/prepare_vodozemac.sh
           dart --define=HOMESERVER=$HOMESERVER --define=USER1_NAME=$USER1_NAME --define=USER2_NAME=$USER2_NAME --define=USER3_NAME=$USER3_NAME --define=USER1_PW=$USER1_PW --define=USER2_PW=$USER2_PW --define=USER3_PW=$USER3_PW test test_driver/matrixsdk_test.dart -p vm
 
@@ -72,7 +72,7 @@ jobs:
     env:
       NO_OLM: 1
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest-16core
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -118,7 +118,7 @@ jobs:
     timeout-minutes: 30
     needs: [coverage, coverage_without_olm]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
       - name: Merge lcov files
         run: |
@@ -141,7 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -158,7 +158,7 @@ jobs:
     env:
       NO_OLM: 1
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
@@ -166,21 +166,58 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
       - name: Run tests
         run: |
-          dart pub get
+          dart pub get --no-example
           dart test test/box_test.dart --platform chrome
 
   pub-dev-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
           sdk: ${{ env.dart_version }}
       - name: pub.dev publish dry run
         run: |
-          dart pub get
+          dart pub get --no-example
           dart pub publish --dry-run
+
+  # Lint/analyze the example app so breaking SDK changes also enforce an
+  # example update.
+  example_analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: example
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: flutter analyze
+
+  # Build the example as a web app so it can be reviewed on any pull request.
+  example_build_web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: example
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter build web --base-href "/matrix-example-chat/"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: matrix-example-chat-web
+          path: example/build/web/
+          retention-days: 7
 
   # Call the publish workflow only when all tests pass and this is a tag push
   call_publish:

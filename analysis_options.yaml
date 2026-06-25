@@ -8,7 +8,6 @@ linter:
   rules:
     # TODO: Enable these lints one after another and fix them
     non_constant_identifier_names: false
-    sort_pub_dependencies: false
 
 dart_code_linter:
   rules:
@@ -27,4 +26,6 @@ dart_code_linter:
 
 analyzer:
   exclude:
-    - example/main.dart
+    # The example is a standalone Flutter app with its own analysis_options.yaml
+    # and is linted separately in CI (see .github/workflows/example.yml).
+    - example/**

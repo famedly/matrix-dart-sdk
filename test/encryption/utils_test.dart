@@ -5,11 +5,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:test/test.dart';
-
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/matrix.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Utils', () {
