@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import '../model/auth/authentication_data.dart';
 import '../model/auth/authentication_types.dart';
 import '../model/auth/authentication_identifier.dart';
@@ -55,6 +59,32 @@ class Api {
     return DiscoveryInformation.fromJson(json as Map<String, Object?>);
   }
 
+  /// Gets public key information for a [Policy Server](https://spec.matrix.org/unstable/client-server-api/#policy-servers).
+  ///
+  /// **NOTE:**
+  /// Like the [well-known discovery URI](https://spec.matrix.org/unstable/client-server-api/#well-known-uris),
+  /// this endpoint should be accessed with the hostname of the Policy Server's
+  /// [server name](https://spec.matrix.org/unstable/appendices/#server-name) by making a
+  /// GET request to `https://hostname/.well-known/matrix/policy_server`.
+  ///
+  ///
+  /// Note that this endpoint is not necessarily handled by the homeserver or
+  /// Policy Server. It may be served by another webserver.
+  ///
+  /// returns `public_keys`:
+  /// The unpadded base64-encoded public keys for the Policy Server. MUST contain
+  /// at least `ed25519`.
+  Future<PublicKeys> getWellknownPolicy() async {
+    final requestUri = Uri(path: '.well-known/matrix/policy_server');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return PublicKeys.fromJson(json['public_keys'] as Map<String, Object?>);
+  }
+
   /// Gets server admin contact and support page of the domain.
   ///
   /// **NOTE:**
@@ -76,6 +106,118 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return GetWellknownSupportResponse.fromJson(json as Map<String, Object?>);
+  }
+
+  /// Gets information about the locked status of a particular server-local user.
+  ///
+  /// The user calling this endpoint MUST be a server admin.
+  ///
+  /// In order to prevent user enumeration, servers MUST ensure that authorization is checked
+  /// prior to trying to do account lookups.
+  ///
+  /// [userId] The user to look up.
+  ///
+  /// returns `locked`:
+  /// Whether the target account is locked.
+  Future<bool> getAdminLockUser(String userId) async {
+    final requestUri = Uri(
+      path: '_matrix/client/v1/admin/lock/${Uri.encodeComponent(userId)}',
+    );
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['locked'] as bool;
+  }
+
+  /// Sets the locked status of a particular server-local user.
+  ///
+  /// The user calling this endpoint MUST be a server admin. The client SHOULD check that the user
+  /// is allowed to lock other users at the [`GET /capabilities`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3capabilities)
+  /// endpoint prior to using this endpoint.
+  ///
+  /// In order to prevent user enumeration, servers MUST ensure that authorization is checked
+  /// prior to trying to do account lookups.
+  ///
+  /// [userId] The user to change the locked status of.
+  ///
+  /// [locked] Whether to lock the target account.
+  ///
+  /// returns `locked`:
+  /// Whether the target account is locked.
+  Future<bool> setAdminLockUser(String userId, bool locked) async {
+    final requestUri = Uri(
+      path: '_matrix/client/v1/admin/lock/${Uri.encodeComponent(userId)}',
+    );
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({'locked': locked}));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['locked'] as bool;
+  }
+
+  /// Gets information about the suspended status of a particular server-local user.
+  ///
+  /// The user calling this endpoint MUST be a server admin.
+  ///
+  /// In order to prevent user enumeration, servers MUST ensure that authorization is checked
+  /// prior to trying to do account lookups.
+  ///
+  /// [userId] The user to look up.
+  ///
+  /// returns `suspended`:
+  /// Whether the target account is suspended.
+  Future<bool> getAdminSuspendUser(String userId) async {
+    final requestUri = Uri(
+      path: '_matrix/client/v1/admin/suspend/${Uri.encodeComponent(userId)}',
+    );
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['suspended'] as bool;
+  }
+
+  /// Sets the suspended status of a particular server-local user.
+  ///
+  /// The user calling this endpoint MUST be a server admin. The client SHOULD check that the user
+  /// is allowed to suspend other users at the [`GET /capabilities`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3capabilities)
+  /// endpoint prior to using this endpoint.
+  ///
+  /// In order to prevent user enumeration, servers MUST ensure that authorization is checked
+  /// prior to trying to do account lookups.
+  ///
+  /// [userId] The user to change the suspended status of.
+  ///
+  /// [suspended] Whether to suspend the target account.
+  ///
+  /// returns `suspended`:
+  /// Whether the target account is suspended.
+  Future<bool> setAdminSuspendUser(String userId, bool suspended) async {
+    final requestUri = Uri(
+      path: '_matrix/client/v1/admin/suspend/${Uri.encodeComponent(userId)}',
+    );
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({'suspended': suspended}));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['suspended'] as bool;
   }
 
   /// This API asks the homeserver to call the
@@ -1335,6 +1477,14 @@ class Api {
   /// parameter because the homeserver is expected to sign the request to the
   /// identity server instead.
   ///
+  /// **WARNING:**
+  /// **[Added in `v1.18`]**  [OAuth 2.0 aware clients](https://spec.matrix.org/unstable/client-server-api/#oauth-20-aware-clients)
+  /// MUST NOT use this endpoint when the server supports the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
+  /// Instead they MUST refer the user to the [account management URL](https://spec.matrix.org/unstable/client-server-api/#oauth-20-account-management),
+  /// if available, and MAY use the `action=org.matrix.account_deactivate`
+  /// parameter.
+  ///
+  ///
   /// [auth] Additional authentication information for the user-interactive authentication API.
   ///
   /// [erase] Whether the user would like their content to be erased as
@@ -1418,7 +1568,7 @@ class Api {
   /// [auth] Additional authentication information for the user-interactive authentication API.
   ///
   /// [logoutDevices] Whether the user's other access tokens, and their associated devices, should be
-  /// revoked if the request succeeds. Defaults to true.
+  /// revoked if the request succeeds. Defaults to `true`.
   ///
   /// When `false`, the server can still take advantage of the [soft logout method](https://spec.matrix.org/unstable/client-server-api/#soft-logout)
   /// for the user's remaining devices.
@@ -1859,6 +2009,13 @@ class Api {
   /// via the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
   ///
   ///
+  /// **WARNING:**
+  /// **[Added in `v1.18`]**  [OAuth 2.0 aware clients](https://spec.matrix.org/unstable/client-server-api/#oauth-20-aware-clients)
+  /// MUST NOT use this endpoint when the server supports the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
+  /// Instead they MUST refer the user to the [account management URL](https://spec.matrix.org/unstable/client-server-api/#oauth-20-account-management),
+  /// if available.
+  ///
+  ///
   /// [auth] Additional authentication information for the
   /// user-interactive authentication API.
   ///
@@ -1913,6 +2070,13 @@ class Api {
   /// **WARNING:**
   /// When this endpoint requires User-Interactive Authentication, it cannot be used when the access token was obtained
   /// via the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
+  ///
+  ///
+  /// **WARNING:**
+  /// **[Added in `v1.18`]**  [OAuth 2.0 aware clients](https://spec.matrix.org/unstable/client-server-api/#oauth-20-aware-clients)
+  /// MUST NOT use this endpoint when the server supports the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
+  /// Instead they MUST refer the user to the [account management URL](https://spec.matrix.org/unstable/client-server-api/#oauth-20-account-management),
+  /// if available, with the `action=org.matrix.device_delete` and `device_id={deviceId}` parameters.
   ///
   ///
   /// [deviceId] The device to delete.
@@ -2412,9 +2576,9 @@ class Api {
   /// except when used by an application service.
   ///
   /// User-Interactive Authentication MUST be performed for regular clients, except in these cases:
-  /// - there is no existing cross-signing master key uploaded to the homeserver, OR
-  /// - there is an existing cross-signing master key and it exactly matches the
-  ///   cross-signing master key provided in the request body. If there are any additional
+  /// - there is no existing master signing key uploaded to the homeserver, OR
+  /// - there is an existing master signing key and it exactly matches the
+  ///   master signing key provided in the request body. If there are any additional
   ///   keys provided in the request (self-signing key, user-signing key) they MUST also
   ///   match the existing keys stored on the server. In other words, the request contains
   ///   no new keys.
@@ -2434,16 +2598,16 @@ class Api {
   /// [auth] Additional authentication information for the
   /// user-interactive authentication API.
   ///
-  /// [masterKey] Optional. The user\'s master key.
+  /// [masterKey] Optional. The user\'s master signing key.
   ///
   /// [selfSigningKey] Optional. The user\'s self-signing key. Must be signed by
-  /// the accompanying master key, or by the user\'s most recently
-  /// uploaded master key if no master key is included in the
+  /// the accompanying master signing key, or by the user\'s most recently
+  /// uploaded master signing key if no master signing key is included in the
   /// request.
   ///
   /// [userSigningKey] Optional. The user\'s user-signing key. Must be signed by
-  /// the accompanying master key, or by the user\'s most recently
-  /// uploaded master key if no master key is included in the
+  /// the accompanying master signing key, or by the user\'s most recently
+  /// uploaded master signing key if no master signing key is included in the
   /// request.
   Future<void> uploadCrossSigningKeys({
     AuthenticationData? auth,
@@ -2691,7 +2855,7 @@ class Api {
   /// known client device, a new device will be created. The given
   /// device ID must not be the same as a
   /// [cross-signing](https://spec.matrix.org/unstable/client-server-api/#cross-signing) key ID.
-  /// The server will auto-generate a device_id
+  /// The server will auto-generate a `device_id`
   /// if this is not specified.
   ///
   /// [identifier] Identification information for a user
@@ -3028,7 +3192,7 @@ class Api {
   /// [filter] Filter to apply to the results.
   ///
   /// [includeAllNetworks] Whether or not to include all known networks/protocols from
-  /// application services on the homeserver. Defaults to false.
+  /// application services on the homeserver. Defaults to `false`.
   ///
   /// [limit] Limit the number of results returned.
   ///
@@ -3448,6 +3612,15 @@ class Api {
   /// 400 HTTP status code with an `M_APPSERVICE_LOGIN_UNSUPPORTED` error code.
   ///
   ///
+  /// **WARNING:**
+  /// **[Added in `v1.18`]**  [OAuth 2.0 aware clients](https://spec.matrix.org/unstable/client-server-api/#oauth-20-aware-clients)
+  /// MUST NOT use this endpoint when the server offers the [`m.login.sso`
+  /// authentication flow](https://spec.matrix.org/unstable/client-server-api/#client-login-via-sso) with
+  /// `oauth_aware_preferred` set to `true`. Instead they MUST use the
+  /// [`/login/sso/redirect`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3loginssoredirect)
+  /// endpoint, adding the `action=register` parameter.
+  ///
+  ///
   /// [kind] The kind of account to register. Defaults to `user`.
   ///
   /// [auth] Additional authentication information for the
@@ -3458,18 +3631,18 @@ class Api {
   ///
   /// [deviceId] ID of the client device. If this does not correspond to a
   /// known client device, a new device will be created. The server
-  /// will auto-generate a device_id if this is not specified.
+  /// will auto-generate a `device_id` if this is not specified.
   ///
   /// [inhibitLogin] If true, an `access_token` and `device_id` should not be
   /// returned from this call, therefore preventing an automatic
-  /// login. Defaults to false.
+  /// login. Defaults to `false`.
   ///
   /// [initialDeviceDisplayName] A display name to assign to the newly-created device. Ignored
   /// if `device_id` corresponds to a known device.
   ///
   /// [password] The desired password for the account.
   ///
-  /// [refreshToken] If true, the client supports refresh tokens.
+  /// [refreshToken] If `true`, the client supports refresh tokens.
   ///
   /// [username] The basis for the localpart of the desired Matrix ID. If omitted,
   /// the homeserver MUST generate a Matrix ID local part.
@@ -4400,8 +4573,15 @@ class Api {
   /// If the user was invited to the room, but had not joined, this call
   /// serves to reject the invite.
   ///
-  /// The user will still be allowed to retrieve history from the room which
-  /// they were previously allowed to see.
+  /// Servers MAY additionally forget the room when this endpoint is called –
+  /// just as if the user had also invoked [`/forget`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3roomsroomidforget).
+  /// Servers that do this, MUST inform clients about this behavior using the
+  /// [`m.forget_forced_upon_leave`](https://spec.matrix.org/unstable/client-server-api/#mforget_forced_upon_leave-capability)
+  /// capability.
+  ///
+  /// If the server doesn't automatically forget the room, the user will still be
+  /// allowed to retrieve history from the room which they were previously allowed
+  /// to see.
   ///
   /// [roomId] The room identifier to leave.
   ///
@@ -4669,6 +4849,15 @@ class Api {
   /// implementations. The caller is not required to be joined to the room to
   /// report it.
   ///
+  /// Clients could infer whether a reported room exists based on the 404 response.
+  /// Homeservers that wish to conceal this information MAY return 200 responses
+  /// regardless of the existence of the reported room.
+  ///
+  /// Furthermore, it might be possible for clients to deduce whether a reported
+  /// room exists by timing the response. This is because only a report for an
+  /// existing room will require the homeserver to do further processing. To
+  /// combat this, homeservers MAY add a random delay when generating a response.
+  ///
   /// [roomId] The room being reported.
   ///
   /// [reason] The reason the room is being reported. May be blank.
@@ -4692,6 +4881,10 @@ class Api {
   /// the appropriate people. The caller must be joined to the room to report
   /// it.
   ///
+  /// Clients could infer whether a reported event or room exists based on the 404
+  /// response. Homeservers that wish to conceal this information MAY return 200
+  /// responses regardless of the existence of the reported event or room.
+  ///
   /// Furthermore, it might be possible for clients to deduce whether a reported
   /// event exists by timing the response. This is because only a report for an
   /// existing event will require the homeserver to do further processing. To
@@ -4702,14 +4895,10 @@ class Api {
   /// [eventId] The event to report.
   ///
   /// [reason] The reason the content is being reported.
-  ///
-  /// [score] The score to rate this content as where -100 is most offensive
-  /// and 0 is inoffensive.
   Future<void> reportEvent(
     String roomId,
     String eventId, {
     String? reason,
-    int? score,
   }) async {
     final requestUri = Uri(
       path:
@@ -4719,10 +4908,7 @@ class Api {
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(
-      jsonEncode({
-        if (reason != null) 'reason': reason,
-        if (score != null) 'score': score,
-      }),
+      jsonEncode({if (reason != null) 'reason': reason}),
     );
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -4738,7 +4924,12 @@ class Api {
   ///
   /// The body of the request should be the content object of the event; the
   /// fields in this object will vary depending on the type of event. See
-  /// [Room Events](https://spec.matrix.org/unstable/client-server-api/#room-events) for the m. event specification.
+  /// [Room Events](https://spec.matrix.org/unstable/client-server-api/#room-events) for the `m.` event specification.
+  ///
+  /// Homeservers MUST allow clients to send `m.room.redaction` events with this
+  /// endpoint for all room versions. In rooms with a version older than 11 they
+  /// MUST move the `redacts` property inside the `content` to the top level of
+  /// the event.
   ///
   /// [roomId] The room to send the event to.
   ///

@@ -722,3 +722,9 @@ extension EventFormatEnhancedEnum on EventFormat {
       }[this]?.call() ??
       orElse();
 }
+
+extension AccountManagementActionsSupportedExtension
+    on List<AccountManagementActionsSupported> {
+  AccountManagementActionsSupported? fromString(String val) =>
+      firstWhere((supported) => val == supported.name);
+}
