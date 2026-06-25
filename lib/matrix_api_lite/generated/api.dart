@@ -944,6 +944,10 @@ class Api {
   /// This results in this endpoint being an equivalent to `/3pid/bind` rather
   /// than dual-purpose.
   ///
+  /// This endpoint uses [capabilities negotiation](https://spec.matrix.org/unstable/client-server-api/#capabilities-negotiation).
+  /// Clients SHOULD check the value of the [`m.3pid_changes` capability](https://spec.matrix.org/unstable/client-server-api/#m3pid_changes-capability)
+  /// to determine if this endpoint is available.
+  ///
   /// [threePidCreds] The third-party credentials to associate with the account.
   ///
   /// returns `submit_url`:
@@ -984,6 +988,10 @@ class Api {
   ///
   /// Homeservers should prevent the caller from adding a 3PID to their account if it has
   /// already been added to another user's account on the homeserver.
+  ///
+  /// This endpoint uses [capabilities negotiation](https://spec.matrix.org/unstable/client-server-api/#capabilities-negotiation).
+  /// Clients SHOULD check the value of the [`m.3pid_changes` capability](https://spec.matrix.org/unstable/client-server-api/#m3pid_changes-capability)
+  /// to determine if this endpoint is available.
   ///
   /// **WARNING:**
   /// Since this endpoint uses User-Interactive Authentication, it cannot be used when the access token was obtained
@@ -1067,6 +1075,10 @@ class Api {
   /// Unlike other endpoints, this endpoint does not take an `id_access_token`
   /// parameter because the homeserver is expected to sign the request to the
   /// identity server instead.
+  ///
+  /// This endpoint uses [capabilities negotiation](https://spec.matrix.org/unstable/client-server-api/#capabilities-negotiation).
+  /// Clients SHOULD check the value of the [`m.3pid_changes` capability](https://spec.matrix.org/unstable/client-server-api/#m3pid_changes-capability)
+  /// to determine if this endpoint is available.
   ///
   /// [address] The third-party address being removed.
   ///
@@ -1398,6 +1410,10 @@ class Api {
   /// valid access token is provided. The homeserver SHOULD NOT revoke the
   /// access token provided in the request. Whether other access tokens for
   /// the user are revoked depends on the request parameters.
+  ///
+  /// This endpoint uses [capabilities negotiation](https://spec.matrix.org/unstable/client-server-api/#capabilities-negotiation).
+  /// Clients SHOULD check the value of the [`m.change_password` capability](https://spec.matrix.org/unstable/client-server-api/#mchange_password-capability)
+  /// to determine if this endpoint is available.
   ///
   /// [auth] Additional authentication information for the user-interactive authentication API.
   ///
@@ -1833,12 +1849,13 @@ class Api {
     return json['room_id'] as String;
   }
 
-  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
+  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api),
+  /// except when used by an application service.
   ///
   /// Deletes the given devices, and invalidates any access token associated with them.
   ///
   /// **WARNING:**
-  /// Since this endpoint uses User-Interactive Authentication, it cannot be used when the access token was obtained
+  /// When this endpoint requires User-Interactive Authentication, it cannot be used when the access token was obtained
   /// via the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
   ///
   ///
@@ -1888,12 +1905,13 @@ class Api {
         : null)(json['devices']);
   }
 
-  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
+  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api),
+  /// except when used by an application service.
   ///
   /// Deletes the given device, and invalidates any access token associated with it.
   ///
   /// **WARNING:**
-  /// Since this endpoint uses User-Interactive Authentication, it cannot be used when the access token was obtained
+  /// When this endpoint requires User-Interactive Authentication, it cannot be used when the access token was obtained
   /// via the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
   ///
   ///
@@ -1936,7 +1954,17 @@ class Api {
     return Device.fromJson(json as Map<String, Object?>);
   }
 
-  /// Updates the metadata on the given device.
+  /// Updates the metadata on the given device, or creates a new device.
+  ///
+  /// The ability to create new devices is only available to application
+  /// services: regular clients may only update existing devices.
+  ///
+  /// When a new device was created, the homeserver MUST return a 201 HTTP
+  /// status code. It MUST return a 200 HTTP status code if a device was
+  /// updated.
+  ///
+  /// This endpoint is rate-limited for device creation. Servers MAY use login
+  /// rate limits.
   ///
   /// [deviceId] The device to update.
   ///
@@ -2182,17 +2210,17 @@ class Api {
   /// [timeout] The maximum time in milliseconds to wait for an event.
   ///
   /// [roomId] The room ID for which events should be returned.
-  Future<PeekEventsResponse> peekEvents({
+  Future<PeekEventsResponse> peekEvents(
+    String roomId, {
     String? from,
     int? timeout,
-    String? roomId,
   }) async {
     final requestUri = Uri(
       path: '_matrix/client/v3/events',
       queryParameters: {
         if (from != null) 'from': from,
         if (timeout != null) 'timeout': timeout.toString(),
-        if (roomId != null) 'room_id': roomId,
+        'room_id': roomId,
       },
     );
     final request = Request('GET', baseUri!.resolveUri(requestUri));
@@ -2211,7 +2239,7 @@ class Api {
   /// This endpoint was deprecated in r0 of this specification. Clients
   /// should instead call the
   /// [/rooms/{roomId}/event/{eventId}](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomideventeventid) API
-  /// or the [/rooms/{roomId}/context/{eventId](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidcontexteventid) API.
+  /// or the [/rooms/{roomId}/context/{eventId}](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidcontexteventid) API.
   ///
   /// [eventId] The event ID to get.
   @deprecated
@@ -2380,9 +2408,10 @@ class Api {
 
   /// Publishes cross-signing keys for the user.
   ///
-  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
+  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api),
+  /// except when used by an application service.
   ///
-  /// User-Interactive Authentication MUST be performed, except in these cases:
+  /// User-Interactive Authentication MUST be performed for regular clients, except in these cases:
   /// - there is no existing cross-signing master key uploaded to the homeserver, OR
   /// - there is an existing cross-signing master key and it exactly matches the
   ///   cross-signing master key provided in the request body. If there are any additional
@@ -2395,8 +2424,10 @@ class Api {
   /// makes this endpoint idempotent in the case where the response is lost over the network,
   /// which would otherwise cause a UIA challenge upon retry.
   ///
-  /// **WARNING:**
-  /// When this endpoint requires User-Interactive Authentication, it cannot be used when the access token was obtained
+  /// **NOTE:**
+  /// When this endpoint requires User-Interactive Authentication,
+  /// it uses the [`m.oauth`](https://spec.matrix.org/unstable/client-server-api/#oauth-authentication)
+  /// authentication type if the access token was obtained
   /// via the [OAuth 2.0 API](https://spec.matrix.org/unstable/client-server-api/#oauth-20-api).
   ///
   ///
@@ -2919,6 +2950,11 @@ class Api {
   /// them rather than treating `null` as a deletion request. Clients that want to delete a
   /// field, including its key and value, SHOULD use the `DELETE` endpoint instead.
   ///
+  /// This endpoint uses [capabilities negotiation](https://spec.matrix.org/unstable/client-server-api/#capabilities-negotiation)
+  /// depending on the `keyName`. Clients SHOULD check the value of the
+  /// [`m.profile_fields` capability](https://spec.matrix.org/unstable/client-server-api/#mprofile_fields-capability) to detect
+  /// which `keyName`s they are allowed to modify.
+  ///
   /// [userId] The user whose profile field should be set.
   ///
   /// [keyName] The name of the profile field to set. This MUST be either `avatar_url`, `displayname`, `m.tz`, or a custom field following the [Common Namespaced Identifier Grammar](https://spec.matrix.org/unstable/appendices/#common-namespaced-identifier-grammar).
@@ -3399,6 +3435,18 @@ class Api {
   ///
   /// Any user ID returned by this API must conform to the grammar given in the
   /// [Matrix specification](https://spec.matrix.org/unstable/appendices/#user-identifiers).
+  ///
+  /// **NOTE:**
+  /// **[Added in `v1.17`]**
+  /// Even if the server doesn't support the Legacy authentication API, it
+  /// MUST support this endpoint for application services to be able to
+  /// [create users](https://spec.matrix.org/unstable/application-service-api/#server-admin-style-permissions).
+  ///
+  /// In that case application services MUST set the `"inhibit_login": true`
+  /// parameter as they cannot use it to log in as users. If the
+  /// `inhibit_login` parameter is not set to `true`, the server MUST return a
+  /// 400 HTTP status code with an `M_APPSERVICE_LOGIN_UNSUPPORTED` error code.
+  ///
   ///
   /// [kind] The kind of account to register. Defaults to `user`.
   ///
@@ -4575,9 +4623,9 @@ class Api {
   /// This cannot be undone.
   ///
   /// Any user with a power level greater than or equal to the `m.room.redaction`
-  /// event power level may send redaction events in the room. If the user's power
-  /// level is also greater than or equal to the `redact` power level of the room,
-  /// the user may redact events sent by other users.
+  /// event power level may send redactions for their own events in the room. If
+  /// the user's power level is also greater than or equal to the `redact` power
+  /// level of the room, the user may redact events sent by other users.
   ///
   /// Server administrators may redact events sent by users on their server.
   ///
@@ -5092,10 +5140,15 @@ class Api {
   /// sync and the **start** of the timeline in `state` and MUST omit
   /// `state_after`.
   ///
-  /// Even if this is set to `true`, clients MUST update their local state
-  /// with events in `state` and `timeline` if `state_after` is missing in
-  /// the response, for compatibility with servers that don't support this
-  /// parameter.
+  /// Servers MAY implement this parameter ahead of declaring support for
+  /// the version of the spec in which it was introduced. Consequently,
+  /// clients MAY set this parameter to `true` regardless of the
+  /// [`/versions`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientversions) response.
+  /// If they do, they can infer whether the server actually supports this
+  /// parameter from the presence of `state_after` in the response. If
+  /// `state_after` is missing, clients MUST behave as if they had not
+  /// specified the parameter and update their local state with events
+  /// in `state` and `timeline`.
   ///
   /// By default, this is `false`.
   Future<SyncUpdate> sync({

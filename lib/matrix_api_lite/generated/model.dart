@@ -453,17 +453,27 @@ class MediaConfig {
 ///
 @_NameSource('rule override generated')
 class PreviewForUrl {
-  PreviewForUrl({this.matrixImageSize, this.ogImage});
+  PreviewForUrl({
+    this.matrixImageSize,
+    this.ogImage,
+    this.additionalProperties = const {},
+  });
 
   PreviewForUrl.fromJson(Map<String, Object?> json)
     : matrixImageSize = ((v) =>
           v != null ? v as int : null)(json['matrix:image:size']),
       ogImage = ((v) =>
-          v != null ? Uri.parse(v as String) : null)(json['og:image']);
+          v != null ? Uri.parse(v as String) : null)(json['og:image']),
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where((e) => !['matrix:image:size', 'og:image'].contains(e.key))
+            .map((e) => MapEntry(e.key, e.value as Object?)),
+      );
   Map<String, Object?> toJson() {
     final matrixImageSize = this.matrixImageSize;
     final ogImage = this.ogImage;
     return {
+      ...additionalProperties,
       if (matrixImageSize != null) 'matrix:image:size': matrixImageSize,
       if (ogImage != null) 'og:image': ogImage.toString(),
     };
@@ -474,6 +484,8 @@ class PreviewForUrl {
 
   /// An [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the image. Omitted if there is no image.
   Uri? ogImage;
+
+  Map<String, Object?> additionalProperties;
 
   @dart.override
   bool operator ==(Object other) =>
