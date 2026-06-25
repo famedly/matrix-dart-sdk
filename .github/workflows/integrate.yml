@@ -38,7 +38,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Check licenses
-        uses: fsfe/reuse-action@v5
+        uses: fsfe/reuse-action@v6
 
   e2ee_test:
     runs-on: ubuntu-latest-16core
