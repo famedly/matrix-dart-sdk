@@ -1,22 +1,20 @@
-// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
-//
-// SPDX-License-Identifier: AGPL-3.0-or-later
-
-import 'dart:convert';
-import 'dart:typed_data';
-
-import 'package:http/http.dart';
-
-import 'package:matrix/matrix_api_lite/generated/fixed_model.dart';
-import 'package:matrix/matrix_api_lite/generated/internal.dart';
-import 'package:matrix/matrix_api_lite/generated/model.dart';
-import 'package:matrix/matrix_api_lite/model/auth/authentication_data.dart';
-import 'package:matrix/matrix_api_lite/model/auth/authentication_identifier.dart';
-import 'package:matrix/matrix_api_lite/model/matrix_event.dart';
-import 'package:matrix/matrix_api_lite/model/matrix_keys.dart';
-import 'package:matrix/matrix_api_lite/model/sync_update.dart';
+import '../model/auth/authentication_data.dart';
+import '../model/auth/authentication_types.dart';
+import '../model/auth/authentication_identifier.dart';
+import '../model/matrix_keys.dart';
+import '../model/sync_update.dart';
+import '../model/matrix_event.dart';
+import '../model/children_state.dart';
 
 // ignore_for_file: provide_deprecation_message
+
+import 'model.dart';
+import 'fixed_model.dart';
+import 'internal.dart';
+
+import 'package:http/http.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
 class Api {
   Client httpClient;
@@ -492,7 +490,7 @@ class Api {
     final requestUri = Uri(
       path:
           '_matrix/client/v1/room_summary/${Uri.encodeComponent(roomIdOrAlias)}',
-      queryParameters: {if (via != null) 'via': via},
+      queryParameters: {if (via != null) "via": via},
     );
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -1367,9 +1365,8 @@ class Api {
   }) async {
     final requestUri = Uri(path: '_matrix/client/v3/account/deactivate');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
-    if (bearerToken != null) {
+    if (bearerToken != null)
       request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    }
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(
       jsonEncode({
@@ -1418,9 +1415,8 @@ class Api {
   }) async {
     final requestUri = Uri(path: '_matrix/client/v3/account/password');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
-    if (bearerToken != null) {
+    if (bearerToken != null)
       request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    }
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(
       jsonEncode({
@@ -2266,7 +2262,7 @@ class Api {
   }) async {
     final requestUri = Uri(
       path: '_matrix/client/v3/join/${Uri.encodeComponent(roomIdOrAlias)}',
-      queryParameters: {if (via != null) 'via': via},
+      queryParameters: {if (via != null) "via": via},
     );
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -2369,7 +2365,7 @@ class Api {
     request.bodyBytes = utf8.encode(
       jsonEncode({
         'one_time_keys': oneTimeKeys.map(
-          (k, v) => MapEntry(k, v.map(MapEntry.new)),
+          (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v))),
         ),
         if (timeout != null) 'timeout': timeout,
       }),
@@ -2500,7 +2496,9 @@ class Api {
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(
-      jsonEncode(body.map((k, v) => MapEntry(k, v.map(MapEntry.new)))),
+      jsonEncode(
+        body.map((k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v)))),
+      ),
     );
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -2609,7 +2607,7 @@ class Api {
   }) async {
     final requestUri = Uri(
       path: '_matrix/client/v3/knock/${Uri.encodeComponent(roomIdOrAlias)}',
-      queryParameters: {if (via != null) 'via': via},
+      queryParameters: {if (via != null) "via": via},
     );
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -2856,9 +2854,8 @@ class Api {
       path: '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}',
     );
     final request = Request('GET', baseUri!.resolveUri(requestUri));
-    if (bearerToken != null) {
+    if (bearerToken != null)
       request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    }
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -2904,9 +2901,8 @@ class Api {
           '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/${Uri.encodeComponent(keyName)}',
     );
     final request = Request('GET', baseUri!.resolveUri(requestUri));
-    if (bearerToken != null) {
+    if (bearerToken != null)
       request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    }
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -5007,7 +5003,9 @@ class Api {
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(
       jsonEncode({
-        'messages': messages.map((k, v) => MapEntry(k, v.map(MapEntry.new))),
+        'messages': messages.map(
+          (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v))),
+        ),
       }),
     );
     final response = await httpClient.send(request);
@@ -5676,9 +5674,8 @@ class Api {
   Future<GetVersionsResponse> getVersions() async {
     final requestUri = Uri(path: '_matrix/client/versions');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
-    if (bearerToken != null) {
+    if (bearerToken != null)
       request.headers['authorization'] = 'Bearer ${bearerToken!}';
-    }
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -6044,9 +6041,9 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ((json['content_uri'] as String).startsWith('mxc://')
+    return ((json['content_uri'] as String).startsWith("mxc://")
         ? Uri.parse(json['content_uri'] as String)
-        : throw Exception('Uri not an mxc URI'));
+        : throw Exception("Uri not an mxc URI"));
   }
 
   /// This endpoint permits uploading content to an `mxc://` URI that was created
