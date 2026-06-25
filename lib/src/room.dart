@@ -2153,7 +2153,13 @@ class Room {
   }
 
   /// Returns the user's own power level.
-  PowerLevel get ownPowerLevel => getPowerLevelByUserId(client.userID!);
+  PowerLevel get ownPowerLevel {
+    final userId = client.userID;
+    // This makes sure we don't run into null check exceptions if by any reason
+    // the client of the room object doesn't have the userId
+    if (userId == null) return PowerLevel.user;
+    return getPowerLevelByUserId(userId);
+  }
 
   /// Returns the power levels from all users for this room or null if not given.
   @Deprecated('Use `getPowerLevelByUserId(String userId)` instead')
