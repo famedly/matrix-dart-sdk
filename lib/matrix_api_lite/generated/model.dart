@@ -2,13 +2,17 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import '../model/auth/authentication_data.dart';
+import '../model/auth/authentication_types.dart';
+import '../model/auth/authentication_identifier.dart';
+import '../model/matrix_keys.dart';
+import '../model/sync_update.dart';
+import '../model/matrix_event.dart';
+import '../model/children_state.dart';
+
 import 'dart:core' as dart;
 import 'dart:core';
-
-import 'package:matrix/matrix_api_lite/model/children_state.dart';
-import 'package:matrix/matrix_api_lite/model/matrix_event.dart';
-import 'package:matrix/matrix_api_lite/model/matrix_keys.dart';
-
+import 'internal.dart';
 part 'model.g.dart';
 
 class _NameSource {
@@ -84,7 +88,7 @@ class DiscoveryInformation {
             .where(
               (e) => !['m.homeserver', 'm.identity_server'].contains(e.key),
             )
-            .map((e) => MapEntry(e.key, e.value)),
+            .map((e) => MapEntry(e.key, e.value as Object?)),
       );
   Map<String, Object?> toJson() {
     final mIdentityServer = this.mIdentityServer;
@@ -114,6 +118,39 @@ class DiscoveryInformation {
 
   @dart.override
   int get hashCode => Object.hash(mHomeserver, mIdentityServer);
+}
+
+///
+@_NameSource('generated')
+class PublicKeys {
+  PublicKeys({required this.ed25519, this.additionalProperties = const {}});
+
+  PublicKeys.fromJson(Map<String, Object?> json)
+    : ed25519 = json['ed25519'] as String,
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where((e) => !['ed25519'].contains(e.key))
+            .map((e) => MapEntry(e.key, e.value as String)),
+      );
+  Map<String, Object?> toJson() => {
+    ...additionalProperties,
+    'ed25519': ed25519,
+  };
+
+  /// The unpadded base64-encoded ed25519 public key for the Policy Server.
+  String ed25519;
+
+  Map<String, String> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PublicKeys &&
+          other.runtimeType == runtimeType &&
+          other.ed25519 == ed25519);
+
+  @dart.override
+  int get hashCode => ed25519.hashCode;
 }
 
 ///
@@ -235,12 +272,29 @@ class GetWellknownSupportResponse {
   int get hashCode => Object.hash(contacts, supportPage);
 }
 
+/// An action that the account management URL supports.
+@_NameSource('generated')
+enum AccountManagementActionsSupported {
+  orgMatrixAccountDeactivate('org.matrix.account_deactivate'),
+  orgMatrixCrossSigningReset('org.matrix.cross_signing_reset'),
+  orgMatrixDeviceDelete('org.matrix.device_delete'),
+  orgMatrixDeviceView('org.matrix.device_view'),
+  orgMatrixDevicesList('org.matrix.devices_list'),
+  orgMatrixProfile('org.matrix.profile');
+
+  final String name;
+  const AccountManagementActionsSupported(this.name);
+}
+
 ///
 @_NameSource('generated')
 class GetAuthMetadataResponse {
   GetAuthMetadataResponse({
+    this.accountManagementActionsSupported,
+    this.accountManagementUri,
     required this.authorizationEndpoint,
     required this.codeChallengeMethodsSupported,
+    this.deviceAuthorizationEndpoint,
     required this.grantTypesSupported,
     required this.issuer,
     this.promptValuesSupported,
@@ -252,13 +306,28 @@ class GetAuthMetadataResponse {
   });
 
   GetAuthMetadataResponse.fromJson(Map<String, Object?> json)
-    : authorizationEndpoint = Uri.parse(
+    : accountManagementActionsSupported = ((v) => v != null
+          ? (v as List)
+                .map(
+                  (v) => AccountManagementActionsSupported.values.fromString(
+                    v as String,
+                  )!,
+                )
+                .toList()
+          : null)(json['account_management_actions_supported']),
+      accountManagementUri = ((v) => v != null ? Uri.parse(v as String) : null)(
+        json['account_management_uri'],
+      ),
+      authorizationEndpoint = Uri.parse(
         json['authorization_endpoint'] as String,
       ),
       codeChallengeMethodsSupported =
           (json['code_challenge_methods_supported'] as List)
               .map((v) => v as String)
               .toList(),
+      deviceAuthorizationEndpoint = ((v) => v != null
+          ? Uri.parse(v as String)
+          : null)(json['device_authorization_endpoint']),
       grantTypesSupported = (json['grant_types_supported'] as List)
           .map((v) => v as String)
           .toList(),
@@ -276,12 +345,23 @@ class GetAuthMetadataResponse {
       revocationEndpoint = Uri.parse(json['revocation_endpoint'] as String),
       tokenEndpoint = Uri.parse(json['token_endpoint'] as String);
   Map<String, Object?> toJson() {
+    final accountManagementActionsSupported =
+        this.accountManagementActionsSupported;
+    final accountManagementUri = this.accountManagementUri;
+    final deviceAuthorizationEndpoint = this.deviceAuthorizationEndpoint;
     final promptValuesSupported = this.promptValuesSupported;
     return {
+      if (accountManagementActionsSupported != null)
+        'account_management_actions_supported':
+            accountManagementActionsSupported.map((v) => v.name).toList(),
+      if (accountManagementUri != null)
+        'account_management_uri': accountManagementUri.toString(),
       'authorization_endpoint': authorizationEndpoint.toString(),
       'code_challenge_methods_supported': codeChallengeMethodsSupported
           .map((v) => v)
           .toList(),
+      if (deviceAuthorizationEndpoint != null)
+        'device_authorization_endpoint': deviceAuthorizationEndpoint.toString(),
       'grant_types_supported': grantTypesSupported.map((v) => v).toList(),
       'issuer': issuer.toString(),
       if (promptValuesSupported != null)
@@ -294,6 +374,17 @@ class GetAuthMetadataResponse {
     };
   }
 
+  /// List of actions that the account management URL supports.
+  ///
+  /// This is an extension [defined in this specification](https://spec.matrix.org/unstable/client-server-api/#oauth-20-account-management).
+  List<AccountManagementActionsSupported>? accountManagementActionsSupported;
+
+  /// The URL where the user is able to access the account management capabilities
+  /// of the homeserver.
+  ///
+  /// This is an extension [defined in this specification](https://spec.matrix.org/unstable/client-server-api/#oauth-20-account-management).
+  Uri? accountManagementUri;
+
   /// URL of the authorization endpoint, necessary to use the authorization code
   /// grant.
   Uri authorizationEndpoint;
@@ -305,12 +396,21 @@ class GetAuthMetadataResponse {
   /// the authorization code grant.
   List<String> codeChallengeMethodsSupported;
 
+  /// URL of the device authorization endpoint, as defined in
+  /// [RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628), necessary to use
+  /// the [device authorization grant](https://spec.matrix.org/unstable/client-server-api/#device-authorization-grant).
+  Uri? deviceAuthorizationEndpoint;
+
   /// List of OAuth 2.0 grant type strings that the server supports at the token
   /// endpoint.
   ///
   /// This array MUST contain at least the `authorization_code` and `refresh_token`
   /// values, for clients to be able to use the authorization code grant and refresh
   /// token grant, respectively.
+  ///
+  /// **[Added in `v1.18`]**  It MAY also contain
+  /// `urn:ietf:params:oauth:grant-type:device_code` to indicate support for the
+  /// [device authorization grant](https://spec.matrix.org/unstable/client-server-api/#device-authorization-grant).
   List<String> grantTypesSupported;
 
   /// The authorization server's issuer identifier, which is a URL that uses the
@@ -351,8 +451,7 @@ class GetAuthMetadataResponse {
   /// its access and refresh tokens.
   Uri revocationEndpoint;
 
-  /// URL of the token endpoint, necessary to use the authorization code grant and
-  /// the refresh token grant.
+  /// URL of the token endpoint, used by the grants.
   Uri tokenEndpoint;
 
   @dart.override
@@ -360,9 +459,13 @@ class GetAuthMetadataResponse {
       identical(this, other) ||
       (other is GetAuthMetadataResponse &&
           other.runtimeType == runtimeType &&
+          other.accountManagementActionsSupported ==
+              accountManagementActionsSupported &&
+          other.accountManagementUri == accountManagementUri &&
           other.authorizationEndpoint == authorizationEndpoint &&
           other.codeChallengeMethodsSupported ==
               codeChallengeMethodsSupported &&
+          other.deviceAuthorizationEndpoint == deviceAuthorizationEndpoint &&
           other.grantTypesSupported == grantTypesSupported &&
           other.issuer == issuer &&
           other.promptValuesSupported == promptValuesSupported &&
@@ -374,8 +477,11 @@ class GetAuthMetadataResponse {
 
   @dart.override
   int get hashCode => Object.hash(
+    accountManagementActionsSupported,
+    accountManagementUri,
     authorizationEndpoint,
     codeChallengeMethodsSupported,
+    deviceAuthorizationEndpoint,
     grantTypesSupported,
     issuer,
     promptValuesSupported,
@@ -453,17 +559,27 @@ class MediaConfig {
 ///
 @_NameSource('rule override generated')
 class PreviewForUrl {
-  PreviewForUrl({this.matrixImageSize, this.ogImage});
+  PreviewForUrl({
+    this.matrixImageSize,
+    this.ogImage,
+    this.additionalProperties = const {},
+  });
 
   PreviewForUrl.fromJson(Map<String, Object?> json)
     : matrixImageSize = ((v) =>
           v != null ? v as int : null)(json['matrix:image:size']),
       ogImage = ((v) =>
-          v != null ? Uri.parse(v as String) : null)(json['og:image']);
+          v != null ? Uri.parse(v as String) : null)(json['og:image']),
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where((e) => !['matrix:image:size', 'og:image'].contains(e.key))
+            .map((e) => MapEntry(e.key, e.value as Object?)),
+      );
   Map<String, Object?> toJson() {
     final matrixImageSize = this.matrixImageSize;
     final ogImage = this.ogImage;
     return {
+      ...additionalProperties,
       if (matrixImageSize != null) 'matrix:image:size': matrixImageSize,
       if (ogImage != null) 'og:image': ogImage.toString(),
     };
@@ -474,6 +590,8 @@ class PreviewForUrl {
 
   /// An [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the image. Omitted if there is no image.
   Uri? ogImage;
+
+  Map<String, Object?> additionalProperties;
 
   @dart.override
   bool operator ==(Object other) =>
@@ -711,7 +829,6 @@ class RoomSummary$1 implements PublishedRoomsChunk, GetRoomSummaryResponse$1 {
       encryption = ((v) => v != null ? v as String : null)(json['encryption']),
       roomVersion = ((v) =>
           v != null ? v as String : null)(json['room_version']);
-  @override
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
@@ -741,61 +858,48 @@ class RoomSummary$1 implements PublishedRoomsChunk, GetRoomSummaryResponse$1 {
   }
 
   /// The URL for the room's avatar, if one is set.
-  @override
   Uri? avatarUrl;
 
   /// The canonical alias of the room, if any.
-  @override
   String? canonicalAlias;
 
   /// Whether guest users may join the room and participate in it.
   /// If they can, they will be subject to ordinary power level
   /// rules like any other user.
-  @override
   bool guestCanJoin;
 
   /// The room's join rule. When not present, the room is assumed to
   /// be `public`.
-  @override
   String? joinRule;
 
   /// The name of the room, if any.
-  @override
   String? name;
 
   /// The number of members joined to the room.
-  @override
   int numJoinedMembers;
 
   /// The ID of the room.
-  @override
   String roomId;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
-  @override
   String? roomType;
 
   /// The plain text topic of the room. Omitted if no `text/plain` mimetype
   /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
-  @override
   String? topic;
 
   /// Whether the room may be viewed by users without joining.
-  @override
   bool worldReadable;
 
   /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
   /// are specified by the join rules. Empty or omitted otherwise.
-  @override
   List<String>? allowedRoomIds;
 
   /// The encryption algorithm to be used to encrypt messages sent in the
   /// room.
-  @override
   String? encryption;
 
   /// The version of the room.
-  @override
   String? roomVersion;
 
   @dart.override
@@ -920,7 +1024,6 @@ class GetRoomSummaryResponse$3
       membership = ((v) => v != null
           ? Membership.values.fromString(v as String)!
           : null)(json['membership']);
-  @override
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
@@ -952,66 +1055,52 @@ class GetRoomSummaryResponse$3
   }
 
   /// The URL for the room's avatar, if one is set.
-  @override
   Uri? avatarUrl;
 
   /// The canonical alias of the room, if any.
-  @override
   String? canonicalAlias;
 
   /// Whether guest users may join the room and participate in it.
   /// If they can, they will be subject to ordinary power level
   /// rules like any other user.
-  @override
   bool guestCanJoin;
 
   /// The room's join rule. When not present, the room is assumed to
   /// be `public`.
-  @override
   String? joinRule;
 
   /// The name of the room, if any.
-  @override
   String? name;
 
   /// The number of members joined to the room.
-  @override
   int numJoinedMembers;
 
   /// The ID of the room.
-  @override
   String roomId;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
-  @override
   String? roomType;
 
   /// The plain text topic of the room. Omitted if no `text/plain` mimetype
   /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
-  @override
   String? topic;
 
   /// Whether the room may be viewed by users without joining.
-  @override
   bool worldReadable;
 
   /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
   /// are specified by the join rules. Empty or omitted otherwise.
-  @override
   List<String>? allowedRoomIds;
 
   /// The encryption algorithm to be used to encrypt messages sent in the
   /// room.
-  @override
   String? encryption;
 
   /// The version of the room.
-  @override
   String? roomVersion;
 
   /// The membership state of the user if the user is joined to the room. Absent
   /// if the API was called unauthenticated.
-  @override
   Membership? membership;
 
   @dart.override
@@ -1152,7 +1241,6 @@ class RoomSummary$2 implements PublishedRoomsChunk, SpaceRoomsChunk$1 {
       encryption = ((v) => v != null ? v as String : null)(json['encryption']),
       roomVersion = ((v) =>
           v != null ? v as String : null)(json['room_version']);
-  @override
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
@@ -1182,61 +1270,48 @@ class RoomSummary$2 implements PublishedRoomsChunk, SpaceRoomsChunk$1 {
   }
 
   /// The URL for the room's avatar, if one is set.
-  @override
   Uri? avatarUrl;
 
   /// The canonical alias of the room, if any.
-  @override
   String? canonicalAlias;
 
   /// Whether guest users may join the room and participate in it.
   /// If they can, they will be subject to ordinary power level
   /// rules like any other user.
-  @override
   bool guestCanJoin;
 
   /// The room's join rule. When not present, the room is assumed to
   /// be `public`.
-  @override
   String? joinRule;
 
   /// The name of the room, if any.
-  @override
   String? name;
 
   /// The number of members joined to the room.
-  @override
   int numJoinedMembers;
 
   /// The ID of the room.
-  @override
   String roomId;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
-  @override
   String? roomType;
 
   /// The plain text topic of the room. Omitted if no `text/plain` mimetype
   /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
-  @override
   String? topic;
 
   /// Whether the room may be viewed by users without joining.
-  @override
   bool worldReadable;
 
   /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
   /// are specified by the join rules. Empty or omitted otherwise.
-  @override
   List<String>? allowedRoomIds;
 
   /// The encryption algorithm to be used to encrypt messages sent in the
   /// room.
-  @override
   String? encryption;
 
   /// The version of the room.
-  @override
   String? roomVersion;
 
   @dart.override
@@ -1394,7 +1469,6 @@ class SpaceRoomsChunk$2 implements RoomSummary$2, SpaceHierarchyRoomsChunk {
       childrenState = (json['children_state'] as List)
           .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
           .toList();
-  @override
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
@@ -1425,66 +1499,52 @@ class SpaceRoomsChunk$2 implements RoomSummary$2, SpaceHierarchyRoomsChunk {
   }
 
   /// The URL for the room's avatar, if one is set.
-  @override
   Uri? avatarUrl;
 
   /// The canonical alias of the room, if any.
-  @override
   String? canonicalAlias;
 
   /// Whether guest users may join the room and participate in it.
   /// If they can, they will be subject to ordinary power level
   /// rules like any other user.
-  @override
   bool guestCanJoin;
 
   /// The room's join rule. When not present, the room is assumed to
   /// be `public`.
-  @override
   String? joinRule;
 
   /// The name of the room, if any.
-  @override
   String? name;
 
   /// The number of members joined to the room.
-  @override
   int numJoinedMembers;
 
   /// The ID of the room.
-  @override
   String roomId;
 
   ///
-  @override
   String? roomType;
 
   /// The plain text topic of the room. Omitted if no `text/plain` mimetype
   /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
-  @override
   String? topic;
 
   /// Whether the room may be viewed by users without joining.
-  @override
   bool worldReadable;
 
   ///
-  @override
   List<String>? allowedRoomIds;
 
   ///
-  @override
   String? encryption;
 
   ///
-  @override
   String? roomVersion;
 
   /// The [`m.space.child`](https://spec.matrix.org/unstable/client-server-api/#mspacechild) events of the space-room, represented
   /// as [Stripped State Events](https://spec.matrix.org/unstable/client-server-api/#stripped-state) with an added `origin_server_ts` key.
   ///
   /// If the room is not a space-room, this should be empty.
-  @override
   List<ChildrenState> childrenState;
 
   @dart.override
@@ -2003,15 +2063,18 @@ class RequestTokenResponse {
   String sid;
 
   /// An optional field containing a URL where the client must submit the
-  /// validation token to, with identical parameters to the Identity Service
-  /// API's `POST /validate/email/submitToken` endpoint (without the requirement
-  /// for an access token). The homeserver must send this token to the user (if
-  /// applicable), who should then be prompted to provide it to the client.
+  /// validation token, with identical request and response parameters and error
+  /// codes to the Identity Service API's
+  /// [`POST /validate/email/submitToken`](https://spec.matrix.org/unstable/identity-service-api/#post_matrixidentityv2validateemailsubmittoken)
+  /// and [`POST /validate/msisdn/submitToken`](https://spec.matrix.org/unstable/identity-service-api/#post_matrixidentityv2validatemsisdnsubmittoken)
+  /// endpoints (without the requirement for an access token). The homeserver
+  /// must send this token to the user (if applicable), who should then be
+  /// prompted to provide it to the client.
   ///
   /// If this field is not present, the client can assume that verification
   /// will happen without the client's involvement provided the homeserver
-  /// advertises this specification version in the `/versions` response
-  /// (ie: r0.5.0).
+  /// advertises a sufficiently recent version in the [`GET /versions`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientversions)
+  /// response (ie: r0.5.0).
   Uri? submitUrl;
 
   @dart.override
@@ -2246,6 +2309,47 @@ class BooleanCapability {
 
 ///
 @_NameSource('spec')
+class AccountModerationCapability {
+  AccountModerationCapability({this.lock, this.suspend});
+
+  AccountModerationCapability.fromJson(Map<String, Object?> json)
+    : lock = ((v) => v != null ? v as bool : null)(json['lock']),
+      suspend = ((v) => v != null ? v as bool : null)(json['suspend']);
+  Map<String, Object?> toJson() {
+    final lock = this.lock;
+    final suspend = this.suspend;
+    return {
+      if (lock != null) 'lock': lock,
+      if (suspend != null) 'suspend': suspend,
+    };
+  }
+
+  /// `true` if the user can lock a user via [`PUT /admin/lock/{userId}`](https://spec.matrix.org/unstable/client-server-api/#put_matrixclientv1adminlockuserid),
+  /// `false` otherwise.
+  ///
+  /// Defaults to `false`.
+  bool? lock;
+
+  /// `true` if the user can suspend a user via [`PUT /admin/suspend/{userId}`](https://spec.matrix.org/unstable/client-server-api/#put_matrixclientv1adminsuspenduserid),
+  /// `false` otherwise.
+  ///
+  /// Defaults to `false`.
+  bool? suspend;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AccountModerationCapability &&
+          other.runtimeType == runtimeType &&
+          other.lock == lock &&
+          other.suspend == suspend);
+
+  @dart.override
+  int get hashCode => Object.hash(lock, suspend);
+}
+
+///
+@_NameSource('spec')
 class ProfileFieldsCapability {
   ProfileFieldsCapability({
     this.allowed,
@@ -2352,7 +2456,9 @@ class RoomVersionsCapability {
 class Capabilities {
   Capabilities({
     this.m3pidChanges,
+    this.mAccountModeration,
     this.mChangePassword,
+    this.mForgetForcedUponLeave,
     this.mGetLoginToken,
     this.mProfileFields,
     this.mRoomVersions,
@@ -2365,9 +2471,15 @@ class Capabilities {
     : m3pidChanges = ((v) => v != null
           ? BooleanCapability.fromJson(v as Map<String, Object?>)
           : null)(json['m.3pid_changes']),
+      mAccountModeration = ((v) => v != null
+          ? AccountModerationCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.account_moderation']),
       mChangePassword = ((v) => v != null
           ? BooleanCapability.fromJson(v as Map<String, Object?>)
           : null)(json['m.change_password']),
+      mForgetForcedUponLeave = ((v) => v != null
+          ? BooleanCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.forget_forced_upon_leave']),
       mGetLoginToken = ((v) => v != null
           ? BooleanCapability.fromJson(v as Map<String, Object?>)
           : null)(json['m.get_login_token']),
@@ -2388,7 +2500,9 @@ class Capabilities {
             .where(
               (e) => ![
                 'm.3pid_changes',
+                'm.account_moderation',
                 'm.change_password',
+                'm.forget_forced_upon_leave',
                 'm.get_login_token',
                 'm.profile_fields',
                 'm.room_versions',
@@ -2396,11 +2510,13 @@ class Capabilities {
                 'm.set_displayname',
               ].contains(e.key),
             )
-            .map((e) => MapEntry(e.key, e.value)),
+            .map((e) => MapEntry(e.key, e.value as Object?)),
       );
   Map<String, Object?> toJson() {
     final m3pidChanges = this.m3pidChanges;
+    final mAccountModeration = this.mAccountModeration;
     final mChangePassword = this.mChangePassword;
+    final mForgetForcedUponLeave = this.mForgetForcedUponLeave;
     final mGetLoginToken = this.mGetLoginToken;
     final mProfileFields = this.mProfileFields;
     final mRoomVersions = this.mRoomVersions;
@@ -2409,8 +2525,12 @@ class Capabilities {
     return {
       ...additionalProperties,
       if (m3pidChanges != null) 'm.3pid_changes': m3pidChanges.toJson(),
+      if (mAccountModeration != null)
+        'm.account_moderation': mAccountModeration.toJson(),
       if (mChangePassword != null)
         'm.change_password': mChangePassword.toJson(),
+      if (mForgetForcedUponLeave != null)
+        'm.forget_forced_upon_leave': mForgetForcedUponLeave.toJson(),
       if (mGetLoginToken != null) 'm.get_login_token': mGetLoginToken.toJson(),
       if (mProfileFields != null) 'm.profile_fields': mProfileFields.toJson(),
       if (mRoomVersions != null) 'm.room_versions': mRoomVersions.toJson(),
@@ -2423,8 +2543,20 @@ class Capabilities {
   /// Capability to indicate if the user can change 3PID associations on their account.
   BooleanCapability? m3pidChanges;
 
+  /// Capability to indicate if the user can perform account moderation actions
+  /// via [server administration](https://spec.matrix.org/unstable/client-server-api/#server-administration)
+  /// endpoints.
+  ///
+  /// This property should be omitted altogether if `suspend` and `lock` would
+  /// be `false`.
+  AccountModerationCapability? mAccountModeration;
+
   /// Capability to indicate if the user can change their password.
   BooleanCapability? mChangePassword;
+
+  /// Capability to indicate if the server automatically forgets rooms once the user
+  /// leaves.
+  BooleanCapability? mForgetForcedUponLeave;
 
   /// Capability to indicate if the user can generate tokens to log further clients into their account.
   BooleanCapability? mGetLoginToken;
@@ -2461,7 +2593,9 @@ class Capabilities {
       (other is Capabilities &&
           other.runtimeType == runtimeType &&
           other.m3pidChanges == m3pidChanges &&
+          other.mAccountModeration == mAccountModeration &&
           other.mChangePassword == mChangePassword &&
+          other.mForgetForcedUponLeave == mForgetForcedUponLeave &&
           other.mGetLoginToken == mGetLoginToken &&
           other.mProfileFields == mProfileFields &&
           other.mRoomVersions == mRoomVersions &&
@@ -2471,7 +2605,9 @@ class Capabilities {
   @dart.override
   int get hashCode => Object.hash(
     m3pidChanges,
+    mAccountModeration,
     mChangePassword,
+    mForgetForcedUponLeave,
     mGetLoginToken,
     mProfileFields,
     mRoomVersions,
@@ -2809,7 +2945,9 @@ class ThirdPartySigned {
   Map<String, Object?> toJson() => {
     'mxid': mxid,
     'sender': sender,
-    'signatures': signatures.map((k, v) => MapEntry(k, v.map(MapEntry.new))),
+    'signatures': signatures.map(
+      (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v))),
+    ),
     'token': token,
   };
 
@@ -2903,9 +3041,9 @@ class ClaimKeysResponse {
   Map<String, Object?> toJson() {
     final failures = this.failures;
     return {
-      if (failures != null) 'failures': failures.map(MapEntry.new),
+      if (failures != null) 'failures': failures.map((k, v) => MapEntry(k, v)),
       'one_time_keys': oneTimeKeys.map(
-        (k, v) => MapEntry(k, v.map(MapEntry.new)),
+        (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v))),
       ),
     };
   }
@@ -3006,7 +3144,7 @@ class QueryKeysResponse {
         'device_keys': deviceKeys.map(
           (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson()))),
         ),
-      if (failures != null) 'failures': failures.map(MapEntry.new),
+      if (failures != null) 'failures': failures.map((k, v) => MapEntry(k, v)),
       if (masterKeys != null)
         'master_keys': masterKeys.map((k, v) => MapEntry(k, v.toJson())),
       if (selfSigningKeys != null)
@@ -3036,8 +3174,8 @@ class QueryKeysResponse {
   /// user or device is missing from the `device_keys` result.
   Map<String, Map<String, Object?>>? failures;
 
-  /// Information on the master cross-signing keys of the queried users.
-  /// A map from user ID, to master key information.  For each key, the
+  /// Information on the master signing keys of the queried users.
+  /// A map from user ID, to master signing key information.  For each key, the
   /// information returned will be the same as uploaded via
   /// `/keys/device_signing/upload`, along with the signatures
   /// uploaded via `/keys/signatures/upload` that the requesting user
@@ -3094,7 +3232,7 @@ class LoginFlow {
       additionalProperties = Map.fromEntries(
         json.entries
             .where((e) => !['get_login_token', 'type'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value)),
+            .map((e) => MapEntry(e.key, e.value as Object?)),
       );
   Map<String, Object?> toJson() {
     final getLoginToken = this.getLoginToken;
@@ -3420,9 +3558,9 @@ class ProfileInformation {
 
   ProfileInformation.fromJson(Map<String, Object?> json)
     : avatarUrl = ((v) => v != null
-          ? ((v as String).startsWith('mxc://')
-                ? Uri.parse(v)
-                : throw Exception('Uri not an mxc URI'))
+          ? ((v as String).startsWith("mxc://")
+                ? Uri.parse(v as String)
+                : throw Exception("Uri not an mxc URI"))
           : null)(json['avatar_url']),
       displayname = ((v) =>
           v != null ? v as String : null)(json['displayname']),
@@ -3432,7 +3570,7 @@ class ProfileInformation {
             .where(
               (e) => !['avatar_url', 'displayname', 'm.tz'].contains(e.key),
             )
-            .map((e) => MapEntry(e.key, e.value)),
+            .map((e) => MapEntry(e.key, e.value as Object?)),
       );
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
@@ -3542,7 +3680,9 @@ class PublicRoomQueryFilter {
     : genericSearchTerm = ((v) =>
           v != null ? v as String : null)(json['generic_search_term']),
       roomTypes = ((v) => v != null
-          ? (v as List).map(((v) => v != null ? v as String : null)).toList()
+          ? (v as List)
+                .map((v) => ((v) => v != null ? v as String : null)(v))
+                .toList()
           : null)(json['room_types']);
   Map<String, Object?> toJson() {
     final genericSearchTerm = this.genericSearchTerm;
@@ -3649,7 +3789,7 @@ class PusherData {
       additionalProperties = Map.fromEntries(
         json.entries
             .where((e) => !['format', 'url'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value)),
+            .map((e) => MapEntry(e.key, e.value as Object?)),
       );
   Map<String, Object?> toJson() {
     final format = this.format;
@@ -3737,7 +3877,6 @@ class Pusher implements PusherId {
       kind = json['kind'] as String,
       lang = json['lang'] as String,
       profileTag = ((v) => v != null ? v as String : null)(json['profile_tag']);
-  @override
   Map<String, Object?> toJson() {
     final profileTag = this.profileTag;
     return {
@@ -3754,13 +3893,11 @@ class Pusher implements PusherId {
 
   /// This is a reverse-DNS style identifier for the application.
   /// Max length, 64 chars.
-  @override
   String appId;
 
   /// This is a unique identifier for this pusher. See `/set` for
   /// more detail.
   /// Max length, 512 bytes.
-  @override
   String pushkey;
 
   /// A string that will allow the user to identify what application
@@ -4898,16 +5035,16 @@ class EventFilter {
   ///
   int? limit;
 
-  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `'senders'` filter.
+  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `senders` filter.
   List<String>? notSenders;
 
-  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `'types'` filter. A '*' can be used as a wildcard to match any sequence of characters.
+  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `types` filter. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? notTypes;
 
   /// A list of senders IDs to include. If this list is absent then all senders are included.
   List<String>? senders;
 
-  /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
+  /// A list of event types to include. If this list is absent then all event types are included. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? types;
 
   @dart.override
@@ -4985,7 +5122,7 @@ class RoomEventFilter {
   /// for more information. Defaults to `false`.
   bool? lazyLoadMembers;
 
-  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `'rooms'` filter.
+  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `rooms` filter.
   List<String>? notRooms;
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
@@ -5062,7 +5199,6 @@ class SearchFilter implements EventFilter, RoomEventFilter {
           : null)(json['rooms']),
       unreadThreadNotifications = ((v) =>
           v != null ? v as bool : null)(json['unread_thread_notifications']);
-  @override
   Map<String, Object?> toJson() {
     final limit = this.limit;
     final notSenders = this.notSenders;
@@ -5097,27 +5233,21 @@ class SearchFilter implements EventFilter, RoomEventFilter {
   /// Servers should apply a default value, and impose a maximum value to avoid
   /// resource exhaustion.
   ///
-  @override
   int? limit;
 
-  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `'senders'` filter.
-  @override
+  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `senders` filter.
   List<String>? notSenders;
 
-  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `'types'` filter. A '*' can be used as a wildcard to match any sequence of characters.
-  @override
+  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `types` filter. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? notTypes;
 
   /// A list of senders IDs to include. If this list is absent then all senders are included.
-  @override
   List<String>? senders;
 
-  /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
-  @override
+  /// A list of event types to include. If this list is absent then all event types are included. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? types;
 
   /// If `true`, includes only events with a `url` key in their content. If `false`, excludes those events. If omitted, `url` key is not considered for filtering.
-  @override
   bool? containsUrl;
 
   /// If `true`, sends all membership events for all events, even if they have already
@@ -5125,26 +5255,21 @@ class SearchFilter implements EventFilter, RoomEventFilter {
   /// apply unless `lazy_load_members` is `true`. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
-  @override
   bool? includeRedundantMembers;
 
   /// If `true`, enables lazy-loading of membership events. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
-  @override
   bool? lazyLoadMembers;
 
-  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `'rooms'` filter.
-  @override
+  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `rooms` filter.
   List<String>? notRooms;
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
-  @override
   List<String>? rooms;
 
   /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
-  @override
   bool? unreadThreadNotifications;
 
   @dart.override
@@ -6019,7 +6144,6 @@ class Instances$2 implements ProtocolInstance, Instances$1 {
       icon = ((v) => v != null ? v as String : null)(json['icon']),
       networkId = json['network_id'] as String,
       instanceId = ((v) => v != null ? v as String : null)(json['instance_id']);
-  @override
   Map<String, Object?> toJson() {
     final icon = this.icon;
     final instanceId = this.instanceId;
@@ -6033,20 +6157,16 @@ class Instances$2 implements ProtocolInstance, Instances$1 {
   }
 
   /// A human-readable description for the protocol, such as the name.
-  @override
   String desc;
 
   /// Preset values for `fields` the client may use to search by.
-  @override
   Map<String, Object?> fields;
 
   /// An optional content URI representing the protocol. Overrides the one provided
   /// at the higher level Protocol object.
-  @override
   String? icon;
 
   /// A unique identifier across all instances.
-  @override
   String networkId;
 
   /// A unique identifier for this instance on the homeserver. This field is added
@@ -6055,7 +6175,6 @@ class Instances$2 implements ProtocolInstance, Instances$1 {
   ///
   /// This is the identifier to use as the `third_party_instance_id` in a request to
   /// [`POST /_matrix/client/v3/publicRooms`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3publicrooms).
-  @override
   String? instanceId;
 
   @dart.override
@@ -6133,7 +6252,6 @@ class GetProtocolMetadataResponse$2
       instances = (json['instances'] as List)
           .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
           .toList();
-  @override
   Map<String, Object?> toJson() => {
     'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
     'icon': icon,
@@ -6147,25 +6265,21 @@ class GetProtocolMetadataResponse$2
   /// The `string` key for this object is the field name itself.
   ///
   /// May be an empty object if no fields are defined.
-  @override
   Map<String, FieldType> fieldTypes;
 
   /// A content URI representing an icon for the third-party protocol.
-  @override
   String icon;
 
   /// Fields which may be used to identify a third-party location. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the name of a channel.
-  @override
   List<String> locationFields;
 
   /// Fields which may be used to identify a third-party user. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the nickname of a user.
-  @override
   List<String> userFields;
 
   /// A list of objects representing independent instances of configuration.
@@ -6176,7 +6290,6 @@ class GetProtocolMetadataResponse$2
   /// [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
   /// to include an `instance_id` to serve as a unique identifier for each
   /// instance on the homeserver.
-  @override
   List<Instances$2> instances;
 
   @dart.override
@@ -6254,7 +6367,6 @@ class GetProtocolsResponse$2 implements Protocol, GetProtocolsResponse$1 {
       instances = (json['instances'] as List)
           .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
           .toList();
-  @override
   Map<String, Object?> toJson() => {
     'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
     'icon': icon,
@@ -6268,25 +6380,21 @@ class GetProtocolsResponse$2 implements Protocol, GetProtocolsResponse$1 {
   /// The `string` key for this object is the field name itself.
   ///
   /// May be an empty object if no fields are defined.
-  @override
   Map<String, FieldType> fieldTypes;
 
   /// A content URI representing an icon for the third-party protocol.
-  @override
   String icon;
 
   /// Fields which may be used to identify a third-party location. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the name of a channel.
-  @override
   List<String> locationFields;
 
   /// Fields which may be used to identify a third-party user. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the nickname of a user.
-  @override
   List<String> userFields;
 
   /// A list of objects representing independent instances of configuration.
@@ -6297,7 +6405,6 @@ class GetProtocolsResponse$2 implements Protocol, GetProtocolsResponse$1 {
   /// [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
   /// to include an `instance_id` to serve as a unique identifier for each
   /// instance on the homeserver.
-  @override
   List<Instances$2> instances;
 
   @dart.override
@@ -6411,7 +6518,6 @@ class StateFilter implements EventFilter, RoomEventFilter {
           : null)(json['rooms']),
       unreadThreadNotifications = ((v) =>
           v != null ? v as bool : null)(json['unread_thread_notifications']);
-  @override
   Map<String, Object?> toJson() {
     final limit = this.limit;
     final notSenders = this.notSenders;
@@ -6446,27 +6552,21 @@ class StateFilter implements EventFilter, RoomEventFilter {
   /// Servers should apply a default value, and impose a maximum value to avoid
   /// resource exhaustion.
   ///
-  @override
   int? limit;
 
-  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `'senders'` filter.
-  @override
+  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `senders` filter.
   List<String>? notSenders;
 
-  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `'types'` filter. A '*' can be used as a wildcard to match any sequence of characters.
-  @override
+  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `types` filter. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? notTypes;
 
   /// A list of senders IDs to include. If this list is absent then all senders are included.
-  @override
   List<String>? senders;
 
-  /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
-  @override
+  /// A list of event types to include. If this list is absent then all event types are included. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? types;
 
   /// If `true`, includes only events with a `url` key in their content. If `false`, excludes those events. If omitted, `url` key is not considered for filtering.
-  @override
   bool? containsUrl;
 
   /// If `true`, sends all membership events for all events, even if they have already
@@ -6474,26 +6574,21 @@ class StateFilter implements EventFilter, RoomEventFilter {
   /// apply unless `lazy_load_members` is `true`. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
-  @override
   bool? includeRedundantMembers;
 
   /// If `true`, enables lazy-loading of membership events. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
-  @override
   bool? lazyLoadMembers;
 
-  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `'rooms'` filter.
-  @override
+  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `rooms` filter.
   List<String>? notRooms;
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
-  @override
   List<String>? rooms;
 
   /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
-  @override
   bool? unreadThreadNotifications;
 
   @dart.override
@@ -6588,10 +6683,10 @@ class RoomFilter {
   /// The ephemeral events to include for rooms. These are the events that appear in the `ephemeral` property in the `/sync` response.
   StateFilter? ephemeral;
 
-  /// Include rooms that the user has left in the sync, default false
+  /// Include rooms that the user has left in the sync. Defaults to `false`.
   bool? includeLeave;
 
-  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `'rooms'` filter. This filter is applied before the filters in `ephemeral`, `state`, `timeline` or `account_data`
+  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `rooms` filter. This filter is applied before the filters in `ephemeral`, `state`, `timeline` or `account_data`
   List<String>? notRooms;
 
   /// A list of room IDs to include. If this list is absent then all rooms are included. This filter is applied before the filters in `ephemeral`, `state`, `timeline` or `account_data`
@@ -6674,10 +6769,10 @@ class Filter {
   /// The user account data that isn't associated with rooms to include.
   EventFilter? accountData;
 
-  /// List of event fields to include. If this list is absent then all fields are included. The entries are [dot-separated paths for each property](https://spec.matrix.org/unstable/appendices#dot-separated-property-paths) to include. So ['content.body'] will include the 'body' field of the 'content' object. A server may include more fields than were requested.
+  /// List of event fields to include. If this list is absent then all fields are included. The entries are [dot-separated paths for each property](https://spec.matrix.org/unstable/appendices#dot-separated-property-paths) to include. So `['content.body']` will include the `body` field of the `content` object. A server may include more fields than were requested.
   List<String>? eventFields;
 
-  /// The format to use for events. 'client' will return the events in a format suitable for clients. 'federation' will return the raw event as received over federation. The default is 'client'.
+  /// The format to use for events. `client` will return the events in a format suitable for clients. `federation` will return the raw event as received over federation. The default is `client`.
   EventFormat? eventFormat;
 
   /// The presence updates to include.
@@ -6765,7 +6860,7 @@ class Tag {
       additionalProperties = Map.fromEntries(
         json.entries
             .where((e) => !['order'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value)),
+            .map((e) => MapEntry(e.key, e.value as Object?)),
       );
   Map<String, Object?> toJson() {
     final order = this.order;
@@ -6927,7 +7022,7 @@ class GetVersionsResponse {
     final unstableFeatures = this.unstableFeatures;
     return {
       if (unstableFeatures != null)
-        'unstable_features': unstableFeatures.map(MapEntry.new),
+        'unstable_features': unstableFeatures.map((k, v) => MapEntry(k, v)),
       'versions': versions.map((v) => v).toList(),
     };
   }
@@ -6958,9 +7053,9 @@ class CreateContentResponse {
   CreateContentResponse({required this.contentUri, this.unusedExpiresAt});
 
   CreateContentResponse.fromJson(Map<String, Object?> json)
-    : contentUri = ((json['content_uri'] as String).startsWith('mxc://')
+    : contentUri = ((json['content_uri'] as String).startsWith("mxc://")
           ? Uri.parse(json['content_uri'] as String)
-          : throw Exception('Uri not an mxc URI')),
+          : throw Exception("Uri not an mxc URI")),
       unusedExpiresAt = ((v) =>
           v != null ? v as int : null)(json['unused_expires_at']);
   Map<String, Object?> toJson() {
