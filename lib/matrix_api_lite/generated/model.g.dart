@@ -725,6 +725,8 @@ extension EventFormatEnhancedEnum on EventFormat {
 
 extension AccountManagementActionsSupportedExtension
     on List<AccountManagementActionsSupported> {
-  AccountManagementActionsSupported? fromString(String val) =>
-      firstWhere((supported) => val == supported.name);
+  AccountManagementActionsSupported? fromString(String val) => firstWhere(
+    (supported) => val == supported.name,
+    orElse: () => AccountManagementActionsSupported.orgMatrixProfile,
+  );
 }
