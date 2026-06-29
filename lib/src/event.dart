@@ -525,8 +525,16 @@ class Event extends MatrixEvent {
   bool get canRedact => senderId == room.client.userID || room.canRedact;
 
   /// Redacts this event. Throws `ErrorResponse` on error.
-  Future<String?> redactEvent({String? reason, String? txid}) async =>
-      await room.redactEvent(eventId, reason: reason, txid: txid);
+  Future<String?> redactEvent({
+    String? reason,
+    String? txid,
+    bool redactAllEdits = false,
+  }) async => await room.redactEvent(
+    eventId,
+    reason: reason,
+    txid: txid,
+    redactAllEdits: redactAllEdits,
+  );
 
   /// Searches for the reply event in the given timeline. Also returns the
   /// event fallback if the relationship type is `m.thread`.
