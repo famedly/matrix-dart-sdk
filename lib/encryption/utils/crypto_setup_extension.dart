@@ -102,11 +102,6 @@ extension CryptoSetupExtension on Client {
                 keyOrPassphrase: keyOrPassphrase,
               );
               await bootstrap.openExistingSsss();
-              if (selfSign) {
-                await bootstrap.client.encryption!.crossSigning.selfSign(
-                  openSsss: bootstrap.newSsssKey,
-                );
-              }
               break;
             case BootstrapState.askWipeCrossSigning:
               await bootstrap.wipeCrossSigning(false);
@@ -137,6 +132,10 @@ extension CryptoSetupExtension on Client {
     );
 
     await completer.future;
+
+    if (selfSign) {
+      await encryption.crossSigning.selfSign(keyOrPassphrase: keyOrPassphrase);
+    }
   }
 
   /// Bootsraps a new crypto identity for the client. Creates secret storage
