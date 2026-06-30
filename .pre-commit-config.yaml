@@ -1,0 +1,58 @@
+repos:
+- hooks:
+  - always_run: true
+    description: Fetch Dart dependencies before formatting
+    entry: dart pub get --no-example
+    id: dart-pub-get
+    language: system
+    name: dart pub get
+    pass_filenames: false
+  - description: Format Dart source code
+    entry: dart format .
+    files: \.dart$
+    id: dart-format
+    language: system
+    name: dart format
+    pass_filenames: false
+    types:
+    - file
+  repo: local
+- hooks:
+  - id: check-added-large-files
+  - id: check-case-conflict
+  - id: check-illegal-windows-names
+  - id: end-of-file-fixer
+  - id: fix-byte-order-marker
+  - id: check-json
+  - id: check-json5
+  - id: check-toml
+  - id: check-vcs-permalinks
+  - id: check-xml
+  - args:
+    - --fix=lf
+    id: mixed-line-ending
+  - id: check-symlinks
+  - id: destroyed-symlinks
+  - id: check-merge-conflict
+  - id: detect-private-key
+  - id: check-shebang-scripts-are-executable
+  - id: check-executables-have-shebangs
+  repo: builtin
+- hooks:
+  - args:
+    - --write-changes
+    - --force-exclude
+    description: Check the repository for spelling mistakes
+    entry: typos
+    id: typos
+    language: system
+    name: typos
+    types:
+    - text
+  - description: Ensure that files set up with the filegen module are up-to-date
+    entry: filegen-apply-script
+    id: filegen
+    language: system
+    name: filegen
+    pass_filenames: false
+  repo: local

@@ -1,0 +1,42 @@
+{
+  "clobber-by-default": true,
+  "files": [
+    {
+      "clobber": null,
+      "deactivate": null,
+      "ignore-modification": null,
+      "permissions": "600",
+      "source": "/nix/store/44m318ksk2d7vypcnn6r55ns3px0dsgb-pre-commit-config.yaml",
+      "target": "./.pre-commit-config.yaml",
+      "type": "copy"
+    },
+    {
+      "clobber": null,
+      "deactivate": null,
+      "ignore-modification": null,
+      "permissions": "600",
+      "source": "/nix/store/yx5j011plqdnna0xzh0jk7y738pa611l-check-pre-commit-hooks.yml",
+      "target": "./.github/workflows/check-pre-commit-hooks.yml",
+      "type": "copy"
+    },
+    {
+      "clobber": null,
+      "deactivate": null,
+      "ignore-modification": null,
+      "permissions": "600",
+      "source": "/nix/store/bi9v0kxa8xmpzyd1bm7dwn7lsw6x32d2-dart-ci.yml",
+      "target": "./.github/workflows/dart-ci.yml",
+      "type": "copy"
+    },
+    {
+      "clobber": null,
+      "deactivate": null,
+      "ignore-modification": null,
+      "permissions": "600",
+      "source": "/nix/store/zaps2hdyhy8dxqqbrrx95xajsxj8kx6m-gitattributes",
+      "target": ".gitattributes",
+      "type": "copy"
+    }
+  ],
+  "version": 3
+}
