@@ -3438,13 +3438,15 @@ class Client extends MatrixApi {
                     );
                     continue;
                   }
-                  await database.addSeenDeviceId(
-                    userId,
-                    deviceId,
-                    curve25519Key + ed25519Key,
-                  );
-                  await database.addSeenPublicKey(ed25519Key, deviceId);
-                  await database.addSeenPublicKey(curve25519Key, deviceId);
+                  dbActions.add(() async {
+                    await database.addSeenDeviceId(
+                      userId,
+                      deviceId,
+                      curve25519Key + ed25519Key,
+                    );
+                    await database.addSeenPublicKey(ed25519Key, deviceId);
+                    await database.addSeenPublicKey(curve25519Key, deviceId);
+                  });
                 }
 
                 // is this a new key or the same one as an old one?
@@ -3591,11 +3593,17 @@ class Client extends MatrixApi {
 
       if (dbActions.isNotEmpty) {
         if (!isLogged()) return;
-        await database.transaction(() async {
-          for (final f in dbActions) {
-            await f();
-          }
-        });
+        Logs().i(
+          'Updating user device keys in database... (${dbActions.length} operations)',
+        );
+        await runBenchmarked(
+          'Updating user device keys in database...',
+          () => database.transaction(() async {
+            for (final f in dbActions) {
+              await f();
+            }
+          }),
+        );
       }
     } catch (e, s) {
       Logs().e('[Vodozemac] Unable to update user device keys', e, s);
