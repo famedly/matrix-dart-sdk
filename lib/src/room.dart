@@ -2458,6 +2458,7 @@ class Room {
     String eventId, {
     String? reason,
     String? txid,
+    bool redactAllEdits = false,
   }) async {
     // Create new transaction id
     String messageID;
@@ -2469,6 +2470,26 @@ class Room {
     }
     final data = <String, dynamic>{};
     if (reason != null) data['reason'] = reason;
+
+    if (redactAllEdits) {
+      final edits = await client.getRelatingEventsWithRelType(
+        id,
+        eventId,
+        RelationshipTypes.edit,
+      );
+      for (final edit in edits.chunk) {
+        final txnid = client.generateUniqueTransactionId();
+        try {
+          await client.redactEvent(id, edit.eventId, txnid, reason: reason);
+        } on MatrixException catch (e) {
+          final retryAfterMs = e.retryAfterMs;
+          if (retryAfterMs == null) rethrow;
+          await Future.delayed(Duration(milliseconds: retryAfterMs));
+          await client.redactEvent(id, edit.eventId, txnid, reason: reason);
+        }
+      }
+    }
+
     return await client.redactEvent(id, eventId, messageID, reason: reason);
   }
 
