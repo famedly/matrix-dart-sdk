@@ -6,6 +6,7 @@ path = [
     ".github/workflows/versions.env",
     ".gitignore",
     ".metadata",
+    "example/.metadata",
     "test_driver/synapse/data/.gitignore",
     "test_driver/synapse/data/localhost.log.config",
     "web_test/.gitignore"

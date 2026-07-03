@@ -9,13 +9,12 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
-import 'package:mime/mime.dart';
-
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
 import 'package:matrix/src/utils/html_to_text.dart';
 import 'package:matrix/src/utils/markdown.dart';
 import 'package:matrix/src/utils/multipart_request_progress.dart';
+import 'package:mime/mime.dart';
 
 abstract class RelationshipTypes {
   static const String edit = 'm.replace';
@@ -27,10 +26,8 @@ abstract class RelationshipTypes {
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event extends MatrixEvent {
   /// Requests the user object of the sender of this event.
-  Future<User?> fetchSenderUser() => room.requestUser(
-        senderId,
-        ignoreErrors: true,
-      );
+  Future<User?> fetchSenderUser() =>
+      room.requestUser(senderId, ignoreErrors: true);
 
   @Deprecated(
     'Use eventSender instead or senderFromMemoryOrFallback for a synchronous alternative',
@@ -82,12 +79,12 @@ class Event extends MatrixEvent {
     super.redacts,
     required this.room,
     MatrixEvent? originalSource,
-  })  : _originalSource = originalSource,
-        super(
-          eventId: eventId,
-          originServerTs: originServerTs,
-          roomId: room.id,
-        ) {
+  }) : _originalSource = originalSource,
+       super(
+         eventId: eventId,
+         originServerTs: originServerTs,
+         roomId: room.id,
+       ) {
     this.eventId = eventId;
     this.unsigned = unsigned;
     // synapse unfortunately isn't following the spec and tosses the prev_content
@@ -98,10 +95,10 @@ class Event extends MatrixEvent {
       this.prevContent = (prevContent != null && prevContent.isNotEmpty)
           ? prevContent
           : (unsigned != null &&
-                  unsigned.containsKey('prev_content') &&
-                  unsigned['prev_content'] is Map)
-              ? unsigned['prev_content']
-              : null;
+                unsigned.containsKey('prev_content') &&
+                unsigned['prev_content'] is Map)
+          ? unsigned['prev_content']
+          : null;
     } catch (_) {
       // A strange bug in dart web makes this crash
     }
@@ -112,21 +109,22 @@ class Event extends MatrixEvent {
     // database!
     if (status.isSending) {
       // Age of this event in milliseconds
-      final age = DateTime.now().millisecondsSinceEpoch -
+      final age =
+          DateTime.now().millisecondsSinceEpoch -
           originServerTs.millisecondsSinceEpoch;
 
       final room = this.room;
 
       if (
-          // We don't want to mark the event as failed if it's the lastEvent in the room
-          // since that would be a race condition (with the same event from timeline)
-          // The `room.lastEvent` is null at the time this constructor is called for it,
-          // there's no other way to check this.
-          room.lastEvent?.eventId != null &&
-              // If the event is in the sending queue, then we don't mess with it.
-              !room.sendingQueueEventsByTxId.contains(transactionId) &&
-              // Else, if the event is older than the timeout, then we mark it as failed.
-              age > room.client.sendTimelineEventTimeout.inMilliseconds) {
+      // We don't want to mark the event as failed if it's the lastEvent in the room
+      // since that would be a race condition (with the same event from timeline)
+      // The `room.lastEvent` is null at the time this constructor is called for it,
+      // there's no other way to check this.
+      room.lastEvent?.eventId != null &&
+          // If the event is in the sending queue, then we don't mess with it.
+          !room.sendingQueueEventsByTxId.contains(transactionId) &&
+          // Else, if the event is older than the timeout, then we mark it as failed.
+          age > room.client.sendTimelineEventTimeout.inMilliseconds) {
         // Update this event in database and open timelines
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};
@@ -166,38 +164,35 @@ class Event extends MatrixEvent {
     MatrixEvent matrixEvent,
     Room room, {
     EventStatus? status,
-  }) =>
-      matrixEvent is Event
-          ? matrixEvent
-          : Event(
-              status: status ??
-                  eventStatusFromInt(
-                    matrixEvent.unsigned
-                            ?.tryGet<int>(messageSendingStatusKey) ??
-                        defaultStatus.intValue,
-                  ),
-              content: matrixEvent.content,
-              type: matrixEvent.type,
-              eventId: matrixEvent.eventId,
-              senderId: matrixEvent.senderId,
-              originServerTs: matrixEvent.originServerTs,
-              unsigned: matrixEvent.unsigned,
-              prevContent: matrixEvent.prevContent,
-              stateKey: matrixEvent.stateKey,
-              redacts: matrixEvent.redacts,
-              room: room,
-            );
+  }) => matrixEvent is Event
+      ? matrixEvent
+      : Event(
+          status:
+              status ??
+              eventStatusFromInt(
+                matrixEvent.unsigned?.tryGet<int>(messageSendingStatusKey) ??
+                    defaultStatus.intValue,
+              ),
+          content: matrixEvent.content,
+          type: matrixEvent.type,
+          eventId: matrixEvent.eventId,
+          senderId: matrixEvent.senderId,
+          originServerTs: matrixEvent.originServerTs,
+          unsigned: matrixEvent.unsigned,
+          prevContent: matrixEvent.prevContent,
+          stateKey: matrixEvent.stateKey,
+          redacts: matrixEvent.redacts,
+          room: room,
+        );
 
   /// Get a State event from a table row or from the event stream.
-  factory Event.fromJson(
-    Map<String, dynamic> jsonPayload,
-    Room room,
-  ) {
+  factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room) {
     final content = Event.getMapFromPayload(jsonPayload['content']);
     final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
     final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
-    final originalSource =
-        Event.getMapFromPayload(jsonPayload['original_source']);
+    final originalSource = Event.getMapFromPayload(
+      jsonPayload['original_source'],
+    );
     return Event(
       status: eventStatusFromInt(
         jsonPayload['status'] ??
@@ -216,8 +211,9 @@ class Event extends MatrixEvent {
       unsigned: unsigned,
       room: room,
       redacts: jsonPayload['redacts'],
-      originalSource:
-          originalSource.isEmpty ? null : MatrixEvent.fromJson(originalSource),
+      originalSource: originalSource.isEmpty
+          ? null
+          : MatrixEvent.fromJson(originalSource),
     );
   }
 
@@ -248,24 +244,22 @@ class Event extends MatrixEvent {
   }
 
   User get asUser => User.fromState(
-        // state key should always be set for member events
-        stateKey: stateKey!,
-        prevContent: prevContent,
-        content: content,
-        typeKey: type,
-        senderId: senderId,
-        room: room,
-        originServerTs: originServerTs,
-      );
+    // state key should always be set for member events
+    stateKey: stateKey!,
+    prevContent: prevContent,
+    content: content,
+    typeKey: type,
+    senderId: senderId,
+    room: room,
+    originServerTs: originServerTs,
+  );
 
   String get messageType => type == EventTypes.Sticker
       ? MessageTypes.Sticker
       : (content.tryGet<String>('msgtype') ?? MessageTypes.Text);
 
   void setRedactionEvent(Event redactedBecause) {
-    unsigned = {
-      'redacted_because': redactedBecause.toJson(),
-    };
+    unsigned = {'redacted_because': redactedBecause.toJson()};
     prevContent = null;
     _originalSource = null;
     final contentKeyWhiteList = <String>[];
@@ -317,12 +311,12 @@ class Event extends MatrixEvent {
   /// Use this to get a plain-text representation of the event, stripping things
   /// like spoilers and thelike. Useful for plain text notifications.
   String get plaintextBody => switch (formattedText) {
-        // if the formattedText is empty, fallback to body
-        '' => body,
-        final String s when content['format'] == 'org.matrix.custom.html' =>
-          HtmlToText.convert(s),
-        _ => body,
-      };
+    // if the formattedText is empty, fallback to body
+    '' => body,
+    final String s when content['format'] == 'org.matrix.custom.html' =>
+      HtmlToText.convert(s),
+    _ => body,
+  };
 
   /// Returns a list of [Receipt] instances for this event.
   List<Receipt> get receipts {
@@ -339,7 +333,8 @@ class Event extends MatrixEvent {
         .toList();
 
     // add your own only once
-    final own = receipts.global.latestOwnReceipt ??
+    final own =
+        receipts.global.latestOwnReceipt ??
         receipts.mainThread?.latestOwnReceipt;
     if (own != null && own.eventId == eventId) {
       receiptsList.add(
@@ -357,8 +352,9 @@ class Event extends MatrixEvent {
               .where(
                 (entry) =>
                     entry.value.eventId == eventId &&
-                    receiptsList
-                        .every((element) => element.user.id != entry.key),
+                    receiptsList.every(
+                      (element) => element.user.id != entry.key,
+                    ),
               )
               .map(
                 (entry) => Receipt(
@@ -412,9 +408,7 @@ class Event extends MatrixEvent {
           rooms: RoomsUpdate(
             join: {
               room.id: JoinedRoomUpdate(
-                timeline: TimelineUpdate(
-                  events: [redactedBecause],
-                ),
+                timeline: TimelineUpdate(events: [redactedBecause]),
               ),
             },
           ),
@@ -431,11 +425,7 @@ class Event extends MatrixEvent {
 
     if (getThumbnail) {
       final thumbnailBytes = await room.client.database.getFile(
-        Uri(
-          scheme: 'cache',
-          host: 'thumbnail',
-          path: transactionId,
-        ),
+        Uri(scheme: 'cache', host: 'thumbnail', path: transactionId),
       );
       if (thumbnailBytes != null) {
         return MatrixImageFile(
@@ -446,14 +436,14 @@ class Event extends MatrixEvent {
           height: thumbnailInfoMap.tryGet<int>('h'),
         );
       }
+
+      // If a thumbnail does not exist, we should return null.
+      // Otherwise it sends the original file as a thumbnail back.
+      return null;
     }
 
     final fileBytes = await room.client.database.getFile(
-      Uri(
-        scheme: 'cache',
-        host: 'file',
-        path: transactionId,
-      ),
+      Uri(scheme: 'cache', host: 'file', path: transactionId),
     );
     if (fileBytes == null) {
       await cancelSend();
@@ -461,32 +451,32 @@ class Event extends MatrixEvent {
     }
     return switch (messageType) {
       MessageTypes.Video => MatrixVideoFile(
-          bytes: fileBytes,
-          name: filename,
-          mimeType: attachmentMimetype,
-          duration: infoMap.tryGet<int>('duration'),
-          width: infoMap.tryGet<int>('w'),
-          height: infoMap.tryGet<int>('h'),
-        ),
+        bytes: fileBytes,
+        name: filename,
+        mimeType: attachmentMimetype,
+        duration: infoMap.tryGet<int>('duration'),
+        width: infoMap.tryGet<int>('w'),
+        height: infoMap.tryGet<int>('h'),
+      ),
       MessageTypes.Audio => MatrixAudioFile(
-          bytes: fileBytes,
-          name: filename,
-          mimeType: attachmentMimetype,
-          duration: infoMap.tryGet<int>('duration'),
-        ),
+        bytes: fileBytes,
+        name: filename,
+        mimeType: attachmentMimetype,
+        duration: infoMap.tryGet<int>('duration'),
+      ),
       MessageTypes.Image => MatrixImageFile(
-          bytes: fileBytes,
-          name: filename,
-          mimeType: attachmentMimetype,
-          width: infoMap.tryGet<int>('w'),
-          height: infoMap.tryGet<int>('h'),
-          blurhash: infoMap.tryGet<String>('xyz.amorgan.blurhash'),
-        ),
+        bytes: fileBytes,
+        name: filename,
+        mimeType: attachmentMimetype,
+        width: infoMap.tryGet<int>('w'),
+        height: infoMap.tryGet<int>('h'),
+        blurhash: infoMap.tryGet<String>('xyz.amorgan.blurhash'),
+      ),
       MessageTypes.File || _ => MatrixFile(
-          bytes: fileBytes,
-          name: filename,
-          mimeType: attachmentMimetype,
-        ),
+        bytes: fileBytes,
+        name: filename,
+        mimeType: attachmentMimetype,
+      ),
     };
   }
 
@@ -515,7 +505,7 @@ class Event extends MatrixEvent {
       return await room.sendFileEvent(
         file,
         txid: txid ?? transactionId,
-        thumbnail: thumbnail as MatrixImageFile,
+        thumbnail: thumbnail as MatrixImageFile?,
         inReplyTo: inReplyTo,
         editEventId: credentials.editEventId,
         shrinkImageMaxDimension: credentials.shrinkImageMaxDimension,
@@ -621,13 +611,13 @@ class Event extends MatrixEvent {
 
   /// Gets the underlying mxc url of a thumbnail of a file event, or null if not present
   Uri? get thumbnailMxcUrl => Uri.tryParse(
-        isThumbnailEncrypted
-            ? (infoMap
-                    .tryGetMap<String, Object?>('thumbnail_file')
-                    ?.tryGet<String>('url') ??
-                '')
-            : (infoMap.tryGet<String>('thumbnail_url') ?? ''),
-      );
+    isThumbnailEncrypted
+        ? (infoMap
+                  .tryGetMap<String, Object?>('thumbnail_file')
+                  ?.tryGet<String>('url') ??
+              '')
+        : (infoMap.tryGet<String>('thumbnail_url') ?? ''),
+  );
 
   /// Gets the mxc url of an attachment/thumbnail of a file event, taking sizes into account, or null if not present
   Uri? attachmentOrThumbnailMxcUrl({bool getThumbnail = false}) {
@@ -669,6 +659,7 @@ class Event extends MatrixEvent {
     ThumbnailMethod method = ThumbnailMethod.scale,
     int minNoThumbSize = _minNoThumbSize,
     bool animated = false,
+    bool skipScanner = false,
   }) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
         !hasAttachment ||
@@ -700,9 +691,12 @@ class Event extends MatrixEvent {
         height: height,
         method: method,
         animated: animated,
+        skipScanner: skipScanner,
       );
     } else {
-      return await Uri.parse(thisMxcUrl).getDownloadUri(room.client);
+      return await Uri.parse(
+        thisMxcUrl,
+      ).getDownloadUri(room.client, skipScanner: skipScanner);
     }
   }
 
@@ -807,6 +801,7 @@ class Event extends MatrixEvent {
     bool getThumbnail = false,
     Future<Uint8List> Function(Uri)? downloadCallback,
     bool fromLocalStoreOnly = false,
+    bool skipScanner = false,
 
     /// Callback which gets triggered on progress containing the amount of
     /// downloaded bytes.
@@ -825,8 +820,9 @@ class Event extends MatrixEvent {
       throw "This event hasn't any attachment or thumbnail.";
     }
     getThumbnail = mxcUrl != attachmentMxcUrl;
-    final isEncrypted =
-        getThumbnail ? isThumbnailEncrypted : isAttachmentEncrypted;
+    final isEncrypted = getThumbnail
+        ? isThumbnailEncrypted
+        : isAttachmentEncrypted;
     if (isEncrypted && !room.client.encryptionEnabled) {
       throw ('Encryption is not enabled in your Client.');
     }
@@ -842,7 +838,7 @@ class Event extends MatrixEvent {
     }
 
     // Download the file
-    final scanner = room.client.contentScannerConfig;
+    final scanner = skipScanner ? null : room.client.contentScannerConfig;
     final useScannerForEncrypted = scanner != null && isEncrypted;
     final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
     if (canDownloadFileFromServer) {
@@ -857,7 +853,10 @@ class Event extends MatrixEvent {
           fileMap: fileMap,
         );
       } else {
-        final downloadUri = await mxcUrl.getDownloadUri(room.client);
+        final downloadUri = await mxcUrl.getDownloadUri(
+          room.client,
+          skipScanner: skipScanner,
+        );
         if (downloadCallback != null) {
           uint8list = await downloadCallback(downloadUri);
         } else {
@@ -901,8 +900,9 @@ class Event extends MatrixEvent {
             .tryGetMap<String, Object?>('hashes')!
             .tryGet<String>('sha256')!,
       );
-      uint8list =
-          await room.client.nativeImplementations.decryptFile(encryptedFile);
+      uint8list = await room.client.nativeImplementations.decryptFile(
+        encryptedFile,
+      );
       if (uint8list == null) {
         throw ('Unable to decrypt file');
       }
@@ -953,15 +953,10 @@ class Event extends MatrixEvent {
     final response = await room.client.httpClient.send(request);
     if (scanner != null &&
         (response.statusCode < 200 || response.statusCode >= 300)) {
-      throw parseContentScannerError(
-        await http.Response.fromStream(response),
-      );
+      throw parseContentScannerError(await http.Response.fromStream(response));
     }
     if (scanner == null && response.statusCode >= 400) {
-      room.client.unexpectedResponse(
-        response,
-        await response.stream.toBytes(),
-      );
+      room.client.unexpectedResponse(response, await response.stream.toBytes());
     }
 
     return response.stream.toBytesWithProgress(onDownloadProgress);
@@ -1017,15 +1012,14 @@ class Event extends MatrixEvent {
     bool hideEdit = false,
     bool plaintextBody = false,
     bool removeMarkdown = false,
-  }) =>
-      calcLocalizedBodyFallback(
-        i18n,
-        withSenderNamePrefix: withSenderNamePrefix,
-        hideReply: hideReply,
-        hideEdit: hideEdit,
-        plaintextBody: plaintextBody,
-        removeMarkdown: removeMarkdown,
-      );
+  }) => calcLocalizedBodyFallback(
+    i18n,
+    withSenderNamePrefix: withSenderNamePrefix,
+    hideReply: hideReply,
+    hideEdit: hideEdit,
+    plaintextBody: plaintextBody,
+    removeMarkdown: removeMarkdown,
+  );
 
   /// Works similar to `calcLocalizedBody()` but does not wait for the sender
   /// user to be fetched. If it is not in the cache it will just use the
@@ -1087,7 +1081,8 @@ class Event extends MatrixEvent {
     var body = plaintextBody ? this.plaintextBody : this.body;
 
     // Html messages will already have their reply fallback removed during the Html to Text conversion.
-    var mayHaveReplyFallback = !plaintextBody ||
+    var mayHaveReplyFallback =
+        !plaintextBody ||
         (content['format'] != 'org.matrix.custom.html' ||
             formattedText.isEmpty);
 
@@ -1096,8 +1091,10 @@ class Event extends MatrixEvent {
     if (hideEdit &&
         relationshipType == RelationshipTypes.edit &&
         newContent != null) {
-      final newBody =
-          newContent.tryGet<String>('formatted_body', TryGet.silent);
+      final newBody = newContent.tryGet<String>(
+        'formatted_body',
+        TryGet.silent,
+      );
       if (plaintextBody &&
           newContent['format'] == 'org.matrix.custom.html' &&
           newBody != null &&
@@ -1198,7 +1195,8 @@ class Event extends MatrixEvent {
       // aggregated edits
       if (allEditEvents.isNotEmpty) {
         allEditEvents.sort(
-          (a, b) => a.originServerTs.millisecondsSinceEpoch -
+          (a, b) =>
+              a.originServerTs.millisecondsSinceEpoch -
                       b.originServerTs.millisecondsSinceEpoch >
                   0
               ? 1
@@ -1329,10 +1327,6 @@ class Event extends MatrixEvent {
   }
 }
 
-enum FileSendingStatus {
-  generatingThumbnail,
-  encrypting,
-  uploading,
-}
+enum FileSendingStatus { generatingThumbnail, encrypting, uploading }
 
 class FileNoLongerInCacheException implements Exception {}

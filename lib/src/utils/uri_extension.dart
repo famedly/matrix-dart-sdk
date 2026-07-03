@@ -15,10 +15,10 @@ extension MxcUriExtension on Uri {
   ///
   /// Scanner and authenticated media URLs may need an authorization header:
   /// `headers: {"authorization": "Bearer ${client.accessToken}"}`
-  Future<Uri> getDownloadUri(Client client) async {
+  Future<Uri> getDownloadUri(Client client, {bool skipScanner = false}) async {
     if (!isScheme('mxc')) return Uri();
 
-    final scanner = client.contentScannerConfig;
+    final scanner = skipScanner ? null : client.contentScannerConfig;
     if (scanner != null) {
       return _appendMxcTo(scanner.downloadUri);
     }
@@ -41,8 +41,9 @@ extension MxcUriExtension on Uri {
 
   Uri _appendMxcTo(Uri base) {
     final reference = '$host${hasPort ? ':$port' : ''}$path';
-    final trimmed =
-        reference.startsWith('/') ? reference.substring(1) : reference;
+    final trimmed = reference.startsWith('/')
+        ? reference.substring(1)
+        : reference;
     final basePath = base.path.endsWith('/') ? base.path : '${base.path}/';
     return base.replace(path: '$basePath$trimmed');
   }
@@ -65,6 +66,7 @@ extension MxcUriExtension on Uri {
     num? height,
     ThumbnailMethod? method = ThumbnailMethod.crop,
     bool? animated = false,
+    bool skipScanner = false,
   }) async {
     if (!isScheme('mxc')) return Uri();
 
@@ -75,10 +77,11 @@ extension MxcUriExtension on Uri {
       if (animated != null) 'animated': animated.toString(),
     };
 
-    final scanner = client.contentScannerConfig;
+    final scanner = skipScanner ? null : client.contentScannerConfig;
     if (scanner != null) {
-      return _appendMxcTo(scanner.downloadThumbnailUri)
-          .replace(queryParameters: queryParameters);
+      return _appendMxcTo(
+        scanner.downloadThumbnailUri,
+      ).replace(queryParameters: queryParameters);
     }
 
     final homeserver = client.homeserver;
@@ -109,11 +112,11 @@ extension MxcUriExtension on Uri {
   )
   Uri getDownloadLink(Client matrix) => isScheme('mxc')
       ? matrix.homeserver != null
-          ? matrix.homeserver?.resolve(
-                '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path',
-              ) ??
-              Uri()
-          : Uri()
+            ? matrix.homeserver?.resolve(
+                    '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path',
+                  ) ??
+                  Uri()
+            : Uri()
       : Uri();
 
   /// Returns a scaled thumbnail link to this content with the given `width` and

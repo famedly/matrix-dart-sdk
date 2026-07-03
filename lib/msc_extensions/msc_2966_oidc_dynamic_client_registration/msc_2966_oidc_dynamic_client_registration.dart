@@ -55,7 +55,7 @@ extension Msc2966OidcDynamicClientRegistration on Client {
         break;
     }
     final body = <String, Object?>{
-      if (additionalProperties != null) ...additionalProperties,
+      ...?additionalProperties,
       'redirect_uris': redirectUris.map((uri) => uri.toString()).toList(),
       'token_endpoint_auth_method': tokenEndpointAuthMethod,
       'response_types': responseTypes,
@@ -73,10 +73,7 @@ extension Msc2966OidcDynamicClientRegistration on Client {
       headers: {'content-type': 'application/json'},
     );
     if (response.statusCode != 201) {
-      unexpectedResponse(
-        response,
-        response.bodyBytes,
-      );
+      unexpectedResponse(response, response.bodyBytes);
     }
     final responseString = utf8.decode(response.bodyBytes);
     final json = jsonDecode(responseString);
@@ -100,15 +97,15 @@ class OidcClientData {
   });
 
   factory OidcClientData.fromJson(Map<String, Object?> json) => OidcClientData(
-        clientId: json['client_id'] as String,
-        clientIdIssuedAt: json['client_id_issued_at'] is int
-            ? DateTime.fromMillisecondsSinceEpoch(
-                json['client_id_issued_at'] as int,
-              )
-            : null,
-        clientInformation: OidcClientInformation.fromJson(json),
-        additionalProperties: json,
-      );
+    clientId: json['client_id'] as String,
+    clientIdIssuedAt: json['client_id_issued_at'] is int
+        ? DateTime.fromMillisecondsSinceEpoch(
+            json['client_id_issued_at'] as int,
+          )
+        : null,
+    clientInformation: OidcClientInformation.fromJson(json),
+    additionalProperties: json,
+  );
 
   Map<String, Object?> toJson() => additionalProperties;
 }
@@ -163,7 +160,7 @@ class OidcClientInformation {
     final policyUri = this.policyUri;
     final localeSuffix = locale == null ? '' : '#$locale';
     return {
-      if (clientName != null) 'client_name$localeSuffix': clientName,
+      'client_name$localeSuffix': ?clientName,
       'client_uri$localeSuffix': clientUri.toString(),
       if (logoUri != null) 'logo_uri$localeSuffix': logoUri.toString(),
       if (tosUri != null) 'tos_uri$localeSuffix': tosUri.toString(),

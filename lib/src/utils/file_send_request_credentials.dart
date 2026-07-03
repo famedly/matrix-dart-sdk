@@ -24,10 +24,10 @@ class FileSendRequestCredentials {
       );
 
   Map<String, dynamic> toJson() => {
-        if (inReplyTo != null) 'in_reply_to': inReplyTo,
-        if (editEventId != null) 'edit_event_id': editEventId,
-        if (shrinkImageMaxDimension != null)
-          'shrink_image_max_dimension': shrinkImageMaxDimension,
-        if (extraContent != null) 'extra_content': extraContent,
-      };
+    if (inReplyTo != null) 'in_reply_to': inReplyTo,
+    if (editEventId != null) 'edit_event_id': editEventId,
+    if (shrinkImageMaxDimension != null)
+      'shrink_image_max_dimension': shrinkImageMaxDimension,
+    if (extraContent != null) 'extra_content': extraContent,
+  };
 }

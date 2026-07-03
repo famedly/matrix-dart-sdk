@@ -4,7 +4,40 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [7.5.0] 2nd July 2026
+- build: (BREAKING) update to matrix spec 1.18 (Christian Kußowski)
+- build: (deps): bump actions/checkout from 6 to 7 (dependabot[bot])
+- build: update dart to 3.11 and enable null aware elements in lists (Christian Kußowski)
+- build: update to matrix spec 1.17 (Christian Kußowski)
+- ci: enable sort_pub_dependencies lint (Cursor Agent)
+- fix: database operation not in transaction (Christian Kußowski)
+- fix: load keys for decryption separately for [Room].searchEvents (Karthikeyan S)
+- fix: selfSign() with passphrase fails sometimes when using existing ssss instead of just the passphrase (Christian Kußowski)
+- fix: type error in model (Christian Kußowski)
+- refactor: use new formatting for code generated files (Christian Kußowski)
+
+## [7.4.0] 23rd June 2026
+- feat: add skipScanner flag to download methods for per-call content scanner bypass (Khalil Amor)
+
+## [7.3.0] 18th June 2026
+- feat: add isValidMatrixIdStrict for spec-compliant matrix id validation (Cursor Agent)
+- fix: return null when thumbnail was not found and make cast nullable (yurtemre7)
+
+## [7.2.4] 16th June 2026
+- chore: Follow up actually store updated tofu state in db (Christian Kußowski)
+- fix: Allow image resizer to return new mime type (Christian Kußowski)
+
+## [7.2.3] 11th June 2026
+- feat: Flag cross signing keys as tofu (Christian Kußowski)
+- chore: Increase timeout for create key (Christian Kußowski)
+- fix: Do not request keys when already logged out (Christian Kußowski)
+
+## [7.2.2] 29th May 2026
+
+- fix: fail tests if they fail (#2348) (td)
+
 ## [7.2.1] 28th May 2026
+
 - feat: update ssss to centralise key logic (Abrish Sabri)
 - fix: Account data not existing throws exception while function expects empty json object (Christian Kußowski)
 - fix: encryption loop iteration (Abrish Sabri)
@@ -15,6 +48,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - feat: add matrix content scanner support (Khalil)
 - fix: Actually throw error on failed download (Christian Kußowski)
 - fix: Workaround that synapse's initial sync account data may not be up to date (Christian Kußowski)
+
+## [7.1.2] 12th May 2026
+- fix: do not send notify rtc event in direct chats (td)
 
 ## [7.1.1] 12th May 2026
 

@@ -3,9 +3,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:canonical_json/canonical_json.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/matrix.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 extension JsonSignatureCheckExtension on Map<String, dynamic> {
   /// Checks the signature of a signed json object.

@@ -29,26 +29,27 @@ class MatrixContentScannerConfig {
     required this.downloadEncryptedUri,
     this.withAuthHeader = true,
     this.scanBeforePreview = false,
-  })  : downloadUri = _ensureTrailingSlash(downloadUri),
-        downloadThumbnailUri = _ensureTrailingSlash(downloadThumbnailUri);
+  }) : downloadUri = _ensureTrailingSlash(downloadUri),
+       downloadThumbnailUri = _ensureTrailingSlash(downloadThumbnailUri);
 
   factory MatrixContentScannerConfig.fromJson(Map<String, Object?> json) =>
       MatrixContentScannerConfig(
         downloadUri: Uri.parse(json['download_uri']! as String),
-        downloadThumbnailUri:
-            Uri.parse(json['download_thumbnail_uri']! as String),
+        downloadThumbnailUri: Uri.parse(
+          json['download_thumbnail_uri']! as String,
+        ),
         downloadEncryptedUri: Uri.parse(json['download_encrypted']! as String),
         withAuthHeader: (json['with_auth_header'] as bool?) ?? true,
         scanBeforePreview: (json['scan_before_preview'] as bool?) ?? false,
       );
 
   Map<String, Object?> toJson() => {
-        'download_uri': downloadUri.toString(),
-        'download_thumbnail_uri': downloadThumbnailUri.toString(),
-        'download_encrypted': downloadEncryptedUri.toString(),
-        'with_auth_header': withAuthHeader,
-        'scan_before_preview': scanBeforePreview,
-      };
+    'download_uri': downloadUri.toString(),
+    'download_thumbnail_uri': downloadThumbnailUri.toString(),
+    'download_encrypted': downloadEncryptedUri.toString(),
+    'with_auth_header': withAuthHeader,
+    'scan_before_preview': scanBeforePreview,
+  };
 
   static Uri _ensureTrailingSlash(Uri uri) {
     if (uri.path.endsWith('/')) return uri;
@@ -72,6 +73,13 @@ class ContentScannerException implements Exception {
     required this.info,
     required this.statusCode,
   });
+
+  static const reasonNotClean = 'MCS_MEDIA_NOT_CLEAN';
+  static const reasonMimeTypeForbidden = 'MCS_MIME_TYPE_FORBIDDEN';
+  static const reasonBadDecryption = 'MCS_BAD_DECRYPTION';
+  static const reasonFailedToDecrypt = 'MCS_MEDIA_FAILED_TO_DECRYPT';
+  static const reasonRequestFailed = 'MCS_MEDIA_REQUEST_FAILED';
+  static const reasonUnknown = 'M_UNKNOWN';
 
   @override
   String toString() => 'ContentScannerException($statusCode $reason): $info';

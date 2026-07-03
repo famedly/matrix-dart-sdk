@@ -35,8 +35,8 @@ class ToDeviceEventDecryptionError extends ToDeviceEvent {
     required this.exception,
     this.stackTrace,
   }) : super(
-          sender: toDeviceEvent.senderId,
-          content: toDeviceEvent.content,
-          type: toDeviceEvent.type,
-        );
+         sender: toDeviceEvent.senderId,
+         content: toDeviceEvent.content,
+         type: toDeviceEvent.type,
+       );
 }

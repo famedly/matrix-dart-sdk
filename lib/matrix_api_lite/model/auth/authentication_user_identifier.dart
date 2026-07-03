@@ -9,11 +9,11 @@ class AuthenticationUserIdentifier extends AuthenticationIdentifier {
   String user;
 
   AuthenticationUserIdentifier({required this.user})
-      : super(type: AuthenticationIdentifierTypes.userId);
+    : super(type: AuthenticationIdentifierTypes.userId);
 
   AuthenticationUserIdentifier.fromJson(super.json)
-      : user = json['user'] as String,
-        super.fromJson();
+    : user = json['user'] as String,
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

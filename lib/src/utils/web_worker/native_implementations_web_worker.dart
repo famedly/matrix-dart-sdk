@@ -8,9 +8,8 @@ import 'dart:js_interop';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:web/web.dart';
-
 import 'package:matrix/matrix.dart';
+import 'package:web/web.dart';
 
 // ignore: unused-code
 class NativeImplementationsWebWorker extends NativeImplementations {
@@ -99,9 +98,9 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     try {
       final result =
           await operation<Map<dynamic, dynamic>, Map<String, dynamic>>(
-        WebWorkerOperations.shrinkImage,
-        args.toJson(),
-      );
+            WebWorkerOperations.shrinkImage,
+            args.toJson(),
+          );
       return MatrixImageFileResizedResponse.fromJson(Map.from(result));
     } catch (e, s) {
       if (!retryInDummy) {
@@ -141,16 +140,13 @@ class WebWorkerData {
       );
 
   Map<String, Object?> toJson() => {
-        'label': label,
-        if (name != null) 'name': name!.index,
-        'data': data,
-      };
+    'label': label,
+    if (name != null) 'name': name!.index,
+    'data': data,
+  };
 }
 
-enum WebWorkerOperations {
-  shrinkImage,
-  calcImageMetadata,
-}
+enum WebWorkerOperations { shrinkImage, calcImageMetadata }
 
 class WebWorkerError extends Error {
   /// the error thrown in the web worker. Usually a [String]
@@ -169,6 +165,5 @@ class WebWorkerError extends Error {
 }
 
 /// converts a stringifyed, obfuscated [StackTrace] into a [StackTrace]
-typedef WebWorkerStackTraceCallback = FutureOr<StackTrace> Function(
-  String obfuscatedStackTrace,
-);
+typedef WebWorkerStackTraceCallback =
+    FutureOr<StackTrace> Function(String obfuscatedStackTrace);

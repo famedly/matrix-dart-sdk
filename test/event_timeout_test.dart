@@ -5,10 +5,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:matrix/matrix.dart';
 import 'package:path/path.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 
 void main() {
@@ -21,11 +21,7 @@ void main() {
         sendTimelineEventTimeout: const Duration(seconds: 5),
         databasePath: join(Directory.current.path, 'test.sqlite'),
       );
-      room = Room(
-        id: '!1234:example.com',
-        client: client,
-        roomAccountData: {},
-      );
+      room = Room(id: '!1234:example.com', client: client, roomAccountData: {});
       client.rooms.add(room);
     });
 
@@ -34,8 +30,7 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
 
-    test('Event constructor correctly checks timeout from originServerTs',
-        () async {
+    test('Event constructor correctly checks timeout from originServerTs', () async {
       final completer = Completer();
       room.sendingQueue.add(completer); // to block the events from being sent
 
@@ -50,8 +45,9 @@ void main() {
       );
 
       // do the timeout
-      final timeout =
-          Duration(seconds: client.sendTimelineEventTimeout.inSeconds + 2);
+      final timeout = Duration(
+        seconds: client.sendTimelineEventTimeout.inSeconds + 2,
+      );
       await Future.delayed(timeout);
 
       // this will trigger the check in the Event constructor to see if the
@@ -102,9 +98,7 @@ void main() {
                       senderId: '@test:example.com',
                       originServerTs: DateTime.now(),
                       room: room,
-                      unsigned: {
-                        'transaction_id': '1234',
-                      },
+                      unsigned: {'transaction_id': '1234'},
                     ),
                   ],
                 ),

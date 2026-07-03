@@ -8,14 +8,11 @@ class DehydratedDevice {
   String deviceId;
   Map<String, dynamic>? deviceData;
 
-  DehydratedDevice({
-    required this.deviceId,
-    this.deviceData,
-  });
+  DehydratedDevice({required this.deviceId, this.deviceData});
 
   DehydratedDevice.fromJson(Map<String, dynamic> json)
-      : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
+    : deviceId = json['device_id'] as String,
+      deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
 
   Map<String, dynamic> toJson() {
     return {

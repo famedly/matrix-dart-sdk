@@ -12,14 +12,12 @@ class AuthenticationToken extends AuthenticationData {
   String? txnId;
 
   AuthenticationToken({super.session, required this.token, this.txnId})
-      : super(
-          type: AuthenticationTypes.token,
-        );
+    : super(type: AuthenticationTypes.token);
 
   AuthenticationToken.fromJson(super.json)
-      : token = json['token'] as String,
-        txnId = json['txn_id'] as String?,
-        super.fromJson();
+    : token = json['token'] as String,
+      txnId = json['txn_id'] as String?,
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

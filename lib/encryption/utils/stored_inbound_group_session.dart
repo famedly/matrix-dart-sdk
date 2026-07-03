@@ -41,15 +41,15 @@ class StoredInboundGroupSession {
       );
 
   Map<String, dynamic> toJson() => {
-        'room_id': roomId,
-        'session_id': sessionId,
-        'pickle': pickle,
-        'content': content,
-        'indexes': indexes,
-        'allowed_at_index': allowedAtIndex,
-        // ignore: deprecated_member_use_from_same_package
-        if (uploaded != null) 'uploaded': uploaded,
-        'sender_key': senderKey,
-        'sender_claimed_keys': senderClaimedKeys,
-      };
+    'room_id': roomId,
+    'session_id': sessionId,
+    'pickle': pickle,
+    'content': content,
+    'indexes': indexes,
+    'allowed_at_index': allowedAtIndex,
+    // ignore: deprecated_member_use_from_same_package
+    if (uploaded != null) 'uploaded': uploaded,
+    'sender_key': senderKey,
+    'sender_claimed_keys': senderClaimedKeys,
+  };
 }

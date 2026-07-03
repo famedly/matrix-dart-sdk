@@ -6,9 +6,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
-import 'package:test/test.dart';
-
 import 'package:matrix/matrix.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('MatrixApi.unexpectedResponse', () {
@@ -75,7 +74,7 @@ void main() {
           'flows': [
             {
               'stages': ['m.login.password'],
-            }
+            },
           ],
           'session': 'uia_session_id',
         },

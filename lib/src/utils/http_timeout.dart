@@ -9,17 +9,16 @@ import 'package:http/http.dart' as http;
 http.StreamedResponse replaceStream(
   http.StreamedResponse base,
   Stream<List<int>> stream,
-) =>
-    http.StreamedResponse(
-      http.ByteStream(stream),
-      base.statusCode,
-      contentLength: base.contentLength,
-      request: base.request,
-      headers: base.headers,
-      isRedirect: base.isRedirect,
-      persistentConnection: base.persistentConnection,
-      reasonPhrase: base.reasonPhrase,
-    );
+) => http.StreamedResponse(
+  http.ByteStream(stream),
+  base.statusCode,
+  contentLength: base.contentLength,
+  request: base.request,
+  headers: base.headers,
+  isRedirect: base.isRedirect,
+  persistentConnection: base.persistentConnection,
+  reasonPhrase: base.reasonPhrase,
+);
 
 /// Http Client that enforces a timeout on requests.
 /// Timeout calculation is done in a subclass.

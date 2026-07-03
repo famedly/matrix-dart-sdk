@@ -16,10 +16,10 @@ class ChildrenState extends StrippedStateEvent {
   });
 
   ChildrenState.fromJson(super.json)
-      : originServerTs = DateTime.fromMillisecondsSinceEpoch(
-          json['origin_server_ts'] as int,
-        ),
-        super.fromJson();
+    : originServerTs = DateTime.fromMillisecondsSinceEpoch(
+        json['origin_server_ts'] as int,
+      ),
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

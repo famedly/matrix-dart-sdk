@@ -5,9 +5,9 @@
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 
 void main() {
@@ -36,10 +36,7 @@ void main() {
       );
 
       if (resp.statusCode == 200) {
-        final file = MatrixImageFile(
-          name: 'file.jpg',
-          bytes: resp.bodyBytes,
-        );
+        final file = MatrixImageFile(name: 'file.jpg', bytes: resp.bodyBytes);
         expect(file.bytes.isNotEmpty, true);
         expect(file.height, null);
         expect(file.width, null);

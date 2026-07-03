@@ -15,7 +15,7 @@ class MarkedUnread {
   const MarkedUnread(this.unread);
 
   MarkedUnread.fromJson(Map<String, dynamic> json)
-      : unread = json.tryGet<bool>('unread') ?? false;
+    : unread = json.tryGet<bool>('unread') ?? false;
 
   Map<String, dynamic> toJson() => {'unread': unread};
 }

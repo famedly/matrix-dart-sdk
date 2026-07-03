@@ -12,9 +12,9 @@ class AuthenticationData {
   AuthenticationData({this.type, this.session, this.additionalFields});
 
   AuthenticationData.fromJson(Map<String, Object?> json)
-      : type = json['type'] as String?,
-        session = json['session'] as String?,
-        additionalFields = json;
+    : type = json['type'] as String?,
+      session = json['session'] as String?,
+      additionalFields = json;
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};

@@ -2,19 +2,16 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
-import 'package:matrix/matrix.dart';
 import '../fake_database.dart';
 
 void main() {
   group('MXC 3861 OIDC', tags: 'olm', () {
     test('Test OIDC Login Flow', () async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
+      await vod.init(wasmPath: './pkg/', libraryPath: './rust/target/debug/');
       final client = Client(
         logLevel: Level.verbose,
         'testclient',
@@ -89,24 +86,15 @@ void main() {
         code: 'faketestcode',
         state: session.state,
       );
-      expect(
-        FakeMatrixApi.calledEndpoints['/oauth2/token'] != null,
-        true,
-      );
+      expect(FakeMatrixApi.calledEndpoints['/oauth2/token'] != null, true);
 
       expect(client.isLogged(), true);
 
       await client.refreshAccessToken();
-      expect(
-        FakeMatrixApi.calledEndpoints['/client/v3/refresh'],
-        null,
-      );
+      expect(FakeMatrixApi.calledEndpoints['/client/v3/refresh'], null);
 
       await client.logout();
-      expect(
-        FakeMatrixApi.calledEndpoints.containsKey('/oauth2/revoke'),
-        true,
-      );
+      expect(FakeMatrixApi.calledEndpoints.containsKey('/oauth2/revoke'), true);
     });
   });
 }

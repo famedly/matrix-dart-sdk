@@ -2,17 +2,13 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:test/test.dart';
-
 import 'package:matrix/src/utils/markdown.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('markdown', () {
     final emotePacks = {
-      'room': {
-        'fox': 'mxc://roomfox',
-        'bunny': 'mxc://roombunny',
-      },
+      'room': {'fox': 'mxc://roomfox', 'bunny': 'mxc://roombunny'},
       'user': {
         'fox': 'mxc://userfox',
         'bunny': 'mxc://userbunny',

@@ -2,9 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:test/test.dart';
-
 import 'package:matrix/matrix_api_lite.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Try-get-map-extension', () {
@@ -13,9 +12,7 @@ void main() {
         'str': 'foxies',
         'int': 42,
         'list': [2, 3, 4],
-        'map': <String, dynamic>{
-          'beep': 'boop',
-        },
+        'map': <String, dynamic>{'beep': 'boop'},
       };
       expect(data.tryGet<String>('str'), 'foxies');
       expect(data.tryGet<int>('str'), null);

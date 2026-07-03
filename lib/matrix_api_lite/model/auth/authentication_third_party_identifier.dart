@@ -15,9 +15,9 @@ class AuthenticationThirdPartyIdentifier extends AuthenticationIdentifier {
   }) : super(type: AuthenticationIdentifierTypes.thirdParty);
 
   AuthenticationThirdPartyIdentifier.fromJson(super.json)
-      : medium = json['medium'] as String,
-        address = json['address'] as String,
-        super.fromJson();
+    : medium = json['medium'] as String,
+      address = json['address'] as String,
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

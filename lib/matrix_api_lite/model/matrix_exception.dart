@@ -64,7 +64,7 @@ class MatrixException implements Exception {
   http.Response? response;
 
   MatrixException(http.Response this.response)
-      : raw = json.decode(response.body) as Map<String, Object?>;
+    : raw = json.decode(response.body) as Map<String, Object?>;
 
   MatrixException.fromJson(Map<String, Object?> content) : raw = content;
 
@@ -73,9 +73,9 @@ class MatrixException implements Exception {
 
   /// Returns the errcode as an [MatrixError].
   MatrixError get error => MatrixError.values.firstWhere(
-        (e) => e.name == errcode,
-        orElse: () => MatrixError.M_UNKNOWN,
-      );
+    (e) => e.name == errcode,
+    orElse: () => MatrixError.M_UNKNOWN,
+  );
 
   int? get retryAfterMs => raw.tryGet<int>('retry_after_ms');
 

@@ -8,11 +8,11 @@ class RoomSummary {
   int? mInvitedMemberCount;
 
   RoomSummary.fromJson(Map<String, Object?> json)
-      : mHeroes = json['m.heroes'] != null
-            ? List<String>.from(json['m.heroes'] as List)
-            : null,
-        mJoinedMemberCount = json['m.joined_member_count'] as int?,
-        mInvitedMemberCount = json['m.invited_member_count'] as int?;
+    : mHeroes = json['m.heroes'] != null
+          ? List<String>.from(json['m.heroes'] as List)
+          : null,
+      mJoinedMemberCount = json['m.joined_member_count'] as int?,
+      mInvitedMemberCount = json['m.invited_member_count'] as int?;
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};

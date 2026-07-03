@@ -2,27 +2,16 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:test/test.dart';
-
 import 'package:matrix/matrix.dart';
+import 'package:test/test.dart';
 
 const updates = {
   'empty': {
     'next_batch': 'blah',
-    'account_data': {
-      'events': [],
-    },
-    'presences': {
-      'events': [],
-    },
-    'rooms': {
-      'join': {},
-      'leave': {},
-      'invite': {},
-    },
-    'to_device': {
-      'events': [],
-    },
+    'account_data': {'events': []},
+    'presences': {'events': []},
+    'rooms': {'join': {}, 'leave': {}, 'invite': {}},
+    'to_device': {'events': []},
   },
   'presence': {
     'next_batch': 'blah',
@@ -48,9 +37,7 @@ const updates = {
       'events': [
         {
           'type': 'blah',
-          'content': {
-            'beep': 'boop',
-          },
+          'content': {'beep': 'boop'},
         },
       ],
     },
@@ -60,9 +47,7 @@ const updates = {
     'rooms': {
       'invite': {
         '!room': {
-          'invite_state': {
-            'events': [],
-          },
+          'invite_state': {'events': []},
         },
       },
     },
@@ -70,9 +55,7 @@ const updates = {
   'leave': {
     'next_batch': 'blah',
     'rooms': {
-      'leave': {
-        '!room': <String, dynamic>{},
-      },
+      'leave': {'!room': <String, dynamic>{}},
     },
   },
   'join': {
@@ -80,18 +63,10 @@ const updates = {
     'rooms': {
       'join': {
         '!room': {
-          'timeline': {
-            'events': [],
-          },
-          'state': {
-            'events': [],
-          },
-          'account_data': {
-            'events': [],
-          },
-          'ephemeral': {
-            'events': [],
-          },
+          'timeline': {'events': []},
+          'state': {'events': []},
+          'account_data': {'events': []},
+          'ephemeral': {'events': []},
           'unread_notifications': <String, dynamic>{},
           'summary': <String, dynamic>{},
         },
@@ -105,9 +80,7 @@ const updates = {
         {
           'type': 'beep',
           'sender': '@example:localhost',
-          'content': {
-            'blah': 'blubb',
-          },
+          'content': {'blah': 'blubb'},
         },
       ],
     },

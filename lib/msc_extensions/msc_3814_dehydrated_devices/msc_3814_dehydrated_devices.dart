@@ -49,8 +49,9 @@ extension DehydratedDeviceHandler on Client {
       }
 
       // Just throw away the old device if it is using an old algoritm. In the future we could try to still use it and then migrate it, but currently that is not worth the effort
-      if (_oldDehydratedDeviceAlgorithms
-          .contains(device.deviceData?.tryGet<String>('algorithm'))) {
+      if (_oldDehydratedDeviceAlgorithms.contains(
+        device.deviceData?.tryGet<String>('algorithm'),
+      )) {
         await _uploadNewDevice(secureStorage);
         return;
       }
@@ -74,12 +75,14 @@ extension DehydratedDeviceHandler on Client {
         return;
       }
 
-      final pickleDeviceKey =
-          await secureStorage.getStored(_ssssSecretNameForDehydratedDevice);
+      final pickleDeviceKey = await secureStorage.getStored(
+        _ssssSecretNameForDehydratedDevice,
+      );
       final pickledDevice = device.deviceData?.tryGet<String>('device');
       if (pickledDevice == null) {
-        Logs()
-            .w('Dehydrated device ${device.deviceId} is invalid, replacing it');
+        Logs().w(
+          'Dehydrated device ${device.deviceId} is invalid, replacing it',
+        );
         await _uploadNewDevice(secureStorage);
         return;
       }
@@ -97,8 +100,9 @@ extension DehydratedDeviceHandler on Client {
 
         if (dehydratedDeviceIdentity.curve25519Key != encryption.identityKey ||
             dehydratedDeviceIdentity.ed25519Key != encryption.fingerprintKey) {
-          Logs()
-              .w('Invalid dehydrated device ${device.deviceId}, replacing it');
+          Logs().w(
+            'Invalid dehydrated device ${device.deviceId}, replacing it',
+          );
           await encryption.dispose();
           await _uploadNewDevice(secureStorage);
           return;
@@ -126,10 +130,9 @@ extension DehydratedDeviceHandler on Client {
         } while (events.events?.isNotEmpty == true);
 
         // make sure the sessions we just received get uploaded before we upload a new device (which deletes the old device).
-        await this
-            .encryption
-            ?.keyManager
-            .uploadInboundGroupSessions(skipIfInProgress: false);
+        await this.encryption?.keyManager.uploadInboundGroupSessions(
+          skipIfInProgress: false,
+        );
 
         await _uploadNewDevice(secureStorage);
       } finally {
@@ -147,8 +150,9 @@ extension DehydratedDeviceHandler on Client {
     try {
       String? pickleDeviceKey;
       try {
-        pickleDeviceKey =
-            await secureStorage.getStored(_ssssSecretNameForDehydratedDevice);
+        pickleDeviceKey = await secureStorage.getStored(
+          _ssssSecretNameForDehydratedDevice,
+        );
       } catch (_) {
         Logs().i('Dehydrated device key not found, creating new one.');
         pickleDeviceKey = base64.encode(uc.secureRandomBytes(128));

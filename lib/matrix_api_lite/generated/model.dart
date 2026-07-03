@@ -2,13 +2,17 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import '../model/auth/authentication_data.dart';
+import '../model/auth/authentication_types.dart';
+import '../model/auth/authentication_identifier.dart';
+import '../model/matrix_keys.dart';
+import '../model/sync_update.dart';
+import '../model/matrix_event.dart';
+import '../model/children_state.dart';
+
 import 'dart:core' as dart;
 import 'dart:core';
-
-import 'package:matrix/matrix_api_lite/model/children_state.dart';
-import 'package:matrix/matrix_api_lite/model/matrix_event.dart';
-import 'package:matrix/matrix_api_lite/model/matrix_keys.dart';
-
+import 'internal.dart';
 part 'model.g.dart';
 
 class _NameSource {
@@ -19,15 +23,11 @@ class _NameSource {
 ///
 @_NameSource('spec')
 class HomeserverInformation {
-  HomeserverInformation({
-    required this.baseUrl,
-  });
+  HomeserverInformation({required this.baseUrl});
 
   HomeserverInformation.fromJson(Map<String, Object?> json)
-      : baseUrl = Uri.parse(json['base_url'] as String);
-  Map<String, Object?> toJson() => {
-        'base_url': baseUrl.toString(),
-      };
+    : baseUrl = Uri.parse(json['base_url'] as String);
+  Map<String, Object?> toJson() => {'base_url': baseUrl.toString()};
 
   /// The base URL for the homeserver for client-server connections.
   Uri baseUrl;
@@ -46,15 +46,11 @@ class HomeserverInformation {
 ///
 @_NameSource('spec')
 class IdentityServerInformation {
-  IdentityServerInformation({
-    required this.baseUrl,
-  });
+  IdentityServerInformation({required this.baseUrl});
 
   IdentityServerInformation.fromJson(Map<String, Object?> json)
-      : baseUrl = Uri.parse(json['base_url'] as String);
-  Map<String, Object?> toJson() => {
-        'base_url': baseUrl.toString(),
-      };
+    : baseUrl = Uri.parse(json['base_url'] as String);
+  Map<String, Object?> toJson() => {'base_url': baseUrl.toString()};
 
   /// The base URL for the identity server for client-server connections.
   Uri baseUrl;
@@ -81,19 +77,19 @@ class DiscoveryInformation {
   });
 
   DiscoveryInformation.fromJson(Map<String, Object?> json)
-      : mHomeserver = HomeserverInformation.fromJson(
-          json['m.homeserver'] as Map<String, Object?>,
-        ),
-        mIdentityServer = ((v) => v != null
-            ? IdentityServerInformation.fromJson(v as Map<String, Object?>)
-            : null)(json['m.identity_server']),
-        additionalProperties = Map.fromEntries(
-          json.entries
-              .where(
-                (e) => !['m.homeserver', 'm.identity_server'].contains(e.key),
-              )
-              .map((e) => MapEntry(e.key, e.value)),
-        );
+    : mHomeserver = HomeserverInformation.fromJson(
+        json['m.homeserver'] as Map<String, Object?>,
+      ),
+      mIdentityServer = ((v) => v != null
+          ? IdentityServerInformation.fromJson(v as Map<String, Object?>)
+          : null)(json['m.identity_server']),
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where(
+              (e) => !['m.homeserver', 'm.identity_server'].contains(e.key),
+            )
+            .map((e) => MapEntry(e.key, e.value as Object?)),
+      );
   Map<String, Object?> toJson() {
     final mIdentityServer = this.mIdentityServer;
     return {
@@ -126,6 +122,39 @@ class DiscoveryInformation {
 
 ///
 @_NameSource('generated')
+class PublicKeys {
+  PublicKeys({required this.ed25519, this.additionalProperties = const {}});
+
+  PublicKeys.fromJson(Map<String, Object?> json)
+    : ed25519 = json['ed25519'] as String,
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where((e) => !['ed25519'].contains(e.key))
+            .map((e) => MapEntry(e.key, e.value as String)),
+      );
+  Map<String, Object?> toJson() => {
+    ...additionalProperties,
+    'ed25519': ed25519,
+  };
+
+  /// The unpadded base64-encoded ed25519 public key for the Policy Server.
+  String ed25519;
+
+  Map<String, String> additionalProperties;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PublicKeys &&
+          other.runtimeType == runtimeType &&
+          other.ed25519 == ed25519);
+
+  @dart.override
+  int get hashCode => ed25519.hashCode;
+}
+
+///
+@_NameSource('generated')
 enum Role {
   mRoleAdmin('m.role.admin'),
   mRoleSecurity('m.role.security');
@@ -137,17 +166,13 @@ enum Role {
 /// A way to contact the server administrator.
 @_NameSource('spec')
 class Contact {
-  Contact({
-    this.emailAddress,
-    this.matrixId,
-    required this.role,
-  });
+  Contact({this.emailAddress, this.matrixId, required this.role});
 
   Contact.fromJson(Map<String, Object?> json)
-      : emailAddress =
-            ((v) => v != null ? v as String : null)(json['email_address']),
-        matrixId = ((v) => v != null ? v as String : null)(json['matrix_id']),
-        role = Role.values.fromString(json['role'] as String)!;
+    : emailAddress = ((v) =>
+          v != null ? v as String : null)(json['email_address']),
+      matrixId = ((v) => v != null ? v as String : null)(json['matrix_id']),
+      role = Role.values.fromString(json['role'] as String)!;
   Map<String, Object?> toJson() {
     final emailAddress = this.emailAddress;
     final matrixId = this.matrixId;
@@ -202,19 +227,16 @@ class Contact {
 ///
 @_NameSource('generated')
 class GetWellknownSupportResponse {
-  GetWellknownSupportResponse({
-    this.contacts,
-    this.supportPage,
-  });
+  GetWellknownSupportResponse({this.contacts, this.supportPage});
 
   GetWellknownSupportResponse.fromJson(Map<String, Object?> json)
-      : contacts = ((v) => v != null
-            ? (v as List)
+    : contacts = ((v) => v != null
+          ? (v as List)
                 .map((v) => Contact.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['contacts']),
-        supportPage = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['support_page']);
+          : null)(json['contacts']),
+      supportPage = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['support_page']);
   Map<String, Object?> toJson() {
     final contacts = this.contacts;
     final supportPage = this.supportPage;
@@ -250,12 +272,29 @@ class GetWellknownSupportResponse {
   int get hashCode => Object.hash(contacts, supportPage);
 }
 
+/// An action that the account management URL supports.
+@_NameSource('generated')
+enum AccountManagementActionsSupported {
+  orgMatrixAccountDeactivate('org.matrix.account_deactivate'),
+  orgMatrixCrossSigningReset('org.matrix.cross_signing_reset'),
+  orgMatrixDeviceDelete('org.matrix.device_delete'),
+  orgMatrixDeviceView('org.matrix.device_view'),
+  orgMatrixDevicesList('org.matrix.devices_list'),
+  orgMatrixProfile('org.matrix.profile');
+
+  final String name;
+  const AccountManagementActionsSupported(this.name);
+}
+
 ///
 @_NameSource('generated')
 class GetAuthMetadataResponse {
   GetAuthMetadataResponse({
+    this.accountManagementActionsSupported,
+    this.accountManagementUri,
     required this.authorizationEndpoint,
     required this.codeChallengeMethodsSupported,
+    this.deviceAuthorizationEndpoint,
     required this.grantTypesSupported,
     required this.issuer,
     this.promptValuesSupported,
@@ -267,35 +306,62 @@ class GetAuthMetadataResponse {
   });
 
   GetAuthMetadataResponse.fromJson(Map<String, Object?> json)
-      : authorizationEndpoint =
-            Uri.parse(json['authorization_endpoint'] as String),
-        codeChallengeMethodsSupported =
-            (json['code_challenge_methods_supported'] as List)
-                .map((v) => v as String)
-                .toList(),
-        grantTypesSupported = (json['grant_types_supported'] as List)
-            .map((v) => v as String)
-            .toList(),
-        issuer = Uri.parse(json['issuer'] as String),
-        promptValuesSupported = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['prompt_values_supported']),
-        registrationEndpoint =
-            Uri.parse(json['registration_endpoint'] as String),
-        responseModesSupported = (json['response_modes_supported'] as List)
-            .map((v) => v as String)
-            .toList(),
-        responseTypesSupported = (json['response_types_supported'] as List)
-            .map((v) => v as String)
-            .toList(),
-        revocationEndpoint = Uri.parse(json['revocation_endpoint'] as String),
-        tokenEndpoint = Uri.parse(json['token_endpoint'] as String);
+    : accountManagementActionsSupported = ((v) => v != null
+          ? (v as List)
+                .map(
+                  (v) => AccountManagementActionsSupported.values.fromString(
+                    v as String,
+                  )!,
+                )
+                .toList()
+          : null)(json['account_management_actions_supported']),
+      accountManagementUri = ((v) => v != null ? Uri.parse(v as String) : null)(
+        json['account_management_uri'],
+      ),
+      authorizationEndpoint = Uri.parse(
+        json['authorization_endpoint'] as String,
+      ),
+      codeChallengeMethodsSupported =
+          (json['code_challenge_methods_supported'] as List)
+              .map((v) => v as String)
+              .toList(),
+      deviceAuthorizationEndpoint = ((v) => v != null
+          ? Uri.parse(v as String)
+          : null)(json['device_authorization_endpoint']),
+      grantTypesSupported = (json['grant_types_supported'] as List)
+          .map((v) => v as String)
+          .toList(),
+      issuer = Uri.parse(json['issuer'] as String),
+      promptValuesSupported = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['prompt_values_supported']),
+      registrationEndpoint = Uri.parse(json['registration_endpoint'] as String),
+      responseModesSupported = (json['response_modes_supported'] as List)
+          .map((v) => v as String)
+          .toList(),
+      responseTypesSupported = (json['response_types_supported'] as List)
+          .map((v) => v as String)
+          .toList(),
+      revocationEndpoint = Uri.parse(json['revocation_endpoint'] as String),
+      tokenEndpoint = Uri.parse(json['token_endpoint'] as String);
   Map<String, Object?> toJson() {
+    final accountManagementActionsSupported =
+        this.accountManagementActionsSupported;
+    final accountManagementUri = this.accountManagementUri;
+    final deviceAuthorizationEndpoint = this.deviceAuthorizationEndpoint;
     final promptValuesSupported = this.promptValuesSupported;
     return {
+      if (accountManagementActionsSupported != null)
+        'account_management_actions_supported':
+            accountManagementActionsSupported.map((v) => v.name).toList(),
+      if (accountManagementUri != null)
+        'account_management_uri': accountManagementUri.toString(),
       'authorization_endpoint': authorizationEndpoint.toString(),
-      'code_challenge_methods_supported':
-          codeChallengeMethodsSupported.map((v) => v).toList(),
+      'code_challenge_methods_supported': codeChallengeMethodsSupported
+          .map((v) => v)
+          .toList(),
+      if (deviceAuthorizationEndpoint != null)
+        'device_authorization_endpoint': deviceAuthorizationEndpoint.toString(),
       'grant_types_supported': grantTypesSupported.map((v) => v).toList(),
       'issuer': issuer.toString(),
       if (promptValuesSupported != null)
@@ -308,6 +374,17 @@ class GetAuthMetadataResponse {
     };
   }
 
+  /// List of actions that the account management URL supports.
+  ///
+  /// This is an extension [defined in this specification](https://spec.matrix.org/unstable/client-server-api/#oauth-20-account-management).
+  List<AccountManagementActionsSupported>? accountManagementActionsSupported;
+
+  /// The URL where the user is able to access the account management capabilities
+  /// of the homeserver.
+  ///
+  /// This is an extension [defined in this specification](https://spec.matrix.org/unstable/client-server-api/#oauth-20-account-management).
+  Uri? accountManagementUri;
+
   /// URL of the authorization endpoint, necessary to use the authorization code
   /// grant.
   Uri authorizationEndpoint;
@@ -319,12 +396,21 @@ class GetAuthMetadataResponse {
   /// the authorization code grant.
   List<String> codeChallengeMethodsSupported;
 
+  /// URL of the device authorization endpoint, as defined in
+  /// [RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628), necessary to use
+  /// the [device authorization grant](https://spec.matrix.org/unstable/client-server-api/#device-authorization-grant).
+  Uri? deviceAuthorizationEndpoint;
+
   /// List of OAuth 2.0 grant type strings that the server supports at the token
   /// endpoint.
   ///
   /// This array MUST contain at least the `authorization_code` and `refresh_token`
   /// values, for clients to be able to use the authorization code grant and refresh
   /// token grant, respectively.
+  ///
+  /// **[Added in `v1.18`]**  It MAY also contain
+  /// `urn:ietf:params:oauth:grant-type:device_code` to indicate support for the
+  /// [device authorization grant](https://spec.matrix.org/unstable/client-server-api/#device-authorization-grant).
   List<String> grantTypesSupported;
 
   /// The authorization server's issuer identifier, which is a URL that uses the
@@ -365,8 +451,7 @@ class GetAuthMetadataResponse {
   /// its access and refresh tokens.
   Uri revocationEndpoint;
 
-  /// URL of the token endpoint, necessary to use the authorization code grant and
-  /// the refresh token grant.
+  /// URL of the token endpoint, used by the grants.
   Uri tokenEndpoint;
 
   @dart.override
@@ -374,9 +459,13 @@ class GetAuthMetadataResponse {
       identical(this, other) ||
       (other is GetAuthMetadataResponse &&
           other.runtimeType == runtimeType &&
+          other.accountManagementActionsSupported ==
+              accountManagementActionsSupported &&
+          other.accountManagementUri == accountManagementUri &&
           other.authorizationEndpoint == authorizationEndpoint &&
           other.codeChallengeMethodsSupported ==
               codeChallengeMethodsSupported &&
+          other.deviceAuthorizationEndpoint == deviceAuthorizationEndpoint &&
           other.grantTypesSupported == grantTypesSupported &&
           other.issuer == issuer &&
           other.promptValuesSupported == promptValuesSupported &&
@@ -388,17 +477,20 @@ class GetAuthMetadataResponse {
 
   @dart.override
   int get hashCode => Object.hash(
-        authorizationEndpoint,
-        codeChallengeMethodsSupported,
-        grantTypesSupported,
-        issuer,
-        promptValuesSupported,
-        registrationEndpoint,
-        responseModesSupported,
-        responseTypesSupported,
-        revocationEndpoint,
-        tokenEndpoint,
-      );
+    accountManagementActionsSupported,
+    accountManagementUri,
+    authorizationEndpoint,
+    codeChallengeMethodsSupported,
+    deviceAuthorizationEndpoint,
+    grantTypesSupported,
+    issuer,
+    promptValuesSupported,
+    registrationEndpoint,
+    responseModesSupported,
+    responseTypesSupported,
+    revocationEndpoint,
+    tokenEndpoint,
+  );
 }
 
 ///
@@ -410,12 +502,12 @@ class GenerateLoginTokenResponse {
   });
 
   GenerateLoginTokenResponse.fromJson(Map<String, Object?> json)
-      : expiresInMs = json['expires_in_ms'] as int,
-        loginToken = json['login_token'] as String;
+    : expiresInMs = json['expires_in_ms'] as int,
+      loginToken = json['login_token'] as String;
   Map<String, Object?> toJson() => {
-        'expires_in_ms': expiresInMs,
-        'login_token': loginToken,
-      };
+    'expires_in_ms': expiresInMs,
+    'login_token': loginToken,
+  };
 
   /// The time remaining in milliseconds until the homeserver will no longer accept the token. `120000`
   /// (2 minutes) is recommended as a default.
@@ -439,18 +531,13 @@ class GenerateLoginTokenResponse {
 ///
 @_NameSource('rule override generated')
 class MediaConfig {
-  MediaConfig({
-    this.mUploadSize,
-  });
+  MediaConfig({this.mUploadSize});
 
   MediaConfig.fromJson(Map<String, Object?> json)
-      : mUploadSize =
-            ((v) => v != null ? v as int : null)(json['m.upload.size']);
+    : mUploadSize = ((v) => v != null ? v as int : null)(json['m.upload.size']);
   Map<String, Object?> toJson() {
     final mUploadSize = this.mUploadSize;
-    return {
-      if (mUploadSize != null) 'm.upload.size': mUploadSize,
-    };
+    return {if (mUploadSize != null) 'm.upload.size': mUploadSize};
   }
 
   /// The maximum size an upload can be in bytes.
@@ -475,17 +562,24 @@ class PreviewForUrl {
   PreviewForUrl({
     this.matrixImageSize,
     this.ogImage,
+    this.additionalProperties = const {},
   });
 
   PreviewForUrl.fromJson(Map<String, Object?> json)
-      : matrixImageSize =
-            ((v) => v != null ? v as int : null)(json['matrix:image:size']),
-        ogImage = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['og:image']);
+    : matrixImageSize = ((v) =>
+          v != null ? v as int : null)(json['matrix:image:size']),
+      ogImage = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['og:image']),
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where((e) => !['matrix:image:size', 'og:image'].contains(e.key))
+            .map((e) => MapEntry(e.key, e.value as Object?)),
+      );
   Map<String, Object?> toJson() {
     final matrixImageSize = this.matrixImageSize;
     final ogImage = this.ogImage;
     return {
+      ...additionalProperties,
       if (matrixImageSize != null) 'matrix:image:size': matrixImageSize,
       if (ogImage != null) 'og:image': ogImage.toString(),
     };
@@ -496,6 +590,8 @@ class PreviewForUrl {
 
   /// An [`mxc://` URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the image. Omitted if there is no image.
   Uri? ogImage;
+
+  Map<String, Object?> additionalProperties;
 
   @dart.override
   bool operator ==(Object other) =>
@@ -536,18 +632,18 @@ class PublishedRoomsChunk {
   });
 
   PublishedRoomsChunk.fromJson(Map<String, Object?> json)
-      : avatarUrl = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
-        canonicalAlias =
-            ((v) => v != null ? v as String : null)(json['canonical_alias']),
-        guestCanJoin = json['guest_can_join'] as bool,
-        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
-        name = ((v) => v != null ? v as String : null)(json['name']),
-        numJoinedMembers = json['num_joined_members'] as int,
-        roomId = json['room_id'] as String,
-        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
-        topic = ((v) => v != null ? v as String : null)(json['topic']),
-        worldReadable = json['world_readable'] as bool;
+    : avatarUrl = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+      canonicalAlias = ((v) =>
+          v != null ? v as String : null)(json['canonical_alias']),
+      guestCanJoin = json['guest_can_join'] as bool,
+      joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
+      name = ((v) => v != null ? v as String : null)(json['name']),
+      numJoinedMembers = json['num_joined_members'] as int,
+      roomId = json['room_id'] as String,
+      roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+      topic = ((v) => v != null ? v as String : null)(json['topic']),
+      worldReadable = json['world_readable'] as bool;
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
@@ -621,17 +717,17 @@ class PublishedRoomsChunk {
 
   @dart.override
   int get hashCode => Object.hash(
-        avatarUrl,
-        canonicalAlias,
-        guestCanJoin,
-        joinRule,
-        name,
-        numJoinedMembers,
-        roomId,
-        roomType,
-        topic,
-        worldReadable,
-      );
+    avatarUrl,
+    canonicalAlias,
+    guestCanJoin,
+    joinRule,
+    name,
+    numJoinedMembers,
+    roomId,
+    roomType,
+    topic,
+    worldReadable,
+  );
 }
 
 ///
@@ -645,14 +741,13 @@ class GetRoomSummaryResponse$1 {
   });
 
   GetRoomSummaryResponse$1.fromJson(Map<String, Object?> json)
-      : allowedRoomIds = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['allowed_room_ids']),
-        encryption =
-            ((v) => v != null ? v as String : null)(json['encryption']),
-        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
-        roomVersion =
-            ((v) => v != null ? v as String : null)(json['room_version']);
+    : allowedRoomIds = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['allowed_room_ids']),
+      encryption = ((v) => v != null ? v as String : null)(json['encryption']),
+      roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+      roomVersion = ((v) =>
+          v != null ? v as String : null)(json['room_version']);
   Map<String, Object?> toJson() {
     final allowedRoomIds = this.allowedRoomIds;
     final encryption = this.encryption;
@@ -716,26 +811,24 @@ class RoomSummary$1 implements PublishedRoomsChunk, GetRoomSummaryResponse$1 {
   });
 
   RoomSummary$1.fromJson(Map<String, Object?> json)
-      : avatarUrl = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
-        canonicalAlias =
-            ((v) => v != null ? v as String : null)(json['canonical_alias']),
-        guestCanJoin = json['guest_can_join'] as bool,
-        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
-        name = ((v) => v != null ? v as String : null)(json['name']),
-        numJoinedMembers = json['num_joined_members'] as int,
-        roomId = json['room_id'] as String,
-        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
-        topic = ((v) => v != null ? v as String : null)(json['topic']),
-        worldReadable = json['world_readable'] as bool,
-        allowedRoomIds = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['allowed_room_ids']),
-        encryption =
-            ((v) => v != null ? v as String : null)(json['encryption']),
-        roomVersion =
-            ((v) => v != null ? v as String : null)(json['room_version']);
-  @override
+    : avatarUrl = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+      canonicalAlias = ((v) =>
+          v != null ? v as String : null)(json['canonical_alias']),
+      guestCanJoin = json['guest_can_join'] as bool,
+      joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
+      name = ((v) => v != null ? v as String : null)(json['name']),
+      numJoinedMembers = json['num_joined_members'] as int,
+      roomId = json['room_id'] as String,
+      roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+      topic = ((v) => v != null ? v as String : null)(json['topic']),
+      worldReadable = json['world_readable'] as bool,
+      allowedRoomIds = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['allowed_room_ids']),
+      encryption = ((v) => v != null ? v as String : null)(json['encryption']),
+      roomVersion = ((v) =>
+          v != null ? v as String : null)(json['room_version']);
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
@@ -765,61 +858,48 @@ class RoomSummary$1 implements PublishedRoomsChunk, GetRoomSummaryResponse$1 {
   }
 
   /// The URL for the room's avatar, if one is set.
-  @override
   Uri? avatarUrl;
 
   /// The canonical alias of the room, if any.
-  @override
   String? canonicalAlias;
 
   /// Whether guest users may join the room and participate in it.
   /// If they can, they will be subject to ordinary power level
   /// rules like any other user.
-  @override
   bool guestCanJoin;
 
   /// The room's join rule. When not present, the room is assumed to
   /// be `public`.
-  @override
   String? joinRule;
 
   /// The name of the room, if any.
-  @override
   String? name;
 
   /// The number of members joined to the room.
-  @override
   int numJoinedMembers;
 
   /// The ID of the room.
-  @override
   String roomId;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
-  @override
   String? roomType;
 
   /// The plain text topic of the room. Omitted if no `text/plain` mimetype
   /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
-  @override
   String? topic;
 
   /// Whether the room may be viewed by users without joining.
-  @override
   bool worldReadable;
 
   /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
   /// are specified by the join rules. Empty or omitted otherwise.
-  @override
   List<String>? allowedRoomIds;
 
   /// The encryption algorithm to be used to encrypt messages sent in the
   /// room.
-  @override
   String? encryption;
 
   /// The version of the room.
-  @override
   String? roomVersion;
 
   @dart.override
@@ -843,20 +923,20 @@ class RoomSummary$1 implements PublishedRoomsChunk, GetRoomSummaryResponse$1 {
 
   @dart.override
   int get hashCode => Object.hash(
-        avatarUrl,
-        canonicalAlias,
-        guestCanJoin,
-        joinRule,
-        name,
-        numJoinedMembers,
-        roomId,
-        roomType,
-        topic,
-        worldReadable,
-        allowedRoomIds,
-        encryption,
-        roomVersion,
-      );
+    avatarUrl,
+    canonicalAlias,
+    guestCanJoin,
+    joinRule,
+    name,
+    numJoinedMembers,
+    roomId,
+    roomType,
+    topic,
+    worldReadable,
+    allowedRoomIds,
+    encryption,
+    roomVersion,
+  );
 }
 
 ///
@@ -875,19 +955,15 @@ enum Membership {
 ///
 @_NameSource('generated')
 class GetRoomSummaryResponse$2 {
-  GetRoomSummaryResponse$2({
-    this.membership,
-  });
+  GetRoomSummaryResponse$2({this.membership});
 
   GetRoomSummaryResponse$2.fromJson(Map<String, Object?> json)
-      : membership = ((v) => v != null
-            ? Membership.values.fromString(v as String)!
-            : null)(json['membership']);
+    : membership = ((v) => v != null
+          ? Membership.values.fromString(v as String)!
+          : null)(json['membership']);
   Map<String, Object?> toJson() {
     final membership = this.membership;
-    return {
-      if (membership != null) 'membership': membership.name,
-    };
+    return {if (membership != null) 'membership': membership.name};
   }
 
   /// The membership state of the user if the user is joined to the room. Absent
@@ -927,29 +1003,27 @@ class GetRoomSummaryResponse$3
   });
 
   GetRoomSummaryResponse$3.fromJson(Map<String, Object?> json)
-      : avatarUrl = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
-        canonicalAlias =
-            ((v) => v != null ? v as String : null)(json['canonical_alias']),
-        guestCanJoin = json['guest_can_join'] as bool,
-        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
-        name = ((v) => v != null ? v as String : null)(json['name']),
-        numJoinedMembers = json['num_joined_members'] as int,
-        roomId = json['room_id'] as String,
-        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
-        topic = ((v) => v != null ? v as String : null)(json['topic']),
-        worldReadable = json['world_readable'] as bool,
-        allowedRoomIds = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['allowed_room_ids']),
-        encryption =
-            ((v) => v != null ? v as String : null)(json['encryption']),
-        roomVersion =
-            ((v) => v != null ? v as String : null)(json['room_version']),
-        membership = ((v) => v != null
-            ? Membership.values.fromString(v as String)!
-            : null)(json['membership']);
-  @override
+    : avatarUrl = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+      canonicalAlias = ((v) =>
+          v != null ? v as String : null)(json['canonical_alias']),
+      guestCanJoin = json['guest_can_join'] as bool,
+      joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
+      name = ((v) => v != null ? v as String : null)(json['name']),
+      numJoinedMembers = json['num_joined_members'] as int,
+      roomId = json['room_id'] as String,
+      roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+      topic = ((v) => v != null ? v as String : null)(json['topic']),
+      worldReadable = json['world_readable'] as bool,
+      allowedRoomIds = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['allowed_room_ids']),
+      encryption = ((v) => v != null ? v as String : null)(json['encryption']),
+      roomVersion = ((v) =>
+          v != null ? v as String : null)(json['room_version']),
+      membership = ((v) => v != null
+          ? Membership.values.fromString(v as String)!
+          : null)(json['membership']);
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
@@ -981,66 +1055,52 @@ class GetRoomSummaryResponse$3
   }
 
   /// The URL for the room's avatar, if one is set.
-  @override
   Uri? avatarUrl;
 
   /// The canonical alias of the room, if any.
-  @override
   String? canonicalAlias;
 
   /// Whether guest users may join the room and participate in it.
   /// If they can, they will be subject to ordinary power level
   /// rules like any other user.
-  @override
   bool guestCanJoin;
 
   /// The room's join rule. When not present, the room is assumed to
   /// be `public`.
-  @override
   String? joinRule;
 
   /// The name of the room, if any.
-  @override
   String? name;
 
   /// The number of members joined to the room.
-  @override
   int numJoinedMembers;
 
   /// The ID of the room.
-  @override
   String roomId;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
-  @override
   String? roomType;
 
   /// The plain text topic of the room. Omitted if no `text/plain` mimetype
   /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
-  @override
   String? topic;
 
   /// Whether the room may be viewed by users without joining.
-  @override
   bool worldReadable;
 
   /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
   /// are specified by the join rules. Empty or omitted otherwise.
-  @override
   List<String>? allowedRoomIds;
 
   /// The encryption algorithm to be used to encrypt messages sent in the
   /// room.
-  @override
   String? encryption;
 
   /// The version of the room.
-  @override
   String? roomVersion;
 
   /// The membership state of the user if the user is joined to the room. Absent
   /// if the API was called unauthenticated.
-  @override
   Membership? membership;
 
   @dart.override
@@ -1065,21 +1125,21 @@ class GetRoomSummaryResponse$3
 
   @dart.override
   int get hashCode => Object.hash(
-        avatarUrl,
-        canonicalAlias,
-        guestCanJoin,
-        joinRule,
-        name,
-        numJoinedMembers,
-        roomId,
-        roomType,
-        topic,
-        worldReadable,
-        allowedRoomIds,
-        encryption,
-        roomVersion,
-        membership,
-      );
+    avatarUrl,
+    canonicalAlias,
+    guestCanJoin,
+    joinRule,
+    name,
+    numJoinedMembers,
+    roomId,
+    roomType,
+    topic,
+    worldReadable,
+    allowedRoomIds,
+    encryption,
+    roomVersion,
+    membership,
+  );
 }
 
 ///
@@ -1093,14 +1153,13 @@ class SpaceRoomsChunk$1 {
   });
 
   SpaceRoomsChunk$1.fromJson(Map<String, Object?> json)
-      : allowedRoomIds = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['allowed_room_ids']),
-        encryption =
-            ((v) => v != null ? v as String : null)(json['encryption']),
-        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
-        roomVersion =
-            ((v) => v != null ? v as String : null)(json['room_version']);
+    : allowedRoomIds = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['allowed_room_ids']),
+      encryption = ((v) => v != null ? v as String : null)(json['encryption']),
+      roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+      roomVersion = ((v) =>
+          v != null ? v as String : null)(json['room_version']);
   Map<String, Object?> toJson() {
     final allowedRoomIds = this.allowedRoomIds;
     final encryption = this.encryption;
@@ -1164,26 +1223,24 @@ class RoomSummary$2 implements PublishedRoomsChunk, SpaceRoomsChunk$1 {
   });
 
   RoomSummary$2.fromJson(Map<String, Object?> json)
-      : avatarUrl = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
-        canonicalAlias =
-            ((v) => v != null ? v as String : null)(json['canonical_alias']),
-        guestCanJoin = json['guest_can_join'] as bool,
-        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
-        name = ((v) => v != null ? v as String : null)(json['name']),
-        numJoinedMembers = json['num_joined_members'] as int,
-        roomId = json['room_id'] as String,
-        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
-        topic = ((v) => v != null ? v as String : null)(json['topic']),
-        worldReadable = json['world_readable'] as bool,
-        allowedRoomIds = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['allowed_room_ids']),
-        encryption =
-            ((v) => v != null ? v as String : null)(json['encryption']),
-        roomVersion =
-            ((v) => v != null ? v as String : null)(json['room_version']);
-  @override
+    : avatarUrl = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+      canonicalAlias = ((v) =>
+          v != null ? v as String : null)(json['canonical_alias']),
+      guestCanJoin = json['guest_can_join'] as bool,
+      joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
+      name = ((v) => v != null ? v as String : null)(json['name']),
+      numJoinedMembers = json['num_joined_members'] as int,
+      roomId = json['room_id'] as String,
+      roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+      topic = ((v) => v != null ? v as String : null)(json['topic']),
+      worldReadable = json['world_readable'] as bool,
+      allowedRoomIds = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['allowed_room_ids']),
+      encryption = ((v) => v != null ? v as String : null)(json['encryption']),
+      roomVersion = ((v) =>
+          v != null ? v as String : null)(json['room_version']);
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
@@ -1213,61 +1270,48 @@ class RoomSummary$2 implements PublishedRoomsChunk, SpaceRoomsChunk$1 {
   }
 
   /// The URL for the room's avatar, if one is set.
-  @override
   Uri? avatarUrl;
 
   /// The canonical alias of the room, if any.
-  @override
   String? canonicalAlias;
 
   /// Whether guest users may join the room and participate in it.
   /// If they can, they will be subject to ordinary power level
   /// rules like any other user.
-  @override
   bool guestCanJoin;
 
   /// The room's join rule. When not present, the room is assumed to
   /// be `public`.
-  @override
   String? joinRule;
 
   /// The name of the room, if any.
-  @override
   String? name;
 
   /// The number of members joined to the room.
-  @override
   int numJoinedMembers;
 
   /// The ID of the room.
-  @override
   String roomId;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
-  @override
   String? roomType;
 
   /// The plain text topic of the room. Omitted if no `text/plain` mimetype
   /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
-  @override
   String? topic;
 
   /// Whether the room may be viewed by users without joining.
-  @override
   bool worldReadable;
 
   /// If the room is a [restricted room](https://spec.matrix.org/unstable/server-server-api/#restricted-rooms), these are the room IDs which
   /// are specified by the join rules. Empty or omitted otherwise.
-  @override
   List<String>? allowedRoomIds;
 
   /// The encryption algorithm to be used to encrypt messages sent in the
   /// room.
-  @override
   String? encryption;
 
   /// The version of the room.
-  @override
   String? roomVersion;
 
   @dart.override
@@ -1291,20 +1335,20 @@ class RoomSummary$2 implements PublishedRoomsChunk, SpaceRoomsChunk$1 {
 
   @dart.override
   int get hashCode => Object.hash(
-        avatarUrl,
-        canonicalAlias,
-        guestCanJoin,
-        joinRule,
-        name,
-        numJoinedMembers,
-        roomId,
-        roomType,
-        topic,
-        worldReadable,
-        allowedRoomIds,
-        encryption,
-        roomVersion,
-      );
+    avatarUrl,
+    canonicalAlias,
+    guestCanJoin,
+    joinRule,
+    name,
+    numJoinedMembers,
+    roomId,
+    roomType,
+    topic,
+    worldReadable,
+    allowedRoomIds,
+    encryption,
+    roomVersion,
+  );
 }
 
 ///
@@ -1319,17 +1363,16 @@ class SpaceHierarchyRoomsChunk {
   });
 
   SpaceHierarchyRoomsChunk.fromJson(Map<String, Object?> json)
-      : allowedRoomIds = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['allowed_room_ids']),
-        childrenState = (json['children_state'] as List)
-            .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
-            .toList(),
-        encryption =
-            ((v) => v != null ? v as String : null)(json['encryption']),
-        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
-        roomVersion =
-            ((v) => v != null ? v as String : null)(json['room_version']);
+    : allowedRoomIds = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['allowed_room_ids']),
+      childrenState = (json['children_state'] as List)
+          .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
+          .toList(),
+      encryption = ((v) => v != null ? v as String : null)(json['encryption']),
+      roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+      roomVersion = ((v) =>
+          v != null ? v as String : null)(json['room_version']);
   Map<String, Object?> toJson() {
     final allowedRoomIds = this.allowedRoomIds;
     final encryption = this.encryption;
@@ -1376,12 +1419,12 @@ class SpaceHierarchyRoomsChunk {
 
   @dart.override
   int get hashCode => Object.hash(
-        allowedRoomIds,
-        childrenState,
-        encryption,
-        roomType,
-        roomVersion,
-      );
+    allowedRoomIds,
+    childrenState,
+    encryption,
+    roomType,
+    roomVersion,
+  );
 }
 
 ///
@@ -1405,29 +1448,27 @@ class SpaceRoomsChunk$2 implements RoomSummary$2, SpaceHierarchyRoomsChunk {
   });
 
   SpaceRoomsChunk$2.fromJson(Map<String, Object?> json)
-      : avatarUrl = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
-        canonicalAlias =
-            ((v) => v != null ? v as String : null)(json['canonical_alias']),
-        guestCanJoin = json['guest_can_join'] as bool,
-        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
-        name = ((v) => v != null ? v as String : null)(json['name']),
-        numJoinedMembers = json['num_joined_members'] as int,
-        roomId = json['room_id'] as String,
-        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
-        topic = ((v) => v != null ? v as String : null)(json['topic']),
-        worldReadable = json['world_readable'] as bool,
-        allowedRoomIds = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['allowed_room_ids']),
-        encryption =
-            ((v) => v != null ? v as String : null)(json['encryption']),
-        roomVersion =
-            ((v) => v != null ? v as String : null)(json['room_version']),
-        childrenState = (json['children_state'] as List)
-            .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
-            .toList();
-  @override
+    : avatarUrl = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+      canonicalAlias = ((v) =>
+          v != null ? v as String : null)(json['canonical_alias']),
+      guestCanJoin = json['guest_can_join'] as bool,
+      joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
+      name = ((v) => v != null ? v as String : null)(json['name']),
+      numJoinedMembers = json['num_joined_members'] as int,
+      roomId = json['room_id'] as String,
+      roomType = ((v) => v != null ? v as String : null)(json['room_type']),
+      topic = ((v) => v != null ? v as String : null)(json['topic']),
+      worldReadable = json['world_readable'] as bool,
+      allowedRoomIds = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['allowed_room_ids']),
+      encryption = ((v) => v != null ? v as String : null)(json['encryption']),
+      roomVersion = ((v) =>
+          v != null ? v as String : null)(json['room_version']),
+      childrenState = (json['children_state'] as List)
+          .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
+          .toList();
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
@@ -1458,66 +1499,52 @@ class SpaceRoomsChunk$2 implements RoomSummary$2, SpaceHierarchyRoomsChunk {
   }
 
   /// The URL for the room's avatar, if one is set.
-  @override
   Uri? avatarUrl;
 
   /// The canonical alias of the room, if any.
-  @override
   String? canonicalAlias;
 
   /// Whether guest users may join the room and participate in it.
   /// If they can, they will be subject to ordinary power level
   /// rules like any other user.
-  @override
   bool guestCanJoin;
 
   /// The room's join rule. When not present, the room is assumed to
   /// be `public`.
-  @override
   String? joinRule;
 
   /// The name of the room, if any.
-  @override
   String? name;
 
   /// The number of members joined to the room.
-  @override
   int numJoinedMembers;
 
   /// The ID of the room.
-  @override
   String roomId;
 
   ///
-  @override
   String? roomType;
 
   /// The plain text topic of the room. Omitted if no `text/plain` mimetype
   /// exists in [`m.room.topic`](https://spec.matrix.org/unstable/client-server-api/#mroomtopic).
-  @override
   String? topic;
 
   /// Whether the room may be viewed by users without joining.
-  @override
   bool worldReadable;
 
   ///
-  @override
   List<String>? allowedRoomIds;
 
   ///
-  @override
   String? encryption;
 
   ///
-  @override
   String? roomVersion;
 
   /// The [`m.space.child`](https://spec.matrix.org/unstable/client-server-api/#mspacechild) events of the space-room, represented
   /// as [Stripped State Events](https://spec.matrix.org/unstable/client-server-api/#stripped-state) with an added `origin_server_ts` key.
   ///
   /// If the room is not a space-room, this should be empty.
-  @override
   List<ChildrenState> childrenState;
 
   @dart.override
@@ -1542,36 +1569,33 @@ class SpaceRoomsChunk$2 implements RoomSummary$2, SpaceHierarchyRoomsChunk {
 
   @dart.override
   int get hashCode => Object.hash(
-        avatarUrl,
-        canonicalAlias,
-        guestCanJoin,
-        joinRule,
-        name,
-        numJoinedMembers,
-        roomId,
-        roomType,
-        topic,
-        worldReadable,
-        allowedRoomIds,
-        encryption,
-        roomVersion,
-        childrenState,
-      );
+    avatarUrl,
+    canonicalAlias,
+    guestCanJoin,
+    joinRule,
+    name,
+    numJoinedMembers,
+    roomId,
+    roomType,
+    topic,
+    worldReadable,
+    allowedRoomIds,
+    encryption,
+    roomVersion,
+    childrenState,
+  );
 }
 
 ///
 @_NameSource('generated')
 class GetSpaceHierarchyResponse {
-  GetSpaceHierarchyResponse({
-    this.nextBatch,
-    required this.rooms,
-  });
+  GetSpaceHierarchyResponse({this.nextBatch, required this.rooms});
 
   GetSpaceHierarchyResponse.fromJson(Map<String, Object?> json)
-      : nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        rooms = (json['rooms'] as List)
-            .map((v) => SpaceRoomsChunk$2.fromJson(v as Map<String, Object?>))
-            .toList();
+    : nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+      rooms = (json['rooms'] as List)
+          .map((v) => SpaceRoomsChunk$2.fromJson(v as Map<String, Object?>))
+          .toList();
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
     return {
@@ -1630,13 +1654,13 @@ class GetRelatingEventsResponse {
   });
 
   GetRelatingEventsResponse.fromJson(Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
-            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-            .toList(),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
-        recursionDepth =
-            ((v) => v != null ? v as int : null)(json['recursion_depth']);
+    : chunk = (json['chunk'] as List)
+          .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+          .toList(),
+      nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+      prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+      recursionDepth = ((v) =>
+          v != null ? v as int : null)(json['recursion_depth']);
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
     final prevBatch = this.prevBatch;
@@ -1692,13 +1716,13 @@ class GetRelatingEventsWithRelTypeResponse {
   });
 
   GetRelatingEventsWithRelTypeResponse.fromJson(Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
-            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-            .toList(),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
-        recursionDepth =
-            ((v) => v != null ? v as int : null)(json['recursion_depth']);
+    : chunk = (json['chunk'] as List)
+          .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+          .toList(),
+      nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+      prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+      recursionDepth = ((v) =>
+          v != null ? v as int : null)(json['recursion_depth']);
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
     final prevBatch = this.prevBatch;
@@ -1755,13 +1779,13 @@ class GetRelatingEventsWithRelTypeAndEventTypeResponse {
 
   GetRelatingEventsWithRelTypeAndEventTypeResponse.fromJson(
     Map<String, Object?> json,
-  )   : chunk = (json['chunk'] as List)
-            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-            .toList(),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
-        recursionDepth =
-            ((v) => v != null ? v as int : null)(json['recursion_depth']);
+  ) : chunk = (json['chunk'] as List)
+          .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+          .toList(),
+      nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+      prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+      recursionDepth = ((v) =>
+          v != null ? v as int : null)(json['recursion_depth']);
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
     final prevBatch = this.prevBatch;
@@ -1819,16 +1843,13 @@ enum Include {
 ///
 @_NameSource('generated')
 class GetThreadRootsResponse {
-  GetThreadRootsResponse({
-    required this.chunk,
-    this.nextBatch,
-  });
+  GetThreadRootsResponse({required this.chunk, this.nextBatch});
 
   GetThreadRootsResponse.fromJson(Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
-            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-            .toList(),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']);
+    : chunk = (json['chunk'] as List)
+          .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+          .toList(),
+      nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']);
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
     return {
@@ -1870,12 +1891,12 @@ class GetEventByTimestampResponse {
   });
 
   GetEventByTimestampResponse.fromJson(Map<String, Object?> json)
-      : eventId = json['event_id'] as String,
-        originServerTs = json['origin_server_ts'] as int;
+    : eventId = json['event_id'] as String,
+      originServerTs = json['origin_server_ts'] as int;
   Map<String, Object?> toJson() => {
-        'event_id': eventId,
-        'origin_server_ts': originServerTs,
-      };
+    'event_id': eventId,
+    'origin_server_ts': originServerTs,
+  };
 
   /// The ID of the event found
   String eventId;
@@ -1919,17 +1940,18 @@ class ThirdPartyIdentifier {
   });
 
   ThirdPartyIdentifier.fromJson(Map<String, Object?> json)
-      : addedAt = json['added_at'] as int,
-        address = json['address'] as String,
-        medium = ThirdPartyIdentifierMedium.values
-            .fromString(json['medium'] as String)!,
-        validatedAt = json['validated_at'] as int;
+    : addedAt = json['added_at'] as int,
+      address = json['address'] as String,
+      medium = ThirdPartyIdentifierMedium.values.fromString(
+        json['medium'] as String,
+      )!,
+      validatedAt = json['validated_at'] as int;
   Map<String, Object?> toJson() => {
-        'added_at': addedAt,
-        'address': address,
-        'medium': medium.name,
-        'validated_at': validatedAt,
-      };
+    'added_at': addedAt,
+    'address': address,
+    'medium': medium.name,
+    'validated_at': validatedAt,
+  };
 
   /// The timestamp, in milliseconds, when the homeserver associated the third-party identifier with the user.
   int addedAt;
@@ -1969,16 +1991,16 @@ class ThreePidCredentials {
   });
 
   ThreePidCredentials.fromJson(Map<String, Object?> json)
-      : clientSecret = json['client_secret'] as String,
-        idAccessToken = json['id_access_token'] as String,
-        idServer = json['id_server'] as String,
-        sid = json['sid'] as String;
+    : clientSecret = json['client_secret'] as String,
+      idAccessToken = json['id_access_token'] as String,
+      idServer = json['id_server'] as String,
+      sid = json['sid'] as String;
   Map<String, Object?> toJson() => {
-        'client_secret': clientSecret,
-        'id_access_token': idAccessToken,
-        'id_server': idServer,
-        'sid': sid,
-      };
+    'client_secret': clientSecret,
+    'id_access_token': idAccessToken,
+    'id_server': idServer,
+    'sid': sid,
+  };
 
   /// The client secret used in the session with the identity server.
   String clientSecret;
@@ -2021,15 +2043,12 @@ enum IdServerUnbindResult {
 ///
 @_NameSource('spec')
 class RequestTokenResponse {
-  RequestTokenResponse({
-    required this.sid,
-    this.submitUrl,
-  });
+  RequestTokenResponse({required this.sid, this.submitUrl});
 
   RequestTokenResponse.fromJson(Map<String, Object?> json)
-      : sid = json['sid'] as String,
-        submitUrl = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['submit_url']);
+    : sid = json['sid'] as String,
+      submitUrl = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['submit_url']);
   Map<String, Object?> toJson() {
     final submitUrl = this.submitUrl;
     return {
@@ -2044,15 +2063,18 @@ class RequestTokenResponse {
   String sid;
 
   /// An optional field containing a URL where the client must submit the
-  /// validation token to, with identical parameters to the Identity Service
-  /// API's `POST /validate/email/submitToken` endpoint (without the requirement
-  /// for an access token). The homeserver must send this token to the user (if
-  /// applicable), who should then be prompted to provide it to the client.
+  /// validation token, with identical request and response parameters and error
+  /// codes to the Identity Service API's
+  /// [`POST /validate/email/submitToken`](https://spec.matrix.org/unstable/identity-service-api/#post_matrixidentityv2validateemailsubmittoken)
+  /// and [`POST /validate/msisdn/submitToken`](https://spec.matrix.org/unstable/identity-service-api/#post_matrixidentityv2validatemsisdnsubmittoken)
+  /// endpoints (without the requirement for an access token). The homeserver
+  /// must send this token to the user (if applicable), who should then be
+  /// prompted to provide it to the client.
   ///
   /// If this field is not present, the client can assume that verification
   /// will happen without the client's involvement provided the homeserver
-  /// advertises this specification version in the `/versions` response
-  /// (ie: r0.5.0).
+  /// advertises a sufficiently recent version in the [`GET /versions`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientversions)
+  /// response (ie: r0.5.0).
   Uri? submitUrl;
 
   @dart.override
@@ -2070,16 +2092,12 @@ class RequestTokenResponse {
 ///
 @_NameSource('rule override generated')
 class TokenOwnerInfo {
-  TokenOwnerInfo({
-    this.deviceId,
-    this.isGuest,
-    required this.userId,
-  });
+  TokenOwnerInfo({this.deviceId, this.isGuest, required this.userId});
 
   TokenOwnerInfo.fromJson(Map<String, Object?> json)
-      : deviceId = ((v) => v != null ? v as String : null)(json['device_id']),
-        isGuest = ((v) => v != null ? v as bool : null)(json['is_guest']),
-        userId = json['user_id'] as String;
+    : deviceId = ((v) => v != null ? v as String : null)(json['device_id']),
+      isGuest = ((v) => v != null ? v as bool : null)(json['is_guest']),
+      userId = json['user_id'] as String;
   Map<String, Object?> toJson() {
     final deviceId = this.deviceId;
     final isGuest = this.isGuest;
@@ -2120,16 +2138,12 @@ class TokenOwnerInfo {
 ///
 @_NameSource('spec')
 class ConnectionInfo {
-  ConnectionInfo({
-    this.ip,
-    this.lastSeen,
-    this.userAgent,
-  });
+  ConnectionInfo({this.ip, this.lastSeen, this.userAgent});
 
   ConnectionInfo.fromJson(Map<String, Object?> json)
-      : ip = ((v) => v != null ? v as String : null)(json['ip']),
-        lastSeen = ((v) => v != null ? v as int : null)(json['last_seen']),
-        userAgent = ((v) => v != null ? v as String : null)(json['user_agent']);
+    : ip = ((v) => v != null ? v as String : null)(json['ip']),
+      lastSeen = ((v) => v != null ? v as int : null)(json['last_seen']),
+      userAgent = ((v) => v != null ? v as String : null)(json['user_agent']);
   Map<String, Object?> toJson() {
     final ip = this.ip;
     final lastSeen = this.lastSeen;
@@ -2166,16 +2180,14 @@ class ConnectionInfo {
 ///
 @_NameSource('spec')
 class SessionInfo {
-  SessionInfo({
-    this.connections,
-  });
+  SessionInfo({this.connections});
 
   SessionInfo.fromJson(Map<String, Object?> json)
-      : connections = ((v) => v != null
-            ? (v as List)
+    : connections = ((v) => v != null
+          ? (v as List)
                 .map((v) => ConnectionInfo.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['connections']);
+          : null)(json['connections']);
   Map<String, Object?> toJson() {
     final connections = this.connections;
     return {
@@ -2201,16 +2213,14 @@ class SessionInfo {
 ///
 @_NameSource('spec')
 class DeviceInfo {
-  DeviceInfo({
-    this.sessions,
-  });
+  DeviceInfo({this.sessions});
 
   DeviceInfo.fromJson(Map<String, Object?> json)
-      : sessions = ((v) => v != null
-            ? (v as List)
+    : sessions = ((v) => v != null
+          ? (v as List)
                 .map((v) => SessionInfo.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['sessions']);
+          : null)(json['sessions']);
   Map<String, Object?> toJson() {
     final sessions = this.sessions;
     return {
@@ -2236,19 +2246,16 @@ class DeviceInfo {
 ///
 @_NameSource('rule override generated')
 class WhoIsInfo {
-  WhoIsInfo({
-    this.devices,
-    this.userId,
-  });
+  WhoIsInfo({this.devices, this.userId});
 
   WhoIsInfo.fromJson(Map<String, Object?> json)
-      : devices = ((v) => v != null
-            ? (v as Map<String, Object?>).map(
-                (k, v) =>
-                    MapEntry(k, DeviceInfo.fromJson(v as Map<String, Object?>)),
-              )
-            : null)(json['devices']),
-        userId = ((v) => v != null ? v as String : null)(json['user_id']);
+    : devices = ((v) => v != null
+          ? (v as Map<String, Object?>).map(
+              (k, v) =>
+                  MapEntry(k, DeviceInfo.fromJson(v as Map<String, Object?>)),
+            )
+          : null)(json['devices']),
+      userId = ((v) => v != null ? v as String : null)(json['user_id']);
   Map<String, Object?> toJson() {
     final devices = this.devices;
     final userId = this.userId;
@@ -2280,15 +2287,11 @@ class WhoIsInfo {
 ///
 @_NameSource('spec')
 class BooleanCapability {
-  BooleanCapability({
-    required this.enabled,
-  });
+  BooleanCapability({required this.enabled});
 
   BooleanCapability.fromJson(Map<String, Object?> json)
-      : enabled = json['enabled'] as bool;
-  Map<String, Object?> toJson() => {
-        'enabled': enabled,
-      };
+    : enabled = json['enabled'] as bool;
+  Map<String, Object?> toJson() => {'enabled': enabled};
 
   /// True if the user can perform the action, false otherwise.
   bool enabled;
@@ -2306,6 +2309,47 @@ class BooleanCapability {
 
 ///
 @_NameSource('spec')
+class AccountModerationCapability {
+  AccountModerationCapability({this.lock, this.suspend});
+
+  AccountModerationCapability.fromJson(Map<String, Object?> json)
+    : lock = ((v) => v != null ? v as bool : null)(json['lock']),
+      suspend = ((v) => v != null ? v as bool : null)(json['suspend']);
+  Map<String, Object?> toJson() {
+    final lock = this.lock;
+    final suspend = this.suspend;
+    return {
+      if (lock != null) 'lock': lock,
+      if (suspend != null) 'suspend': suspend,
+    };
+  }
+
+  /// `true` if the user can lock a user via [`PUT /admin/lock/{userId}`](https://spec.matrix.org/unstable/client-server-api/#put_matrixclientv1adminlockuserid),
+  /// `false` otherwise.
+  ///
+  /// Defaults to `false`.
+  bool? lock;
+
+  /// `true` if the user can suspend a user via [`PUT /admin/suspend/{userId}`](https://spec.matrix.org/unstable/client-server-api/#put_matrixclientv1adminsuspenduserid),
+  /// `false` otherwise.
+  ///
+  /// Defaults to `false`.
+  bool? suspend;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AccountModerationCapability &&
+          other.runtimeType == runtimeType &&
+          other.lock == lock &&
+          other.suspend == suspend);
+
+  @dart.override
+  int get hashCode => Object.hash(lock, suspend);
+}
+
+///
+@_NameSource('spec')
 class ProfileFieldsCapability {
   ProfileFieldsCapability({
     this.allowed,
@@ -2314,13 +2358,13 @@ class ProfileFieldsCapability {
   });
 
   ProfileFieldsCapability.fromJson(Map<String, Object?> json)
-      : allowed = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['allowed']),
-        disallowed = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['disallowed']),
-        enabled = json['enabled'] as bool;
+    : allowed = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['allowed']),
+      disallowed = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['disallowed']),
+      enabled = json['enabled'] as bool;
   Map<String, Object?> toJson() {
     final allowed = this.allowed;
     final disallowed = this.disallowed;
@@ -2376,21 +2420,18 @@ enum RoomVersionAvailable {
 ///
 @_NameSource('spec')
 class RoomVersionsCapability {
-  RoomVersionsCapability({
-    required this.available,
-    required this.default$,
-  });
+  RoomVersionsCapability({required this.available, required this.default$});
 
   RoomVersionsCapability.fromJson(Map<String, Object?> json)
-      : available = (json['available'] as Map<String, Object?>).map(
-          (k, v) =>
-              MapEntry(k, RoomVersionAvailable.values.fromString(v as String)!),
-        ),
-        default$ = json['default'] as String;
+    : available = (json['available'] as Map<String, Object?>).map(
+        (k, v) =>
+            MapEntry(k, RoomVersionAvailable.values.fromString(v as String)!),
+      ),
+      default$ = json['default'] as String;
   Map<String, Object?> toJson() => {
-        'available': available.map((k, v) => MapEntry(k, v.name)),
-        'default': default$,
-      };
+    'available': available.map((k, v) => MapEntry(k, v.name)),
+    'default': default$,
+  };
 
   /// A detailed description of the room versions the server supports.
   Map<String, RoomVersionAvailable> available;
@@ -2415,7 +2456,9 @@ class RoomVersionsCapability {
 class Capabilities {
   Capabilities({
     this.m3pidChanges,
+    this.mAccountModeration,
     this.mChangePassword,
+    this.mForgetForcedUponLeave,
     this.mGetLoginToken,
     this.mProfileFields,
     this.mRoomVersions,
@@ -2425,45 +2468,55 @@ class Capabilities {
   });
 
   Capabilities.fromJson(Map<String, Object?> json)
-      : m3pidChanges = ((v) => v != null
-            ? BooleanCapability.fromJson(v as Map<String, Object?>)
-            : null)(json['m.3pid_changes']),
-        mChangePassword = ((v) => v != null
-            ? BooleanCapability.fromJson(v as Map<String, Object?>)
-            : null)(json['m.change_password']),
-        mGetLoginToken = ((v) => v != null
-            ? BooleanCapability.fromJson(v as Map<String, Object?>)
-            : null)(json['m.get_login_token']),
-        mProfileFields = ((v) => v != null
-            ? ProfileFieldsCapability.fromJson(v as Map<String, Object?>)
-            : null)(json['m.profile_fields']),
-        mRoomVersions = ((v) => v != null
-            ? RoomVersionsCapability.fromJson(v as Map<String, Object?>)
-            : null)(json['m.room_versions']),
-        mSetAvatarUrl = ((v) => v != null
-            ? BooleanCapability.fromJson(v as Map<String, Object?>)
-            : null)(json['m.set_avatar_url']),
-        mSetDisplayname = ((v) => v != null
-            ? BooleanCapability.fromJson(v as Map<String, Object?>)
-            : null)(json['m.set_displayname']),
-        additionalProperties = Map.fromEntries(
-          json.entries
-              .where(
-                (e) => ![
-                  'm.3pid_changes',
-                  'm.change_password',
-                  'm.get_login_token',
-                  'm.profile_fields',
-                  'm.room_versions',
-                  'm.set_avatar_url',
-                  'm.set_displayname',
-                ].contains(e.key),
-              )
-              .map((e) => MapEntry(e.key, e.value)),
-        );
+    : m3pidChanges = ((v) => v != null
+          ? BooleanCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.3pid_changes']),
+      mAccountModeration = ((v) => v != null
+          ? AccountModerationCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.account_moderation']),
+      mChangePassword = ((v) => v != null
+          ? BooleanCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.change_password']),
+      mForgetForcedUponLeave = ((v) => v != null
+          ? BooleanCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.forget_forced_upon_leave']),
+      mGetLoginToken = ((v) => v != null
+          ? BooleanCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.get_login_token']),
+      mProfileFields = ((v) => v != null
+          ? ProfileFieldsCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.profile_fields']),
+      mRoomVersions = ((v) => v != null
+          ? RoomVersionsCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.room_versions']),
+      mSetAvatarUrl = ((v) => v != null
+          ? BooleanCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.set_avatar_url']),
+      mSetDisplayname = ((v) => v != null
+          ? BooleanCapability.fromJson(v as Map<String, Object?>)
+          : null)(json['m.set_displayname']),
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where(
+              (e) => ![
+                'm.3pid_changes',
+                'm.account_moderation',
+                'm.change_password',
+                'm.forget_forced_upon_leave',
+                'm.get_login_token',
+                'm.profile_fields',
+                'm.room_versions',
+                'm.set_avatar_url',
+                'm.set_displayname',
+              ].contains(e.key),
+            )
+            .map((e) => MapEntry(e.key, e.value as Object?)),
+      );
   Map<String, Object?> toJson() {
     final m3pidChanges = this.m3pidChanges;
+    final mAccountModeration = this.mAccountModeration;
     final mChangePassword = this.mChangePassword;
+    final mForgetForcedUponLeave = this.mForgetForcedUponLeave;
     final mGetLoginToken = this.mGetLoginToken;
     final mProfileFields = this.mProfileFields;
     final mRoomVersions = this.mRoomVersions;
@@ -2472,8 +2525,12 @@ class Capabilities {
     return {
       ...additionalProperties,
       if (m3pidChanges != null) 'm.3pid_changes': m3pidChanges.toJson(),
+      if (mAccountModeration != null)
+        'm.account_moderation': mAccountModeration.toJson(),
       if (mChangePassword != null)
         'm.change_password': mChangePassword.toJson(),
+      if (mForgetForcedUponLeave != null)
+        'm.forget_forced_upon_leave': mForgetForcedUponLeave.toJson(),
       if (mGetLoginToken != null) 'm.get_login_token': mGetLoginToken.toJson(),
       if (mProfileFields != null) 'm.profile_fields': mProfileFields.toJson(),
       if (mRoomVersions != null) 'm.room_versions': mRoomVersions.toJson(),
@@ -2486,8 +2543,20 @@ class Capabilities {
   /// Capability to indicate if the user can change 3PID associations on their account.
   BooleanCapability? m3pidChanges;
 
+  /// Capability to indicate if the user can perform account moderation actions
+  /// via [server administration](https://spec.matrix.org/unstable/client-server-api/#server-administration)
+  /// endpoints.
+  ///
+  /// This property should be omitted altogether if `suspend` and `lock` would
+  /// be `false`.
+  AccountModerationCapability? mAccountModeration;
+
   /// Capability to indicate if the user can change their password.
   BooleanCapability? mChangePassword;
+
+  /// Capability to indicate if the server automatically forgets rooms once the user
+  /// leaves.
+  BooleanCapability? mForgetForcedUponLeave;
 
   /// Capability to indicate if the user can generate tokens to log further clients into their account.
   BooleanCapability? mGetLoginToken;
@@ -2524,7 +2593,9 @@ class Capabilities {
       (other is Capabilities &&
           other.runtimeType == runtimeType &&
           other.m3pidChanges == m3pidChanges &&
+          other.mAccountModeration == mAccountModeration &&
           other.mChangePassword == mChangePassword &&
+          other.mForgetForcedUponLeave == mForgetForcedUponLeave &&
           other.mGetLoginToken == mGetLoginToken &&
           other.mProfileFields == mProfileFields &&
           other.mRoomVersions == mRoomVersions &&
@@ -2533,29 +2604,27 @@ class Capabilities {
 
   @dart.override
   int get hashCode => Object.hash(
-        m3pidChanges,
-        mChangePassword,
-        mGetLoginToken,
-        mProfileFields,
-        mRoomVersions,
-        mSetAvatarUrl,
-        mSetDisplayname,
-      );
+    m3pidChanges,
+    mAccountModeration,
+    mChangePassword,
+    mForgetForcedUponLeave,
+    mGetLoginToken,
+    mProfileFields,
+    mRoomVersions,
+    mSetAvatarUrl,
+    mSetDisplayname,
+  );
 }
 
 ///
 @_NameSource('spec')
 class StateEvent {
-  StateEvent({
-    required this.content,
-    this.stateKey,
-    required this.type,
-  });
+  StateEvent({required this.content, this.stateKey, required this.type});
 
   StateEvent.fromJson(Map<String, Object?> json)
-      : content = json['content'] as Map<String, Object?>,
-        stateKey = ((v) => v != null ? v as String : null)(json['state_key']),
-        type = json['type'] as String;
+    : content = json['content'] as Map<String, Object?>,
+      stateKey = ((v) => v != null ? v as String : null)(json['state_key']),
+      type = json['type'] as String;
   Map<String, Object?> toJson() {
     final stateKey = this.stateKey;
     return {
@@ -2598,16 +2667,16 @@ class Invite3pid {
   });
 
   Invite3pid.fromJson(Map<String, Object?> json)
-      : address = json['address'] as String,
-        idAccessToken = json['id_access_token'] as String,
-        idServer = json['id_server'] as String,
-        medium = json['medium'] as String;
+    : address = json['address'] as String,
+      idAccessToken = json['id_access_token'] as String,
+      idServer = json['id_server'] as String,
+      medium = json['medium'] as String;
   Map<String, Object?> toJson() => {
-        'address': address,
-        'id_access_token': idAccessToken,
-        'id_server': idServer,
-        'medium': medium,
-      };
+    'address': address,
+    'id_access_token': idAccessToken,
+    'id_server': idServer,
+    'medium': medium,
+  };
 
   /// The invitee's third-party identifier.
   String address;
@@ -2670,12 +2739,12 @@ class Device {
   });
 
   Device.fromJson(Map<String, Object?> json)
-      : deviceId = json['device_id'] as String,
-        displayName =
-            ((v) => v != null ? v as String : null)(json['display_name']),
-        lastSeenIp =
-            ((v) => v != null ? v as String : null)(json['last_seen_ip']),
-        lastSeenTs = ((v) => v != null ? v as int : null)(json['last_seen_ts']);
+    : deviceId = json['device_id'] as String,
+      displayName = ((v) =>
+          v != null ? v as String : null)(json['display_name']),
+      lastSeenIp = ((v) =>
+          v != null ? v as String : null)(json['last_seen_ip']),
+      lastSeenTs = ((v) => v != null ? v as int : null)(json['last_seen_ts']);
   Map<String, Object?> toJson() {
     final displayName = this.displayName;
     final lastSeenIp = this.lastSeenIp;
@@ -2722,16 +2791,13 @@ class Device {
 ///
 @_NameSource('generated')
 class GetRoomIdByAliasResponse {
-  GetRoomIdByAliasResponse({
-    this.roomId,
-    this.servers,
-  });
+  GetRoomIdByAliasResponse({this.roomId, this.servers});
 
   GetRoomIdByAliasResponse.fromJson(Map<String, Object?> json)
-      : roomId = ((v) => v != null ? v as String : null)(json['room_id']),
-        servers = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['servers']);
+    : roomId = ((v) => v != null ? v as String : null)(json['room_id']),
+      servers = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['servers']);
   Map<String, Object?> toJson() {
     final roomId = this.roomId;
     final servers = this.servers;
@@ -2762,20 +2828,16 @@ class GetRoomIdByAliasResponse {
 ///
 @_NameSource('generated')
 class GetEventsResponse {
-  GetEventsResponse({
-    this.chunk,
-    this.end,
-    this.start,
-  });
+  GetEventsResponse({this.chunk, this.end, this.start});
 
   GetEventsResponse.fromJson(Map<String, Object?> json)
-      : chunk = ((v) => v != null
-            ? (v as List)
+    : chunk = ((v) => v != null
+          ? (v as List)
                 .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['chunk']),
-        end = ((v) => v != null ? v as String : null)(json['end']),
-        start = ((v) => v != null ? v as String : null)(json['start']);
+          : null)(json['chunk']),
+      end = ((v) => v != null ? v as String : null)(json['end']),
+      start = ((v) => v != null ? v as String : null)(json['start']);
   Map<String, Object?> toJson() {
     final chunk = this.chunk;
     final end = this.end;
@@ -2814,20 +2876,16 @@ class GetEventsResponse {
 ///
 @_NameSource('generated')
 class PeekEventsResponse {
-  PeekEventsResponse({
-    this.chunk,
-    this.end,
-    this.start,
-  });
+  PeekEventsResponse({this.chunk, this.end, this.start});
 
   PeekEventsResponse.fromJson(Map<String, Object?> json)
-      : chunk = ((v) => v != null
-            ? (v as List)
+    : chunk = ((v) => v != null
+          ? (v as List)
                 .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['chunk']),
-        end = ((v) => v != null ? v as String : null)(json['end']),
-        start = ((v) => v != null ? v as String : null)(json['start']);
+          : null)(json['chunk']),
+      end = ((v) => v != null ? v as String : null)(json['end']),
+      start = ((v) => v != null ? v as String : null)(json['start']);
   Map<String, Object?> toJson() {
     final chunk = this.chunk;
     final end = this.end;
@@ -2875,22 +2933,23 @@ class ThirdPartySigned {
   });
 
   ThirdPartySigned.fromJson(Map<String, Object?> json)
-      : mxid = json['mxid'] as String,
-        sender = json['sender'] as String,
-        signatures = (json['signatures'] as Map<String, Object?>).map(
-          (k, v) => MapEntry(
-            k,
-            (v as Map<String, Object?>).map((k, v) => MapEntry(k, v as String)),
-          ),
+    : mxid = json['mxid'] as String,
+      sender = json['sender'] as String,
+      signatures = (json['signatures'] as Map<String, Object?>).map(
+        (k, v) => MapEntry(
+          k,
+          (v as Map<String, Object?>).map((k, v) => MapEntry(k, v as String)),
         ),
-        token = json['token'] as String;
+      ),
+      token = json['token'] as String;
   Map<String, Object?> toJson() => {
-        'mxid': mxid,
-        'sender': sender,
-        'signatures':
-            signatures.map((k, v) => MapEntry(k, v.map(MapEntry.new))),
-        'token': token,
-      };
+    'mxid': mxid,
+    'sender': sender,
+    'signatures': signatures.map(
+      (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v))),
+    ),
+    'token': token,
+  };
 
   /// The Matrix ID of the invitee.
   String mxid;
@@ -2921,18 +2980,15 @@ class ThirdPartySigned {
 ///
 @_NameSource('generated')
 class GetKeysChangesResponse {
-  GetKeysChangesResponse({
-    this.changed,
-    this.left,
-  });
+  GetKeysChangesResponse({this.changed, this.left});
 
   GetKeysChangesResponse.fromJson(Map<String, Object?> json)
-      : changed = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['changed']),
-        left = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['left']);
+    : changed = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['changed']),
+      left = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['left']);
   Map<String, Object?> toJson() {
     final changed = this.changed;
     final left = this.left;
@@ -2966,29 +3022,29 @@ class GetKeysChangesResponse {
 ///
 @_NameSource('generated')
 class ClaimKeysResponse {
-  ClaimKeysResponse({
-    this.failures,
-    required this.oneTimeKeys,
-  });
+  ClaimKeysResponse({this.failures, required this.oneTimeKeys});
 
   ClaimKeysResponse.fromJson(Map<String, Object?> json)
-      : failures = ((v) => v != null
-            ? (v as Map<String, Object?>)
-                .map((k, v) => MapEntry(k, v as Map<String, Object?>))
-            : null)(json['failures']),
-        oneTimeKeys = (json['one_time_keys'] as Map<String, Object?>).map(
-          (k, v) => MapEntry(
-            k,
-            (v as Map<String, Object?>)
-                .map((k, v) => MapEntry(k, v as Map<String, Object?>)),
+    : failures = ((v) => v != null
+          ? (v as Map<String, Object?>).map(
+              (k, v) => MapEntry(k, v as Map<String, Object?>),
+            )
+          : null)(json['failures']),
+      oneTimeKeys = (json['one_time_keys'] as Map<String, Object?>).map(
+        (k, v) => MapEntry(
+          k,
+          (v as Map<String, Object?>).map(
+            (k, v) => MapEntry(k, v as Map<String, Object?>),
           ),
-        );
+        ),
+      );
   Map<String, Object?> toJson() {
     final failures = this.failures;
     return {
-      if (failures != null) 'failures': failures.map(MapEntry.new),
-      'one_time_keys':
-          oneTimeKeys.map((k, v) => MapEntry(k, v.map(MapEntry.new))),
+      if (failures != null) 'failures': failures.map((k, v) => MapEntry(k, v)),
+      'one_time_keys': oneTimeKeys.map(
+        (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v))),
+      ),
     };
   }
 
@@ -3035,47 +3091,48 @@ class QueryKeysResponse {
   });
 
   QueryKeysResponse.fromJson(Map<String, Object?> json)
-      : deviceKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map(
-                (k, v) => MapEntry(
-                  k,
-                  (v as Map<String, Object?>).map(
-                    (k, v) => MapEntry(
-                      k,
-                      MatrixDeviceKeys.fromJson(v as Map<String, Object?>),
-                    ),
+    : deviceKeys = ((v) => v != null
+          ? (v as Map<String, Object?>).map(
+              (k, v) => MapEntry(
+                k,
+                (v as Map<String, Object?>).map(
+                  (k, v) => MapEntry(
+                    k,
+                    MatrixDeviceKeys.fromJson(v as Map<String, Object?>),
                   ),
                 ),
-              )
-            : null)(json['device_keys']),
-        failures = ((v) => v != null
-            ? (v as Map<String, Object?>)
-                .map((k, v) => MapEntry(k, v as Map<String, Object?>))
-            : null)(json['failures']),
-        masterKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map(
-                (k, v) => MapEntry(
-                  k,
-                  MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
-                ),
-              )
-            : null)(json['master_keys']),
-        selfSigningKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map(
-                (k, v) => MapEntry(
-                  k,
-                  MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
-                ),
-              )
-            : null)(json['self_signing_keys']),
-        userSigningKeys = ((v) => v != null
-            ? (v as Map<String, Object?>).map(
-                (k, v) => MapEntry(
-                  k,
-                  MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
-                ),
-              )
-            : null)(json['user_signing_keys']);
+              ),
+            )
+          : null)(json['device_keys']),
+      failures = ((v) => v != null
+          ? (v as Map<String, Object?>).map(
+              (k, v) => MapEntry(k, v as Map<String, Object?>),
+            )
+          : null)(json['failures']),
+      masterKeys = ((v) => v != null
+          ? (v as Map<String, Object?>).map(
+              (k, v) => MapEntry(
+                k,
+                MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
+              ),
+            )
+          : null)(json['master_keys']),
+      selfSigningKeys = ((v) => v != null
+          ? (v as Map<String, Object?>).map(
+              (k, v) => MapEntry(
+                k,
+                MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
+              ),
+            )
+          : null)(json['self_signing_keys']),
+      userSigningKeys = ((v) => v != null
+          ? (v as Map<String, Object?>).map(
+              (k, v) => MapEntry(
+                k,
+                MatrixCrossSigningKey.fromJson(v as Map<String, Object?>),
+              ),
+            )
+          : null)(json['user_signing_keys']);
   Map<String, Object?> toJson() {
     final deviceKeys = this.deviceKeys;
     final failures = this.failures;
@@ -3087,15 +3144,17 @@ class QueryKeysResponse {
         'device_keys': deviceKeys.map(
           (k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v.toJson()))),
         ),
-      if (failures != null) 'failures': failures.map(MapEntry.new),
+      if (failures != null) 'failures': failures.map((k, v) => MapEntry(k, v)),
       if (masterKeys != null)
         'master_keys': masterKeys.map((k, v) => MapEntry(k, v.toJson())),
       if (selfSigningKeys != null)
-        'self_signing_keys':
-            selfSigningKeys.map((k, v) => MapEntry(k, v.toJson())),
+        'self_signing_keys': selfSigningKeys.map(
+          (k, v) => MapEntry(k, v.toJson()),
+        ),
       if (userSigningKeys != null)
-        'user_signing_keys':
-            userSigningKeys.map((k, v) => MapEntry(k, v.toJson())),
+        'user_signing_keys': userSigningKeys.map(
+          (k, v) => MapEntry(k, v.toJson()),
+        ),
     };
   }
 
@@ -3115,8 +3174,8 @@ class QueryKeysResponse {
   /// user or device is missing from the `device_keys` result.
   Map<String, Map<String, Object?>>? failures;
 
-  /// Information on the master cross-signing keys of the queried users.
-  /// A map from user ID, to master key information.  For each key, the
+  /// Information on the master signing keys of the queried users.
+  /// A map from user ID, to master signing key information.  For each key, the
   /// information returned will be the same as uploaded via
   /// `/keys/device_signing/upload`, along with the signatures
   /// uploaded via `/keys/signatures/upload` that the requesting user
@@ -3149,12 +3208,12 @@ class QueryKeysResponse {
 
   @dart.override
   int get hashCode => Object.hash(
-        deviceKeys,
-        failures,
-        masterKeys,
-        selfSigningKeys,
-        userSigningKeys,
-      );
+    deviceKeys,
+    failures,
+    masterKeys,
+    selfSigningKeys,
+    userSigningKeys,
+  );
 }
 
 ///
@@ -3167,14 +3226,14 @@ class LoginFlow {
   });
 
   LoginFlow.fromJson(Map<String, Object?> json)
-      : getLoginToken =
-            ((v) => v != null ? v as bool : null)(json['get_login_token']),
-        type = json['type'] as String,
-        additionalProperties = Map.fromEntries(
-          json.entries
-              .where((e) => !['get_login_token', 'type'].contains(e.key))
-              .map((e) => MapEntry(e.key, e.value)),
-        );
+    : getLoginToken = ((v) =>
+          v != null ? v as bool : null)(json['get_login_token']),
+      type = json['type'] as String,
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where((e) => !['get_login_token', 'type'].contains(e.key))
+            .map((e) => MapEntry(e.key, e.value as Object?)),
+      );
   Map<String, Object?> toJson() {
     final getLoginToken = this.getLoginToken;
     return {
@@ -3224,18 +3283,16 @@ class LoginResponse {
   });
 
   LoginResponse.fromJson(Map<String, Object?> json)
-      : accessToken = json['access_token'] as String,
-        deviceId = json['device_id'] as String,
-        expiresInMs =
-            ((v) => v != null ? v as int : null)(json['expires_in_ms']),
-        homeServer =
-            ((v) => v != null ? v as String : null)(json['home_server']),
-        refreshToken =
-            ((v) => v != null ? v as String : null)(json['refresh_token']),
-        userId = json['user_id'] as String,
-        wellKnown = ((v) => v != null
-            ? DiscoveryInformation.fromJson(v as Map<String, Object?>)
-            : null)(json['well_known']);
+    : accessToken = json['access_token'] as String,
+      deviceId = json['device_id'] as String,
+      expiresInMs = ((v) => v != null ? v as int : null)(json['expires_in_ms']),
+      homeServer = ((v) => v != null ? v as String : null)(json['home_server']),
+      refreshToken = ((v) =>
+          v != null ? v as String : null)(json['refresh_token']),
+      userId = json['user_id'] as String,
+      wellKnown = ((v) => v != null
+          ? DiscoveryInformation.fromJson(v as Map<String, Object?>)
+          : null)(json['well_known']);
   Map<String, Object?> toJson() {
     final expiresInMs = this.expiresInMs;
     final homeServer = this.homeServer;
@@ -3305,14 +3362,14 @@ class LoginResponse {
 
   @dart.override
   int get hashCode => Object.hash(
-        accessToken,
-        deviceId,
-        expiresInMs,
-        homeServer,
-        refreshToken,
-        userId,
-        wellKnown,
-      );
+    accessToken,
+    deviceId,
+    expiresInMs,
+    homeServer,
+    refreshToken,
+    userId,
+    wellKnown,
+  );
 }
 
 ///
@@ -3328,13 +3385,12 @@ class Notification {
   });
 
   Notification.fromJson(Map<String, Object?> json)
-      : actions = (json['actions'] as List).map((v) => v as Object?).toList(),
-        event = MatrixEvent.fromJson(json['event'] as Map<String, Object?>),
-        profileTag =
-            ((v) => v != null ? v as String : null)(json['profile_tag']),
-        read = json['read'] as bool,
-        roomId = json['room_id'] as String,
-        ts = json['ts'] as int;
+    : actions = (json['actions'] as List).map((v) => v as Object?).toList(),
+      event = MatrixEvent.fromJson(json['event'] as Map<String, Object?>),
+      profileTag = ((v) => v != null ? v as String : null)(json['profile_tag']),
+      read = json['read'] as bool,
+      roomId = json['room_id'] as String,
+      ts = json['ts'] as int;
   Map<String, Object?> toJson() {
     final profileTag = this.profileTag;
     return {
@@ -3387,16 +3443,13 @@ class Notification {
 ///
 @_NameSource('generated')
 class GetNotificationsResponse {
-  GetNotificationsResponse({
-    this.nextToken,
-    required this.notifications,
-  });
+  GetNotificationsResponse({this.nextToken, required this.notifications});
 
   GetNotificationsResponse.fromJson(Map<String, Object?> json)
-      : nextToken = ((v) => v != null ? v as String : null)(json['next_token']),
-        notifications = (json['notifications'] as List)
-            .map((v) => Notification.fromJson(v as Map<String, Object?>))
-            .toList();
+    : nextToken = ((v) => v != null ? v as String : null)(json['next_token']),
+      notifications = (json['notifications'] as List)
+          .map((v) => Notification.fromJson(v as Map<String, Object?>))
+          .toList();
   Map<String, Object?> toJson() {
     final nextToken = this.nextToken;
     return {
@@ -3447,12 +3500,12 @@ class GetPresenceResponse {
   });
 
   GetPresenceResponse.fromJson(Map<String, Object?> json)
-      : currentlyActive =
-            ((v) => v != null ? v as bool : null)(json['currently_active']),
-        lastActiveAgo =
-            ((v) => v != null ? v as int : null)(json['last_active_ago']),
-        presence = PresenceType.values.fromString(json['presence'] as String)!,
-        statusMsg = ((v) => v != null ? v as String : null)(json['status_msg']);
+    : currentlyActive = ((v) =>
+          v != null ? v as bool : null)(json['currently_active']),
+      lastActiveAgo = ((v) =>
+          v != null ? v as int : null)(json['last_active_ago']),
+      presence = PresenceType.values.fromString(json['presence'] as String)!,
+      statusMsg = ((v) => v != null ? v as String : null)(json['status_msg']);
   Map<String, Object?> toJson() {
     final currentlyActive = this.currentlyActive;
     final lastActiveAgo = this.lastActiveAgo;
@@ -3504,21 +3557,21 @@ class ProfileInformation {
   });
 
   ProfileInformation.fromJson(Map<String, Object?> json)
-      : avatarUrl = ((v) => v != null
-            ? ((v as String).startsWith('mxc://')
-                ? Uri.parse(v)
-                : throw Exception('Uri not an mxc URI'))
-            : null)(json['avatar_url']),
-        displayname =
-            ((v) => v != null ? v as String : null)(json['displayname']),
-        mTz = ((v) => v != null ? v as String : null)(json['m.tz']),
-        additionalProperties = Map.fromEntries(
-          json.entries
-              .where(
-                (e) => !['avatar_url', 'displayname', 'm.tz'].contains(e.key),
-              )
-              .map((e) => MapEntry(e.key, e.value)),
-        );
+    : avatarUrl = ((v) => v != null
+          ? ((v as String).startsWith("mxc://")
+                ? Uri.parse(v as String)
+                : throw Exception("Uri not an mxc URI"))
+          : null)(json['avatar_url']),
+      displayname = ((v) =>
+          v != null ? v as String : null)(json['displayname']),
+      mTz = ((v) => v != null ? v as String : null)(json['m.tz']),
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where(
+              (e) => !['avatar_url', 'displayname', 'm.tz'].contains(e.key),
+            )
+            .map((e) => MapEntry(e.key, e.value as Object?)),
+      );
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final displayname = this.displayname;
@@ -3566,13 +3619,13 @@ class GetPublicRoomsResponse {
   });
 
   GetPublicRoomsResponse.fromJson(Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
-            .map((v) => PublishedRoomsChunk.fromJson(v as Map<String, Object?>))
-            .toList(),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
-        totalRoomCountEstimate = ((v) =>
-            v != null ? v as int : null)(json['total_room_count_estimate']);
+    : chunk = (json['chunk'] as List)
+          .map((v) => PublishedRoomsChunk.fromJson(v as Map<String, Object?>))
+          .toList(),
+      nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+      prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+      totalRoomCountEstimate = ((v) =>
+          v != null ? v as int : null)(json['total_room_count_estimate']);
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
     final prevBatch = this.prevBatch;
@@ -3621,17 +3674,16 @@ class GetPublicRoomsResponse {
 ///
 @_NameSource('rule override spec')
 class PublicRoomQueryFilter {
-  PublicRoomQueryFilter({
-    this.genericSearchTerm,
-    this.roomTypes,
-  });
+  PublicRoomQueryFilter({this.genericSearchTerm, this.roomTypes});
 
   PublicRoomQueryFilter.fromJson(Map<String, Object?> json)
-      : genericSearchTerm = ((v) =>
-            v != null ? v as String : null)(json['generic_search_term']),
-        roomTypes = ((v) => v != null
-            ? (v as List).map(((v) => v != null ? v as String : null)).toList()
-            : null)(json['room_types']);
+    : genericSearchTerm = ((v) =>
+          v != null ? v as String : null)(json['generic_search_term']),
+      roomTypes = ((v) => v != null
+          ? (v as List)
+                .map((v) => ((v) => v != null ? v as String : null)(v))
+                .toList()
+          : null)(json['room_types']);
   Map<String, Object?> toJson() {
     final genericSearchTerm = this.genericSearchTerm;
     final roomTypes = this.roomTypes;
@@ -3674,13 +3726,13 @@ class QueryPublicRoomsResponse {
   });
 
   QueryPublicRoomsResponse.fromJson(Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
-            .map((v) => PublishedRoomsChunk.fromJson(v as Map<String, Object?>))
-            .toList(),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
-        totalRoomCountEstimate = ((v) =>
-            v != null ? v as int : null)(json['total_room_count_estimate']);
+    : chunk = (json['chunk'] as List)
+          .map((v) => PublishedRoomsChunk.fromJson(v as Map<String, Object?>))
+          .toList(),
+      nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+      prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']),
+      totalRoomCountEstimate = ((v) =>
+          v != null ? v as int : null)(json['total_room_count_estimate']);
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
     final prevBatch = this.prevBatch;
@@ -3729,20 +3781,16 @@ class QueryPublicRoomsResponse {
 ///
 @_NameSource('spec')
 class PusherData {
-  PusherData({
-    this.format,
-    this.url,
-    this.additionalProperties = const {},
-  });
+  PusherData({this.format, this.url, this.additionalProperties = const {}});
 
   PusherData.fromJson(Map<String, Object?> json)
-      : format = ((v) => v != null ? v as String : null)(json['format']),
-        url = ((v) => v != null ? Uri.parse(v as String) : null)(json['url']),
-        additionalProperties = Map.fromEntries(
-          json.entries
-              .where((e) => !['format', 'url'].contains(e.key))
-              .map((e) => MapEntry(e.key, e.value)),
-        );
+    : format = ((v) => v != null ? v as String : null)(json['format']),
+      url = ((v) => v != null ? Uri.parse(v as String) : null)(json['url']),
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where((e) => !['format', 'url'].contains(e.key))
+            .map((e) => MapEntry(e.key, e.value as Object?)),
+      );
   Map<String, Object?> toJson() {
     final format = this.format;
     final url = this.url;
@@ -3778,18 +3826,12 @@ class PusherData {
 ///
 @_NameSource('spec')
 class PusherId {
-  PusherId({
-    required this.appId,
-    required this.pushkey,
-  });
+  PusherId({required this.appId, required this.pushkey});
 
   PusherId.fromJson(Map<String, Object?> json)
-      : appId = json['app_id'] as String,
-        pushkey = json['pushkey'] as String;
-  Map<String, Object?> toJson() => {
-        'app_id': appId,
-        'pushkey': pushkey,
-      };
+    : appId = json['app_id'] as String,
+      pushkey = json['pushkey'] as String;
+  Map<String, Object?> toJson() => {'app_id': appId, 'pushkey': pushkey};
 
   /// This is a reverse-DNS style identifier for the application.
   /// Max length, 64 chars.
@@ -3827,16 +3869,14 @@ class Pusher implements PusherId {
   });
 
   Pusher.fromJson(Map<String, Object?> json)
-      : appId = json['app_id'] as String,
-        pushkey = json['pushkey'] as String,
-        appDisplayName = json['app_display_name'] as String,
-        data = PusherData.fromJson(json['data'] as Map<String, Object?>),
-        deviceDisplayName = json['device_display_name'] as String,
-        kind = json['kind'] as String,
-        lang = json['lang'] as String,
-        profileTag =
-            ((v) => v != null ? v as String : null)(json['profile_tag']);
-  @override
+    : appId = json['app_id'] as String,
+      pushkey = json['pushkey'] as String,
+      appDisplayName = json['app_display_name'] as String,
+      data = PusherData.fromJson(json['data'] as Map<String, Object?>),
+      deviceDisplayName = json['device_display_name'] as String,
+      kind = json['kind'] as String,
+      lang = json['lang'] as String,
+      profileTag = ((v) => v != null ? v as String : null)(json['profile_tag']);
   Map<String, Object?> toJson() {
     final profileTag = this.profileTag;
     return {
@@ -3853,13 +3893,11 @@ class Pusher implements PusherId {
 
   /// This is a reverse-DNS style identifier for the application.
   /// Max length, 64 chars.
-  @override
   String appId;
 
   /// This is a unique identifier for this pusher. See `/set` for
   /// more detail.
   /// Max length, 512 bytes.
-  @override
   String pushkey;
 
   /// A string that will allow the user to identify what application
@@ -3902,15 +3940,15 @@ class Pusher implements PusherId {
 
   @dart.override
   int get hashCode => Object.hash(
-        appId,
-        pushkey,
-        appDisplayName,
-        data,
-        deviceDisplayName,
-        kind,
-        lang,
-        profileTag,
-      );
+    appId,
+    pushkey,
+    appDisplayName,
+    data,
+    deviceDisplayName,
+    kind,
+    lang,
+    profileTag,
+  );
 }
 
 ///
@@ -3925,11 +3963,11 @@ class PushCondition {
   });
 
   PushCondition.fromJson(Map<String, Object?> json)
-      : is$ = ((v) => v != null ? v as String : null)(json['is']),
-        key = ((v) => v != null ? v as String : null)(json['key']),
-        kind = json['kind'] as String,
-        pattern = ((v) => v != null ? v as String : null)(json['pattern']),
-        value = ((v) => v != null ? v as Object? : null)(json['value']);
+    : is$ = ((v) => v != null ? v as String : null)(json['is']),
+      key = ((v) => v != null ? v as String : null)(json['key']),
+      kind = json['kind'] as String,
+      pattern = ((v) => v != null ? v as String : null)(json['pattern']),
+      value = ((v) => v != null ? v as Object? : null)(json['value']);
   Map<String, Object?> toJson() {
     final is$ = this.is$;
     final key = this.key;
@@ -4000,16 +4038,16 @@ class PushRule {
   });
 
   PushRule.fromJson(Map<String, Object?> json)
-      : actions = (json['actions'] as List).map((v) => v as Object?).toList(),
-        conditions = ((v) => v != null
-            ? (v as List)
+    : actions = (json['actions'] as List).map((v) => v as Object?).toList(),
+      conditions = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushCondition.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['conditions']),
-        default$ = json['default'] as bool,
-        enabled = json['enabled'] as bool,
-        pattern = ((v) => v != null ? v as String : null)(json['pattern']),
-        ruleId = json['rule_id'] as String;
+          : null)(json['conditions']),
+      default$ = json['default'] as bool,
+      enabled = json['enabled'] as bool,
+      pattern = ((v) => v != null ? v as String : null)(json['pattern']),
+      ruleId = json['rule_id'] as String;
   Map<String, Object?> toJson() {
     final conditions = this.conditions;
     final pattern = this.pattern;
@@ -4074,31 +4112,31 @@ class PushRuleSet {
   });
 
   PushRuleSet.fromJson(Map<String, Object?> json)
-      : content = ((v) => v != null
-            ? (v as List)
+    : content = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['content']),
-        override = ((v) => v != null
-            ? (v as List)
+          : null)(json['content']),
+      override = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['override']),
-        room = ((v) => v != null
-            ? (v as List)
+          : null)(json['override']),
+      room = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['room']),
-        sender = ((v) => v != null
-            ? (v as List)
+          : null)(json['room']),
+      sender = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['sender']),
-        underride = ((v) => v != null
-            ? (v as List)
+          : null)(json['sender']),
+      underride = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['underride']);
+          : null)(json['underride']);
   Map<String, Object?> toJson() {
     final content = this.content;
     final override = this.override;
@@ -4158,31 +4196,31 @@ class GetPushRulesGlobalResponse {
   });
 
   GetPushRulesGlobalResponse.fromJson(Map<String, Object?> json)
-      : content = ((v) => v != null
-            ? (v as List)
+    : content = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['content']),
-        override = ((v) => v != null
-            ? (v as List)
+          : null)(json['content']),
+      override = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['override']),
-        room = ((v) => v != null
-            ? (v as List)
+          : null)(json['override']),
+      room = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['room']),
-        sender = ((v) => v != null
-            ? (v as List)
+          : null)(json['room']),
+      sender = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['sender']),
-        underride = ((v) => v != null
-            ? (v as List)
+          : null)(json['sender']),
+      underride = ((v) => v != null
+          ? (v as List)
                 .map((v) => PushRule.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['underride']);
+          : null)(json['underride']);
   Map<String, Object?> toJson() {
     final content = this.content;
     final override = this.override;
@@ -4253,11 +4291,10 @@ class RefreshResponse {
   });
 
   RefreshResponse.fromJson(Map<String, Object?> json)
-      : accessToken = json['access_token'] as String,
-        expiresInMs =
-            ((v) => v != null ? v as int : null)(json['expires_in_ms']),
-        refreshToken =
-            ((v) => v != null ? v as String : null)(json['refresh_token']);
+    : accessToken = json['access_token'] as String,
+      expiresInMs = ((v) => v != null ? v as int : null)(json['expires_in_ms']),
+      refreshToken = ((v) =>
+          v != null ? v as String : null)(json['refresh_token']);
   Map<String, Object?> toJson() {
     final expiresInMs = this.expiresInMs;
     final refreshToken = this.refreshToken;
@@ -4317,16 +4354,14 @@ class RegisterResponse {
   });
 
   RegisterResponse.fromJson(Map<String, Object?> json)
-      : accessToken =
-            ((v) => v != null ? v as String : null)(json['access_token']),
-        deviceId = ((v) => v != null ? v as String : null)(json['device_id']),
-        expiresInMs =
-            ((v) => v != null ? v as int : null)(json['expires_in_ms']),
-        homeServer =
-            ((v) => v != null ? v as String : null)(json['home_server']),
-        refreshToken =
-            ((v) => v != null ? v as String : null)(json['refresh_token']),
-        userId = json['user_id'] as String;
+    : accessToken = ((v) =>
+          v != null ? v as String : null)(json['access_token']),
+      deviceId = ((v) => v != null ? v as String : null)(json['device_id']),
+      expiresInMs = ((v) => v != null ? v as int : null)(json['expires_in_ms']),
+      homeServer = ((v) => v != null ? v as String : null)(json['home_server']),
+      refreshToken = ((v) =>
+          v != null ? v as String : null)(json['refresh_token']),
+      userId = json['user_id'] as String;
   Map<String, Object?> toJson() {
     final accessToken = this.accessToken;
     final deviceId = this.deviceId;
@@ -4398,30 +4433,24 @@ class RegisterResponse {
 
   @dart.override
   int get hashCode => Object.hash(
-        accessToken,
-        deviceId,
-        expiresInMs,
-        homeServer,
-        refreshToken,
-        userId,
-      );
+    accessToken,
+    deviceId,
+    expiresInMs,
+    homeServer,
+    refreshToken,
+    userId,
+  );
 }
 
 ///
 @_NameSource('spec')
 class RoomKeysUpdateResponse {
-  RoomKeysUpdateResponse({
-    required this.count,
-    required this.etag,
-  });
+  RoomKeysUpdateResponse({required this.count, required this.etag});
 
   RoomKeysUpdateResponse.fromJson(Map<String, Object?> json)
-      : count = json['count'] as int,
-        etag = json['etag'] as String;
-  Map<String, Object?> toJson() => {
-        'count': count,
-        'etag': etag,
-      };
+    : count = json['count'] as int,
+      etag = json['etag'] as String;
+  Map<String, Object?> toJson() => {'count': count, 'etag': etag};
 
   /// The number of keys stored in the backup
   int count;
@@ -4455,16 +4484,16 @@ class KeyBackupData {
   });
 
   KeyBackupData.fromJson(Map<String, Object?> json)
-      : firstMessageIndex = json['first_message_index'] as int,
-        forwardedCount = json['forwarded_count'] as int,
-        isVerified = json['is_verified'] as bool,
-        sessionData = json['session_data'] as Map<String, Object?>;
+    : firstMessageIndex = json['first_message_index'] as int,
+      forwardedCount = json['forwarded_count'] as int,
+      isVerified = json['is_verified'] as bool,
+      sessionData = json['session_data'] as Map<String, Object?>;
   Map<String, Object?> toJson() => {
-        'first_message_index': firstMessageIndex,
-        'forwarded_count': forwardedCount,
-        'is_verified': isVerified,
-        'session_data': sessionData,
-      };
+    'first_message_index': firstMessageIndex,
+    'forwarded_count': forwardedCount,
+    'is_verified': isVerified,
+    'session_data': sessionData,
+  };
 
   /// The index of the first message in the session that the key can decrypt.
   int firstMessageIndex;
@@ -4499,18 +4528,16 @@ class KeyBackupData {
 /// The backed up keys for a room.
 @_NameSource('spec')
 class RoomKeyBackup {
-  RoomKeyBackup({
-    required this.sessions,
-  });
+  RoomKeyBackup({required this.sessions});
 
   RoomKeyBackup.fromJson(Map<String, Object?> json)
-      : sessions = (json['sessions'] as Map<String, Object?>).map(
-          (k, v) =>
-              MapEntry(k, KeyBackupData.fromJson(v as Map<String, Object?>)),
-        );
+    : sessions = (json['sessions'] as Map<String, Object?>).map(
+        (k, v) =>
+            MapEntry(k, KeyBackupData.fromJson(v as Map<String, Object?>)),
+      );
   Map<String, Object?> toJson() => {
-        'sessions': sessions.map((k, v) => MapEntry(k, v.toJson())),
-      };
+    'sessions': sessions.map((k, v) => MapEntry(k, v.toJson())),
+  };
 
   /// A map of session IDs to key data.
   Map<String, KeyBackupData> sessions;
@@ -4529,18 +4556,16 @@ class RoomKeyBackup {
 ///
 @_NameSource('rule override generated')
 class RoomKeys {
-  RoomKeys({
-    required this.rooms,
-  });
+  RoomKeys({required this.rooms});
 
   RoomKeys.fromJson(Map<String, Object?> json)
-      : rooms = (json['rooms'] as Map<String, Object?>).map(
-          (k, v) =>
-              MapEntry(k, RoomKeyBackup.fromJson(v as Map<String, Object?>)),
-        );
+    : rooms = (json['rooms'] as Map<String, Object?>).map(
+        (k, v) =>
+            MapEntry(k, RoomKeyBackup.fromJson(v as Map<String, Object?>)),
+      );
   Map<String, Object?> toJson() => {
-        'rooms': rooms.map((k, v) => MapEntry(k, v.toJson())),
-      };
+    'rooms': rooms.map((k, v) => MapEntry(k, v.toJson())),
+  };
 
   /// A map of room IDs to room key backup data.
   Map<String, RoomKeyBackup> rooms;
@@ -4577,19 +4602,20 @@ class GetRoomKeysVersionCurrentResponse {
   });
 
   GetRoomKeysVersionCurrentResponse.fromJson(Map<String, Object?> json)
-      : algorithm =
-            BackupAlgorithm.values.fromString(json['algorithm'] as String)!,
-        authData = json['auth_data'] as Map<String, Object?>,
-        count = json['count'] as int,
-        etag = json['etag'] as String,
-        version = json['version'] as String;
+    : algorithm = BackupAlgorithm.values.fromString(
+        json['algorithm'] as String,
+      )!,
+      authData = json['auth_data'] as Map<String, Object?>,
+      count = json['count'] as int,
+      etag = json['etag'] as String,
+      version = json['version'] as String;
   Map<String, Object?> toJson() => {
-        'algorithm': algorithm.name,
-        'auth_data': authData,
-        'count': count,
-        'etag': etag,
-        'version': version,
-      };
+    'algorithm': algorithm.name,
+    'auth_data': authData,
+    'count': count,
+    'etag': etag,
+    'version': version,
+  };
 
   /// The algorithm used for storing backups.
   BackupAlgorithm algorithm;
@@ -4638,19 +4664,20 @@ class GetRoomKeysVersionResponse {
   });
 
   GetRoomKeysVersionResponse.fromJson(Map<String, Object?> json)
-      : algorithm =
-            BackupAlgorithm.values.fromString(json['algorithm'] as String)!,
-        authData = json['auth_data'] as Map<String, Object?>,
-        count = json['count'] as int,
-        etag = json['etag'] as String,
-        version = json['version'] as String;
+    : algorithm = BackupAlgorithm.values.fromString(
+        json['algorithm'] as String,
+      )!,
+      authData = json['auth_data'] as Map<String, Object?>,
+      count = json['count'] as int,
+      etag = json['etag'] as String,
+      version = json['version'] as String;
   Map<String, Object?> toJson() => {
-        'algorithm': algorithm.name,
-        'auth_data': authData,
-        'count': count,
-        'etag': etag,
-        'version': version,
-      };
+    'algorithm': algorithm.name,
+    'auth_data': authData,
+    'count': count,
+    'etag': etag,
+    'version': version,
+  };
 
   /// The algorithm used for storing backups.
   BackupAlgorithm algorithm;
@@ -4700,26 +4727,26 @@ class EventContext {
   });
 
   EventContext.fromJson(Map<String, Object?> json)
-      : end = ((v) => v != null ? v as String : null)(json['end']),
-        event = ((v) => v != null
-            ? MatrixEvent.fromJson(v as Map<String, Object?>)
-            : null)(json['event']),
-        eventsAfter = ((v) => v != null
-            ? (v as List)
+    : end = ((v) => v != null ? v as String : null)(json['end']),
+      event = ((v) => v != null
+          ? MatrixEvent.fromJson(v as Map<String, Object?>)
+          : null)(json['event']),
+      eventsAfter = ((v) => v != null
+          ? (v as List)
                 .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['events_after']),
-        eventsBefore = ((v) => v != null
-            ? (v as List)
+          : null)(json['events_after']),
+      eventsBefore = ((v) => v != null
+          ? (v as List)
                 .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['events_before']),
-        start = ((v) => v != null ? v as String : null)(json['start']),
-        state = ((v) => v != null
-            ? (v as List)
+          : null)(json['events_before']),
+      start = ((v) => v != null ? v as String : null)(json['start']),
+      state = ((v) => v != null
+          ? (v as List)
                 .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['state']);
+          : null)(json['state']);
   Map<String, Object?> toJson() {
     final end = this.end;
     final event = this.event;
@@ -4779,16 +4806,13 @@ class EventContext {
 ///
 @_NameSource('spec')
 class RoomMember {
-  RoomMember({
-    this.avatarUrl,
-    this.displayName,
-  });
+  RoomMember({this.avatarUrl, this.displayName});
 
   RoomMember.fromJson(Map<String, Object?> json)
-      : avatarUrl = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
-        displayName =
-            ((v) => v != null ? v as String : null)(json['display_name']);
+    : avatarUrl = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+      displayName = ((v) =>
+          v != null ? v as String : null)(json['display_name']);
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final displayName = this.displayName;
@@ -4827,16 +4851,16 @@ class GetRoomEventsResponse {
   });
 
   GetRoomEventsResponse.fromJson(Map<String, Object?> json)
-      : chunk = (json['chunk'] as List)
-            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
-            .toList(),
-        end = ((v) => v != null ? v as String : null)(json['end']),
-        start = json['start'] as String,
-        state = ((v) => v != null
-            ? (v as List)
+    : chunk = (json['chunk'] as List)
+          .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+          .toList(),
+      end = ((v) => v != null ? v as String : null)(json['end']),
+      start = json['start'] as String,
+      state = ((v) => v != null
+          ? (v as List)
                 .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['state']);
+          : null)(json['state']);
   Map<String, Object?> toJson() {
     final end = this.end;
     final state = this.state;
@@ -4919,18 +4943,13 @@ enum Format {
 ///
 @_NameSource('spec')
 class IncludeEventContext {
-  IncludeEventContext({
-    this.afterLimit,
-    this.beforeLimit,
-    this.includeProfile,
-  });
+  IncludeEventContext({this.afterLimit, this.beforeLimit, this.includeProfile});
 
   IncludeEventContext.fromJson(Map<String, Object?> json)
-      : afterLimit = ((v) => v != null ? v as int : null)(json['after_limit']),
-        beforeLimit =
-            ((v) => v != null ? v as int : null)(json['before_limit']),
-        includeProfile =
-            ((v) => v != null ? v as bool : null)(json['include_profile']);
+    : afterLimit = ((v) => v != null ? v as int : null)(json['after_limit']),
+      beforeLimit = ((v) => v != null ? v as int : null)(json['before_limit']),
+      includeProfile = ((v) =>
+          v != null ? v as bool : null)(json['include_profile']);
   Map<String, Object?> toJson() {
     final afterLimit = this.afterLimit;
     final beforeLimit = this.beforeLimit;
@@ -4981,19 +5000,19 @@ class EventFilter {
   });
 
   EventFilter.fromJson(Map<String, Object?> json)
-      : limit = ((v) => v != null ? v as int : null)(json['limit']),
-        notSenders = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['not_senders']),
-        notTypes = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['not_types']),
-        senders = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['senders']),
-        types = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['types']);
+    : limit = ((v) => v != null ? v as int : null)(json['limit']),
+      notSenders = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['not_senders']),
+      notTypes = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['not_types']),
+      senders = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['senders']),
+      types = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['types']);
   Map<String, Object?> toJson() {
     final limit = this.limit;
     final notSenders = this.notSenders;
@@ -5016,16 +5035,16 @@ class EventFilter {
   ///
   int? limit;
 
-  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `'senders'` filter.
+  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `senders` filter.
   List<String>? notSenders;
 
-  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `'types'` filter. A '*' can be used as a wildcard to match any sequence of characters.
+  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `types` filter. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? notTypes;
 
   /// A list of senders IDs to include. If this list is absent then all senders are included.
   List<String>? senders;
 
-  /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
+  /// A list of event types to include. If this list is absent then all event types are included. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? types;
 
   @dart.override
@@ -5056,20 +5075,19 @@ class RoomEventFilter {
   });
 
   RoomEventFilter.fromJson(Map<String, Object?> json)
-      : containsUrl =
-            ((v) => v != null ? v as bool : null)(json['contains_url']),
-        includeRedundantMembers = ((v) =>
-            v != null ? v as bool : null)(json['include_redundant_members']),
-        lazyLoadMembers =
-            ((v) => v != null ? v as bool : null)(json['lazy_load_members']),
-        notRooms = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['not_rooms']),
-        rooms = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['rooms']),
-        unreadThreadNotifications = ((v) =>
-            v != null ? v as bool : null)(json['unread_thread_notifications']);
+    : containsUrl = ((v) => v != null ? v as bool : null)(json['contains_url']),
+      includeRedundantMembers = ((v) =>
+          v != null ? v as bool : null)(json['include_redundant_members']),
+      lazyLoadMembers = ((v) =>
+          v != null ? v as bool : null)(json['lazy_load_members']),
+      notRooms = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['not_rooms']),
+      rooms = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['rooms']),
+      unreadThreadNotifications = ((v) =>
+          v != null ? v as bool : null)(json['unread_thread_notifications']);
   Map<String, Object?> toJson() {
     final containsUrl = this.containsUrl;
     final includeRedundantMembers = this.includeRedundantMembers;
@@ -5104,7 +5122,7 @@ class RoomEventFilter {
   /// for more information. Defaults to `false`.
   bool? lazyLoadMembers;
 
-  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `'rooms'` filter.
+  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `rooms` filter.
   List<String>? notRooms;
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
@@ -5128,13 +5146,13 @@ class RoomEventFilter {
 
   @dart.override
   int get hashCode => Object.hash(
-        containsUrl,
-        includeRedundantMembers,
-        lazyLoadMembers,
-        notRooms,
-        rooms,
-        unreadThreadNotifications,
-      );
+    containsUrl,
+    includeRedundantMembers,
+    lazyLoadMembers,
+    notRooms,
+    rooms,
+    unreadThreadNotifications,
+  );
 }
 
 ///
@@ -5155,34 +5173,32 @@ class SearchFilter implements EventFilter, RoomEventFilter {
   });
 
   SearchFilter.fromJson(Map<String, Object?> json)
-      : limit = ((v) => v != null ? v as int : null)(json['limit']),
-        notSenders = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['not_senders']),
-        notTypes = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['not_types']),
-        senders = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['senders']),
-        types = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['types']),
-        containsUrl =
-            ((v) => v != null ? v as bool : null)(json['contains_url']),
-        includeRedundantMembers = ((v) =>
-            v != null ? v as bool : null)(json['include_redundant_members']),
-        lazyLoadMembers =
-            ((v) => v != null ? v as bool : null)(json['lazy_load_members']),
-        notRooms = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['not_rooms']),
-        rooms = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['rooms']),
-        unreadThreadNotifications = ((v) =>
-            v != null ? v as bool : null)(json['unread_thread_notifications']);
-  @override
+    : limit = ((v) => v != null ? v as int : null)(json['limit']),
+      notSenders = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['not_senders']),
+      notTypes = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['not_types']),
+      senders = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['senders']),
+      types = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['types']),
+      containsUrl = ((v) => v != null ? v as bool : null)(json['contains_url']),
+      includeRedundantMembers = ((v) =>
+          v != null ? v as bool : null)(json['include_redundant_members']),
+      lazyLoadMembers = ((v) =>
+          v != null ? v as bool : null)(json['lazy_load_members']),
+      notRooms = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['not_rooms']),
+      rooms = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['rooms']),
+      unreadThreadNotifications = ((v) =>
+          v != null ? v as bool : null)(json['unread_thread_notifications']);
   Map<String, Object?> toJson() {
     final limit = this.limit;
     final notSenders = this.notSenders;
@@ -5217,27 +5233,21 @@ class SearchFilter implements EventFilter, RoomEventFilter {
   /// Servers should apply a default value, and impose a maximum value to avoid
   /// resource exhaustion.
   ///
-  @override
   int? limit;
 
-  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `'senders'` filter.
-  @override
+  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `senders` filter.
   List<String>? notSenders;
 
-  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `'types'` filter. A '*' can be used as a wildcard to match any sequence of characters.
-  @override
+  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `types` filter. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? notTypes;
 
   /// A list of senders IDs to include. If this list is absent then all senders are included.
-  @override
   List<String>? senders;
 
-  /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
-  @override
+  /// A list of event types to include. If this list is absent then all event types are included. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? types;
 
   /// If `true`, includes only events with a `url` key in their content. If `false`, excludes those events. If omitted, `url` key is not considered for filtering.
-  @override
   bool? containsUrl;
 
   /// If `true`, sends all membership events for all events, even if they have already
@@ -5245,26 +5255,21 @@ class SearchFilter implements EventFilter, RoomEventFilter {
   /// apply unless `lazy_load_members` is `true`. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
-  @override
   bool? includeRedundantMembers;
 
   /// If `true`, enables lazy-loading of membership events. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
-  @override
   bool? lazyLoadMembers;
 
-  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `'rooms'` filter.
-  @override
+  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `rooms` filter.
   List<String>? notRooms;
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
-  @override
   List<String>? rooms;
 
   /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
-  @override
   bool? unreadThreadNotifications;
 
   @dart.override
@@ -5286,18 +5291,18 @@ class SearchFilter implements EventFilter, RoomEventFilter {
 
   @dart.override
   int get hashCode => Object.hash(
-        limit,
-        notSenders,
-        notTypes,
-        senders,
-        types,
-        containsUrl,
-        includeRedundantMembers,
-        lazyLoadMembers,
-        notRooms,
-        rooms,
-        unreadThreadNotifications,
-      );
+    limit,
+    notSenders,
+    notTypes,
+    senders,
+    types,
+    containsUrl,
+    includeRedundantMembers,
+    lazyLoadMembers,
+    notRooms,
+    rooms,
+    unreadThreadNotifications,
+  );
 }
 
 ///
@@ -5313,19 +5318,15 @@ enum GroupKey {
 /// Configuration for group.
 @_NameSource('spec')
 class Group {
-  Group({
-    this.key,
-  });
+  Group({this.key});
 
   Group.fromJson(Map<String, Object?> json)
-      : key = ((v) => v != null
-            ? GroupKey.values.fromString(v as String)!
-            : null)(json['key']);
+    : key = ((v) => v != null
+          ? GroupKey.values.fromString(v as String)!
+          : null)(json['key']);
   Map<String, Object?> toJson() {
     final key = this.key;
-    return {
-      if (key != null) 'key': key.name,
-    };
+    return {if (key != null) 'key': key.name};
   }
 
   /// Key that defines the group.
@@ -5343,16 +5344,14 @@ class Group {
 ///
 @_NameSource('spec')
 class Groupings {
-  Groupings({
-    this.groupBy,
-  });
+  Groupings({this.groupBy});
 
   Groupings.fromJson(Map<String, Object?> json)
-      : groupBy = ((v) => v != null
-            ? (v as List)
+    : groupBy = ((v) => v != null
+          ? (v as List)
                 .map((v) => Group.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['group_by']);
+          : null)(json['group_by']);
   Map<String, Object?> toJson() {
     final groupBy = this.groupBy;
     return {
@@ -5409,26 +5408,26 @@ class RoomEventsCriteria {
   });
 
   RoomEventsCriteria.fromJson(Map<String, Object?> json)
-      : eventContext = ((v) => v != null
-            ? IncludeEventContext.fromJson(v as Map<String, Object?>)
-            : null)(json['event_context']),
-        filter = ((v) => v != null
-            ? SearchFilter.fromJson(v as Map<String, Object?>)
-            : null)(json['filter']),
-        groupings = ((v) => v != null
-            ? Groupings.fromJson(v as Map<String, Object?>)
-            : null)(json['groupings']),
-        includeState =
-            ((v) => v != null ? v as bool : null)(json['include_state']),
-        keys = ((v) => v != null
-            ? (v as List)
+    : eventContext = ((v) => v != null
+          ? IncludeEventContext.fromJson(v as Map<String, Object?>)
+          : null)(json['event_context']),
+      filter = ((v) => v != null
+          ? SearchFilter.fromJson(v as Map<String, Object?>)
+          : null)(json['filter']),
+      groupings = ((v) => v != null
+          ? Groupings.fromJson(v as Map<String, Object?>)
+          : null)(json['groupings']),
+      includeState = ((v) =>
+          v != null ? v as bool : null)(json['include_state']),
+      keys = ((v) => v != null
+          ? (v as List)
                 .map((v) => KeyKind.values.fromString(v as String)!)
                 .toList()
-            : null)(json['keys']),
-        orderBy = ((v) => v != null
-            ? SearchOrder.values.fromString(v as String)!
-            : null)(json['order_by']),
-        searchTerm = json['search_term'] as String;
+          : null)(json['keys']),
+      orderBy = ((v) => v != null
+          ? SearchOrder.values.fromString(v as String)!
+          : null)(json['order_by']),
+      searchTerm = json['search_term'] as String;
   Map<String, Object?> toJson() {
     final eventContext = this.eventContext;
     final filter = this.filter;
@@ -5487,32 +5486,28 @@ class RoomEventsCriteria {
 
   @dart.override
   int get hashCode => Object.hash(
-        eventContext,
-        filter,
-        groupings,
-        includeState,
-        keys,
-        orderBy,
-        searchTerm,
-      );
+    eventContext,
+    filter,
+    groupings,
+    includeState,
+    keys,
+    orderBy,
+    searchTerm,
+  );
 }
 
 ///
 @_NameSource('spec')
 class Categories {
-  Categories({
-    this.roomEvents,
-  });
+  Categories({this.roomEvents});
 
   Categories.fromJson(Map<String, Object?> json)
-      : roomEvents = ((v) => v != null
-            ? RoomEventsCriteria.fromJson(v as Map<String, Object?>)
-            : null)(json['room_events']);
+    : roomEvents = ((v) => v != null
+          ? RoomEventsCriteria.fromJson(v as Map<String, Object?>)
+          : null)(json['room_events']);
   Map<String, Object?> toJson() {
     final roomEvents = this.roomEvents;
-    return {
-      if (roomEvents != null) 'room_events': roomEvents.toJson(),
-    };
+    return {if (roomEvents != null) 'room_events': roomEvents.toJson()};
   }
 
   /// Mapping of category name to search criteria.
@@ -5532,18 +5527,14 @@ class Categories {
 /// The results for a particular group value.
 @_NameSource('spec')
 class GroupValue {
-  GroupValue({
-    this.nextBatch,
-    this.order,
-    this.results,
-  });
+  GroupValue({this.nextBatch, this.order, this.results});
 
   GroupValue.fromJson(Map<String, Object?> json)
-      : nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        order = ((v) => v != null ? v as int : null)(json['order']),
-        results = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['results']);
+    : nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+      order = ((v) => v != null ? v as int : null)(json['order']),
+      results = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['results']);
   Map<String, Object?> toJson() {
     final nextBatch = this.nextBatch;
     final order = this.order;
@@ -5585,16 +5576,13 @@ class GroupValue {
 ///
 @_NameSource('spec')
 class UserProfile {
-  UserProfile({
-    this.avatarUrl,
-    this.displayname,
-  });
+  UserProfile({this.avatarUrl, this.displayname});
 
   UserProfile.fromJson(Map<String, Object?> json)
-      : avatarUrl = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
-        displayname =
-            ((v) => v != null ? v as String : null)(json['displayname']);
+    : avatarUrl = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+      displayname = ((v) =>
+          v != null ? v as String : null)(json['displayname']);
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final displayname = this.displayname;
@@ -5634,26 +5622,24 @@ class SearchResultsEventContext {
   });
 
   SearchResultsEventContext.fromJson(Map<String, Object?> json)
-      : end = ((v) => v != null ? v as String : null)(json['end']),
-        eventsAfter = ((v) => v != null
-            ? (v as List)
+    : end = ((v) => v != null ? v as String : null)(json['end']),
+      eventsAfter = ((v) => v != null
+          ? (v as List)
                 .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['events_after']),
-        eventsBefore = ((v) => v != null
-            ? (v as List)
+          : null)(json['events_after']),
+      eventsBefore = ((v) => v != null
+          ? (v as List)
                 .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['events_before']),
-        profileInfo = ((v) => v != null
-            ? (v as Map<String, Object?>).map(
-                (k, v) => MapEntry(
-                  k,
-                  UserProfile.fromJson(v as Map<String, Object?>),
-                ),
-              )
-            : null)(json['profile_info']),
-        start = ((v) => v != null ? v as String : null)(json['start']);
+          : null)(json['events_before']),
+      profileInfo = ((v) => v != null
+          ? (v as Map<String, Object?>).map(
+              (k, v) =>
+                  MapEntry(k, UserProfile.fromJson(v as Map<String, Object?>)),
+            )
+          : null)(json['profile_info']),
+      start = ((v) => v != null ? v as String : null)(json['start']);
   Map<String, Object?> toJson() {
     final end = this.end;
     final eventsAfter = this.eventsAfter;
@@ -5710,20 +5696,16 @@ class SearchResultsEventContext {
 /// The result object.
 @_NameSource('spec')
 class Result {
-  Result({
-    this.context,
-    this.rank,
-    this.result,
-  });
+  Result({this.context, this.rank, this.result});
 
   Result.fromJson(Map<String, Object?> json)
-      : context = ((v) => v != null
-            ? SearchResultsEventContext.fromJson(v as Map<String, Object?>)
-            : null)(json['context']),
-        rank = ((v) => v != null ? (v as num).toDouble() : null)(json['rank']),
-        result = ((v) => v != null
-            ? MatrixEvent.fromJson(v as Map<String, Object?>)
-            : null)(json['result']);
+    : context = ((v) => v != null
+          ? SearchResultsEventContext.fromJson(v as Map<String, Object?>)
+          : null)(json['context']),
+      rank = ((v) => v != null ? (v as num).toDouble() : null)(json['rank']),
+      result = ((v) => v != null
+          ? MatrixEvent.fromJson(v as Map<String, Object?>)
+          : null)(json['result']);
   Map<String, Object?> toJson() {
     final context = this.context;
     final rank = this.rank;
@@ -5770,41 +5752,39 @@ class ResultRoomEvents {
   });
 
   ResultRoomEvents.fromJson(Map<String, Object?> json)
-      : count = ((v) => v != null ? v as int : null)(json['count']),
-        groups = ((v) => v != null
-            ? (v as Map<String, Object?>).map(
-                (k, v) => MapEntry(
-                  k,
-                  (v as Map<String, Object?>).map(
-                    (k, v) => MapEntry(
-                      k,
-                      GroupValue.fromJson(v as Map<String, Object?>),
-                    ),
+    : count = ((v) => v != null ? v as int : null)(json['count']),
+      groups = ((v) => v != null
+          ? (v as Map<String, Object?>).map(
+              (k, v) => MapEntry(
+                k,
+                (v as Map<String, Object?>).map(
+                  (k, v) => MapEntry(
+                    k,
+                    GroupValue.fromJson(v as Map<String, Object?>),
                   ),
                 ),
-              )
-            : null)(json['groups']),
-        highlights = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['highlights']),
-        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
-        results = ((v) => v != null
-            ? (v as List)
+              ),
+            )
+          : null)(json['groups']),
+      highlights = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['highlights']),
+      nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+      results = ((v) => v != null
+          ? (v as List)
                 .map((v) => Result.fromJson(v as Map<String, Object?>))
                 .toList()
-            : null)(json['results']),
-        state = ((v) => v != null
-            ? (v as Map<String, Object?>).map(
-                (k, v) => MapEntry(
-                  k,
-                  (v as List)
-                      .map(
-                        (v) => MatrixEvent.fromJson(v as Map<String, Object?>),
-                      )
-                      .toList(),
-                ),
-              )
-            : null)(json['state']);
+          : null)(json['results']),
+      state = ((v) => v != null
+          ? (v as Map<String, Object?>).map(
+              (k, v) => MapEntry(
+                k,
+                (v as List)
+                    .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+                    .toList(),
+              ),
+            )
+          : null)(json['state']);
   Map<String, Object?> toJson() {
     final count = this.count;
     final groups = this.groups;
@@ -5822,8 +5802,9 @@ class ResultRoomEvents {
       if (nextBatch != null) 'next_batch': nextBatch,
       if (results != null) 'results': results.map((v) => v.toJson()).toList(),
       if (state != null)
-        'state':
-            state.map((k, v) => MapEntry(k, v.map((v) => v.toJson()).toList())),
+        'state': state.map(
+          (k, v) => MapEntry(k, v.map((v) => v.toJson()).toList()),
+        ),
     };
   }
 
@@ -5877,19 +5858,15 @@ class ResultRoomEvents {
 ///
 @_NameSource('spec')
 class ResultCategories {
-  ResultCategories({
-    this.roomEvents,
-  });
+  ResultCategories({this.roomEvents});
 
   ResultCategories.fromJson(Map<String, Object?> json)
-      : roomEvents = ((v) => v != null
-            ? ResultRoomEvents.fromJson(v as Map<String, Object?>)
-            : null)(json['room_events']);
+    : roomEvents = ((v) => v != null
+          ? ResultRoomEvents.fromJson(v as Map<String, Object?>)
+          : null)(json['room_events']);
   Map<String, Object?> toJson() {
     final roomEvents = this.roomEvents;
-    return {
-      if (roomEvents != null) 'room_events': roomEvents.toJson(),
-    };
+    return {if (roomEvents != null) 'room_events': roomEvents.toJson()};
   }
 
   /// Mapping of category name to search criteria.
@@ -5909,17 +5886,15 @@ class ResultCategories {
 ///
 @_NameSource('rule override spec')
 class SearchResults {
-  SearchResults({
-    required this.searchCategories,
-  });
+  SearchResults({required this.searchCategories});
 
   SearchResults.fromJson(Map<String, Object?> json)
-      : searchCategories = ResultCategories.fromJson(
-          json['search_categories'] as Map<String, Object?>,
-        );
+    : searchCategories = ResultCategories.fromJson(
+        json['search_categories'] as Map<String, Object?>,
+      );
   Map<String, Object?> toJson() => {
-        'search_categories': searchCategories.toJson(),
-      };
+    'search_categories': searchCategories.toJson(),
+  };
 
   /// Describes which categories to search in and their criteria.
   ResultCategories searchCategories;
@@ -5938,21 +5913,17 @@ class SearchResults {
 ///
 @_NameSource('spec')
 class Location {
-  Location({
-    required this.alias,
-    required this.fields,
-    required this.protocol,
-  });
+  Location({required this.alias, required this.fields, required this.protocol});
 
   Location.fromJson(Map<String, Object?> json)
-      : alias = json['alias'] as String,
-        fields = json['fields'] as Map<String, Object?>,
-        protocol = json['protocol'] as String;
+    : alias = json['alias'] as String,
+      fields = json['fields'] as Map<String, Object?>,
+      protocol = json['protocol'] as String;
   Map<String, Object?> toJson() => {
-        'alias': alias,
-        'fields': fields,
-        'protocol': protocol,
-      };
+    'alias': alias,
+    'fields': fields,
+    'protocol': protocol,
+  };
 
   /// An alias for a matrix room.
   String alias;
@@ -5979,18 +5950,15 @@ class Location {
 /// Definition of valid values for a field.
 @_NameSource('spec')
 class FieldType {
-  FieldType({
-    required this.placeholder,
-    required this.regexp,
-  });
+  FieldType({required this.placeholder, required this.regexp});
 
   FieldType.fromJson(Map<String, Object?> json)
-      : placeholder = json['placeholder'] as String,
-        regexp = json['regexp'] as String;
+    : placeholder = json['placeholder'] as String,
+      regexp = json['regexp'] as String;
   Map<String, Object?> toJson() => {
-        'placeholder': placeholder,
-        'regexp': regexp,
-      };
+    'placeholder': placeholder,
+    'regexp': regexp,
+  };
 
   /// A placeholder serving as a valid example of the field value.
   String placeholder;
@@ -6023,20 +5991,22 @@ class Protocol {
   });
 
   Protocol.fromJson(Map<String, Object?> json)
-      : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
-          (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
-        ),
-        icon = json['icon'] as String,
-        locationFields =
-            (json['location_fields'] as List).map((v) => v as String).toList(),
-        userFields =
-            (json['user_fields'] as List).map((v) => v as String).toList();
+    : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
+        (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
+      ),
+      icon = json['icon'] as String,
+      locationFields = (json['location_fields'] as List)
+          .map((v) => v as String)
+          .toList(),
+      userFields = (json['user_fields'] as List)
+          .map((v) => v as String)
+          .toList();
   Map<String, Object?> toJson() => {
-        'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
-        'icon': icon,
-        'location_fields': locationFields.map((v) => v).toList(),
-        'user_fields': userFields.map((v) => v).toList(),
-      };
+    'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
+    'icon': icon,
+    'location_fields': locationFields.map((v) => v).toList(),
+    'user_fields': userFields.map((v) => v).toList(),
+  };
 
   /// The type definitions for the fields defined in `user_fields` and
   /// `location_fields`. Each entry in those arrays MUST have an entry here.
@@ -6085,10 +6055,10 @@ class ProtocolInstance {
   });
 
   ProtocolInstance.fromJson(Map<String, Object?> json)
-      : desc = json['desc'] as String,
-        fields = json['fields'] as Map<String, Object?>,
-        icon = ((v) => v != null ? v as String : null)(json['icon']),
-        networkId = json['network_id'] as String;
+    : desc = json['desc'] as String,
+      fields = json['fields'] as Map<String, Object?>,
+      icon = ((v) => v != null ? v as String : null)(json['icon']),
+      networkId = json['network_id'] as String;
   Map<String, Object?> toJson() {
     final icon = this.icon;
     return {
@@ -6129,18 +6099,13 @@ class ProtocolInstance {
 ///
 @_NameSource('generated')
 class Instances$1 {
-  Instances$1({
-    this.instanceId,
-  });
+  Instances$1({this.instanceId});
 
   Instances$1.fromJson(Map<String, Object?> json)
-      : instanceId =
-            ((v) => v != null ? v as String : null)(json['instance_id']);
+    : instanceId = ((v) => v != null ? v as String : null)(json['instance_id']);
   Map<String, Object?> toJson() {
     final instanceId = this.instanceId;
-    return {
-      if (instanceId != null) 'instance_id': instanceId,
-    };
+    return {if (instanceId != null) 'instance_id': instanceId};
   }
 
   /// A unique identifier for this instance on the homeserver. This field is added
@@ -6174,13 +6139,11 @@ class Instances$2 implements ProtocolInstance, Instances$1 {
   });
 
   Instances$2.fromJson(Map<String, Object?> json)
-      : desc = json['desc'] as String,
-        fields = json['fields'] as Map<String, Object?>,
-        icon = ((v) => v != null ? v as String : null)(json['icon']),
-        networkId = json['network_id'] as String,
-        instanceId =
-            ((v) => v != null ? v as String : null)(json['instance_id']);
-  @override
+    : desc = json['desc'] as String,
+      fields = json['fields'] as Map<String, Object?>,
+      icon = ((v) => v != null ? v as String : null)(json['icon']),
+      networkId = json['network_id'] as String,
+      instanceId = ((v) => v != null ? v as String : null)(json['instance_id']);
   Map<String, Object?> toJson() {
     final icon = this.icon;
     final instanceId = this.instanceId;
@@ -6194,20 +6157,16 @@ class Instances$2 implements ProtocolInstance, Instances$1 {
   }
 
   /// A human-readable description for the protocol, such as the name.
-  @override
   String desc;
 
   /// Preset values for `fields` the client may use to search by.
-  @override
   Map<String, Object?> fields;
 
   /// An optional content URI representing the protocol. Overrides the one provided
   /// at the higher level Protocol object.
-  @override
   String? icon;
 
   /// A unique identifier across all instances.
-  @override
   String networkId;
 
   /// A unique identifier for this instance on the homeserver. This field is added
@@ -6216,7 +6175,6 @@ class Instances$2 implements ProtocolInstance, Instances$1 {
   ///
   /// This is the identifier to use as the `third_party_instance_id` in a request to
   /// [`POST /_matrix/client/v3/publicRooms`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3publicrooms).
-  @override
   String? instanceId;
 
   @dart.override
@@ -6237,17 +6195,15 @@ class Instances$2 implements ProtocolInstance, Instances$1 {
 ///
 @_NameSource('generated')
 class GetProtocolMetadataResponse$1 {
-  GetProtocolMetadataResponse$1({
-    required this.instances,
-  });
+  GetProtocolMetadataResponse$1({required this.instances});
 
   GetProtocolMetadataResponse$1.fromJson(Map<String, Object?> json)
-      : instances = (json['instances'] as List)
-            .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
-            .toList();
+    : instances = (json['instances'] as List)
+          .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+          .toList();
   Map<String, Object?> toJson() => {
-        'instances': instances.map((v) => v.toJson()).toList(),
-      };
+    'instances': instances.map((v) => v.toJson()).toList(),
+  };
 
   /// A list of objects representing independent instances of configuration.
   /// For example, multiple networks on IRC if multiple are provided by the
@@ -6283,50 +6239,47 @@ class GetProtocolMetadataResponse$2
   });
 
   GetProtocolMetadataResponse$2.fromJson(Map<String, Object?> json)
-      : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
-          (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
-        ),
-        icon = json['icon'] as String,
-        locationFields =
-            (json['location_fields'] as List).map((v) => v as String).toList(),
-        userFields =
-            (json['user_fields'] as List).map((v) => v as String).toList(),
-        instances = (json['instances'] as List)
-            .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
-            .toList();
-  @override
+    : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
+        (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
+      ),
+      icon = json['icon'] as String,
+      locationFields = (json['location_fields'] as List)
+          .map((v) => v as String)
+          .toList(),
+      userFields = (json['user_fields'] as List)
+          .map((v) => v as String)
+          .toList(),
+      instances = (json['instances'] as List)
+          .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+          .toList();
   Map<String, Object?> toJson() => {
-        'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
-        'icon': icon,
-        'location_fields': locationFields.map((v) => v).toList(),
-        'user_fields': userFields.map((v) => v).toList(),
-        'instances': instances.map((v) => v.toJson()).toList(),
-      };
+    'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
+    'icon': icon,
+    'location_fields': locationFields.map((v) => v).toList(),
+    'user_fields': userFields.map((v) => v).toList(),
+    'instances': instances.map((v) => v.toJson()).toList(),
+  };
 
   /// The type definitions for the fields defined in `user_fields` and
   /// `location_fields`. Each entry in those arrays MUST have an entry here.
   /// The `string` key for this object is the field name itself.
   ///
   /// May be an empty object if no fields are defined.
-  @override
   Map<String, FieldType> fieldTypes;
 
   /// A content URI representing an icon for the third-party protocol.
-  @override
   String icon;
 
   /// Fields which may be used to identify a third-party location. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the name of a channel.
-  @override
   List<String> locationFields;
 
   /// Fields which may be used to identify a third-party user. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the nickname of a user.
-  @override
   List<String> userFields;
 
   /// A list of objects representing independent instances of configuration.
@@ -6337,7 +6290,6 @@ class GetProtocolMetadataResponse$2
   /// [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
   /// to include an `instance_id` to serve as a unique identifier for each
   /// instance on the homeserver.
-  @override
   List<Instances$2> instances;
 
   @dart.override
@@ -6359,17 +6311,15 @@ class GetProtocolMetadataResponse$2
 ///
 @_NameSource('generated')
 class GetProtocolsResponse$1 {
-  GetProtocolsResponse$1({
-    required this.instances,
-  });
+  GetProtocolsResponse$1({required this.instances});
 
   GetProtocolsResponse$1.fromJson(Map<String, Object?> json)
-      : instances = (json['instances'] as List)
-            .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
-            .toList();
+    : instances = (json['instances'] as List)
+          .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+          .toList();
   Map<String, Object?> toJson() => {
-        'instances': instances.map((v) => v.toJson()).toList(),
-      };
+    'instances': instances.map((v) => v.toJson()).toList(),
+  };
 
   /// A list of objects representing independent instances of configuration.
   /// For example, multiple networks on IRC if multiple are provided by the
@@ -6404,50 +6354,47 @@ class GetProtocolsResponse$2 implements Protocol, GetProtocolsResponse$1 {
   });
 
   GetProtocolsResponse$2.fromJson(Map<String, Object?> json)
-      : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
-          (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
-        ),
-        icon = json['icon'] as String,
-        locationFields =
-            (json['location_fields'] as List).map((v) => v as String).toList(),
-        userFields =
-            (json['user_fields'] as List).map((v) => v as String).toList(),
-        instances = (json['instances'] as List)
-            .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
-            .toList();
-  @override
+    : fieldTypes = (json['field_types'] as Map<String, Object?>).map(
+        (k, v) => MapEntry(k, FieldType.fromJson(v as Map<String, Object?>)),
+      ),
+      icon = json['icon'] as String,
+      locationFields = (json['location_fields'] as List)
+          .map((v) => v as String)
+          .toList(),
+      userFields = (json['user_fields'] as List)
+          .map((v) => v as String)
+          .toList(),
+      instances = (json['instances'] as List)
+          .map((v) => Instances$2.fromJson(v as Map<String, Object?>))
+          .toList();
   Map<String, Object?> toJson() => {
-        'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
-        'icon': icon,
-        'location_fields': locationFields.map((v) => v).toList(),
-        'user_fields': userFields.map((v) => v).toList(),
-        'instances': instances.map((v) => v.toJson()).toList(),
-      };
+    'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
+    'icon': icon,
+    'location_fields': locationFields.map((v) => v).toList(),
+    'user_fields': userFields.map((v) => v).toList(),
+    'instances': instances.map((v) => v.toJson()).toList(),
+  };
 
   /// The type definitions for the fields defined in `user_fields` and
   /// `location_fields`. Each entry in those arrays MUST have an entry here.
   /// The `string` key for this object is the field name itself.
   ///
   /// May be an empty object if no fields are defined.
-  @override
   Map<String, FieldType> fieldTypes;
 
   /// A content URI representing an icon for the third-party protocol.
-  @override
   String icon;
 
   /// Fields which may be used to identify a third-party location. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the name of a channel.
-  @override
   List<String> locationFields;
 
   /// Fields which may be used to identify a third-party user. These should be
   /// ordered to suggest the way that entities may be grouped, where higher
   /// groupings are ordered first. For example, the name of a network should be
   /// searched before the nickname of a user.
-  @override
   List<String> userFields;
 
   /// A list of objects representing independent instances of configuration.
@@ -6458,7 +6405,6 @@ class GetProtocolsResponse$2 implements Protocol, GetProtocolsResponse$1 {
   /// [`GET /_matrix/app/v1/thirdparty/protocol/{protocol}`](https://spec.matrix.org/unstable/application-service-api/#get_matrixappv1thirdpartyprotocolprotocol)
   /// to include an `instance_id` to serve as a unique identifier for each
   /// instance on the homeserver.
-  @override
   List<Instances$2> instances;
 
   @dart.override
@@ -6487,14 +6433,14 @@ class ThirdPartyUser {
   });
 
   ThirdPartyUser.fromJson(Map<String, Object?> json)
-      : fields = json['fields'] as Map<String, Object?>,
-        protocol = json['protocol'] as String,
-        userid = json['userid'] as String;
+    : fields = json['fields'] as Map<String, Object?>,
+      protocol = json['protocol'] as String,
+      userid = json['userid'] as String;
   Map<String, Object?> toJson() => {
-        'fields': fields,
-        'protocol': protocol,
-        'userid': userid,
-      };
+    'fields': fields,
+    'protocol': protocol,
+    'userid': userid,
+  };
 
   /// Information used to identify this third-party location.
   Map<String, Object?> fields;
@@ -6546,34 +6492,32 @@ class StateFilter implements EventFilter, RoomEventFilter {
   });
 
   StateFilter.fromJson(Map<String, Object?> json)
-      : limit = ((v) => v != null ? v as int : null)(json['limit']),
-        notSenders = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['not_senders']),
-        notTypes = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['not_types']),
-        senders = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['senders']),
-        types = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['types']),
-        containsUrl =
-            ((v) => v != null ? v as bool : null)(json['contains_url']),
-        includeRedundantMembers = ((v) =>
-            v != null ? v as bool : null)(json['include_redundant_members']),
-        lazyLoadMembers =
-            ((v) => v != null ? v as bool : null)(json['lazy_load_members']),
-        notRooms = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['not_rooms']),
-        rooms = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['rooms']),
-        unreadThreadNotifications = ((v) =>
-            v != null ? v as bool : null)(json['unread_thread_notifications']);
-  @override
+    : limit = ((v) => v != null ? v as int : null)(json['limit']),
+      notSenders = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['not_senders']),
+      notTypes = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['not_types']),
+      senders = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['senders']),
+      types = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['types']),
+      containsUrl = ((v) => v != null ? v as bool : null)(json['contains_url']),
+      includeRedundantMembers = ((v) =>
+          v != null ? v as bool : null)(json['include_redundant_members']),
+      lazyLoadMembers = ((v) =>
+          v != null ? v as bool : null)(json['lazy_load_members']),
+      notRooms = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['not_rooms']),
+      rooms = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['rooms']),
+      unreadThreadNotifications = ((v) =>
+          v != null ? v as bool : null)(json['unread_thread_notifications']);
   Map<String, Object?> toJson() {
     final limit = this.limit;
     final notSenders = this.notSenders;
@@ -6608,27 +6552,21 @@ class StateFilter implements EventFilter, RoomEventFilter {
   /// Servers should apply a default value, and impose a maximum value to avoid
   /// resource exhaustion.
   ///
-  @override
   int? limit;
 
-  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `'senders'` filter.
-  @override
+  /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `senders` filter.
   List<String>? notSenders;
 
-  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `'types'` filter. A '*' can be used as a wildcard to match any sequence of characters.
-  @override
+  /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `types` filter. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? notTypes;
 
   /// A list of senders IDs to include. If this list is absent then all senders are included.
-  @override
   List<String>? senders;
 
-  /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
-  @override
+  /// A list of event types to include. If this list is absent then all event types are included. A `*` can be used as a wildcard to match any sequence of characters.
   List<String>? types;
 
   /// If `true`, includes only events with a `url` key in their content. If `false`, excludes those events. If omitted, `url` key is not considered for filtering.
-  @override
   bool? containsUrl;
 
   /// If `true`, sends all membership events for all events, even if they have already
@@ -6636,26 +6574,21 @@ class StateFilter implements EventFilter, RoomEventFilter {
   /// apply unless `lazy_load_members` is `true`. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
-  @override
   bool? includeRedundantMembers;
 
   /// If `true`, enables lazy-loading of membership events. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
-  @override
   bool? lazyLoadMembers;
 
-  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `'rooms'` filter.
-  @override
+  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `rooms` filter.
   List<String>? notRooms;
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
-  @override
   List<String>? rooms;
 
   /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
-  @override
   bool? unreadThreadNotifications;
 
   @dart.override
@@ -6677,18 +6610,18 @@ class StateFilter implements EventFilter, RoomEventFilter {
 
   @dart.override
   int get hashCode => Object.hash(
-        limit,
-        notSenders,
-        notTypes,
-        senders,
-        types,
-        containsUrl,
-        includeRedundantMembers,
-        lazyLoadMembers,
-        notRooms,
-        rooms,
-        unreadThreadNotifications,
-      );
+    limit,
+    notSenders,
+    notTypes,
+    senders,
+    types,
+    containsUrl,
+    includeRedundantMembers,
+    lazyLoadMembers,
+    notRooms,
+    rooms,
+    unreadThreadNotifications,
+  );
 }
 
 ///
@@ -6705,26 +6638,26 @@ class RoomFilter {
   });
 
   RoomFilter.fromJson(Map<String, Object?> json)
-      : accountData = ((v) => v != null
-            ? StateFilter.fromJson(v as Map<String, Object?>)
-            : null)(json['account_data']),
-        ephemeral = ((v) => v != null
-            ? StateFilter.fromJson(v as Map<String, Object?>)
-            : null)(json['ephemeral']),
-        includeLeave =
-            ((v) => v != null ? v as bool : null)(json['include_leave']),
-        notRooms = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['not_rooms']),
-        rooms = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['rooms']),
-        state = ((v) => v != null
-            ? StateFilter.fromJson(v as Map<String, Object?>)
-            : null)(json['state']),
-        timeline = ((v) => v != null
-            ? StateFilter.fromJson(v as Map<String, Object?>)
-            : null)(json['timeline']);
+    : accountData = ((v) => v != null
+          ? StateFilter.fromJson(v as Map<String, Object?>)
+          : null)(json['account_data']),
+      ephemeral = ((v) => v != null
+          ? StateFilter.fromJson(v as Map<String, Object?>)
+          : null)(json['ephemeral']),
+      includeLeave = ((v) =>
+          v != null ? v as bool : null)(json['include_leave']),
+      notRooms = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['not_rooms']),
+      rooms = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['rooms']),
+      state = ((v) => v != null
+          ? StateFilter.fromJson(v as Map<String, Object?>)
+          : null)(json['state']),
+      timeline = ((v) => v != null
+          ? StateFilter.fromJson(v as Map<String, Object?>)
+          : null)(json['timeline']);
   Map<String, Object?> toJson() {
     final accountData = this.accountData;
     final ephemeral = this.ephemeral;
@@ -6750,10 +6683,10 @@ class RoomFilter {
   /// The ephemeral events to include for rooms. These are the events that appear in the `ephemeral` property in the `/sync` response.
   StateFilter? ephemeral;
 
-  /// Include rooms that the user has left in the sync, default false
+  /// Include rooms that the user has left in the sync. Defaults to `false`.
   bool? includeLeave;
 
-  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `'rooms'` filter. This filter is applied before the filters in `ephemeral`, `state`, `timeline` or `account_data`
+  /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `rooms` filter. This filter is applied before the filters in `ephemeral`, `state`, `timeline` or `account_data`
   List<String>? notRooms;
 
   /// A list of room IDs to include. If this list is absent then all rooms are included. This filter is applied before the filters in `ephemeral`, `state`, `timeline` or `account_data`
@@ -6780,14 +6713,14 @@ class RoomFilter {
 
   @dart.override
   int get hashCode => Object.hash(
-        accountData,
-        ephemeral,
-        includeLeave,
-        notRooms,
-        rooms,
-        state,
-        timeline,
-      );
+    accountData,
+    ephemeral,
+    includeLeave,
+    notRooms,
+    rooms,
+    state,
+    timeline,
+  );
 }
 
 ///
@@ -6802,21 +6735,21 @@ class Filter {
   });
 
   Filter.fromJson(Map<String, Object?> json)
-      : accountData = ((v) => v != null
-            ? EventFilter.fromJson(v as Map<String, Object?>)
-            : null)(json['account_data']),
-        eventFields = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['event_fields']),
-        eventFormat = ((v) => v != null
-            ? EventFormat.values.fromString(v as String)!
-            : null)(json['event_format']),
-        presence = ((v) => v != null
-            ? EventFilter.fromJson(v as Map<String, Object?>)
-            : null)(json['presence']),
-        room = ((v) => v != null
-            ? RoomFilter.fromJson(v as Map<String, Object?>)
-            : null)(json['room']);
+    : accountData = ((v) => v != null
+          ? EventFilter.fromJson(v as Map<String, Object?>)
+          : null)(json['account_data']),
+      eventFields = ((v) => v != null
+          ? (v as List).map((v) => v as String).toList()
+          : null)(json['event_fields']),
+      eventFormat = ((v) => v != null
+          ? EventFormat.values.fromString(v as String)!
+          : null)(json['event_format']),
+      presence = ((v) => v != null
+          ? EventFilter.fromJson(v as Map<String, Object?>)
+          : null)(json['presence']),
+      room = ((v) => v != null
+          ? RoomFilter.fromJson(v as Map<String, Object?>)
+          : null)(json['room']);
   Map<String, Object?> toJson() {
     final accountData = this.accountData;
     final eventFields = this.eventFields;
@@ -6836,10 +6769,10 @@ class Filter {
   /// The user account data that isn't associated with rooms to include.
   EventFilter? accountData;
 
-  /// List of event fields to include. If this list is absent then all fields are included. The entries are [dot-separated paths for each property](https://spec.matrix.org/unstable/appendices#dot-separated-property-paths) to include. So ['content.body'] will include the 'body' field of the 'content' object. A server may include more fields than were requested.
+  /// List of event fields to include. If this list is absent then all fields are included. The entries are [dot-separated paths for each property](https://spec.matrix.org/unstable/appendices#dot-separated-property-paths) to include. So `['content.body']` will include the `body` field of the `content` object. A server may include more fields than were requested.
   List<String>? eventFields;
 
-  /// The format to use for events. 'client' will return the events in a format suitable for clients. 'federation' will return the raw event as received over federation. The default is 'client'.
+  /// The format to use for events. `client` will return the events in a format suitable for clients. `federation` will return the raw event as received over federation. The default is `client`.
   EventFormat? eventFormat;
 
   /// The presence updates to include.
@@ -6875,16 +6808,16 @@ class OpenIdCredentials {
   });
 
   OpenIdCredentials.fromJson(Map<String, Object?> json)
-      : accessToken = json['access_token'] as String,
-        expiresIn = json['expires_in'] as int,
-        matrixServerName = json['matrix_server_name'] as String,
-        tokenType = json['token_type'] as String;
+    : accessToken = json['access_token'] as String,
+      expiresIn = json['expires_in'] as int,
+      matrixServerName = json['matrix_server_name'] as String,
+      tokenType = json['token_type'] as String;
   Map<String, Object?> toJson() => {
-        'access_token': accessToken,
-        'expires_in': expiresIn,
-        'matrix_server_name': matrixServerName,
-        'token_type': tokenType,
-      };
+    'access_token': accessToken,
+    'expires_in': expiresIn,
+    'matrix_server_name': matrixServerName,
+    'token_type': tokenType,
+  };
 
   /// An access token the consumer may use to verify the identity of
   /// the person who generated the token. This is given to the federation
@@ -6920,25 +6853,18 @@ class OpenIdCredentials {
 ///
 @_NameSource('spec')
 class Tag {
-  Tag({
-    this.order,
-    this.additionalProperties = const {},
-  });
+  Tag({this.order, this.additionalProperties = const {}});
 
   Tag.fromJson(Map<String, Object?> json)
-      : order =
-            ((v) => v != null ? (v as num).toDouble() : null)(json['order']),
-        additionalProperties = Map.fromEntries(
-          json.entries
-              .where((e) => !['order'].contains(e.key))
-              .map((e) => MapEntry(e.key, e.value)),
-        );
+    : order = ((v) => v != null ? (v as num).toDouble() : null)(json['order']),
+      additionalProperties = Map.fromEntries(
+        json.entries
+            .where((e) => !['order'].contains(e.key))
+            .map((e) => MapEntry(e.key, e.value as Object?)),
+      );
   Map<String, Object?> toJson() {
     final order = this.order;
-    return {
-      ...additionalProperties,
-      if (order != null) 'order': order,
-    };
+    return {...additionalProperties, if (order != null) 'order': order};
   }
 
   /// A number in a range `[0,1]` describing a relative
@@ -6961,18 +6887,14 @@ class Tag {
 ///
 @_NameSource('rule override spec')
 class Profile {
-  Profile({
-    this.avatarUrl,
-    this.displayName,
-    required this.userId,
-  });
+  Profile({this.avatarUrl, this.displayName, required this.userId});
 
   Profile.fromJson(Map<String, Object?> json)
-      : avatarUrl = ((v) =>
-            v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
-        displayName =
-            ((v) => v != null ? v as String : null)(json['display_name']),
-        userId = json['user_id'] as String;
+    : avatarUrl = ((v) =>
+          v != null ? Uri.parse(v as String) : null)(json['avatar_url']),
+      displayName = ((v) =>
+          v != null ? v as String : null)(json['display_name']),
+      userId = json['user_id'] as String;
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final displayName = this.displayName;
@@ -7008,20 +6930,17 @@ class Profile {
 ///
 @_NameSource('generated')
 class SearchUserDirectoryResponse {
-  SearchUserDirectoryResponse({
-    required this.limited,
-    required this.results,
-  });
+  SearchUserDirectoryResponse({required this.limited, required this.results});
 
   SearchUserDirectoryResponse.fromJson(Map<String, Object?> json)
-      : limited = json['limited'] as bool,
-        results = (json['results'] as List)
-            .map((v) => Profile.fromJson(v as Map<String, Object?>))
-            .toList();
+    : limited = json['limited'] as bool,
+      results = (json['results'] as List)
+          .map((v) => Profile.fromJson(v as Map<String, Object?>))
+          .toList();
   Map<String, Object?> toJson() => {
-        'limited': limited,
-        'results': results.map((v) => v.toJson()).toList(),
-      };
+    'limited': limited,
+    'results': results.map((v) => v.toJson()).toList(),
+  };
 
   /// Indicates if the result list has been truncated by the limit.
   bool limited;
@@ -7052,16 +6971,16 @@ class TurnServerCredentials {
   });
 
   TurnServerCredentials.fromJson(Map<String, Object?> json)
-      : password = json['password'] as String,
-        ttl = json['ttl'] as int,
-        uris = (json['uris'] as List).map((v) => v as String).toList(),
-        username = json['username'] as String;
+    : password = json['password'] as String,
+      ttl = json['ttl'] as int,
+      uris = (json['uris'] as List).map((v) => v as String).toList(),
+      username = json['username'] as String;
   Map<String, Object?> toJson() => {
-        'password': password,
-        'ttl': ttl,
-        'uris': uris.map((v) => v).toList(),
-        'username': username,
-      };
+    'password': password,
+    'ttl': ttl,
+    'uris': uris.map((v) => v).toList(),
+    'username': username,
+  };
 
   /// The password to use.
   String password;
@@ -7092,21 +7011,18 @@ class TurnServerCredentials {
 ///
 @_NameSource('generated')
 class GetVersionsResponse {
-  GetVersionsResponse({
-    this.unstableFeatures,
-    required this.versions,
-  });
+  GetVersionsResponse({this.unstableFeatures, required this.versions});
 
   GetVersionsResponse.fromJson(Map<String, Object?> json)
-      : unstableFeatures = ((v) => v != null
-            ? (v as Map<String, Object?>).map((k, v) => MapEntry(k, v as bool))
-            : null)(json['unstable_features']),
-        versions = (json['versions'] as List).map((v) => v as String).toList();
+    : unstableFeatures = ((v) => v != null
+          ? (v as Map<String, Object?>).map((k, v) => MapEntry(k, v as bool))
+          : null)(json['unstable_features']),
+      versions = (json['versions'] as List).map((v) => v as String).toList();
   Map<String, Object?> toJson() {
     final unstableFeatures = this.unstableFeatures;
     return {
       if (unstableFeatures != null)
-        'unstable_features': unstableFeatures.map(MapEntry.new),
+        'unstable_features': unstableFeatures.map((k, v) => MapEntry(k, v)),
       'versions': versions.map((v) => v).toList(),
     };
   }
@@ -7134,17 +7050,14 @@ class GetVersionsResponse {
 ///
 @_NameSource('generated')
 class CreateContentResponse {
-  CreateContentResponse({
-    required this.contentUri,
-    this.unusedExpiresAt,
-  });
+  CreateContentResponse({required this.contentUri, this.unusedExpiresAt});
 
   CreateContentResponse.fromJson(Map<String, Object?> json)
-      : contentUri = ((json['content_uri'] as String).startsWith('mxc://')
-            ? Uri.parse(json['content_uri'] as String)
-            : throw Exception('Uri not an mxc URI')),
-        unusedExpiresAt =
-            ((v) => v != null ? v as int : null)(json['unused_expires_at']);
+    : contentUri = ((json['content_uri'] as String).startsWith("mxc://")
+          ? Uri.parse(json['content_uri'] as String)
+          : throw Exception("Uri not an mxc URI")),
+      unusedExpiresAt = ((v) =>
+          v != null ? v as int : null)(json['unused_expires_at']);
   Map<String, Object?> toJson() {
     final unusedExpiresAt = this.unusedExpiresAt;
     return {

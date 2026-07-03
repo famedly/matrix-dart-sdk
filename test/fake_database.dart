@@ -4,18 +4,15 @@
 
 import 'dart:io';
 
+import 'package:matrix/matrix.dart';
 import 'package:path/path.dart' as path_joiner;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-
-import 'package:matrix/matrix.dart';
 
 Future<DatabaseApi> getDatabase({String? databasePath}) =>
     getMatrixSdkDatabase(path: databasePath);
 
 // ignore: deprecated_member_use_from_same_package
-Future<MatrixSdkDatabase> getMatrixSdkDatabase({
-  String? path,
-}) async {
+Future<MatrixSdkDatabase> getMatrixSdkDatabase({String? path}) async {
   final directory = await Directory(
     path_joiner.join(
       Directory.current.path,

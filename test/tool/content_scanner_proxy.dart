@@ -1,4 +1,5 @@
 #!/usr/bin/env dart
+
 // SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
@@ -32,11 +33,10 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:matrix/matrix.dart';
 import 'package:path/path.dart' as path_joiner;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
-
-import 'package:matrix/matrix.dart';
 
 const _defaultPort = '8080';
 const _defaultContainerName = 'mcs-proxy';
@@ -56,7 +56,8 @@ Future<void> _run() async {
   final userId = _userIdFromEnvOrPrompt();
   final password = _passwordFromEnvOrPrompt();
   final port = Platform.environment['CONTENT_SCANNER_PORT'] ?? _defaultPort;
-  final containerName = Platform.environment['CONTENT_SCANNER_CONTAINER'] ??
+  final containerName =
+      Platform.environment['CONTENT_SCANNER_CONTAINER'] ??
       _defaultContainerName;
   final image = Platform.environment['CONTENT_SCANNER_IMAGE'] ?? _defaultImage;
 
@@ -165,10 +166,7 @@ contentScannerConfig: MatrixContentScannerConfig(
 
 Future<void> _initVodozemac() async {
   try {
-    await vod.init(
-      wasmPath: './pkg/',
-      libraryPath: './rust/target/debug/',
-    );
+    await vod.init(wasmPath: './pkg/', libraryPath: './rust/target/debug/');
     print('Vodozemac initialised (encryption available).');
   } catch (e) {
     throw Exception('Vodozemac init failed: $e');
@@ -238,8 +236,10 @@ Future<void> _runEncryptedSmokeTest({
   const contentType = 'application/octet-stream';
 
   print('Encrypting test file...');
-  final encrypted =
-      await MatrixFile(bytes: plaintext, name: filename).encrypt();
+  final encrypted = await MatrixFile(
+    bytes: plaintext,
+    name: filename,
+  ).encrypt();
 
   print('Uploading encrypted bytes via client.uploadContent...');
   final mxc = await client.uploadContent(
@@ -265,35 +265,29 @@ Future<void> _runEncryptedSmokeTest({
   };
 
   print('Sending m.file event with encrypted file map...');
-  final eventId = await room.sendEvent(
-    {
-      'msgtype': 'm.file',
-      'body': filename,
-      'filename': filename,
-      'file': fileMap,
-      'info': {'mimetype': contentType, 'size': plaintext.length},
-    },
-    displayPendingEvent: false,
-  );
+  final eventId = await room.sendEvent({
+    'msgtype': 'm.file',
+    'body': filename,
+    'filename': filename,
+    'file': fileMap,
+    'info': {'mimetype': contentType, 'size': plaintext.length},
+  }, displayPendingEvent: false);
   if (eventId == null) _die('room.sendEvent returned null — send failed.');
   print('  event_id: $eventId');
 
   print('Downloading via event.downloadAndDecryptAttachment (SDK path)...');
-  final event = Event.fromJson(
-    {
-      'type': EventTypes.Message,
-      'event_id': eventId,
-      'sender': client.userID,
-      'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-      'content': {
-        'msgtype': 'm.file',
-        'body': filename,
-        'file': fileMap,
-        'info': {'mimetype': contentType, 'size': plaintext.length},
-      },
+  final event = Event.fromJson({
+    'type': EventTypes.Message,
+    'event_id': eventId,
+    'sender': client.userID,
+    'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+    'content': {
+      'msgtype': 'm.file',
+      'body': filename,
+      'file': fileMap,
+      'info': {'mimetype': contentType, 'size': plaintext.length},
     },
-    room,
-  );
+  }, room);
   final downloaded = await event.downloadAndDecryptAttachment();
 
   if (!_bytesEqual(plaintext, downloaded.bytes)) {
@@ -520,8 +514,8 @@ String _normalizeHomeserver(String homeserver) {
   final trimmed = homeserver.trim();
   final withScheme =
       trimmed.startsWith('http://') || trimmed.startsWith('https://')
-          ? trimmed
-          : 'https://$trimmed';
+      ? trimmed
+      : 'https://$trimmed';
   return withScheme.endsWith('/')
       ? withScheme.substring(0, withScheme.length - 1)
       : withScheme;

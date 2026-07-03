@@ -16,10 +16,10 @@ class CallReplacesTarget {
       );
 
   Map<String, dynamic> toJson() => {
-        if (id != null) 'id': id,
-        if (display_name != null) 'display_name': display_name,
-        if (avatar_url != null) 'avatar_url': avatar_url,
-      };
+    if (id != null) 'id': id,
+    if (display_name != null) 'display_name': display_name,
+    if (avatar_url != null) 'avatar_url': avatar_url,
+  };
 }
 
 /// MSC2747: VoIP call transfers
@@ -39,20 +39,20 @@ class CallReplaces {
     this.target_room,
   });
   factory CallReplaces.fromJson(Map<String, dynamic> json) => CallReplaces(
-        replacement_id: json['replacement_id']?.toString(),
-        create_call: json['create_call']?.toString(),
-        await_call: json['await_call']?.toString(),
-        target_room: json['target_room']?.toString(),
-        target_user: CallReplacesTarget.fromJson(json['target_user']),
-      );
+    replacement_id: json['replacement_id']?.toString(),
+    create_call: json['create_call']?.toString(),
+    await_call: json['await_call']?.toString(),
+    target_room: json['target_room']?.toString(),
+    target_user: CallReplacesTarget.fromJson(json['target_user']),
+  );
 
   Map<String, Object> toJson() => {
-        if (replacement_id != null) 'replacement_id': replacement_id!,
-        if (target_user != null) 'target_user': target_user!.toJson(),
-        if (create_call != null) 'create_call': create_call!,
-        if (await_call != null) 'await_call': await_call!,
-        if (target_room != null) 'target_room': target_room!,
-      };
+    'replacement_id': ?replacement_id,
+    if (target_user != null) 'target_user': target_user!.toJson(),
+    'create_call': ?create_call,
+    'await_call': ?await_call,
+    'target_room': ?target_room,
+  };
 }
 
 // TODO: Change to "sdp_stream_metadata" when MSC3077 is merged
@@ -70,9 +70,9 @@ class CallCapabilities {
         transferee: json['m.call.transferee'] as bool? ?? false,
       );
   Map<String, dynamic> toJson() => {
-        'm.call.transferee': transferee,
-        'm.call.dtmf': dtmf,
-      };
+    'm.call.transferee': transferee,
+    'm.call.dtmf': dtmf,
+  };
 }
 
 /// MSC3077: Support for multi-stream VoIP
@@ -104,10 +104,10 @@ class SDPStreamPurpose {
       );
 
   Map<String, dynamic> toJson() => {
-        'purpose': purpose,
-        'audio_muted': audio_muted,
-        'video_muted': video_muted,
-      };
+    'purpose': purpose,
+    'audio_muted': audio_muted,
+    'video_muted': video_muted,
+  };
 }
 
 class SDPStreamMetadataPurpose {
@@ -143,8 +143,8 @@ class AssertedIdentity {
         avatarUrl: json['avatar_url'] as String?,
       );
   Map<String, dynamic> toJson() => {
-        if (displayName != null) 'display_name': displayName,
-        if (id != null) 'id': id,
-        if (avatarUrl != null) 'avatar_url': avatarUrl,
-      };
+    if (displayName != null) 'display_name': displayName,
+    if (id != null) 'id': id,
+    if (avatarUrl != null) 'avatar_url': avatarUrl,
+  };
 }

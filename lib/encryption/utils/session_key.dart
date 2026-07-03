@@ -4,11 +4,10 @@
 
 import 'dart:convert';
 
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 class SessionKey {
   /// The raw json content of the key
@@ -59,32 +58,34 @@ class SessionKey {
     required this.sessionId,
     required this.senderKey,
     required this.senderClaimedKeys,
-  })  : indexes = indexes ?? <String, String>{},
-        allowedAtIndex = allowedAtIndex ?? <String, Map<String, int>>{};
+  }) : indexes = indexes ?? <String, String>{},
+       allowedAtIndex = allowedAtIndex ?? <String, Map<String, int>>{};
 
   SessionKey.fromDb(StoredInboundGroupSession dbEntry, this.key)
-      : content = Event.getMapFromPayload(dbEntry.content),
-        indexes = Event.getMapFromPayload(dbEntry.indexes)
-            .catchMap((k, v) => MapEntry<String, String>(k, v)),
-        allowedAtIndex = Event.getMapFromPayload(dbEntry.allowedAtIndex)
-            .catchMap((k, v) => MapEntry(k, Map<String, int>.from(v))),
-        roomId = dbEntry.roomId,
-        sessionId = dbEntry.sessionId,
-        senderKey = dbEntry.senderKey {
-    final parsedSenderClaimedKeys =
-        Event.getMapFromPayload(dbEntry.senderClaimedKeys)
-            .catchMap((k, v) => MapEntry<String, String>(k, v));
+    : content = Event.getMapFromPayload(dbEntry.content),
+      indexes = Event.getMapFromPayload(
+        dbEntry.indexes,
+      ).catchMap((k, v) => MapEntry<String, String>(k, v)),
+      allowedAtIndex = Event.getMapFromPayload(
+        dbEntry.allowedAtIndex,
+      ).catchMap((k, v) => MapEntry(k, Map<String, int>.from(v))),
+      roomId = dbEntry.roomId,
+      sessionId = dbEntry.sessionId,
+      senderKey = dbEntry.senderKey {
+    final parsedSenderClaimedKeys = Event.getMapFromPayload(
+      dbEntry.senderClaimedKeys,
+    ).catchMap((k, v) => MapEntry<String, String>(k, v));
     // we need to try...catch as the map used to be <String, int> and that will throw an error.
     senderClaimedKeys = (parsedSenderClaimedKeys.isNotEmpty)
         ? parsedSenderClaimedKeys
         : (content
-                .tryGetMap<String, dynamic>('sender_claimed_keys')
-                ?.catchMap((k, v) => MapEntry<String, String>(k, v)) ??
-            (content['sender_claimed_ed25519_key'] is String
-                ? <String, String>{
-                    'ed25519': content['sender_claimed_ed25519_key'],
-                  }
-                : <String, String>{}));
+                  .tryGetMap<String, dynamic>('sender_claimed_keys')
+                  ?.catchMap((k, v) => MapEntry<String, String>(k, v)) ??
+              (content['sender_claimed_ed25519_key'] is String
+                  ? <String, String>{
+                      'ed25519': content['sender_claimed_ed25519_key'],
+                    }
+                  : <String, String>{}));
 
     try {
       inboundGroupSession = vod.InboundGroupSession.fromPickleEncrypted(

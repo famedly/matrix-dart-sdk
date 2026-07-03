@@ -20,13 +20,13 @@ class SecretStorageKeyContent {
   SecretStorageKeyContent();
 
   SecretStorageKeyContent.fromJson(Map<String, Object?> json)
-      : passphrase = ((Map<String, Object?>? x) => x != null
-            ? PassphraseInfo.fromJson(x)
-            : null)(json.tryGet('passphrase')),
-        iv = json.tryGet('iv'),
-        mac = json.tryGet('mac'),
-        algorithm = json.tryGet('algorithm'),
-        name = json.tryGet('name');
+    : passphrase = ((Map<String, Object?>? x) => x != null
+          ? PassphraseInfo.fromJson(x)
+          : null)(json.tryGet('passphrase')),
+      iv = json.tryGet('iv'),
+      mac = json.tryGet('mac'),
+      algorithm = json.tryGet('algorithm'),
+      name = json.tryGet('name');
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};
@@ -55,10 +55,10 @@ class PassphraseInfo {
   });
 
   PassphraseInfo.fromJson(Map<String, Object?> json)
-      : algorithm = json.tryGet('algorithm', TryGet.required),
-        salt = json.tryGet('salt', TryGet.required),
-        iterations = json.tryGet('iterations', TryGet.required),
-        bits = json.tryGet('bits');
+    : algorithm = json.tryGet('algorithm', TryGet.required),
+      salt = json.tryGet('salt', TryGet.required),
+      iterations = json.tryGet('iterations', TryGet.required),
+      bits = json.tryGet('bits');
 
   Map<String, Object?> toJson() {
     final data = <String, Object?>{};

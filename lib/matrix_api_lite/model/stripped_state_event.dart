@@ -15,8 +15,8 @@ class StrippedStateEvent extends BasicEventWithSender {
   });
 
   StrippedStateEvent.fromJson(super.json)
-      : stateKey = json.tryGet<String>('state_key'),
-        super.fromJson();
+    : stateKey = json.tryGet<String>('state_key'),
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

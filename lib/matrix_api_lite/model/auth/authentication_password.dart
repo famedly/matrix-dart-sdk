@@ -18,16 +18,14 @@ class AuthenticationPassword extends AuthenticationData {
     super.session,
     required this.password,
     required this.identifier,
-  }) : super(
-          type: AuthenticationTypes.password,
-        );
+  }) : super(type: AuthenticationTypes.password);
 
   AuthenticationPassword.fromJson(super.json)
-      : password = json['password'] as String,
-        identifier = AuthenticationIdentifier.subFromJson(
-          json['identifier'] as Map<String, Object?>,
-        ),
-        super.fromJson();
+    : password = json['password'] as String,
+      identifier = AuthenticationIdentifier.subFromJson(
+        json['identifier'] as Map<String, Object?>,
+      ),
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

@@ -24,14 +24,11 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
       '/client/unstable/org.matrix.msc3814.v1/dehydrated_device',
       data: {
         'device_id': deviceId,
-        if (initialDeviceDisplayName != null)
-          'initial_device_display_name': initialDeviceDisplayName,
-        if (deviceData != null) 'device_data': deviceData,
+        'initial_device_display_name': ?initialDeviceDisplayName,
+        'device_data': ?deviceData,
         if (deviceKeys != null) 'device_keys': deviceKeys.toJson(),
-        if (oneTimeKeys != null) 'one_time_keys': oneTimeKeys,
-        if (fallbackKeys != null) ...{
-          'fallback_keys': fallbackKeys,
-        },
+        'one_time_keys': ?oneTimeKeys,
+        if (fallbackKeys != null) ...{'fallback_keys': fallbackKeys},
       },
     );
     return response['device_id'] as String;
@@ -57,12 +54,8 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
     final response = await request(
       RequestType.POST,
       '/client/unstable/org.matrix.msc3814.v1/dehydrated_device/$deviceId/events',
-      query: {
-        'limit': limit.toString(),
-      },
-      data: {
-        if (nextBatch != null) 'next_batch': nextBatch,
-      },
+      query: {'limit': limit.toString()},
+      data: {'next_batch': ?nextBatch},
     );
     return DehydratedDeviceEvents.fromJson(response);
   }

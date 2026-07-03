@@ -2,11 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:test/test.dart';
-
 import 'package:matrix/src/database/sqflite_box.dart'
     if (dart.library.js_interop) 'package:matrix/src/database/indexeddb_box.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Box tests', () {
@@ -103,14 +102,11 @@ void main() {
       await collection.close();
     });
 
-    test(
-      'Collection.deleteDatabase',
-      () async {
-        await collection.deleteDatabase(
-          db?.path ?? '',
-          isWeb ? null : databaseFactoryFfi,
-        );
-      },
-    );
+    test('Collection.deleteDatabase', () async {
+      await collection.deleteDatabase(
+        db?.path ?? '',
+        isWeb ? null : databaseFactoryFfi,
+      );
+    });
   });
 }

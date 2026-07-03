@@ -9,16 +9,12 @@ import 'package:matrix/matrix.dart';
 abstract class CallBackend {
   String type;
 
-  CallBackend({
-    required this.type,
-  });
+  CallBackend({required this.type});
 
   factory CallBackend.fromJson(Map<String, Object?> json) {
     final type = json['type'] as String;
     if (type == 'mesh') {
-      return MeshBackend(
-        type: type,
-      );
+      return MeshBackend(type: type);
     } else if (type == 'livekit') {
       return LiveKitBackend(
         livekitAlias: json['livekit_alias'] as String,

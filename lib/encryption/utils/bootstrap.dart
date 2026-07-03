@@ -6,12 +6,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/key_manager.dart';
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/matrix.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 enum BootstrapState {
   /// Is loading.
@@ -228,7 +227,7 @@ class Bootstrap {
         if (existingOldKeys.isNotEmpty) {
           final primaryUnlockedKey =
               existingOldKeys[encryption.ssss.defaultKeyId] ??
-                  existingOldKeys.values.first;
+              existingOldKeys.values.first;
           await encryption.ssss.migrateSecretsToKey(
             primaryUnlockedKey: primaryUnlockedKey,
             destinationKey: newSsssKey!,
@@ -318,9 +317,7 @@ class Bootstrap {
         final json = <String, dynamic>{
           'user_id': userID,
           'usage': ['master'],
-          'keys': <String, dynamic>{
-            'ed25519:$masterPub': masterPub,
-          },
+          'keys': <String, dynamic>{'ed25519:$masterPub': masterPub},
         };
         masterKey = MatrixCrossSigningKey.fromJson(json);
         secretsToStore[EventTypes.CrossSigningMasterKey] = masterSigningKey;
@@ -349,15 +346,11 @@ class Bootstrap {
         final json = <String, dynamic>{
           'user_id': userID,
           'usage': ['self_signing'],
-          'keys': <String, dynamic>{
-            'ed25519:$selfSigningPub': selfSigningPub,
-          },
+          'keys': <String, dynamic>{'ed25519:$selfSigningPub': selfSigningPub},
         };
         final signature = sign(json);
         json['signatures'] = <String, dynamic>{
-          userID: <String, dynamic>{
-            'ed25519:$masterPub': signature,
-          },
+          userID: <String, dynamic>{'ed25519:$masterPub': signature},
         };
         selfSigningKey = MatrixCrossSigningKey.fromJson(json);
         secretsToStore[EventTypes.CrossSigningSelfSigning] = selfSigningPriv;
@@ -369,15 +362,11 @@ class Bootstrap {
         final json = <String, dynamic>{
           'user_id': userID,
           'usage': ['user_signing'],
-          'keys': <String, dynamic>{
-            'ed25519:$userSigningPub': userSigningPub,
-          },
+          'keys': <String, dynamic>{'ed25519:$userSigningPub': userSigningPub},
         };
         final signature = sign(json);
         json['signatures'] = <String, dynamic>{
-          userID: <String, dynamic>{
-            'ed25519:$masterPub': signature,
-          },
+          userID: <String, dynamic>{'ed25519:$masterPub': signature},
         };
         userSigningKey = MatrixCrossSigningKey.fromJson(json);
         secretsToStore[EventTypes.CrossSigningUserSigning] = userSigningPriv;
@@ -421,8 +410,10 @@ class Bootstrap {
           );
         }
         Logs().v('Set own master key to verified...');
-        await client.userDeviceKeys[client.userID]!.masterKey!
-            .setVerified(true, false);
+        await client.userDeviceKeys[client.userID]!.masterKey!.setVerified(
+          true,
+          false,
+        );
         keysToSign.add(client.userDeviceKeys[client.userID]!.masterKey!);
       }
       if (selfSigningKey != null) {
@@ -481,9 +472,7 @@ class Bootstrap {
       Logs().v('Create the new backup version...');
       await client.postRoomKeysVersion(
         BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2,
-        <String, dynamic>{
-          'public_key': pubKey,
-        },
+        <String, dynamic>{'public_key': pubKey},
       );
       Logs().v('Store the secret...');
       await newSsssKey?.store(megolmKey, base64.encode(privKey));
