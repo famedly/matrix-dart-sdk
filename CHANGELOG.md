@@ -4,6 +4,18 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [7.5.0] 2nd July 2026
+- build: (BREAKING) update to matrix spec 1.18 (Christian Kußowski)
+- build: (deps): bump actions/checkout from 6 to 7 (dependabot[bot])
+- build: update dart to 3.11 and enable null aware elements in lists (Christian Kußowski)
+- build: update to matrix spec 1.17 (Christian Kußowski)
+- ci: enable sort_pub_dependencies lint (Cursor Agent)
+- fix: database operation not in transaction (Christian Kußowski)
+- fix: load keys for decryption separately for [Room].searchEvents (Karthikeyan S)
+- fix: selfSign() with passphrase fails sometimes when using existing ssss instead of just the passphrase (Christian Kußowski)
+- fix: type error in model (Christian Kußowski)
+- refactor: use new formatting for code generated files (Christian Kußowski)
+
 ## [7.4.0] 23rd June 2026
 - feat: add skipScanner flag to download methods for per-call content scanner bypass (Khalil Amor)
 
