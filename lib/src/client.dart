@@ -2983,11 +2983,25 @@ class Client extends MatrixApi {
     }
     // If the membership is "leave" then remove the item and stop here
     else if (membership == Membership.leave) {
-      if (syncFilter.room?.includeLeave == true && !found) {
-        rooms.add(room);
+      final leftUpdate = chatUpdate as LeftRoomUpdate;
+      if (syncFilter.room?.includeLeave == true) {
+        final membershipChanged = found && room.membership != membership;
+        room.membership = membership;
+        room.prev_batch = leftUpdate.timeline?.prevBatch ?? room.prev_batch;
+        if (!found) rooms.add(room);
+        if (membershipChanged) {
+          // ignore: deprecated_member_use_from_same_package
+          room.onUpdate.add(room.id);
+        }
       } else if (found) {
         rooms.removeAt(roomIndex);
       }
+    }
+    // Update membership for existing invites.
+    else if (found && chatUpdate is InvitedRoomUpdate) {
+      rooms[roomIndex].membership = membership;
+      // ignore: deprecated_member_use_from_same_package
+      rooms[roomIndex].onUpdate.add(rooms[roomIndex].id);
     }
     // Update notification, highlight count and/or additional information
     else if (found &&

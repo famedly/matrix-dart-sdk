@@ -20,6 +20,7 @@ Future? vodInit;
 Future<Client> getClient({
   Duration sendTimelineEventTimeout = const Duration(minutes: 1),
   String? databasePath,
+  Filter? syncFilter,
 }) async {
   try {
     vodInit ??= vod.init(
@@ -37,6 +38,7 @@ Future<Client> getClient({
     database: await getDatabase(databasePath: databasePath),
     onSoftLogout: (client) => client.refreshAccessToken(),
     sendTimelineEventTimeout: sendTimelineEventTimeout,
+    syncFilter: syncFilter,
   );
   FakeMatrixApi.client = client;
   await client.checkHomeserver(

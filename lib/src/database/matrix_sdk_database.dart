@@ -1305,8 +1305,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
                 lastEvent: lastEvent,
               ).toJson(),
       );
-    } else if (roomUpdate is JoinedRoomUpdate) {
+    } else {
       final currentRoom = Room.fromJson(copyMap(currentRawRoom), client);
+      final joinedUpdate = roomUpdate is JoinedRoomUpdate ? roomUpdate : null;
+      final leftUpdate = roomUpdate is LeftRoomUpdate ? roomUpdate : null;
       await _roomsBox.put(
         roomId,
         Room(
@@ -1314,17 +1316,22 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           id: roomId,
           membership: membership,
           highlightCount:
-              roomUpdate.unreadNotifications?.highlightCount ??
+              joinedUpdate?.unreadNotifications?.highlightCount ??
               currentRoom.highlightCount,
           notificationCount:
-              roomUpdate.unreadNotifications?.notificationCount ??
+              joinedUpdate?.unreadNotifications?.notificationCount ??
               currentRoom.notificationCount,
-          prev_batch: roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch,
-          summary: RoomSummary.fromJson(
-            currentRoom.summary.toJson()
-              ..addAll(roomUpdate.summary?.toJson() ?? {}),
-          ),
-          lastEvent: lastEvent,
+          prev_batch:
+              joinedUpdate?.timeline?.prevBatch ??
+              leftUpdate?.timeline?.prevBatch ??
+              currentRoom.prev_batch,
+          summary: joinedUpdate == null
+              ? currentRoom.summary
+              : RoomSummary.fromJson(
+                  currentRoom.summary.toJson()
+                    ..addAll(joinedUpdate.summary?.toJson() ?? {}),
+                ),
+          lastEvent: lastEvent ?? currentRoom.lastEvent,
         ).toJson(),
       );
     }

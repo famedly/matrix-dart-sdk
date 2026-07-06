@@ -73,6 +73,122 @@ void main() async {
       expect(eventsFromStore.isEmpty, true);
     });
 
+    test('includeLeave keeps left room in rooms and database', () async {
+      await client.dispose().onError((e, s) {});
+      client = await getClient(
+        syncFilter: Filter(
+          room: RoomFilter(
+            state: StateFilter(lazyLoadMembers: true),
+            includeLeave: true,
+          ),
+        ),
+      );
+      client.rooms.clear();
+      await client.database.clearCache();
+
+      const roomId = '!includeLeaveRoom:example.com';
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 't_join',
+          rooms: RoomsUpdate(
+            join: {
+              roomId: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  prevBatch: 'join_batch',
+                  events: [
+                    MatrixEvent(
+                      type: EventTypes.Message,
+                      senderId: '@alice:example.com',
+                      eventId: '\$include-leave-join',
+                      originServerTs: DateTime.fromMillisecondsSinceEpoch(1),
+                      content: {'msgtype': 'm.text', 'body': 'joined'},
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 't_leave',
+          rooms: RoomsUpdate(
+            leave: {
+              roomId: LeftRoomUpdate(
+                timeline: TimelineUpdate(
+                  prevBatch: 'leave_batch',
+                  events: [
+                    MatrixEvent(
+                      type: EventTypes.Message,
+                      senderId: '@alice:example.com',
+                      eventId: '\$include-leave-left',
+                      originServerTs: DateTime.fromMillisecondsSinceEpoch(2),
+                      content: {'msgtype': 'm.text', 'body': 'left'},
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      final room = client.getRoomById(roomId);
+      expect(room, isNotNull);
+      expect(room!.membership, Membership.leave);
+      expect(room.prev_batch, 'leave_batch');
+
+      final storedRoom = await client.database.getSingleRoom(client, roomId);
+      expect(storedRoom?.membership, Membership.leave);
+      expect(storedRoom?.prev_batch, 'leave_batch');
+      expect(storedRoom?.lastEvent?.eventId, '\$include-leave-left');
+
+      final timeline = await room.getTimeline();
+      expect(
+        timeline.events.map((event) => event.eventId),
+        contains('\$include-leave-left'),
+      );
+    });
+
+    test('reinvite updates kept left room membership', () async {
+      await client.dispose().onError((e, s) {});
+      client = await getClient(
+        syncFilter: Filter(
+          room: RoomFilter(
+            state: StateFilter(lazyLoadMembers: true),
+            includeLeave: true,
+          ),
+        ),
+      );
+      client.rooms.clear();
+      await client.database.clearCache();
+
+      const roomId = '!reinviteLeftRoom:example.com';
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 't_join',
+          rooms: RoomsUpdate(join: {roomId: JoinedRoomUpdate()}),
+        ),
+      );
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 't_leave',
+          rooms: RoomsUpdate(leave: {roomId: LeftRoomUpdate()}),
+        ),
+      );
+
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 't_invite',
+          rooms: RoomsUpdate(invite: {roomId: InvitedRoomUpdate()}),
+        ),
+      );
+
+      expect(client.getRoomById(roomId)?.membership, Membership.invite);
+    });
+
     test('discard room from archives when membership change', () async {
       await client.loadArchiveWithTimeline();
       await client.handleSync(

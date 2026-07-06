@@ -1701,11 +1701,9 @@ class Room {
 
     var events = <Event>[];
 
-    if (!isArchived) {
-      await client.database.transaction(() async {
-        events = await client.database.getEventList(this, limit: limit);
-      });
-    }
+    await client.database.transaction(() async {
+      events = await client.database.getEventList(this, limit: limit);
+    });
 
     var chunk = TimelineChunk(events: events);
     // Load the timeline arround eventContextId if set
