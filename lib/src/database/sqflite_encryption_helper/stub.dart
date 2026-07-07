@@ -6,7 +6,6 @@ import 'package:sqflite_common/sqlite_api.dart';
 
 /// A helper utility for SQfLite related encryption operations
 ///
-/// * helps loading the required dynamic libraries - even on cursed systems
 /// * migrates unencrypted SQLite databases to SQLCipher
 /// * applies the PRAGMA key to a database and ensure it is properly loading
 class SQfLiteEncryptionHelper {
@@ -25,17 +24,23 @@ class SQfLiteEncryptionHelper {
     required this.cipher,
   });
 
-  /// Loads the correct [DynamicLibrary] required for SQLCipher
+  /// No-op, kept for backwards compatibility.
   ///
-  /// To be used with `package:sqlite3/open.dart`:
-  /// ```dart
-  /// void main() {
-  ///   final factory = createDatabaseFactoryFfi(
-  ///     ffiInit: SQfLiteEncryptionHelper.ffiInit,
-  ///   );
-  /// }
+  /// Since `sqlite3` 3.x the SQLite library is bundled via
+  /// [build hooks](https://dart.dev/tools/hooks) and can no longer be
+  /// overridden at runtime. To use SQLCipher, select it in the `hooks`
+  /// section of your application's `pubspec.yaml` instead:
+  /// ```yaml
+  /// hooks:
+  ///   user_defines:
+  ///     sqlite3:
+  ///       source: sqlcipher
   /// ```
-  static void ffiInit() => throw UnimplementedError();
+  @Deprecated(
+    'sqlite3 is now loaded through build hooks. Select SQLCipher via the '
+    'hooks user_defines in your pubspec.yaml instead.',
+  )
+  static void ffiInit() {}
 
   /// checks whether the database exists and is encrypted
   ///
