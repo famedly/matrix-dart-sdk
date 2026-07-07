@@ -71,6 +71,16 @@ class SQfLiteEncryptionHelper {
     // hell, it's unencrypted. This should not happen. Time to encrypt it.
     final plainDb = await factory.openDatabase(path);
 
+    // Ensure SQLCipher is actually loaded before running the
+    // SQLCipher-specific migration statements below - they would otherwise
+    // fail with an unclear error.
+    try {
+      await _ensureSQLCipherAvailable(plainDb);
+    } catch (_) {
+      await plainDb.close();
+      rethrow;
+    }
+
     final encryptedPath = '$path.encrypted';
 
     await plainDb.execute(
@@ -107,25 +117,30 @@ class SQfLiteEncryptionHelper {
   /// * applies [cipher] as PRAGMA key
   /// * checks whether this operation was successful
   Future<void> applyPragmaKey(Database database) async {
+    await _ensureSQLCipherAvailable(database);
+
+    final result = await database.rawQuery("PRAGMA KEY='$cipher';");
+    assert(result.single['ok'] == 'ok');
+  }
+
+  /// ensures the given [database] is actually backed by SQLCipher
+  ///
+  /// Throws a [StateError] otherwise, since the encryption PRAGMAs just fail
+  /// silently with regular sqlite3 (meaning that we'd accidentally use
+  /// plaintext databases).
+  Future<void> _ensureSQLCipherAvailable(Database database) async {
     final cipherVersion = await database.rawQuery('PRAGMA cipher_version;');
     if (cipherVersion.isEmpty) {
-      // Make sure that we're actually using SQLCipher, since the pragma
-      // used to encrypt databases just fails silently with regular
-      // sqlite3
-      // (meaning that we'd accidentally use plaintext databases).
       throw StateError(
         'SQLCipher library is not available, '
         'please check your dependencies!',
       );
-    } else {
-      final version = cipherVersion.singleOrNull?['cipher_version'];
-      Logs().d(
-        'PRAGMA supported by bundled SQLite. Encryption supported. SQLCipher version: $version.',
-      );
     }
 
-    final result = await database.rawQuery("PRAGMA KEY='$cipher';");
-    assert(result.single['ok'] == 'ok');
+    final version = cipherVersion.singleOrNull?['cipher_version'];
+    Logs().d(
+      'PRAGMA supported by bundled SQLite. Encryption supported. SQLCipher version: $version.',
+    );
   }
 
   /// checks whether a File has a plain text SQLite header
