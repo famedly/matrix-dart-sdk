@@ -6,3 +6,7 @@ exclude:
   - example/**
 ignore:
   - lints
+  # Not imported directly anymore (sqlite3 3.x dropped `package:sqlite3/open.dart`),
+  # but kept as a direct dependency so downstream apps are forced onto the
+  # hooks-based sqlite3 3.x that SQLCipher selection now relies on.
+  - sqlite3
