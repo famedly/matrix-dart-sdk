@@ -534,6 +534,7 @@ class LiveKitBackend extends CallBackend {
     _encryptionKeysMap.remove(groupCall.localParticipant);
     _currentLocalKeyIndex = 0;
     _latestLocalKeyIndex = 0;
+    _lastNewKeyTime = DateTime(1900);
     _memberLeaveEncKeyRotateDebounceTimer?.cancel();
   }
 
