@@ -908,15 +908,15 @@ class Event extends MatrixEvent {
       }
     }
 
+    final useThumbnail = getThumbnail && hasThumbnail;
     final filename = content.tryGet<String>('filename') ?? body;
-    final mimeType = attachmentMimetype;
 
     return MatrixFile(
       bytes: uint8list,
-      name: getThumbnail
-          ? '$filename.thumbnail.${extensionFromMime(mimeType)}'
+      name: useThumbnail
+          ? '$filename.thumbnail.${extensionFromMime(thumbnailMimetype)}'
           : filename,
-      mimeType: attachmentMimetype,
+      mimeType: useThumbnail ? thumbnailMimetype : attachmentMimetype,
     );
   }
 
