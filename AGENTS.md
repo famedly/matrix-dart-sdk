@@ -29,8 +29,9 @@ root fails (the example needs the Flutter SDK). Use `dart pub get --no-example` 
 `flutter pub get`, which the shared `dart` CI template uses). All plain-dart CI jobs
 in `.github/workflows/integrate.yml` pass `--no-example`.
 
-Toolchain already provided by the VM snapshot (do not reinstall): Dart SDK 3.9.2 (on
-`PATH` as `dart`), the Rust toolchain (`cargo`), Docker, mikefarah `yq` (at
+Toolchain already provided by the VM snapshot (do not reinstall): Dart SDK 3.11.1 (on
+`PATH` as `dart`, pinned to `.github/workflows/versions.env`; the repo requires SDK
+`>=3.11.0`), the Rust toolchain (`cargo`), Docker, mikefarah `yq` (at
 `/usr/local/bin/yq` — required by `scripts/prepare_vodozemac.sh`; note the distro's
 `/usr/bin/yq` is the incompatible python `yq`), and `libsqlite3-dev`/`lcov`. The update
 script fetches dependencies with `dart pub get --no-example` (plain `dart pub get`
