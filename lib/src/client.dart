@@ -2719,11 +2719,13 @@ class Client extends MatrixApi {
       final syncRoomUpdate = entry.value;
 
       final room = await _updateRoomsByRoomUpdate(id, syncRoomUpdate);
+      var participantListComplete = room.participantListComplete;
 
       // Is the timeline limited? Then all previous messages should be
       // removed from the database!
       if (syncRoomUpdate is JoinedRoomUpdate &&
           syncRoomUpdate.timeline?.limited == true) {
+        participantListComplete = false;
         await database.deleteTimelineForRoom(id);
         room.lastEvent = null;
       }
@@ -2840,7 +2842,13 @@ class Client extends MatrixApi {
         runInRoot(room.refreshLastEvent);
       }
 
-      await database.storeRoomUpdate(id, syncRoomUpdate, room.lastEvent, this);
+      await database.storeRoomUpdate(
+        id,
+        syncRoomUpdate,
+        room.lastEvent,
+        participantListComplete,
+        this,
+      );
     }
   }
 

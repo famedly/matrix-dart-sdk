@@ -75,6 +75,7 @@ class Room {
     'prev_batch': prev_batch,
     'summary': summary.toJson(),
     'last_event': lastEvent?.toJson(),
+    'participant_list_complete': participantListComplete,
   };
 
   factory Room.fromJson(Map<String, dynamic> json, Client client) {
@@ -89,6 +90,7 @@ class Room {
       highlightCount: json['highlight_count'],
       prev_batch: json['prev_batch'],
       summary: RoomSummary.fromJson(Map<String, dynamic>.from(json['summary'])),
+      participantListComplete: json['participant_list_complete'] == true,
     );
     if (json['last_event'] != null) {
       room.lastEvent = Event.fromJson(json['last_event'], room);
@@ -474,14 +476,10 @@ class Room {
     RoomSummary? summary,
     this.lastEvent,
     LatestReceiptState? receiptState,
+    bool participantListComplete = false,
   }) : roomAccountData = roomAccountData ?? <String, BasicEvent>{},
-       summary =
-           summary ??
-           RoomSummary.fromJson({
-             'm.joined_member_count': 0,
-             'm.invited_member_count': 0,
-             'm.heroes': [],
-           }),
+       _participantListComplete = participantListComplete,
+       summary = summary ?? RoomSummary(),
        receiptState = receiptState ?? LatestReceiptState.empty();
 
   /// The default count of how much events should be requested when requesting the
@@ -1887,6 +1885,14 @@ class Room {
           client,
         );
       }
+      _participantListComplete = true;
+      await client.database.storeRoomUpdate(
+        id,
+        JoinedRoomUpdate(),
+        lastEvent,
+        _participantListComplete,
+        client,
+      );
     }
 
     users.removeWhere((u) => !membershipFilter.contains(u.membership));
@@ -1894,18 +1900,9 @@ class Room {
   }
 
   /// Checks if the local participant list of joined and invited users is complete.
-  bool get participantListComplete {
-    final knownParticipants = getParticipants();
-    final joinedCount = knownParticipants
-        .where((u) => u.membership == Membership.join)
-        .length;
-    final invitedCount = knownParticipants
-        .where((u) => u.membership == Membership.invite)
-        .length;
+  bool get participantListComplete => _participantListComplete;
 
-    return (summary.mJoinedMemberCount ?? 0) == joinedCount &&
-        (summary.mInvitedMemberCount ?? 0) == invitedCount;
-  }
+  bool _participantListComplete;
 
   @Deprecated(
     'The method was renamed unsafeGetUserFromMemoryOrFallback. Please prefer requestParticipants.',

@@ -61,6 +61,7 @@ abstract class DatabaseApi {
     String roomId,
     SyncRoomUpdate roomUpdate,
     Event? lastEvent,
+    bool participantListComplete,
     Client client,
   );
 

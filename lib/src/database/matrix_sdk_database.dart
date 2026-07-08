@@ -1267,6 +1267,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String roomId,
     SyncRoomUpdate roomUpdate,
     Event? lastEvent,
+    bool participantListComplete,
     Client client,
   ) async {
     // Leave room if membership is leave
@@ -1296,12 +1297,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
                 prev_batch: roomUpdate.timeline?.prevBatch,
                 summary: roomUpdate.summary,
                 lastEvent: lastEvent,
+                participantListComplete: participantListComplete,
               ).toJson()
             : Room(
                 client: client,
                 id: roomId,
                 membership: membership,
                 lastEvent: lastEvent,
+                participantListComplete: participantListComplete,
               ).toJson(),
       );
     } else if (roomUpdate is JoinedRoomUpdate) {
@@ -1324,6 +1327,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
               ..addAll(roomUpdate.summary?.toJson() ?? {}),
           ),
           lastEvent: lastEvent,
+          participantListComplete: participantListComplete,
         ).toJson(),
       );
     }

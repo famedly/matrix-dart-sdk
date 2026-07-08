@@ -95,7 +95,13 @@ void main() {
           'testclient',
           database: await getMatrixSdkDatabase(),
         );
-        await database.storeRoomUpdate('!testroom', roomUpdate, null, client);
+        await database.storeRoomUpdate(
+          '!testroom',
+          roomUpdate,
+          null,
+          false,
+          client,
+        );
         final rooms = await database.getRoomList(client);
         expect(rooms.single.id, '!testroom');
       });
@@ -270,6 +276,7 @@ void main() {
           roomid,
           JoinedRoomUpdate(),
           null,
+          false,
           client,
         );
 

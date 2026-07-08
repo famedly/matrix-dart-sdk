@@ -7,6 +7,12 @@ class RoomSummary {
   int? mJoinedMemberCount;
   int? mInvitedMemberCount;
 
+  RoomSummary({
+    this.mHeroes,
+    this.mInvitedMemberCount,
+    this.mJoinedMemberCount,
+  });
+
   RoomSummary.fromJson(Map<String, Object?> json)
     : mHeroes = json['m.heroes'] != null
           ? List<String>.from(json['m.heroes'] as List)
