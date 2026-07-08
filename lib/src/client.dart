@@ -1932,6 +1932,7 @@ class Client extends MatrixApi {
       ).timeout(timeoutForServerRequests);
     } on MatrixException catch (_) {
       // No access to the MatrixEvent. Search in /notifications
+      await ensureNotSoftLoggedOut();
       final notificationsResponse = await getNotifications();
       matrixEvent ??= notificationsResponse.notifications
           .firstWhereOrNull(
