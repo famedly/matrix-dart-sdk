@@ -6,7 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Voice and Video Calls
 
-This guide walks through adding 1:1 voice and video calls to a Flutter app using `flutter_webrtc`. For group calls and LiveKit integration, see the [VoIP module README](https://github.com/famedly/matrix-dart-sdk/tree/main/lib/src/voip).
+This guide walks through adding voice and video calls to a Flutter app using the MatrixRTC API.
+It covers both P2P mesh calls (via `MeshBackend`) and SFU-backed group calls (via `LiveKitBackend`).
+
+> **Note:** The legacy `WebRTCDelegate` / `CallSession` APIs are deprecated. New projects should use the MatrixRTC event stream described here.
 
 ## Add dependencies
 
@@ -18,7 +21,7 @@ dependencies:
 
 ## Implement WebRTCDelegate
 
-The SDK handles Matrix call signaling (invite, answer, hangup). You provide the media layer by implementing `WebRTCDelegate`:
+The SDK handles Matrix call signaling. You provide the media layer by implementing `WebRTCDelegate`:
 
 ```dart
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
@@ -50,19 +53,17 @@ class MyCallDelegate implements WebRTCDelegate {
 
   @override
   Future<void> registerListeners(CallSession session) async {
-    session.onCallStateChanged.stream.listen((state) {
-      // React to call state transitions
-    });
+    // Reserved for legacy compatibility
   }
 
   @override
   Future<void> handleNewCall(CallSession session) async {
-    // Show incoming or outgoing call UI
+    // Reserved for legacy compatibility
   }
 
   @override
   Future<void> handleMissedCall(CallSession session) async {
-    // Notify the user about a missed call
+    // Reserved for legacy compatibility
   }
 
   @override
@@ -70,64 +71,153 @@ class MyCallDelegate implements WebRTCDelegate {
 }
 ```
 
-## Set up VoIP on the Client
+## Create a group call with MatrixRTC
 
-Attach your delegate to the `Client` via the `VoIP` class. The SDK then handles all Matrix call events automatically:
+Attach your delegate to the `Client` via `VoIP`, then create a `GroupCallSession`:
 
 ```dart
 final delegate = MyCallDelegate();
 final voip = VoIP(client, delegate);
-```
+final room = client.getRoomById('!roomid:server')!;
 
-## Make an outgoing call
+// P2P mesh — good for small groups (2–6 participants)
+final backend = MeshBackend();
 
-```dart
-final call = await voip.inviteToCall(
+// OR LiveKit SFU — better for large calls
+// final backend = LiveKitBackend(
+//   liveKitServer: 'https://livekit.example.com',
+//   liveKitToken: '...',
+// );
+
+final groupCall = GroupCallSession.withAutoGenId(
   room,
-  CallType.kVideo,  // or CallType.kVoice for audio only
-  userId: '@user:server.com',
+  voip,
+  backend,
+  'm.call',   // application
+  'm.room',   // scope
 );
 
-call.onCallStateChanged.stream.listen((state) {
-  // kRinging → kConnecting → kConnected → kEnded
-});
-
-call.answer();   // answer incoming
-call.hangup();   // end the call
-call.reject();   // reject incoming
+// Enter the call (sends member state event, triggers notifications)
+await groupCall.enter();
 ```
 
-## Receive an incoming call
+## Listen for MatrixRTC events
 
-The SDK fires `delegate.handleNewCall()` when a call arrives. Check the direction:
+The `matrixRTCEventStream` delivers typed, pattern-matchable events for everything that happens during a call:
 
 ```dart
-@override
-Future<void> handleNewCall(CallSession session) async {
-  switch (session.direction) {
-    case CallDirection.kIncoming:
-      // Show incoming call screen with answer/reject buttons
+groupCall.matrixRTCEventStream.stream.listen((event) {
+  switch (event) {
+    case GroupCallStateChanged(:final state):
+      // kEntered | kConnected | kEnded | kIdle
       break;
-    case CallDirection.kOutgoing:
-      // Show outgoing call screen with hangup button
+    case ParticipantsJoinEvent(:final participants):
+      for (final p in participants) {
+        print('${p.userId} joined');
+      }
+    case ParticipantsLeftEvent(:final participants):
+      for (final p in participants) {
+        print('${p.userId} left');
+      }
+    case GroupCallActiveSpeakerChanged(:final participant):
+      // Highlight the active speaker
+      break;
+    case GroupCallLocalMutedChanged(:final muted, :final kind):
+      // Update mute UI
+      break;
+    case GroupCallLocalScreenshareStateChanged(:final screensharing):
+      // Toggle screenshare UI
+      break;
+    case CallAddedEvent(:final call):
+      // A new CallSession was added to the group
+      break;
+    case CallRemovedEvent(:final call):
+      // A CallSession was removed
+      break;
+    case GroupCallStreamAdded(:final type):
+    case GroupCallStreamRemoved(:final type):
+      // User media or screenshare stream changed
+      break;
+    case GroupCallStateError(:final msg, :final err):
+      // Handle error
+      break;
+    default:
       break;
   }
+});
+```
+
+## Mute, screenshare, and reactions
+
+```dart
+// Mute/unmute mic
+await backend.setDeviceMuted(groupCall, true, MediaInputKind.audioinput);
+
+// Mute/unmute camera
+await backend.setDeviceMuted(groupCall, true, MediaInputKind.videoinput);
+
+// Start/stop screenshare
+await backend.setScreensharing(groupCall, true);
+
+// Send a call reaction (hand raise, emoji)
+await groupCall.sendReactionEvent(emoji: '🖐️', isEphemeral: true);
+
+// Remove a reaction
+await groupCall.removeReactionEvent(eventId: '...');
+
+// Get all reactions of a type
+final reactions = await groupCall.getAllReactions(emoji: '🖐️');
+```
+
+## Incoming call notifications (MSC4075)
+
+The SDK supports the MSC4075 RTC notification extension for ringing incoming group calls:
+
+```dart
+// Send a ring notification when a call starts
+await room.sendRtcNotification(
+  type: RtcNotificationType.ring,
+  userIds: ['@alice:example.com'],
+  memberEventId: memberStateEventId,
+);
+
+// Check if an incoming event is a ring notification
+final notification = event.tryParseRtcNotificationContent();
+if (notification != null && notification.shouldNotifyUser(
+  event: event,
+  currentUserId: client.userID!,
+)) {
+  // Show incoming call UI / play ringtone
 }
 ```
 
-## Call state reference
+## Leave a call
 
-| State | Meaning |
+```dart
+await groupCall.leave();
+```
+
+## MatrixRTC event reference
+
+| Event | When it fires |
 |---|---|
-| `kFledgling` | Call object created |
-| `kWaitLocalMedia` | Requesting mic/camera |
-| `kCreateOffer` | Preparing SDP offer |
-| `kInviteSent` / `kRinging` | Call is ringing — play ringtone here |
-| `kConnecting` | Peer connection establishing |
-| `kConnected` | Media flowing — stop ringtone |
-| `kEnding` / `kEnded` | Call finished |
+| `GroupCallStateChanged` | Call state transitions (entered, connected, ended) |
+| `ParticipantsJoinEvent` | One or more participants joined |
+| `ParticipantsLeftEvent` | One or more participants left |
+| `GroupCallActiveSpeakerChanged` | The active speaker changed |
+| `GroupCallLocalMutedChanged` | Local mic or camera muted/unmuted |
+| `GroupCallLocalScreenshareStateChanged` | Local screenshare started/stopped |
+| `CallAddedEvent` | A new CallSession was added to the group |
+| `CallRemovedEvent` | A CallSession was removed |
+| `CallReplacedEvent` | An existing CallSession was replaced |
+| `GroupCallStreamAdded` | A user media or screenshare stream became available |
+| `GroupCallStreamRemoved` | A stream was removed |
+| `GroupCallStreamReplaced` | A stream was replaced |
+| `CallReactionAddedEvent` | A reaction (emoji, hand raise) was added |
+| `CallReactionRemovedEvent` | A reaction was removed |
+| `GroupCallStateError` | An error occurred |
 
 ## Next steps
 
-- For group calls and LiveKit, see the [VoIP module README](https://github.com/famedly/matrix-dart-sdk/tree/main/lib/src/voip).
+- For LiveKit backend configuration, see the [VoIP module README](https://github.com/famedly/matrix-dart-sdk/tree/main/lib/src/voip).
 - For TURN server configuration, the SDK uses `client.getTurnServer()` automatically when available.
