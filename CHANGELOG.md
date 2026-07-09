@@ -4,6 +4,15 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [8.0.0] 9th July 2026
+- chore: better error handling for soft logout (Christian Kußowski)
+- docs: correct Dart SDK version in cloud setup notes (Cursor Agent)
+- fix: do not assume room member count is 1 if absent (Christian Kußowski)
+- fix: ensure not soft logged out in pushhelper (Christian Kußowski)
+- fix: (BREAKING) Soft logout with Matrix native OIDC does not send soft_logout flag (Christian Kußowski)
+- fix: use thumbnail only if present (Christian Kußowski)
+- refactor: No longer set timeline event as state event (Christian Kußowski)
+
 ## [7.5.0] 2nd July 2026
 - build: (BREAKING) update to matrix spec 1.18 (Christian Kußowski)
 - build: (deps): bump actions/checkout from 6 to 7 (dependabot[bot])
