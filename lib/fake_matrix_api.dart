@@ -1842,6 +1842,18 @@ class FakeMatrixApi extends BaseClient {
               },
             ],
           },
+      '/client/v3/rooms/!1234%3AfakeServer.notExisting/members': (var req) => {
+        'chunk': [
+          {
+            'type': 'm.room.member',
+            'content': {'membership': 'join'},
+            'sender': '@fakeuser:fakeServer.notExisting',
+            'state_key': '@test:fakeServer.notExisting',
+            'event_id': '\$abcd',
+            'origin_server_ts': 1783579093968,
+          },
+        ],
+      },
       '/client/v3/rooms/!696r7674:example.com/members': (var req) => {
         'chunk': [
           {

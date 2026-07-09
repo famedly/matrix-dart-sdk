@@ -712,6 +712,10 @@ void main() {
       final newParticipants = room.getParticipants();
       expect(oldParticipants.length < newParticipants.length, true);
       expect(fetchedParticipants.length, newParticipants.length);
+      room.summary.mJoinedMemberCount = 3;
+      expect(room.participantListComplete, true);
+      room.summary.mJoinedMemberCount = null;
+      expect(room.participantListComplete, false);
     });
 
     test('calcEncryptionHealthState', () async {

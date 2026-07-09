@@ -127,7 +127,10 @@ void main() async {
       // prep work to be able to set a last event that would trigger the (fixed) bug
       await client.loadArchiveWithTimeline();
       expect(client.getArchiveRoomFromCache(roomid) != null, true);
-      expect(client.getRoomById(roomid)?.membership, Membership.leave);
+      final room = client.getRoomById(roomid)!;
+      room.summary.mJoinedMemberCount = 0;
+      room.summary.mInvitedMemberCount = 0;
+      expect(room.membership, Membership.leave);
 
       final outboundSession = await client.encryption?.keyManager
           .createOutboundGroupSession(roomid);
@@ -169,7 +172,6 @@ void main() async {
       expect(client.getRoomById(roomid)?.membership, Membership.leave);
 
       // set the last event
-      final room = client.getRoomById(roomid)!;
       room.lastEvent = Event(
         type: EventTypes.Encrypted,
         content: encryptedEvent,

@@ -475,13 +475,7 @@ class Room {
     this.lastEvent,
     LatestReceiptState? receiptState,
   }) : roomAccountData = roomAccountData ?? <String, BasicEvent>{},
-       summary =
-           summary ??
-           RoomSummary.fromJson({
-             'm.joined_member_count': 0,
-             'm.invited_member_count': 0,
-             'm.heroes': [],
-           }),
+       summary = summary ?? RoomSummary.fromJson({}),
        receiptState = receiptState ?? LatestReceiptState.empty();
 
   /// The default count of how much events should be requested when requesting the
@@ -1895,6 +1889,11 @@ class Room {
 
   /// Checks if the local participant list of joined and invited users is complete.
   bool get participantListComplete {
+    final joinedMemberCount = summary.mJoinedMemberCount;
+    final invitedMemberCount = summary.mInvitedMemberCount;
+    // We can not know if the participant list is complete!
+    if (joinedMemberCount == null || invitedMemberCount == null) return false;
+
     final knownParticipants = getParticipants();
     final joinedCount = knownParticipants
         .where((u) => u.membership == Membership.join)
@@ -1903,8 +1902,8 @@ class Room {
         .where((u) => u.membership == Membership.invite)
         .length;
 
-    return (summary.mJoinedMemberCount ?? 0) == joinedCount &&
-        (summary.mInvitedMemberCount ?? 0) == invitedCount;
+    return joinedMemberCount == joinedCount &&
+        invitedMemberCount == invitedCount;
   }
 
   @Deprecated(
