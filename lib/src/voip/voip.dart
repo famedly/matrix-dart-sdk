@@ -127,7 +127,8 @@ class VoIP {
       for (final mem in mems) {
         unawaited(createGroupCallFromRoomStateEvent(mem));
       }
-      for (final map in groupCalls.entries) {
+      final groupCallsEntries = List.of(groupCalls.entries);
+      for (final map in groupCallsEntries) {
         if (map.key.roomId == event.room.id) {
           // because we don't know which call got updated, just update all
           // group calls we have entered for that room
