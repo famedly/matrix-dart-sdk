@@ -10,7 +10,24 @@ import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
-enum UserVerifiedStatus { verified, unknown, unknownDevice }
+enum UserVerifiedStatus {
+  /// The user is verified by it's cross signing master key.
+  verified,
+
+  /// The user is verified by it's cross signing master key but has unknown devices.
+  unknownDevice,
+
+  /// The user is not verified but the cross signing master key is trusted since
+  /// first use.
+  trustOnFirstUse,
+
+  /// The previously trusted cross signing master key has changed and needs to
+  /// be marked as trusted again.
+  publicKeyHasChanged,
+
+  /// The user is not verified and the first key is not trusted yet.
+  unknown,
+}
 
 class DeviceKeysList {
   Client client;
@@ -28,25 +45,32 @@ class DeviceKeysList {
   CrossSigningKey? get selfSigningKey => getCrossSigningKey('self_signing');
   CrossSigningKey? get userSigningKey => getCrossSigningKey('user_signing');
 
+  /// Marks the current cross signing master key as trusted until it changes.
+  /// `masterKey` must not be null when calling this!
+  Future<void> trustOnFirstUse() => masterKey!.trustOnFirstUse();
+
   UserVerifiedStatus get verified {
+    final masterKey = this.masterKey;
     if (masterKey == null) {
       return UserVerifiedStatus.unknown;
     }
-    if (masterKey!.verified) {
+    if (masterKey.verified) {
       for (final key in deviceKeys.values) {
         if (!key.verified) {
           return UserVerifiedStatus.unknownDevice;
         }
       }
       return UserVerifiedStatus.verified;
-    } else {
-      for (final key in deviceKeys.values) {
-        if (!key.verified) {
-          return UserVerifiedStatus.unknown;
-        }
-      }
-      return UserVerifiedStatus.verified;
     }
+
+    if (masterKey.lastTrustedPublicKey == null) {
+      return UserVerifiedStatus.unknown;
+    }
+
+    if (masterKey.lastTrustedPublicKey == masterKey.publicKey) {
+      return UserVerifiedStatus.trustOnFirstUse;
+    }
+    return UserVerifiedStatus.publicKeyHasChanged;
   }
 
   /// Starts a verification with this device. This might need to create a new
@@ -394,9 +418,7 @@ class CrossSigningKey extends SignableKey {
   @override
   String? identifier;
 
-  DateTime? _trustOnFirstUseSince;
-
-  DateTime? get trustOnFirstUseSince => _trustOnFirstUseSince;
+  String? lastTrustedPublicKey;
 
   String? get publicKey => identifier;
   late List<String> usage;
@@ -407,20 +429,14 @@ class CrossSigningKey extends SignableKey {
       keys.isNotEmpty &&
       ed25519Key != null;
 
-  Future<void> trustOnFirstUse({
-    DateTime? since,
-    bool updateInDatabase = true,
-  }) async {
-    since ??= DateTime.now();
-    if (updateInDatabase) {
-      await client.database.setVerifiedUserCrossSigningKey(
-        verified,
-        userId,
-        publicKey!,
-        trustOnFirstUseSince: since,
-      );
-    }
-    _trustOnFirstUseSince = since;
+  Future<void> trustOnFirstUse() async {
+    lastTrustedPublicKey = publicKey;
+    await client.database.setVerifiedUserCrossSigningKey(
+      verified,
+      userId,
+      publicKey!,
+      lastTrustedPublicKey: lastTrustedPublicKey,
+    );
   }
 
   @override
@@ -428,12 +444,13 @@ class CrossSigningKey extends SignableKey {
     if (!isValid) {
       throw Exception('setVerified called on invalid key');
     }
+    if (newVerified) lastTrustedPublicKey = publicKey;
     await super.setVerified(newVerified, sign);
     await client.database.setVerifiedUserCrossSigningKey(
       newVerified,
       userId,
       publicKey!,
-      trustOnFirstUseSince: trustOnFirstUseSince,
+      lastTrustedPublicKey: lastTrustedPublicKey,
     );
   }
 
@@ -457,9 +474,7 @@ class CrossSigningKey extends SignableKey {
     final json = toJson();
     identifier = key.publicKey;
     usage = json['usage'].cast<String>();
-    _trustOnFirstUseSince = json['tofu'] == null
-        ? null
-        : DateTime.fromMillisecondsSinceEpoch(json['tofu'] as int);
+    lastTrustedPublicKey = json['last_trusted_public_key'];
   }
 
   CrossSigningKey.fromDbJson(Map<String, dynamic> dbEntry, Client client)
@@ -469,18 +484,14 @@ class CrossSigningKey extends SignableKey {
     usage = json['usage'].cast<String>();
     _verified = dbEntry['verified'];
     _blocked = dbEntry['blocked'];
-    _trustOnFirstUseSince = dbEntry['tofu'] == null
-        ? null
-        : DateTime.fromMillisecondsSinceEpoch(dbEntry['tofu'] as int);
+    lastTrustedPublicKey = dbEntry['last_trusted_public_key'];
   }
 
   CrossSigningKey.fromJson(Map<String, dynamic> json, Client client)
     : super.fromJson(json.copy(), client) {
     final json = toJson();
     usage = json['usage'].cast<String>();
-    _trustOnFirstUseSince = json['tofu'] == null
-        ? null
-        : DateTime.fromMillisecondsSinceEpoch(json['tofu'] as int);
+    lastTrustedPublicKey = json['last_trusted_public_key'];
     if (keys.isNotEmpty) {
       identifier = keys.values.first;
     }

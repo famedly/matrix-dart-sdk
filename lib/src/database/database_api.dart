@@ -233,7 +233,7 @@ abstract class DatabaseApi {
     String content,
     bool verified,
     bool blocked, {
-    DateTime? trustOnFirstUseSince,
+    String? lastTrustedPublicKey,
   });
 
   Future deleteFromToDeviceQueue(int id);
@@ -246,7 +246,7 @@ abstract class DatabaseApi {
     bool verified,
     String userId,
     String publicKey, {
-    DateTime? trustOnFirstUseSince,
+    String? lastTrustedPublicKey,
   });
 
   Future setBlockedUserCrossSigningKey(

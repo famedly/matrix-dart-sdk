@@ -547,6 +547,20 @@ void main() => group('Integration tests', () {
         final newSessionRoomA = testClientA.getRoomById(roomId)!;
         await newSessionRoomA.lastEvent?.requestKey();
         expect(newSessionRoomA.lastEvent!.body, testMessage6);
+
+        Logs().i('++++ (Alice) Trust on first use ++++');
+        await testClientB.initCryptoIdentity();
+        await testClientA.oneShotSync();
+        final bKeys = testClientA.userDeviceKeys[testClientB.userID!]!;
+        expect(bKeys.verified, UserVerifiedStatus.unknown);
+        await bKeys.trustOnFirstUse();
+        expect(bKeys.verified, UserVerifiedStatus.trustOnFirstUse);
+        await testClientB.initCryptoIdentity();
+        await testClientA.oneShotSync();
+        expect(bKeys.verified, UserVerifiedStatus.publicKeyHasChanged);
+        await bKeys.trustOnFirstUse();
+        expect(bKeys.verified, UserVerifiedStatus.trustOnFirstUse);
+
         await newSessionRoomA.leave();
         await newSessionRoomA.forget();
       } else {
