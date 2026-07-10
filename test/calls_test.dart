@@ -14,6 +14,28 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 import 'fake_client.dart';
 import 'webrtc_stub.dart';
 
+class MockMutatingGroupCallSession extends GroupCallSession {
+  MockMutatingGroupCallSession({
+    required super.client,
+    required super.room,
+    required super.voip,
+    required super.backend,
+    required super.groupCallId,
+    required super.application,
+    required super.scope,
+    this.onMemberStateChangedHook,
+  });
+
+  final FutureOr<void> Function()? onMemberStateChangedHook;
+  int onMemberStateChangedCalls = 0;
+
+  @override
+  Future<void> onMemberStateChanged() async {
+    onMemberStateChangedCalls++;
+    await onMemberStateChangedHook?.call();
+  }
+}
+
 void main() {
   late Client matrix;
   late Room room;
@@ -1276,5 +1298,66 @@ void main() {
       expect(incomingCall, isNotNull);
       expect(incomingCall?.pc, isNotNull);
     });
+
+    test(
+      'updates all room group calls when member-state handling mutates the map',
+      () async {
+        final firstGroupCall = MockMutatingGroupCallSession(
+          client: matrix,
+          room: room,
+          voip: voip,
+          backend: MeshBackend(),
+          groupCallId: 'group-call-a',
+          application: 'm.call',
+          scope: 'm.room',
+          onMemberStateChangedHook: () {
+            voip.setGroupCallById(
+              GroupCallSession(
+                client: matrix,
+                room: room,
+                voip: voip,
+                backend: MeshBackend(),
+                groupCallId: 'group-call-c',
+                application: 'm.call',
+                scope: 'm.room',
+              ),
+            );
+          },
+        );
+        final secondGroupCall = MockMutatingGroupCallSession(
+          client: matrix,
+          room: room,
+          voip: voip,
+          backend: MeshBackend(),
+          groupCallId: 'group-call-b',
+          application: 'm.call',
+          scope: 'm.room',
+        );
+
+        voip.setGroupCallById(firstGroupCall);
+        voip.setGroupCallById(secondGroupCall);
+
+        room.setState(
+          Event(
+            content: {'memberships': []},
+            type: EventTypes.GroupCallMember,
+            eventId: 'member-state-update',
+            senderId: '@alice:example.com',
+            originServerTs: DateTime.now(),
+            room: room,
+            stateKey: '@alice:example.com',
+          ),
+        );
+
+        await pumpEventQueue();
+
+        expect(firstGroupCall.onMemberStateChangedCalls, 1);
+        expect(secondGroupCall.onMemberStateChangedCalls, 1);
+        expect(
+          voip.groupCalls,
+          contains(VoipId(roomId: room.id, callId: 'group-call-c')),
+        );
+      },
+    );
   });
 }
