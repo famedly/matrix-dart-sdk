@@ -949,7 +949,9 @@ class VoIP {
       {
         'username': _turnServerCredentials!.username,
         'credential': _turnServerCredentials!.password,
-        'urls': _turnServerCredentials!.uris,
+        'urls': _turnServerCredentials!.uris
+            .map((uri) => uri.toString())
+            .toList(),
       },
     ];
   }

@@ -115,7 +115,7 @@ class ConnectionTester {
       {
         'username': _turnServerCredentials!.username,
         'credential': _turnServerCredentials!.password,
-        'url': _turnServerCredentials!.uris[0],
+        'url': _turnServerCredentials!.uris[0].toString(),
       },
     ];
   }
