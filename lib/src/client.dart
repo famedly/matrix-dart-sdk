@@ -1223,6 +1223,17 @@ class Client extends MatrixApi {
               <String, BasicEvent>{},
         );
         entry.value.state?.forEach(room.setState);
+        final timelineStateEvents = entry.value.timeline?.events
+            ?.where((event) => event.stateKey != null)
+            .toList();
+        if (timelineStateEvents != null && timelineStateEvents.isNotEmpty) {
+          await _handleRoomEvents(
+            room,
+            timelineStateEvents,
+            EventUpdateType.timeline,
+            store: false,
+          );
+        }
         final timeline = Timeline(
           room: room,
           chunk: TimelineChunk(
@@ -2480,15 +2491,27 @@ class Client extends MatrixApi {
   }
 
   /// Use this method only for testing utilities!
-  Future<void> handleSync(SyncUpdate sync, {Direction? direction}) async {
+  Future<void> handleSync(
+    SyncUpdate sync, {
+    Direction? direction,
+    bool updateRoomList = true,
+  }) async {
     // ensure we don't upload keys because someone forgot to set a key count
     sync.deviceOneTimeKeysCount ??= {
       'signed_curve25519': encryption?.olmManager.maxNumberOfOneTimeKeys ?? 100,
     };
-    await _handleSync(sync, direction: direction);
+    await _handleSync(
+      sync,
+      direction: direction,
+      updateRoomList: updateRoomList,
+    );
   }
 
-  Future<void> _handleSync(SyncUpdate sync, {Direction? direction}) async {
+  Future<void> _handleSync(
+    SyncUpdate sync, {
+    Direction? direction,
+    bool updateRoomList = true,
+  }) async {
     final syncToDevice = sync.toDevice;
     if (syncToDevice != null) {
       await _handleToDeviceEvents(syncToDevice);
@@ -2497,7 +2520,11 @@ class Client extends MatrixApi {
     if (sync.rooms != null) {
       final join = sync.rooms?.join;
       if (join != null) {
-        await _handleRooms(join, direction: direction);
+        await _handleRooms(
+          join,
+          direction: direction,
+          updateRoomList: updateRoomList,
+        );
       }
       // We need to handle leave before invite. If you decline an invite and
       // then get another invite to the same room, Synapse will include the
@@ -2505,11 +2532,19 @@ class Client extends MatrixApi {
       // will only be included in leave.
       final leave = sync.rooms?.leave;
       if (leave != null) {
-        await _handleRooms(leave, direction: direction);
+        await _handleRooms(
+          leave,
+          direction: direction,
+          updateRoomList: updateRoomList,
+        );
       }
       final invite = sync.rooms?.invite;
       if (invite != null) {
-        await _handleRooms(invite, direction: direction);
+        await _handleRooms(
+          invite,
+          direction: direction,
+          updateRoomList: updateRoomList,
+        );
       }
     }
     for (final newPresence in sync.presence ?? <Presence>[]) {
@@ -2645,6 +2680,7 @@ class Client extends MatrixApi {
   Future<void> _handleRooms(
     Map<String, SyncRoomUpdate> rooms, {
     Direction? direction,
+    bool updateRoomList = true,
   }) async {
     var handledRooms = 0;
     for (final entry in rooms.entries) {
@@ -2657,7 +2693,11 @@ class Client extends MatrixApi {
       final id = entry.key;
       final syncRoomUpdate = entry.value;
 
-      final room = await _updateRoomsByRoomUpdate(id, syncRoomUpdate);
+      final room = await _updateRoomsByRoomUpdate(
+        id,
+        syncRoomUpdate,
+        updateRoomList: updateRoomList,
+      );
 
       // Is the timeline limited? Then all previous messages should be
       // removed from the database!
@@ -2960,8 +3000,9 @@ class Client extends MatrixApi {
 
   Future<Room> _updateRoomsByRoomUpdate(
     String roomId,
-    SyncRoomUpdate chatUpdate,
-  ) async {
+    SyncRoomUpdate chatUpdate, {
+    bool updateRoomList = true,
+  }) async {
     // Update the chat list item.
     // Search the room in the rooms
     final roomIndex = rooms.indexWhere((r) => r.id == roomId);
@@ -2989,13 +3030,13 @@ class Client extends MatrixApi {
               : Room(id: roomId, membership: membership, client: this));
 
     // Does the chat already exist in the list rooms?
-    if (!found && membership != Membership.leave) {
+    if (updateRoomList && !found && membership != Membership.leave) {
       final position = membership == Membership.invite ? 0 : rooms.length;
       // Add the new chat to the list
       rooms.insert(position, room);
     }
     // If the membership is "leave" then remove the item and stop here
-    else if (membership == Membership.leave) {
+    else if (updateRoomList && membership == Membership.leave) {
       if (syncFilter.room?.includeLeave == true && !found) {
         rooms.add(room);
       } else if (found) {

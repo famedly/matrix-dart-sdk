@@ -1424,6 +1424,7 @@ class Room {
   Future<void> forget() async {
     await client.database.forgetRoom(id);
     await client.forgetRoom(id);
+    client.rooms.removeWhere((room) => room.id == id);
     return;
   }
 
@@ -1548,6 +1549,7 @@ class Room {
           ),
         ),
         direction: direction,
+        updateRoomList: membership == Membership.join,
       );
     }
 
