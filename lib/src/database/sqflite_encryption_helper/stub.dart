@@ -25,18 +25,6 @@ class SQfLiteEncryptionHelper {
     required this.cipher,
   });
 
-  /// Loads the correct [DynamicLibrary] required for SQLCipher
-  ///
-  /// To be used with `package:sqlite3/open.dart`:
-  /// ```dart
-  /// void main() {
-  ///   final factory = createDatabaseFactoryFfi(
-  ///     ffiInit: SQfLiteEncryptionHelper.ffiInit,
-  ///   );
-  /// }
-  /// ```
-  static void ffiInit() => throw UnimplementedError();
-
   /// checks whether the database exists and is encrypted
   ///
   /// In case it is not encrypted, the file is being migrated

@@ -6,3 +6,4 @@ exclude:
   - example/**
 ignore:
   - lints
+  - sqlite3
