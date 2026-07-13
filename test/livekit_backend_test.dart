@@ -107,7 +107,8 @@ void main() {
         expect(
           backend.latestLocalKeyIndex,
           1,
-          reason: 'after dispose the backend must generate a fresh key instead of trying to resend a missing one',
+          reason:
+              'after dispose the backend must generate a fresh key instead of trying to resend a missing one',
         );
         expect(backend.currentLocalKeyIndex, 1);
         expect(keyProvider.localKeyIndices, [0, 1]);
