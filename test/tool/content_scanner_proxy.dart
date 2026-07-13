@@ -1,5 +1,4 @@
 #!/usr/bin/env dart
-
 // SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later

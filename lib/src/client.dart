@@ -2617,6 +2617,13 @@ class Client extends MatrixApi {
         if (userKeys != null) {
           userKeys.outdated = true;
           await database.storeUserDeviceKeysInfo(userId, true);
+        } else {
+          // Per spec `changed` also includes users who *now* share an
+          // encrypted room with us. We might not know about them yet, for
+          // example when their membership event was truncated out of a
+          // limited (gappy) sync timeline. Track them so that the next
+          // `updateUserDeviceKeys()` fetches their device keys.
+          _trackedUserIds?.add(userId);
         }
       }
       for (final userId in deviceLists.left ?? []) {
@@ -3134,17 +3141,21 @@ class Client extends MatrixApi {
 
         // Update the room state:
         final stateKey = event.stateKey;
-        if (stateKey != null &&
-            (!room.partial || importantStateEvents.contains(event.type))) {
-          room.setState(event);
+        if (stateKey != null) {
+          if (!room.partial || importantStateEvents.contains(event.type)) {
+            room.setState(event);
+          }
 
+          // New members must be added to the tracked user IDs for encryption
+          // even if the room is only partially loaded, as otherwise their
+          // device keys are never fetched and they never receive room keys:
           if (room.encrypted &&
+              room.membership == Membership.join &&
               event.type == EventTypes.RoomMember &&
               {
                 'join',
                 'invite',
               }.contains(event.content.tryGet<String>('membership'))) {
-            // New members should be added to the tracked user IDs for encryption:
             _trackedUserIds?.add(stateKey);
           }
         }
