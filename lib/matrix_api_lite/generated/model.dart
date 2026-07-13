@@ -385,35 +385,35 @@ class GetAuthMetadataResponse {
   /// This is an extension [defined in this specification](https://spec.matrix.org/unstable/client-server-api/#oauth-20-account-management).
   Uri? accountManagementUri;
 
-  /// URL of the authorization endpoint, necessary to use the authorization code
+  /// URL of the authorisation endpoint, necessary to use the authorisation code
   /// grant.
   Uri authorizationEndpoint;
 
   /// List of OAuth 2.0 Proof Key for Code Exchange (PKCE) code challenge methods
-  /// that the server supports at the authorization endpoint.
+  /// that the server supports at the authorisation endpoint.
   ///
   /// This array MUST contain at least the `S256` value, for improved security in
-  /// the authorization code grant.
+  /// the authorisation code grant.
   List<String> codeChallengeMethodsSupported;
 
-  /// URL of the device authorization endpoint, as defined in
+  /// URL of the device authorisation endpoint, as defined in
   /// [RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628), necessary to use
-  /// the [device authorization grant](https://spec.matrix.org/unstable/client-server-api/#device-authorization-grant).
+  /// the [device authorisation grant](https://spec.matrix.org/unstable/client-server-api/#device-authorisation-grant).
   Uri? deviceAuthorizationEndpoint;
 
   /// List of OAuth 2.0 grant type strings that the server supports at the token
   /// endpoint.
   ///
   /// This array MUST contain at least the `authorization_code` and `refresh_token`
-  /// values, for clients to be able to use the authorization code grant and refresh
+  /// values, for clients to be able to use the authorisation code grant and refresh
   /// token grant, respectively.
   ///
   /// **[Added in `v1.18`]**  It MAY also contain
   /// `urn:ietf:params:oauth:grant-type:device_code` to indicate support for the
-  /// [device authorization grant](https://spec.matrix.org/unstable/client-server-api/#device-authorization-grant).
+  /// [device authorisation grant](https://spec.matrix.org/unstable/client-server-api/#device-authorisation-grant).
   List<String> grantTypesSupported;
 
-  /// The authorization server's issuer identifier, which is a URL that uses the
+  /// The authorisation server's issuer identifier, which is a URL that uses the
   /// `https` scheme and has no query or fragment components.
   ///
   /// This is not used in the context of the Matrix specification, but is required
@@ -421,7 +421,7 @@ class GetAuthMetadataResponse {
   Uri issuer;
 
   /// List of OpenID Connect prompt values that the server supports at the
-  /// authorization endpoint.
+  /// authorisation endpoint.
   ///
   /// Only the `create` value defined in [Initiating User Registration via OpenID
   /// Connect](https://openid.net/specs/openid-connect-prompt-create-1_0.html) is
@@ -434,17 +434,17 @@ class GetAuthMetadataResponse {
   Uri registrationEndpoint;
 
   /// List of OAuth 2.0 response mode strings that the server supports at the
-  /// authorization endpoint.
+  /// authorisation endpoint.
   ///
   /// This array MUST contain at least the `query` and `fragment` values, for
-  /// improved security in the authorization code grant.
+  /// improved security in the authorisation code grant.
   List<String> responseModesSupported;
 
   /// List of OAuth 2.0 response type strings that the server supports at the
-  /// authorization endpoint.
+  /// authorisation endpoint.
   ///
   /// This array MUST contain at least the `code` value, for clients to be able to
-  /// use the authorization code grant.
+  /// use the authorisation code grant.
   List<String> responseTypesSupported;
 
   /// URL of the revocation endpoint, necessary to log out a client by invalidating
@@ -613,6 +613,54 @@ enum Method {
 
   final String name;
   const Method(this.name);
+}
+
+///
+@_NameSource('generated')
+class GetMutualRoomsResponse {
+  GetMutualRoomsResponse({
+    required this.count,
+    required this.joined,
+    this.nextBatch,
+  });
+
+  GetMutualRoomsResponse.fromJson(Map<String, Object?> json)
+    : count = json['count'] as int,
+      joined = (json['joined'] as List).map((v) => v as String).toList(),
+      nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']);
+  Map<String, Object?> toJson() {
+    final nextBatch = this.nextBatch;
+    return {
+      'count': count,
+      'joined': joined.map((v) => v).toList(),
+      if (nextBatch != null) 'next_batch': nextBatch,
+    };
+  }
+
+  /// The number of such rooms. This is the total count even if the response is
+  /// batched and `joined` doesn't include all rooms. This MAY be inaccurate
+  /// if the server is unable to calculate the exact number of rooms.
+  int count;
+
+  /// A list of room IDs where both the authenticated user and `user_id` have a
+  /// membership of type `join`.
+  List<String> joined;
+
+  /// A pagination token to retrieve the next batch of results. This will be absent
+  /// if there are no more results to return.
+  String? nextBatch;
+
+  @dart.override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GetMutualRoomsResponse &&
+          other.runtimeType == runtimeType &&
+          other.count == count &&
+          other.joined == joined &&
+          other.nextBatch == nextBatch);
+
+  @dart.override
+  int get hashCode => Object.hash(count, joined, nextBatch);
 }
 
 ///
@@ -3310,7 +3358,7 @@ class LoginResponse {
   }
 
   /// An access token for the account.
-  /// This access token can then be used to authorize other requests.
+  /// This access token can then be used to authorise other requests.
   String accessToken;
 
   /// ID of the logged-in device. Will be the same as the
@@ -4379,7 +4427,7 @@ class RegisterResponse {
   }
 
   /// An access token for the account.
-  /// This access token can then be used to authorize other requests.
+  /// This access token can then be used to authorise other requests.
   /// Required if the `inhibit_login` option is false.
   String? accessToken;
 
@@ -4766,7 +4814,7 @@ class EventContext {
     };
   }
 
-  /// A token that can be used to paginate forwards with.
+  /// A token that can be used to paginate forwards with using [`GET /messages`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidmessages).
   String? end;
 
   /// Details of the requested event.
@@ -4780,7 +4828,7 @@ class EventContext {
   /// requested event, in reverse-chronological order.
   List<MatrixEvent>? eventsBefore;
 
-  /// A token that can be used to paginate backwards with.
+  /// A token that can be used to paginate backwards with using [`GET /messages`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidmessages).
   String? start;
 
   /// The state of the room at the last event returned.
@@ -6973,12 +7021,12 @@ class TurnServerCredentials {
   TurnServerCredentials.fromJson(Map<String, Object?> json)
     : password = json['password'] as String,
       ttl = json['ttl'] as int,
-      uris = (json['uris'] as List).map((v) => v as String).toList(),
+      uris = (json['uris'] as List).map((v) => Uri.parse(v as String)).toList(),
       username = json['username'] as String;
   Map<String, Object?> toJson() => {
     'password': password,
     'ttl': ttl,
-    'uris': uris.map((v) => v).toList(),
+    'uris': uris.map((v) => v.toString()).toList(),
     'username': username,
   };
 
@@ -6989,7 +7037,7 @@ class TurnServerCredentials {
   int ttl;
 
   /// A list of TURN URIs
-  List<String> uris;
+  List<Uri> uris;
 
   /// The username to use.
   String username;

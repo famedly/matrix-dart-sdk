@@ -112,7 +112,7 @@ class Api {
   ///
   /// The user calling this endpoint MUST be a server admin.
   ///
-  /// In order to prevent user enumeration, servers MUST ensure that authorization is checked
+  /// In order to prevent user enumeration, servers MUST ensure that authorisation is checked
   /// prior to trying to do account lookups.
   ///
   /// [userId] The user to look up.
@@ -139,7 +139,7 @@ class Api {
   /// is allowed to lock other users at the [`GET /capabilities`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3capabilities)
   /// endpoint prior to using this endpoint.
   ///
-  /// In order to prevent user enumeration, servers MUST ensure that authorization is checked
+  /// In order to prevent user enumeration, servers MUST ensure that authorisation is checked
   /// prior to trying to do account lookups.
   ///
   /// [userId] The user to change the locked status of.
@@ -168,7 +168,7 @@ class Api {
   ///
   /// The user calling this endpoint MUST be a server admin.
   ///
-  /// In order to prevent user enumeration, servers MUST ensure that authorization is checked
+  /// In order to prevent user enumeration, servers MUST ensure that authorisation is checked
   /// prior to trying to do account lookups.
   ///
   /// [userId] The user to look up.
@@ -195,7 +195,7 @@ class Api {
   /// is allowed to suspend other users at the [`GET /capabilities`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3capabilities)
   /// endpoint prior to using this endpoint.
   ///
-  /// In order to prevent user enumeration, servers MUST ensure that authorization is checked
+  /// In order to prevent user enumeration, servers MUST ensure that authorisation is checked
   /// prior to trying to do account lookups.
   ///
   /// [userId] The user to change the suspended status of.
@@ -263,20 +263,20 @@ class Api {
     return json['duration_ms'] as int;
   }
 
-  /// Gets the OAuth 2.0 authorization server metadata, as defined in
+  /// Gets the OAuth 2.0 authorisation server metadata, as defined in
   /// [RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414), including the
   /// endpoint URLs and the supported parameters that can be used by the
   /// clients.
   ///
   /// This endpoint definition includes only the fields that are meaningful in
   /// the context of the Matrix specification. The full list of possible
-  /// fields is available in the [OAuth Authorization Server Metadata
+  /// fields is available in the [OAuth Authorisation Server Metadata
   /// registry](https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#authorization-server-metadata),
   /// and normative definitions of them are available in their respective
   /// RFCs.
   ///
   /// **NOTE:**
-  /// The authorization server metadata is relatively large and may change
+  /// The authorisation server metadata is relatively large and may change
   /// over time. Clients should:
   ///
   /// - Cache the metadata appropriately based on HTTP caching headers
@@ -575,6 +575,33 @@ class Api {
       contentType: response.headers['content-type'],
       data: responseBody,
     );
+  }
+
+  /// Get the list of rooms that the user shares with another user. The
+  /// server will return a list of room IDs that the user shares with the
+  /// specified `user_id`.
+  ///
+  /// [userId] The MXID of the user to check for mutual rooms with.
+  ///
+  /// [from] A pagination token from a previous result. This should be a `next_batch` result from
+  /// a previous call to this endpoint. If not provided, the server will return the first
+  /// batch of results.
+  Future<GetMutualRoomsResponse> getMutualRooms(
+    String userId, {
+    String? from,
+  }) async {
+    final requestUri = Uri(
+      path: '_matrix/client/v1/mutual_rooms',
+      queryParameters: {'user_id': userId, if (from != null) 'from': from},
+    );
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetMutualRoomsResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Queries the server to determine if a given registration token is still
@@ -2447,13 +2474,14 @@ class Api {
   /// returns `room_id`:
   /// The joined room ID.
   Future<String> joinRoom(
-    String roomIdOrAlias, {
+    Object? roomIdOrAlias, {
     List<String>? via,
     String? reason,
     ThirdPartySigned? thirdPartySigned,
   }) async {
     final requestUri = Uri(
-      path: '_matrix/client/v3/join/${Uri.encodeComponent(roomIdOrAlias)}',
+      path:
+          '_matrix/client/v3/join/${Uri.encodeComponent(roomIdOrAlias.toString())}',
       queryParameters: {if (via != null) "via": via},
     );
     final request = Request('POST', baseUri!.resolveUri(requestUri));
@@ -2796,12 +2824,13 @@ class Api {
   /// returns `room_id`:
   /// The knocked room ID.
   Future<String> knockRoom(
-    String roomIdOrAlias, {
+    Object? roomIdOrAlias, {
     List<String>? via,
     String? reason,
   }) async {
     final requestUri = Uri(
-      path: '_matrix/client/v3/knock/${Uri.encodeComponent(roomIdOrAlias)}',
+      path:
+          '_matrix/client/v3/knock/${Uri.encodeComponent(roomIdOrAlias.toString())}',
       queryParameters: {if (via != null) "via": via},
     );
     final request = Request('POST', baseUri!.resolveUri(requestUri));
@@ -2839,7 +2868,7 @@ class Api {
   }
 
   /// Authenticates the user, and issues an access token they can
-  /// use to authorize themself in subsequent requests.
+  /// use to authorise themself in subsequent requests.
   ///
   /// If the client does not supply a `device_id`, the server must
   /// auto-generate one.
@@ -2918,7 +2947,7 @@ class Api {
   }
 
   /// Invalidates an existing access token, so that it can no longer be used for
-  /// authorization. The device associated with the access token is also deleted.
+  /// authorisation. The device associated with the access token is also deleted.
   /// [Device keys](https://spec.matrix.org/unstable/client-server-api/#device-keys) for the device are deleted alongside the device.
   Future<void> logout() async {
     final requestUri = Uri(path: '_matrix/client/v3/logout');
@@ -2933,7 +2962,7 @@ class Api {
   }
 
   /// Invalidates all access tokens for a user, so that they can no longer be used for
-  /// authorization. This includes the access token that made this request. All devices
+  /// authorisation. This includes the access token that made this request. All devices
   /// for the user are also deleted. [Device keys](https://spec.matrix.org/unstable/client-server-api/#device-keys) for the device are
   /// deleted alongside the device.
   ///
@@ -3147,8 +3176,12 @@ class Api {
 
   /// Lists a server's published room directory.
   ///
-  /// This API returns paginated responses. The rooms are ordered by the number
-  /// of joined members, with the largest rooms first.
+  /// This API returns paginated responses.
+  ///
+  /// **[Changed in `v1.19`]**  The server determines the order of the rooms
+  /// returned by this endpoint. Previously, rooms were ordered with the largest
+  /// joined member count first. Continuing to order by largest first or another
+  /// stable order is recommended.
   ///
   /// [limit] Limit the number of results returned.
   ///
@@ -3183,8 +3216,12 @@ class Api {
 
   /// Lists a server's published room directory with an optional filter.
   ///
-  /// This API returns paginated responses. The rooms are ordered by the number
-  /// of joined members, with the largest rooms first.
+  /// This API returns paginated responses.
+  ///
+  /// **[Changed in `v1.19`]**  The server determines the order of the rooms
+  /// returned by this endpoint. Previously, rooms were ordered with the largest
+  /// joined member count first. Continuing to order by largest first or another
+  /// stable order is recommended.
   ///
   /// [server] The server to fetch the published room directory from. Defaults
   /// to the local server. Case sensitive.
@@ -3572,7 +3609,7 @@ class Api {
   /// - `guest` accounts. These accounts may have limited permissions and may not be supported by all servers.
   ///
   /// If registration is successful, this endpoint will issue an access token
-  /// the client can use to authorize itself in subsequent requests.
+  /// the client can use to authorise itself in subsequent requests.
   ///
   /// If the client does not supply a `device_id`, the server must
   /// auto-generate one.
@@ -4769,7 +4806,8 @@ class Api {
   ///
   /// [eventId] The event ID to acknowledge up to.
   ///
-  /// [threadId] The root thread event's ID (or `main`) for which
+  /// [threadId] The [thread root](https://spec.matrix.org/unstable/client-server-api/#threading)'s
+  /// [event ID](https://spec.matrix.org/unstable/appendices#event-ids) (or `main`) for which
   /// thread this receipt is intended to be under. If
   /// not specified, the read receipt is *unthreaded*
   /// (default).
@@ -4811,7 +4849,7 @@ class Api {
   ///
   /// [roomId] The room from which to redact the event.
   ///
-  /// [eventId] The ID of the event to redact
+  /// [eventId] The ID of the event to redact.
   ///
   /// [txnId] The [transaction ID](https://spec.matrix.org/unstable/client-server-api/#transaction-identifiers) for this event. Clients should generate a
   /// unique ID; it will be used by the server to ensure idempotency of requests.
@@ -5517,7 +5555,7 @@ class Api {
   /// that set the account data.
   ///
   /// [userId] The ID of the user to get account data for. The access token must be
-  /// authorized to make requests for this user ID.
+  /// authorised to make requests for this user ID.
   ///
   /// [type] The event type of the account data to get. Custom types should be
   /// namespaced to avoid clashes.
@@ -5545,7 +5583,7 @@ class Api {
   /// [/sync](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync).
   ///
   /// [userId] The ID of the user to set account data for. The access token must be
-  /// authorized to make requests for this user ID.
+  /// authorised to make requests for this user ID.
   ///
   /// [type] The event type of the account data to set. Custom types should be
   /// namespaced to avoid clashes.
@@ -5576,7 +5614,7 @@ class Api {
   /// Returns a filter ID that may be used in future requests to
   /// restrict which events are returned to the client.
   ///
-  /// [userId] The id of the user uploading the filter. The access token must be authorized to make requests for this user id.
+  /// [userId] The id of the user uploading the filter. The access token must be authorised to make requests for this user id.
   ///
   /// [body] The filter to upload.
   ///
@@ -5658,7 +5696,7 @@ class Api {
   /// visible to the user that set the account data.
   ///
   /// [userId] The ID of the user to get account data for. The access token must be
-  /// authorized to make requests for this user ID.
+  /// authorised to make requests for this user ID.
   ///
   /// [roomId] The ID of the room to get account data for.
   ///
@@ -5688,7 +5726,7 @@ class Api {
   /// clients in the per-room entries via [/sync](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync).
   ///
   /// [userId] The ID of the user to set account data for. The access token must be
-  /// authorized to make requests for this user ID.
+  /// authorised to make requests for this user ID.
   ///
   /// [roomId] The ID of the room to set account data on.
   ///
@@ -5721,7 +5759,7 @@ class Api {
   /// List the tags set by a user on a room.
   ///
   /// [userId] The id of the user to get tags for. The access token must be
-  /// authorized to make requests for this user ID.
+  /// authorised to make requests for this user ID.
   ///
   /// [roomId] The ID of the room to get tags for.
   ///
@@ -5749,7 +5787,7 @@ class Api {
   /// Remove a tag from the room.
   ///
   /// [userId] The id of the user to remove a tag for. The access token must be
-  /// authorized to make requests for this user ID.
+  /// authorised to make requests for this user ID.
   ///
   /// [roomId] The ID of the room to remove a tag from.
   ///
@@ -5772,7 +5810,7 @@ class Api {
   /// Add a tag to the room.
   ///
   /// [userId] The id of the user to add a tag for. The access token must be
-  /// authorized to make requests for this user ID.
+  /// authorised to make requests for this user ID.
   ///
   /// [roomId] The ID of the room to add a tag to.
   ///

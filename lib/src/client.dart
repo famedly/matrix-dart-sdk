@@ -3860,22 +3860,6 @@ class Client extends MatrixApi {
     return;
   }
 
-  /// preference is always given to via over serverName, irrespective of what field
-  /// you are trying to use
-  @override
-  Future<String> joinRoom(
-    String roomIdOrAlias, {
-    List<String>? serverName,
-    List<String>? via,
-    String? reason,
-    ThirdPartySigned? thirdPartySigned,
-  }) => super.joinRoom(
-    roomIdOrAlias,
-    via: via ?? serverName,
-    reason: reason,
-    thirdPartySigned: thirdPartySigned,
-  );
-
   /// Changes the password. You should either set oldPasswort or another authentication flow.
   @override
   Future<void> changePassword(
