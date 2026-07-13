@@ -4,6 +4,11 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [8.1.0] 13th July 2026
+- fix: avoid concurrent modification when updating group calls (Marco Attanasio)
+- fix: clear LiveKit key debounce timestamp on dispose (Marco Attanasio)
+- fix: get user device keys for gappy syncs and partial rooms (td)
+
 ## [8.0.0] 9th July 2026
 - chore: better error handling for soft logout (Christian Kußowski)
 - docs: correct Dart SDK version in cloud setup notes (Cursor Agent)
