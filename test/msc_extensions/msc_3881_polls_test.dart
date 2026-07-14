@@ -370,6 +370,60 @@ void main() {
       expect(await getRoomEventsFuture.timeout(const Duration(seconds: 1)), 1);
       await aggregationFinished.future.timeout(const Duration(seconds: 1));
     });
+
+    test('endPoll: only the creator or a user with redact power may end (MSC3381)', () async {
+      final room = client.getRoomById(roomId)!;
+      room.membership = Membership.join;
+      final content = PollEventContent(
+        mText: 'EndPoll',
+        pollStartContent: PollStartContent(
+          maxSelections: 1,
+          question: PollQuestion(mText: 'Who?'),
+          answers: [PollAnswer(id: 'a', mText: 'A')],
+        ),
+      ).toJson();
+
+      Event poll(String sender) => Event(
+            content: content,
+            type: PollEventContent.startType,
+            eventId: 'poll_$sender',
+            senderId: sender,
+            originServerTs: DateTime.now(),
+            room: room,
+          );
+
+      void stubEnd(String txid) =>
+          (FakeMatrixApi.currentApi!.api['PUT'] ??= {})['/client/v3/rooms/!696r7674%3Aexample.com/send/org.matrix.msc3381.poll.end/$txid'] =
+              (var req) => {'event_id': txid};
+
+      const other = '@someone:example.com';
+
+      // A non-creator without redact power may not end the poll.
+      expectLater(
+        () => poll(other).endPoll(),
+        throwsA(predicate(
+          (Object? e) => e
+              .toString()
+              .contains('You can not end a poll created by someone else.'),
+        )),
+      );
+
+      // Grant redact power; the same non-creator may now end it.
+      (room.states[EventTypes.RoomPowerLevels] ??= {})[''] = Event.fromJson({
+        'type': EventTypes.RoomPowerLevels,
+        'sender': other,
+        'state_key': '',
+        'content': {'redact': 0, 'users': {client.userID!: 0}, 'users_default': 0},
+        'room_id': room.id,
+        'origin_server_ts': 1,
+      }, room);
+      stubEnd('end_mod');
+      expect(await poll(other).endPoll(txid: 'end_mod'), 'end_mod');
+
+      // The creator may always end their own poll.
+      stubEnd('end_creator');
+      expect(await poll(client.userID!).endPoll(txid: 'end_creator'), 'end_creator');
+    });
   });
 }
 
