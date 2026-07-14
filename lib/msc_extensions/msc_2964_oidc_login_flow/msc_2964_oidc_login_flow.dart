@@ -101,7 +101,7 @@ extension Msc2964OidcLoginFlow on Client {
     }
     if (response.statusCode != 200) {
       Logs().w(
-        'Expected a status code of 200 but got ${response.statusCode} for OIDC client registration.',
+        'Expected a status code of 200 but got ${response.statusCode} for OIDC token exchange.',
       );
     }
     final responseString = utf8.decode(response.bodyBytes);
@@ -139,7 +139,7 @@ extension Msc2964OidcLoginFlow on Client {
     }
     if (response.statusCode != 200) {
       Logs().w(
-        'Expected a status code of 200 but got ${response.statusCode} for OIDC client registration.',
+        'Expected a status code of 200 but got ${response.statusCode} for OIDC token refresh.',
       );
     }
     final responseString = utf8.decode(response.bodyBytes);
@@ -166,7 +166,7 @@ extension Msc2964OidcLoginFlow on Client {
     }
     if (response.statusCode != 200) {
       Logs().w(
-        'Expected a status code of 200 but got ${response.statusCode} for OIDC client registration.',
+        'Expected a status code of 200 but got ${response.statusCode} for OIDC token revocation.',
       );
     }
   }
