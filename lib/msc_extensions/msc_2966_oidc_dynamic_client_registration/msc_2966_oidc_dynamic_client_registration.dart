@@ -72,8 +72,13 @@ extension Msc2966OidcDynamicClientRegistration on Client {
       body: jsonEncode(body),
       headers: {'content-type': 'application/json'},
     );
-    if (response.statusCode != 201) {
+    if (response.statusCode >= 400) {
       unexpectedResponse(response, response.bodyBytes);
+    }
+    if (response.statusCode != 201) {
+      Logs().w(
+        'Expected a status code of 201 but got ${response.statusCode} for OIDC client registration.',
+      );
     }
     final responseString = utf8.decode(response.bodyBytes);
     final json = jsonDecode(responseString);

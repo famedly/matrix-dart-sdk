@@ -96,8 +96,13 @@ extension Msc2964OidcLoginFlow on Client {
       body: body,
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
-    if (response.statusCode != 200) {
+    if (response.statusCode >= 400) {
       unexpectedResponse(response, response.bodyBytes);
+    }
+    if (response.statusCode != 200) {
+      Logs().w(
+        'Expected a status code of 200 but got ${response.statusCode} for OIDC client registration.',
+      );
     }
     final responseString = utf8.decode(response.bodyBytes);
     final oidcAuthResponse = OidcAuthResponse.fromJson(
@@ -129,8 +134,13 @@ extension Msc2964OidcLoginFlow on Client {
       },
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
-    if (response.statusCode != 200) {
+    if (response.statusCode >= 400) {
       unexpectedResponse(response, response.bodyBytes);
+    }
+    if (response.statusCode != 200) {
+      Logs().w(
+        'Expected a status code of 200 but got ${response.statusCode} for OIDC client registration.',
+      );
     }
     final responseString = utf8.decode(response.bodyBytes);
     return OidcAuthResponse.fromJson(jsonDecode(responseString));
@@ -151,8 +161,13 @@ extension Msc2964OidcLoginFlow on Client {
       },
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
-    if (response.statusCode != 200) {
+    if (response.statusCode >= 400) {
       unexpectedResponse(response, response.bodyBytes);
+    }
+    if (response.statusCode != 200) {
+      Logs().w(
+        'Expected a status code of 200 but got ${response.statusCode} for OIDC client registration.',
+      );
     }
   }
 }
