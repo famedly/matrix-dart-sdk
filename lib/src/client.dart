@@ -8,10 +8,11 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
 import 'package:matrix/encryption.dart';
-import 'package:matrix/matrix.dart';
+import 'package:matrix/matrix.dart' hide Result;
 import 'package:matrix/matrix_api_lite/generated/fixed_model.dart';
 import 'package:matrix/msc_extensions/msc_unpublished_custom_refresh_token_lifetime/msc_unpublished_custom_refresh_token_lifetime.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
@@ -576,8 +577,15 @@ class Client extends MatrixApi {
         assert(false);
       }
 
-      final loginTypes = await getLoginFlows() ?? [];
-      if (!loginTypes.any((f) => supportedLoginTypes.contains(f.type))) {
+      final loginTypesResult = await Result.capture(getLoginFlows());
+      final loginTypes = loginTypesResult.asValue?.value ?? [];
+      final loginTypesError = loginTypesResult.asError?.error;
+      if (loginTypesError != null && loginTypesError is! MatrixException) {
+        Logs().w('Unable to fetch legacy login types', loginTypesError);
+      }
+
+      if (loginTypes.isNotEmpty &&
+          !loginTypes.any((f) => supportedLoginTypes.contains(f.type))) {
         throw BadServerLoginTypesException(
           loginTypes.map((f) => f.type).toSet(),
           supportedLoginTypes,
