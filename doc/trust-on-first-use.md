@@ -13,40 +13,43 @@ master key changes **before** they sends an event into the encrypted room.
 You can store that a user confirmed to this by this:
 
 ```dart
-// Assuming that this user has cross signing enabled and we know the master key:
-final masterKey = client.userDeviceKeys['@userid:domain.abc']?.masterKey;
-masterKey?.trustOnFirstUse();
-```
-
-You can check the datetime when you have done this like this:
-
-```dart
-final tofuSince = masterKey?.trustOnFirstUseSince; // returns a DateTime?
+// Assuming that this user has cross signing enabled:
+final userDeviceKeys = client.userDeviceKeys['@userid:domain.abc'];
+print(userDeviceKeys.verified);
 ```
 
 You can loop over all users in a room like this:
 
 ```dart
-Future<List<User>> getUntrustedUsers(Room room) async {
+Future<List<User>> warnAboutChangedKeys(Room room) async {
     if (!room.encrypted) return [];
 
     final users = await room.requestParticipants();
 
-    return users.where((user) {
-        if (user.id == room.client.userID) return false;
+    for(final user in users) {
+        if (user.id == room.client.userID) continue;
         final keys = room.client.userDeviceKeys[user.id];
-        final masterKey = keys?.masterKey;
 
-        if (keys == null ||
-            masterKey == null ||
-            masterKey.verified ||
-            masterKey.trustOnFirstUseSince != null) {
-            return false;
+        if (keys.masterKey == null) {
+            print('User without cross signing detected!');
+            continue;
         }
-        return true;
-    }).toList();
+
+        if (keys.verified == UserVerifiedStatus.unknown) {
+            keys.trustOnFirstUse();
+            print('Trust on first use for ${user.id}');
+            continue;
+        }
+
+        if (keys.verified == UserVerifiedStatus.publicKeyHasChanged) {
+            keys.trustOnFirstUse();
+            print('The public key of ${user.id} has been changed!');
+            // TODO: Inform the user in the GUI!
+            continue;
+        }
+    }
 }
 ```
 
-Then display those users to the user and set trustOnFirstUse flag at their master key.
+Then inform the user about those users.
 This should be done before every message sending into the room.

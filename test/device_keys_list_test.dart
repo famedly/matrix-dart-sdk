@@ -242,9 +242,13 @@ void main() async {
       expect(user.deviceKeys['OTHERDEVICE']?.crossVerified, false);
       expect(user.verified, UserVerifiedStatus.unknown);
 
-      user.deviceKeys['OTHERDEVICE']?.setDirectVerified(true);
+      user.trustOnFirstUse();
+      expect(user.verified, UserVerifiedStatus.trustOnFirstUse);
+
+      user.masterKey?.setDirectVerified(true);
       expect(user.verified, UserVerifiedStatus.verified);
-      user.deviceKeys['OTHERDEVICE']?.setDirectVerified(false);
+      user.masterKey?.setDirectVerified(false);
+      expect(user.verified, UserVerifiedStatus.trustOnFirstUse);
 
       user.masterKey?.setDirectVerified(true);
       user.deviceKeys['GHTYAJCE']?.signatures?[client.userID]?.removeWhere(

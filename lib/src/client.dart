@@ -3545,6 +3545,8 @@ class Client extends MatrixApi {
               userId,
               this,
             );
+            final lastTrustedPublicMasterKey =
+                userKeys.masterKey?.lastTrustedPublicKey;
             final oldKeys = Map<String, CrossSigningKey>.from(
               userKeys.crossSigningKeys,
             );
@@ -3566,6 +3568,11 @@ class Client extends MatrixApi {
               crossSigningKeyListEntry.value,
               this,
             );
+            if (entry.usage.contains('master') &&
+                lastTrustedPublicMasterKey != null) {
+              Logs().d('public master key of ${entry.userId} has changed.');
+              entry.lastTrustedPublicKey = lastTrustedPublicMasterKey;
+            }
             final publicKey = entry.publicKey;
             if (entry.isValid && publicKey != null) {
               final oldKey = oldKeys[publicKey];
@@ -3573,12 +3580,6 @@ class Client extends MatrixApi {
                 if (oldKey != null) {
                   // be sure to save the verification status
                   entry.setDirectVerified(oldKey.directVerified);
-                  if (oldKey.trustOnFirstUseSince != null) {
-                    entry.trustOnFirstUse(
-                      since: oldKey.trustOnFirstUseSince,
-                      updateInDatabase: false,
-                    );
-                  }
                   entry.blocked = oldKey.blocked;
                   entry.validSignatures = oldKey.validSignatures;
                 }
@@ -3596,7 +3597,7 @@ class Client extends MatrixApi {
                   json.encode(entry.toJson()),
                   entry.directVerified,
                   entry.blocked,
-                  trustOnFirstUseSince: entry.trustOnFirstUseSince,
+                  lastTrustedPublicKey: entry.lastTrustedPublicKey,
                 ),
               );
             }
@@ -4143,7 +4144,7 @@ class Client extends MatrixApi {
             jsonEncode(crossSigningKey.toJson()),
             crossSigningKey.directVerified,
             crossSigningKey.blocked,
-            trustOnFirstUseSince: crossSigningKey.trustOnFirstUseSince,
+            lastTrustedPublicKey: crossSigningKey.lastTrustedPublicKey,
           );
         }
       }
