@@ -30,6 +30,8 @@ extension Msc2966OidcDynamicClientRegistration on Client {
     if (redirectUris.isEmpty) {
       throw Exception('At least one redirect URI is required!');
     }
+
+    const loopbackHosts = {'localhost', '127.0.0.1', '[::1]'};
     switch (applicationType) {
       case OidcApplicationType.web:
         if (redirectUris.any((uri) => uri.scheme != 'https')) {
@@ -44,19 +46,34 @@ extension Msc2966OidcDynamicClientRegistration on Client {
         }
         break;
       case OidcApplicationType.native:
-        const allowedHosts = {'localhost', '127.0.0.1', '[::1]'};
         if (redirectUris.any(
-          (uri) => uri.scheme == 'http' && !allowedHosts.contains(uri.host),
+          (uri) => uri.scheme == 'http' && !loopbackHosts.contains(uri.host),
         )) {
           throw Exception(
-            'For http loopback interfaces, the host must be one of $allowedHosts',
+            'For http loopback interfaces, the host must be one of $loopbackHosts',
           );
         }
         break;
     }
+
+    // Remove port from address during registration if its a loopback
+    // Some homeservers will reject authentication otherwise.
+    // Setting the port to the default 80 removes it from toString()
+    final registrationRedirectUris = redirectUris
+        .map(
+          (uri) =>
+              applicationType == OidcApplicationType.native &&
+                  uri.scheme == 'http'
+              ? uri.replace(port: 80)
+              : uri,
+        )
+        .toList();
+
     final body = <String, Object?>{
       ...?additionalProperties,
-      'redirect_uris': redirectUris.map((uri) => uri.toString()).toList(),
+      'redirect_uris': registrationRedirectUris
+          .map((uri) => uri.toString())
+          .toList(),
       'token_endpoint_auth_method': tokenEndpointAuthMethod,
       'response_types': responseTypes,
       'grant_types': grantTypes,
