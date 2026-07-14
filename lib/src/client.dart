@@ -575,8 +575,13 @@ class Client extends MatrixApi {
       final loginTypesResult = await Result.capture(getLoginFlows());
       final loginTypes = loginTypesResult.asValue?.value ?? [];
       final loginTypesError = loginTypesResult.asError?.error;
+      final loginTypesStackTrace = loginTypesResult.asError?.stackTrace;
       if (loginTypesError != null && loginTypesError is! MatrixException) {
-        Logs().w('Unable to fetch legacy login types', loginTypesError);
+        Logs().w(
+          'Unable to fetch legacy login types',
+          loginTypesError,
+          loginTypesStackTrace,
+        );
       }
 
       if (loginTypes.isNotEmpty &&
