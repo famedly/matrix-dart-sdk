@@ -389,12 +389,12 @@ class Encryption {
 
   Future<void> autovalidateMasterOwnKey() async {
     // check if we can set our own master key as verified, if it isn't yet
-    final userId = client.userID;
-    final masterKey = client.userDeviceKeys[userId]?.masterKey;
+    final userId = client.userID!;
+    final ownKeys = await client.fetchUserDeviceKeysList(userId);
+    final masterKey = ownKeys?.masterKey;
     if (masterKey != null &&
-        userId != null &&
         !masterKey.directVerified &&
-        masterKey.hasValidSignatureChain(onlyValidateUserIds: {userId})) {
+        await masterKey.hasValidSignatureChain(onlyValidateUserIds: {userId})) {
       await masterKey.setVerified(true);
     }
   }

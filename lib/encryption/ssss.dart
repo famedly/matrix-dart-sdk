@@ -515,20 +515,23 @@ class SSSS {
     // only send to own, verified devices
     Logs().i('[SSSS] Requesting type $type...');
     if (devices == null || devices.isEmpty) {
-      if (!client.userDeviceKeys.containsKey(client.userID)) {
+      final ownKeys = await client.fetchUserDeviceKeysList(client.userID!);
+      if (ownKeys == null) {
         Logs().w('[SSSS] User does not have any devices');
         return;
       }
-      devices = client.userDeviceKeys[client.userID]!.deviceKeys.values
-          .toList();
+      devices = ownKeys.deviceKeys.values.toList();
     }
-    devices.removeWhere(
-      (DeviceKeys d) =>
-          d.userId != client.userID ||
-          !d.verified ||
-          d.blocked ||
-          d.deviceId == client.deviceID,
-    );
+    final verifiedDevices = <DeviceKeys>[];
+    for (final d in devices) {
+      if (d.userId == client.userID &&
+          await d.verified &&
+          !d.blocked &&
+          d.deviceId != client.deviceID) {
+        verifiedDevices.add(d);
+      }
+    }
+    devices = verifiedDevices;
     if (devices.isEmpty) {
       Logs().w('[SSSS] No devices');
       return;
@@ -557,7 +560,7 @@ class SSSS {
             DateTime.now()
                 .subtract(Duration(minutes: 15))
                 .isBefore(_lastCacheRequest!)) ||
-        client.isUnknownSession) {
+        await client.isUnknownSession) {
       // we are already requesting right now or we attempted to within the last 15 min
       return;
     }
@@ -574,8 +577,12 @@ class SSSS {
     if (event.type == EventTypes.SecretRequest) {
       // got a request to share a secret
       Logs().i('[SSSS] Received sharing request...');
-      if (event.sender != client.userID ||
-          !client.userDeviceKeys.containsKey(client.userID)) {
+      if (event.sender != client.userID) {
+        Logs().i('[SSSS] Not sent by us');
+        return; // we aren't asking for it ourselves, so ignore
+      }
+      final ownKeys = await client.fetchUserDeviceKeysList(client.userID!);
+      if (ownKeys == null) {
         Logs().i('[SSSS] Not sent by us');
         return; // we aren't asking for it ourselves, so ignore
       }
@@ -583,10 +590,8 @@ class SSSS {
         Logs().i('[SSSS] it is actually a cancelation');
         return; // not actually requesting, so ignore
       }
-      final device = client
-          .userDeviceKeys[client.userID]!
-          .deviceKeys[event.content['requesting_device_id']];
-      if (device == null || !device.verified || device.blocked) {
+      final device = ownKeys.deviceKeys[event.content['requesting_device_id']];
+      if (device == null || !(await device.verified) || device.blocked) {
         Logs().i('[SSSS] Unknown / unverified devices, ignoring');
         return; // nope....unknown or untrusted device
       }
@@ -1122,19 +1127,17 @@ class OpenSSSS {
     // first try to cache all secrets that aren't cached yet
     await maybeCacheAll();
     // now try to self-sign
+    final ownKeys = await ssss.client.fetchUserDeviceKeysList(
+      ssss.client.userID!,
+    );
     if (ssss.encryption.crossSigning.enabled &&
-        ssss.client.userDeviceKeys[ssss.client.userID]?.masterKey != null &&
+        ownKeys?.masterKey != null &&
         (ssss
                 .keyIdsFromType(EventTypes.CrossSigningMasterKey)
                 ?.contains(keyId) ??
             false) &&
-        (ssss.client.isUnknownSession ||
-            ssss
-                    .client
-                    .userDeviceKeys[ssss.client.userID]!
-                    .masterKey
-                    ?.directVerified !=
-                true)) {
+        (await ssss.client.isUnknownSession ||
+            ownKeys?.masterKey?.directVerified != true)) {
       try {
         await ssss.encryption.crossSigning.selfSign(openSsss: this);
       } catch (e, s) {

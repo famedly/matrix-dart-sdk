@@ -18,26 +18,22 @@ void main() async {
     KeyVerification req1,
     KeyVerification req2,
   ) async {
-    final copyKnownVerificationMethods = List.from(
-      req2.knownVerificationMethods,
+    final copyKnownVerificationMethods = List<String>.from(
+      await req2.knownVerificationMethods,
     );
 
     // this is the same logic from `acceptVerification()` just couldn't find a
     // easy to to mock it
     // qr code only works when atleast one side has verified master key
     if (req2.userId == req2.client.userID) {
-      if (!(req2
-                  .client
-                  .userDeviceKeys[req2.client.userID]
-                  ?.deviceKeys[req2.deviceId]
-                  ?.hasValidSignatureChain(verifiedByTheirMasterKey: true) ??
+      final ownKeys = await req2.client.fetchUserDeviceKeysList(
+        req2.client.userID!,
+      );
+      if (!(await ownKeys?.deviceKeys[req2.deviceId]?.hasValidSignatureChain(
+                verifiedByTheirMasterKey: true,
+              ) ??
               false) &&
-          !(req2
-                  .client
-                  .userDeviceKeys[req2.client.userID]
-                  ?.masterKey
-                  ?.verified ??
-              false)) {
+          !(await ownKeys?.masterKey?.verified ?? false)) {
         copyKnownVerificationMethods.removeWhere(
           (element) => element.startsWith('m.qr_code'),
         );
@@ -95,38 +91,40 @@ void main() async {
 
     test('Run qr verification mode 1', () async {
       expect(
-        client1.userDeviceKeys[client2.userID]?.masterKey!.verified,
+        await (await client1.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))?.masterKey!.verified,
         false,
       );
       expect(
-        client2.userDeviceKeys[client1.userID]?.masterKey!.verified,
+        await (await client2.fetchUserDeviceKeysList(
+          client1.userID!,
+        ))?.masterKey!.verified,
         false,
       );
       expect(
-        client1
-            .userDeviceKeys[client2.userID]
-            ?.deviceKeys[client2.deviceID]
-            ?.verified,
+        await (await client1.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))?.deviceKeys[client2.deviceID]?.verified,
         false,
       );
       expect(
-        client2
-            .userDeviceKeys[client1.userID]
-            ?.deviceKeys[client1.deviceID]
-            ?.verified,
+        await (await client2.fetchUserDeviceKeysList(
+          client1.userID!,
+        ))?.deviceKeys[client1.deviceID]?.verified,
         false,
       );
       // make sure our master key is *not* verified to not triger SSSS for now
-      client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-        true,
-      );
-      client2.userDeviceKeys[client2.userID]!.masterKey!.setDirectVerified(
-        false,
-      );
-
+      await (await client1.fetchUserDeviceKeysList(
+        client1.userID!,
+      ))!.masterKey!.setVerified(true, false);
+      await (await client2.fetchUserDeviceKeysList(
+        client2.userID!,
+      ))!.masterKey!.setVerified(false, false);
       await client1.encryption!.ssss.clearCache();
-      final req1 = await client1.userDeviceKeys[client2.userID]!
-          .startVerification(newDirectChatEnableEncryption: false);
+      final req1 = await (await client1.fetchUserDeviceKeysList(
+        client2.userID!,
+      ))!.startVerification(newDirectChatEnableEncryption: false);
 
       expect(req1.state, KeyVerificationState.askSSSS);
       await req1.openSSSS(recoveryKey: ssssKey);
@@ -141,7 +139,7 @@ void main() async {
           sender: req1.client.userID!,
           content: {
             'from_device': req1.client.deviceID,
-            'methods': req1.knownVerificationMethods,
+            'methods': await req1.knownVerificationMethods,
             'timestamp': DateTime.now().millisecondsSinceEpoch,
             'transaction_id': req1.transactionId,
           },
@@ -176,8 +174,8 @@ void main() async {
 
       expect(req1.state, KeyVerificationState.askChoice);
 
-      expect(req1.getOurQRMode(), QRMode.verifySelfTrusted);
-      expect(req2.getOurQRMode(), QRMode.verifySelfUntrusted);
+      expect(await req1.getOurQRMode(), QRMode.verifySelfTrusted);
+      expect(await req2.getOurQRMode(), QRMode.verifySelfUntrusted);
 
       // send start
       await req1.continueVerification(
@@ -220,21 +218,29 @@ void main() async {
       expect(req1.state, KeyVerificationState.done);
       expect(req2.state, KeyVerificationState.done);
 
-      expect(client1.userDeviceKeys[client2.userID]?.masterKey!.verified, true);
-      expect(client2.userDeviceKeys[client1.userID]?.masterKey!.verified, true);
-
       expect(
-        client1
-            .userDeviceKeys[client2.userID]
-            ?.deviceKeys[client2.deviceID]
-            ?.verified,
+        await (await client1.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))?.masterKey!.verified,
         true,
       );
       expect(
-        client2
-            .userDeviceKeys[client1.userID]
-            ?.deviceKeys[client1.deviceID]
-            ?.verified,
+        await (await client2.fetchUserDeviceKeysList(
+          client1.userID!,
+        ))?.masterKey!.verified,
+        true,
+      );
+
+      expect(
+        await (await client1.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))?.deviceKeys[client2.deviceID]?.verified,
+        true,
+      );
+      expect(
+        await (await client2.fetchUserDeviceKeysList(
+          client1.userID!,
+        ))?.deviceKeys[client1.deviceID]?.verified,
         true,
       );
 
@@ -246,37 +252,40 @@ void main() async {
 
     test('Run qr verification mode 2', () async {
       expect(
-        client1.userDeviceKeys[client2.userID]?.masterKey!.verified,
+        await (await client1.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))?.masterKey!.verified,
         false,
       );
       expect(
-        client2.userDeviceKeys[client1.userID]?.masterKey!.verified,
+        await (await client2.fetchUserDeviceKeysList(
+          client1.userID!,
+        ))?.masterKey!.verified,
         false,
       );
       expect(
-        client1
-            .userDeviceKeys[client2.userID]
-            ?.deviceKeys[client2.deviceID]
-            ?.verified,
+        await (await client1.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))?.deviceKeys[client2.deviceID]?.verified,
         false,
       );
       expect(
-        client2
-            .userDeviceKeys[client1.userID]
-            ?.deviceKeys[client1.deviceID]
-            ?.verified,
+        await (await client2.fetchUserDeviceKeysList(
+          client1.userID!,
+        ))?.deviceKeys[client1.deviceID]?.verified,
         false,
       );
       // make sure our master key is *not* verified to not triger SSSS for now
-      client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-        false,
-      );
-      client2.userDeviceKeys[client2.userID]!.masterKey!.setDirectVerified(
-        true,
-      );
+      await (await client1.fetchUserDeviceKeysList(
+        client1.userID!,
+      ))!.masterKey!.setVerified(false, false);
+      await (await client2.fetchUserDeviceKeysList(
+        client2.userID!,
+      ))!.masterKey!.setVerified(true, false);
       // await client1.encryption!.ssss.clearCache();
-      final req1 = await client1.userDeviceKeys[client2.userID]!
-          .startVerification(newDirectChatEnableEncryption: false);
+      final req1 = await (await client1.fetchUserDeviceKeysList(
+        client2.userID!,
+      ))!.startVerification(newDirectChatEnableEncryption: false);
 
       expect(req1.state, KeyVerificationState.waitingAccept);
 
@@ -288,7 +297,7 @@ void main() async {
           sender: req1.client.userID!,
           content: {
             'from_device': req1.client.deviceID,
-            'methods': req1.knownVerificationMethods,
+            'methods': await req1.knownVerificationMethods,
             'timestamp': DateTime.now().millisecondsSinceEpoch,
             'transaction_id': req1.transactionId,
           },
@@ -324,8 +333,8 @@ void main() async {
 
       expect(req1.state, KeyVerificationState.askChoice);
 
-      expect(req1.getOurQRMode(), QRMode.verifySelfUntrusted);
-      expect(req2.getOurQRMode(), QRMode.verifySelfTrusted);
+      expect(await req1.getOurQRMode(), QRMode.verifySelfUntrusted);
+      expect(await req2.getOurQRMode(), QRMode.verifySelfTrusted);
 
       // send start
       await req1.continueVerification(
@@ -370,21 +379,29 @@ void main() async {
       await req2.openSSSS(recoveryKey: ssssKey);
       expect(req2.state, KeyVerificationState.done);
 
-      expect(client1.userDeviceKeys[client2.userID]?.masterKey!.verified, true);
-      expect(client2.userDeviceKeys[client1.userID]?.masterKey!.verified, true);
-
       expect(
-        client1
-            .userDeviceKeys[client2.userID]
-            ?.deviceKeys[client2.deviceID]
-            ?.verified,
+        await (await client1.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))?.masterKey!.verified,
         true,
       );
       expect(
-        client2
-            .userDeviceKeys[client1.userID]
-            ?.deviceKeys[client1.deviceID]
-            ?.verified,
+        await (await client2.fetchUserDeviceKeysList(
+          client1.userID!,
+        ))?.masterKey!.verified,
+        true,
+      );
+
+      expect(
+        await (await client1.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))?.deviceKeys[client2.deviceID]?.verified,
+        true,
+      );
+      expect(
+        await (await client2.fetchUserDeviceKeysList(
+          client1.userID!,
+        ))?.deviceKeys[client1.deviceID]?.verified,
         true,
       );
 
@@ -396,16 +413,16 @@ void main() async {
       'Run qr verification mode 1, but fail because incorrect secret',
       () async {
         // make sure our master key is *not* verified to not triger SSSS for now
-        client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-          true,
-        );
-        client2.userDeviceKeys[client2.userID]!.masterKey!.setDirectVerified(
-          false,
-        );
-
+        await (await client1.fetchUserDeviceKeysList(
+          client1.userID!,
+        ))!.masterKey!.setVerified(true, false);
+        await (await client2.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))!.masterKey!.setVerified(false, false);
         await client1.encryption!.ssss.clearCache();
-        final req1 = await client1.userDeviceKeys[client2.userID]!
-            .startVerification(newDirectChatEnableEncryption: false);
+        final req1 = await (await client1.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))!.startVerification(newDirectChatEnableEncryption: false);
 
         expect(req1.state, KeyVerificationState.askSSSS);
         await req1.openSSSS(recoveryKey: ssssKey);
@@ -422,7 +439,7 @@ void main() async {
             sender: req1.client.userID!,
             content: {
               'from_device': req1.client.deviceID,
-              'methods': req1.knownVerificationMethods,
+              'methods': await req1.knownVerificationMethods,
               'timestamp': DateTime.now().millisecondsSinceEpoch,
               'transaction_id': req1.transactionId,
             },
@@ -459,8 +476,8 @@ void main() async {
 
         expect(req1.state, KeyVerificationState.askChoice);
 
-        expect(req1.getOurQRMode(), QRMode.verifySelfTrusted);
-        expect(req2.getOurQRMode(), QRMode.verifySelfUntrusted);
+        expect(await req1.getOurQRMode(), QRMode.verifySelfTrusted);
+        expect(await req2.getOurQRMode(), QRMode.verifySelfUntrusted);
 
         // send start
         await req1.continueVerification(
@@ -503,15 +520,16 @@ void main() async {
       'Run qr verification mode 2, but both unverified master key',
       () async {
         // make sure our master key is *not* verified to not triger SSSS for now
-        await client1.userDeviceKeys[client1.userID]!.masterKey!.setBlocked(
-          true,
-        );
-        await client2.userDeviceKeys[client2.userID]!.masterKey!.setBlocked(
-          true,
-        );
+        await (await client1.fetchUserDeviceKeysList(
+          client1.userID!,
+        ))!.masterKey!.setBlocked(true);
+        await (await client2.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))!.masterKey!.setBlocked(true);
         // await client1.encryption!.ssss.clearCache();
-        final req1 = await client1.userDeviceKeys[client2.userID]!
-            .startVerification(newDirectChatEnableEncryption: false);
+        final req1 = await (await client1.fetchUserDeviceKeysList(
+          client2.userID!,
+        ))!.startVerification(newDirectChatEnableEncryption: false);
 
         expect(req1.state, KeyVerificationState.waitingAccept);
 
@@ -525,7 +543,7 @@ void main() async {
             sender: req1.client.userID!,
             content: {
               'from_device': req1.client.deviceID,
-              'methods': req1.knownVerificationMethods,
+              'methods': await req1.knownVerificationMethods,
               'timestamp': DateTime.now().millisecondsSinceEpoch,
               'transaction_id': req1.transactionId,
             },
@@ -552,8 +570,8 @@ void main() async {
 
         expect(req1.state, KeyVerificationState.waitingAccept);
 
-        expect(req1.getOurQRMode(), QRMode.verifySelfUntrusted);
-        expect(req2.getOurQRMode(), QRMode.verifySelfUntrusted);
+        expect(await req1.getOurQRMode(), QRMode.verifySelfUntrusted);
+        expect(await req2.getOurQRMode(), QRMode.verifySelfUntrusted);
 
         // send start
         await req1.continueVerification(

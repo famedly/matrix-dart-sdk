@@ -310,26 +310,60 @@ class FakeMatrixApi extends BaseClient {
     api['POST']?['/client/v3/keys/device_signing/upload'] = (var reqI) {
       if (_client != null) {
         final jsonBody = decodeJson(reqI);
-        for (final keyType in {
-          'master_key',
-          'self_signing_key',
-          'user_signing_key',
-        }) {
-          if (jsonBody[keyType] != null) {
-            final key = sdk.CrossSigningKey.fromJson(
-              jsonBody[keyType],
-              _client!,
-            );
-            _client!.userDeviceKeys[_client!.userID!]?.crossSigningKeys
-                .removeWhere((k, v) => v.usage.contains(key.usage.first));
-            _client!.userDeviceKeys[_client!.userID!]?.crossSigningKeys[key
-                    .publicKey!] =
-                key;
-          }
-        }
-        // and generate a fake sync
+        final client = _client!;
+        final userId = client.userID!;
         // ignore: discarded_futures
-        _client!.handleSync(sdk.SyncUpdate(nextBatch: ''));
+        (() async {
+          final database = client.database;
+          for (final keyType in {
+            'master_key',
+            'self_signing_key',
+            'user_signing_key',
+          }) {
+            if (jsonBody[keyType] == null) continue;
+            final key = sdk.CrossSigningKey.fromJson(jsonBody[keyType], client);
+            final publicKey = key.publicKey;
+            if (publicKey == null || !key.isValid) continue;
+
+            final existing = await database.getUserDeviceKeysList(
+              userId,
+              client,
+            );
+            CrossSigningKey? oldKey;
+            if (existing != null) {
+              for (final entry in existing.crossSigningKeys.entries) {
+                if (entry.value.usage.contains(key.usage.first)) {
+                  if (entry.key == publicKey) {
+                    oldKey = entry.value;
+                  }
+                  await database.removeUserCrossSigningKey(userId, entry.key);
+                }
+              }
+            }
+            if (oldKey != null) {
+              key.setDirectVerified(oldKey.directVerified);
+              if (oldKey.trustOnFirstUseSince != null) {
+                key.trustOnFirstUse(
+                  since: oldKey.trustOnFirstUseSince,
+                  updateInDatabase: false,
+                );
+              }
+              key.blocked = oldKey.blocked;
+              key.validSignatures = oldKey.validSignatures;
+            }
+
+            await database.storeUserCrossSigningKey(
+              userId,
+              publicKey,
+              jsonEncode(key.toJson()),
+              key.directVerified,
+              key.blocked,
+              trustOnFirstUseSince: key.trustOnFirstUseSince,
+            );
+          }
+          await database.storeUserDeviceKeysInfo(userId, false);
+          await client.handleSync(sdk.SyncUpdate(nextBatch: ''));
+        })();
       }
       return {};
     };

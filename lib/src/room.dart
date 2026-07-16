@@ -1112,16 +1112,17 @@ class Room {
   Future<EncryptionHealthState> calcEncryptionHealthState() async {
     final users = await requestParticipants();
     users.removeWhere(
-      (u) =>
-          !{Membership.invite, Membership.join}.contains(u.membership) ||
-          !client.userDeviceKeys.containsKey(u.id),
+      (u) => !{Membership.invite, Membership.join}.contains(u.membership),
     );
+    final userIds = users.map((u) => u.id).toSet();
+    final allDeviceKeys = await client.fetchUserDeviceKeysLists(userIds);
+    users.removeWhere((u) => !allDeviceKeys.containsKey(u.id));
 
-    if (users.any(
-      (u) =>
-          client.userDeviceKeys[u.id]!.verified != UserVerifiedStatus.verified,
-    )) {
-      return EncryptionHealthState.unverifiedDevices;
+    for (final u in users) {
+      if ((await allDeviceKeys[u.id]!.verified) !=
+          UserVerifiedStatus.verified) {
+        return EncryptionHealthState.unverifiedDevices;
+      }
     }
 
     return EncryptionHealthState.allVerified;

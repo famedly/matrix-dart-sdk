@@ -322,12 +322,18 @@ class LiveKitBackend extends CallBackend {
     final mustEncryptkeysToSendTo = <DeviceKeys>[];
     final unencryptedDataToSend = <String, Map<String, Map<String, Object>>>{};
 
+    final participantUserIds = remoteParticipants
+        .where((p) => p.deviceId != null)
+        .map((p) => p.userId)
+        .toSet();
+    final participantKeys = mustEncrypt && participantUserIds.isNotEmpty
+        ? await groupCall.client.fetchUserDeviceKeysLists(participantUserIds)
+        : <String, DeviceKeysList>{};
+
     for (final participant in remoteParticipants) {
       if (participant.deviceId == null) continue;
       if (mustEncrypt) {
-        final deviceKey = groupCall
-            .client
-            .userDeviceKeys[participant.userId]
+        final deviceKey = participantKeys[participant.userId]
             ?.deviceKeys[participant.deviceId];
         if (deviceKey != null) {
           mustEncryptkeysToSendTo.add(deviceKey);
