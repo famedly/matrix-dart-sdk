@@ -126,11 +126,10 @@ void main() {
       sess = await client.encryption!.keyManager.createOutboundGroupSession(
         roomId,
       );
-      client
-              .userDeviceKeys['@alice:example.com']!
-              .deviceKeys['JLAFKJWSCS']!
-              .blocked =
-          true;
+      await client
+          .userDeviceKeys['@alice:example.com']!
+          .deviceKeys['JLAFKJWSCS']!
+          .setBlocked(true);
       await client.encryption!.keyManager.clearOrUseOutboundGroupSession(
         roomId,
       );
@@ -138,22 +137,20 @@ void main() {
         client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
         false,
       );
-      client
-              .userDeviceKeys['@alice:example.com']!
-              .deviceKeys['JLAFKJWSCS']!
-              .blocked =
-          false;
+      await client
+          .userDeviceKeys['@alice:example.com']!
+          .deviceKeys['JLAFKJWSCS']!
+          .setBlocked(false);
 
       // lazy-create if it would rotate
       sess = await client.encryption!.keyManager.createOutboundGroupSession(
         roomId,
       );
       final oldSessKey = sess.outboundGroupSession!.sessionKey;
-      client
-              .userDeviceKeys['@alice:example.com']!
-              .deviceKeys['JLAFKJWSCS']!
-              .blocked =
-          true;
+      await client
+          .userDeviceKeys['@alice:example.com']!
+          .deviceKeys['JLAFKJWSCS']!
+          .setBlocked(true);
       await client.encryption!.keyManager.prepareOutboundGroupSession(roomId);
       expect(
         client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
@@ -167,11 +164,10 @@ void main() {
             oldSessKey,
         true,
       );
-      client
-              .userDeviceKeys['@alice:example.com']!
-              .deviceKeys['JLAFKJWSCS']!
-              .blocked =
-          false;
+      await client
+          .userDeviceKeys['@alice:example.com']!
+          .deviceKeys['JLAFKJWSCS']!
+          .setBlocked(false);
 
       // rotate if too far in the past
       sess = await client.encryption!.keyManager.createOutboundGroupSession(
@@ -232,6 +228,17 @@ void main() {
           },
         },
       }, client);
+      await client.database.storeUserDeviceKey(
+        '@alice:example.com',
+        'NEWDEVICE',
+        jsonEncode(
+          client.userDeviceKeys['@alice:example.com']!.deviceKeys['NEWDEVICE']!
+              .toJson(),
+        ),
+        false,
+        false,
+        DateTime.now().millisecondsSinceEpoch,
+      );
       await client.encryption!.keyManager.clearOrUseOutboundGroupSession(
         roomId,
       );
