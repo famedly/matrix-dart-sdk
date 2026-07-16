@@ -89,7 +89,7 @@ class KeyManager {
     if (userId == null) return Future.value();
 
     if (!senderClaimedKeys_.containsKey('ed25519')) {
-      final device = client.getUserDeviceKeysByCurve25519Key(senderKey);
+      final device = await client.getUserDeviceKeysByCurve25519Key(senderKey);
       if (device != null && device.ed25519Key != null) {
         senderClaimedKeys_['ed25519'] = device.ed25519Key!;
       }
@@ -229,7 +229,7 @@ class KeyManager {
   }) async {
     final room = client.getRoomById(roomId);
     final requestIdent = '$roomId|$sessionId';
-    if (room != null && !client.isUnknownSession) {
+    if (room != null && !await client.isUnknownSession) {
       final existingReqCompleter = _requestedSessionIdCompleters[requestIdent];
       if (existingReqCompleter != null) {
         if (awaitRequest) {
@@ -290,9 +290,9 @@ class KeyManager {
     return roomInboundGroupSessions[sessionId] = dbSess;
   }
 
-  Map<String, Map<String, bool>> _getDeviceKeyIdMap(
+  Future<Map<String, Map<String, bool>>> _getDeviceKeyIdMap(
     List<DeviceKeys> deviceKeys,
-  ) {
+  ) async {
     final deviceKeyIds = <String, Map<String, bool>>{};
     for (final device in deviceKeys) {
       final deviceId = device.deviceId;
@@ -301,7 +301,7 @@ class KeyManager {
         continue;
       }
       final userDeviceKeyIds = deviceKeyIds[device.userId] ??= <String, bool>{};
-      userDeviceKeyIds[deviceId] = !device.encryptToDevice;
+      userDeviceKeyIds[deviceId] = !(await device.encryptToDevice);
     }
     return deviceKeyIds;
   }
@@ -356,7 +356,7 @@ class KeyManager {
       // next check if the devices in the room changed
       final devicesToReceive = <DeviceKeys>[];
       final newDeviceKeys = await room.getUserDeviceKeys();
-      final newDeviceKeyIds = _getDeviceKeyIdMap(newDeviceKeys);
+      final newDeviceKeyIds = await _getDeviceKeyIdMap(newDeviceKeys);
       // first check for user differences
       final oldUserIds = sess.devices.keys.toSet();
       final newUserIds = newDeviceKeyIds.keys.toSet();
@@ -439,10 +439,15 @@ class KeyManager {
           'session_key': sess.outboundGroupSession!.sessionKey,
         };
         try {
-          devicesToReceive.removeWhere((k) => !k.encryptToDevice);
-          if (devicesToReceive.isNotEmpty) {
+          final encryptableDevices = <DeviceKeys>[];
+          for (final device in devicesToReceive) {
+            if (await device.encryptToDevice) {
+              encryptableDevices.add(device);
+            }
+          }
+          if (encryptableDevices.isNotEmpty) {
             // update allowedAtIndex
-            for (final device in devicesToReceive) {
+            for (final device in encryptableDevices) {
               inboundSess!.allowedAtIndex[device.userId] ??= <String, int>{};
               if (!inboundSess.allowedAtIndex[device.userId]!.containsKey(
                     device.curve25519Key,
@@ -462,7 +467,7 @@ class KeyManager {
             );
             // send out the key
             await client.sendToDeviceEncryptedChunked(
-              devicesToReceive,
+              encryptableDevices,
               EventTypes.RoomKey,
               rawSession,
             );
@@ -550,9 +555,14 @@ class KeyManager {
       );
     }
 
-    final deviceKeys = await room.getUserDeviceKeys();
-    final deviceKeyIds = _getDeviceKeyIdMap(deviceKeys);
-    deviceKeys.removeWhere((k) => !k.encryptToDevice);
+    final allDeviceKeys = await room.getUserDeviceKeys();
+    final deviceKeyIds = await _getDeviceKeyIdMap(allDeviceKeys);
+    final deviceKeys = <DeviceKeys>[];
+    for (final device in allDeviceKeys) {
+      if (await device.encryptToDevice) {
+        deviceKeys.add(device);
+      }
+    }
     final outboundGroupSession = vod.GroupSession();
 
     final rawSession = <String, dynamic>{
@@ -901,13 +911,13 @@ class KeyManager {
         // so that the event loop can progress
         var i = 0;
         for (final dbSession in dbSessions) {
-          final device = client.getUserDeviceKeysByCurve25519Key(
+          final device = await client.getUserDeviceKeysByCurve25519Key(
             dbSession.senderKey,
           );
           args.dbSessions.add(
             DbInboundGroupSessionBundle(
               dbSession: dbSession,
-              verified: device?.verified ?? false,
+              verified: (await device?.verified) ?? false,
             ),
           );
           i++;
@@ -970,9 +980,11 @@ class KeyManager {
           );
           return; // wrong type for roomId or no roomId found
         }
-        final device = client
-            .userDeviceKeys[event.sender]
-            ?.deviceKeys[event.content['requesting_device_id']];
+        final senderDeviceKeys = await client.fetchUserDeviceKeysList(
+          event.sender,
+        );
+        final device =
+            senderDeviceKeys?.deviceKeys[event.content['requesting_device_id']];
         if (device == null) {
           Logs().w('[KeyManager] Device not found, doing nothing');
           return; // device not found
@@ -1023,12 +1035,12 @@ class KeyManager {
           request,
         );
         if (device.userId == client.userID &&
-            device.verified &&
+            await device.verified &&
             !device.blocked) {
           Logs().i('[KeyManager] All checks out, forwarding key...');
           // alright, we can forward the key
           await roomKeyRequest.forwardKey();
-        } else if (device.encryptToDevice &&
+        } else if (await device.encryptToDevice &&
             session.allowedAtIndex
                     .tryGet<Map<String, Object?>>(device.userId)
                     ?.tryGet(device.curve25519Key!) !=
@@ -1150,8 +1162,10 @@ class KeyManager {
         );
         return;
       }
-      final sender_ed25519 = client
-          .userDeviceKeys[event.sender]
+      final senderDeviceKeys = await client.fetchUserDeviceKeysList(
+        event.sender,
+      );
+      final sender_ed25519 = senderDeviceKeys
           ?.deviceKeys[event.content['requesting_device_id']]
           ?.ed25519Key;
       if (sender_ed25519 != null) {
