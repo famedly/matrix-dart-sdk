@@ -1800,6 +1800,55 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String roomId,
     LatestReceiptState receiptState,
   ) => _readReceiptsBox.put(roomId, receiptState.toJson());
+
+  @override
+  Future<DeviceKeysList?> getUserDeviceKeysList(
+    String userId,
+    Client client,
+  ) async {
+    final userDeviceKeysKeys = await _userDeviceKeysBox.getAllKeys();
+    final userCrossSigningKeysKeys = await _userCrossSigningKeysBox
+        .getAllKeys();
+
+    final deviceKeysBoxKeys = userDeviceKeysKeys.where((tuple) {
+      final tupleKey = TupleKey.fromString(tuple);
+      return tupleKey.parts.first == userId;
+    });
+    final crossSigningKeysBoxKeys = userCrossSigningKeysKeys.where((tuple) {
+      final tupleKey = TupleKey.fromString(tuple);
+      return tupleKey.parts.first == userId;
+    });
+    final childEntries = await Future.wait(
+      deviceKeysBoxKeys.map((key) async {
+        final userDeviceKey = await _userDeviceKeysBox.get(key);
+        if (userDeviceKey == null) return null;
+        return copyMap(userDeviceKey);
+      }),
+    );
+    final crossSigningEntries = await Future.wait(
+      crossSigningKeysBoxKeys.map((key) async {
+        final crossSigningKey = await _userCrossSigningKeysBox.get(key);
+        if (crossSigningKey == null) return null;
+        return copyMap(crossSigningKey);
+      }),
+    );
+    return DeviceKeysList.fromDbJson(
+      {
+        'client_id': client.id,
+        'user_id': userId,
+        'outdated': await _userDeviceKeysOutdatedBox.get(userId),
+      },
+      childEntries
+          .where((c) => c != null)
+          .toList()
+          .cast<Map<String, dynamic>>(),
+      crossSigningEntries
+          .where((c) => c != null)
+          .toList()
+          .cast<Map<String, dynamic>>(),
+      client,
+    );
+  }
 }
 
 class TupleKey {
