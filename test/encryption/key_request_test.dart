@@ -69,13 +69,13 @@ void main() {
 
       matrix.setUserId('@alice:example.com'); // we need to pretend to be alice
       FakeMatrixApi.calledEndpoints.clear();
-      await matrix
-          .userDeviceKeys['@alice:example.com']!
-          .deviceKeys['OTHERDEVICE']!
+      final aliceKeys = await matrix.fetchUserDeviceKeysLists({
+        '@alice:example.com',
+        '@test:fakeServer.notExisting',
+      });
+      await aliceKeys['@alice:example.com']!.deviceKeys['OTHERDEVICE']!
           .setBlocked(false);
-      await matrix
-          .userDeviceKeys['@alice:example.com']!
-          .deviceKeys['OTHERDEVICE']!
+      await aliceKeys['@alice:example.com']!.deviceKeys['OTHERDEVICE']!
           .setVerified(true);
       final session = await matrix.encryption!.keyManager
           .loadInboundGroupSession('!726s6s6q:example.com', validSessionId);
@@ -107,8 +107,7 @@ void main() {
       // test a successful foreign share
       FakeMatrixApi.calledEndpoints.clear();
       session!.allowedAtIndex['@test:fakeServer.notExisting'] = <String, int>{
-        matrix
-                .userDeviceKeys['@test:fakeServer.notExisting']!
+        aliceKeys['@test:fakeServer.notExisting']!
                 .deviceKeys['OTHERDEVICE']!
                 .curve25519Key!:
             0,

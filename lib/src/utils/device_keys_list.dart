@@ -29,20 +29,22 @@ class DeviceKeysList {
   CrossSigningKey? get selfSigningKey => getCrossSigningKey('self_signing');
   CrossSigningKey? get userSigningKey => getCrossSigningKey('user_signing');
 
-  UserVerifiedStatus get verified {
+  Future<UserVerifiedStatus> get verified async {
     if (masterKey == null) {
       return UserVerifiedStatus.unknown;
     }
-    if (masterKey!.verified) {
+    if (await masterKey!.verified) {
       for (final key in deviceKeys.values) {
-        if (!key.verified) {
+        final verified = await key.verified;
+        if (!verified) {
           return UserVerifiedStatus.unknownDevice;
         }
       }
       return UserVerifiedStatus.verified;
     } else {
       for (final key in deviceKeys.values) {
-        if (!key.verified) {
+        final verified = await key.verified;
+        if (!verified) {
           return UserVerifiedStatus.unknown;
         }
       }
@@ -170,12 +172,14 @@ abstract class SignableKey extends MatrixSignableKey {
   bool? _blocked;
 
   String? get ed25519Key => keys['ed25519:$identifier'];
-  bool get verified =>
-      identifier != null && (directVerified || crossVerified) && !(blocked);
+  Future<bool> get verified async =>
+      identifier != null &&
+      (directVerified || (await crossVerified)) &&
+      !(blocked);
   bool get blocked => _blocked ?? false;
   set blocked(bool isBlocked) => _blocked = isBlocked;
 
-  bool get encryptToDevice {
+  Future<bool> get encryptToDevice async {
     if (blocked) return false;
 
     if (identifier == null || ed25519Key == null) return false;
@@ -184,7 +188,8 @@ abstract class SignableKey extends MatrixSignableKey {
       case ShareKeysWith.all:
         return true;
       case ShareKeysWith.crossVerifiedIfEnabled:
-        if (client.userDeviceKeys[userId]?.masterKey == null) return true;
+        final keys = await client.fetchUserDeviceKeysList(userId);
+        if (keys?.masterKey == null) return true;
         return hasValidSignatureChain(verifiedByTheirMasterKey: true);
       case ShareKeysWith.crossVerified:
         return hasValidSignatureChain(verifiedByTheirMasterKey: true);
@@ -198,8 +203,8 @@ abstract class SignableKey extends MatrixSignableKey {
   }
 
   bool get directVerified => _verified ?? false;
-  bool get crossVerified => hasValidSignatureChain();
-  bool get signed => hasValidSignatureChain(verifiedOnly: false);
+  Future<bool> get crossVerified => hasValidSignatureChain();
+  Future<bool> get signed => hasValidSignatureChain(verifiedOnly: false);
 
   SignableKey.fromJson(Map<String, dynamic> super.json, this.client)
     : super.fromJson() {
@@ -245,14 +250,14 @@ abstract class SignableKey extends MatrixSignableKey {
     return valid;
   }
 
-  bool hasValidSignatureChain({
+  Future<bool> hasValidSignatureChain({
     bool verifiedOnly = true,
     Set<String>? visited,
     Set<String>? onlyValidateUserIds,
 
     /// Only check if this key is verified by their Master key.
     bool verifiedByTheirMasterKey = false,
-  }) {
+  }) async {
     if (!client.encryptionEnabled) {
       return false;
     }
@@ -272,7 +277,8 @@ abstract class SignableKey extends MatrixSignableKey {
 
     for (final signatureEntries in signatures!.entries) {
       final otherUserId = signatureEntries.key;
-      if (!client.userDeviceKeys.containsKey(otherUserId)) {
+      final otherUserKeys = await client.fetchUserDeviceKeysList(otherUserId);
+      if (otherUserKeys == null) {
         continue;
       }
       // we don't allow transitive trust unless it is for ourself
@@ -289,8 +295,8 @@ abstract class SignableKey extends MatrixSignableKey {
         }
 
         final key =
-            client.userDeviceKeys[otherUserId]?.deviceKeys[keyId] ??
-            client.userDeviceKeys[otherUserId]?.crossSigningKeys[keyId];
+            otherUserKeys.deviceKeys[keyId] ??
+            otherUserKeys.crossSigningKeys[keyId];
         if (key == null) {
           continue;
         }
@@ -339,7 +345,7 @@ abstract class SignableKey extends MatrixSignableKey {
           return true; // we verified this key and it is valid...all checks out!
         }
         // or else we just recurse into that key and check if it works out
-        final haveChain = key.hasValidSignatureChain(
+        final haveChain = await key.hasValidSignatureChain(
           verifiedOnly: verifiedOnly,
           visited: visited_,
           onlyValidateUserIds: onlyValidateUserIds,
@@ -415,7 +421,7 @@ class CrossSigningKey extends SignableKey {
     since ??= DateTime.now();
     if (updateInDatabase) {
       await client.database.setVerifiedUserCrossSigningKey(
-        verified,
+        await verified,
         userId,
         publicKey!,
         trustOnFirstUseSince: since,
