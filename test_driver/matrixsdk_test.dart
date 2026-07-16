@@ -186,10 +186,6 @@ void main() => group('Integration tests', () {
             .blocked,
         isFalse,
       );
-      await Future.wait([
-        testClientA.updateUserDeviceKeys(),
-        testClientB.updateUserDeviceKeys(),
-      ]);
       await testClientA
           .userDeviceKeys[testClientB.userID]!
           .deviceKeys[testClientB.deviceID!]!
