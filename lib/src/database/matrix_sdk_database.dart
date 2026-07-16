@@ -1806,6 +1806,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     Client client,
   ) async {
+    final outdated = await _userDeviceKeysOutdatedBox.get(userId);
+    if (outdated == null) return null;
+
     final userDeviceKeysKeys = await _userDeviceKeysBox.getAllKeys();
     final userCrossSigningKeysKeys = await _userCrossSigningKeysBox
         .getAllKeys();
@@ -1833,11 +1836,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       }),
     );
     return DeviceKeysList.fromDbJson(
-      {
-        'client_id': client.id,
-        'user_id': userId,
-        'outdated': await _userDeviceKeysOutdatedBox.get(userId),
-      },
+      {'client_id': client.id, 'user_id': userId, 'outdated': outdated},
       childEntries
           .where((c) => c != null)
           .toList()
