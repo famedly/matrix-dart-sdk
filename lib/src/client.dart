@@ -3311,10 +3311,8 @@ class Client extends MatrixApi {
     if (deviceKeys != null) {
       for (final rawDeviceKeyListEntry in deviceKeys.entries) {
         final userId = rawDeviceKeyListEntry.key;
-        final userKeys = userDeviceKeys[userId] ??= DeviceKeysList(
-          userId,
-          this,
-        );
+        final userKeys = userDeviceKeys[userId] ??=
+            oldDeviceKeys.remove(userId) ?? DeviceKeysList(userId, this);
         final oldKeys = Map<String, DeviceKeys>.from(userKeys.deviceKeys);
         userKeys.deviceKeys.clear();
         for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
@@ -3433,10 +3431,8 @@ class Client extends MatrixApi {
       }
       for (final crossSigningKeyListEntry in keys.entries) {
         final userId = crossSigningKeyListEntry.key;
-        final userKeys = userDeviceKeys[userId] ??= DeviceKeysList(
-          userId,
-          this,
-        );
+        final userKeys = userDeviceKeys[userId] ??=
+            oldDeviceKeys.remove(userId) ?? DeviceKeysList(userId, this);
         final oldKeys = Map<String, CrossSigningKey>.from(
           userKeys.crossSigningKeys,
         );
@@ -3494,6 +3490,12 @@ class Client extends MatrixApi {
         userDeviceKeys[userId]?.outdated = false;
         dbActions.add(() => database.storeUserDeviceKeysInfo(userId, false));
       }
+    }
+
+    // Keep the previously cached (still outdated) lists for any user the
+    // server failed to return, so we don't lose their trust state.
+    for (final oldEntry in oldDeviceKeys.entries) {
+      userDeviceKeys.putIfAbsent(oldEntry.key, () => oldEntry.value);
     }
 
     // now process all the failures

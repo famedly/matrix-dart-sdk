@@ -367,7 +367,7 @@ class KeyVerification {
     Logs().i('[Key Verification] Received type $type: $payload');
     // Fetch once upfront to avoid multiple DB round-trips within the switch.
     final knownMethods = await knownVerificationMethods;
-    final userKeys = await client.fetchUserDeviceKeysLists({userId});
+    var userKeys = await client.fetchUserDeviceKeysLists({userId});
     try {
       var thisLastStep = lastStep;
       switch (type) {
@@ -392,6 +392,10 @@ class KeyVerification {
 
           // ensure we have the other sides keys
           if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
+            // The device might be new and not yet in our cache, so force a
+            // refresh from the server before giving up.
+            await client.database.storeUserDeviceKeysInfo(userId, true);
+            userKeys = await client.fetchUserDeviceKeysLists({userId});
             if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
               await cancel('im.fluffychat.unknown_device');
               return;
@@ -438,6 +442,10 @@ class KeyVerification {
 
           // ensure we have the other sides keys
           if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
+            // The device might be new and not yet in our cache, so force a
+            // refresh from the server before giving up.
+            await client.database.storeUserDeviceKeysInfo(userId, true);
+            userKeys = await client.fetchUserDeviceKeysLists({userId});
             if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
               await cancel('im.fluffychat.unknown_device');
               return;
@@ -524,6 +532,10 @@ class KeyVerification {
 
           // ensure we have the other sides keys
           if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
+            // The device might be new and not yet in our cache, so force a
+            // refresh from the server before giving up.
+            await client.database.storeUserDeviceKeysInfo(userId, true);
+            userKeys = await client.fetchUserDeviceKeysLists({userId});
             if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
               await cancel('im.fluffychat.unknown_device');
               return;
