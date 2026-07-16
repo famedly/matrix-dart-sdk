@@ -399,7 +399,7 @@ void main() {
       const other = '@someone:example.com';
 
       // A non-creator without redact power may not end the poll.
-      expectLater(
+      await expectLater(
         () => poll(other).endPoll(),
         throwsA(predicate(
           (Object? e) => e
