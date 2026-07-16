@@ -391,7 +391,9 @@ class Bootstrap {
       // aaaand set the SSSS secrets
       if (masterKey != null) {
         while (!(masterKey.publicKey != null &&
-            client.userDeviceKeys[client.userID]?.masterKey?.ed25519Key ==
+            (await client.fetchUserDeviceKeysList(
+                  client.userID!,
+                ))?.masterKey?.ed25519Key ==
                 masterKey.publicKey)) {
           Logs().v('Waiting for master to be created');
           await client.oneShotSync();
@@ -407,24 +409,19 @@ class Bootstrap {
       }
 
       final keysToSign = <SignableKey>[];
+      final ownKeys = await client.fetchUserDeviceKeysList(client.userID!);
       if (masterKey != null) {
-        if (client.userDeviceKeys[client.userID]?.masterKey?.ed25519Key !=
-            masterKey.publicKey) {
+        if (ownKeys?.masterKey?.ed25519Key != masterKey.publicKey) {
           throw BootstrapBadStateException(
             'ERROR: New master key does not match up!',
           );
         }
         Logs().v('Set own master key to verified...');
-        await client.userDeviceKeys[client.userID]!.masterKey!.setVerified(
-          true,
-          false,
-        );
-        keysToSign.add(client.userDeviceKeys[client.userID]!.masterKey!);
+        await ownKeys!.masterKey!.setVerified(true, false);
+        keysToSign.add(ownKeys.masterKey!);
       }
       if (selfSigningKey != null) {
-        keysToSign.add(
-          client.userDeviceKeys[client.userID]!.deviceKeys[client.deviceID]!,
-        );
+        keysToSign.add(ownKeys!.deviceKeys[client.deviceID]!);
       }
       Logs().v('Sign ourself...');
       await encryption.crossSigning.sign(keysToSign);
