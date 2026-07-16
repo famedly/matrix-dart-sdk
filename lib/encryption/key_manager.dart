@@ -629,7 +629,6 @@ class KeyManager {
     if (!enabled) {
       return false;
     }
-    await client.userDeviceKeysLoading;
     return (await encryption.ssss.getCached(megolmKey)) != null;
   }
 
@@ -866,8 +865,6 @@ class KeyManager {
 
     Future<void> uploadInternal() async {
       try {
-        await client.userDeviceKeysLoading;
-
         if (!(await isCached())) {
           return; // we can't backup anyways
         }

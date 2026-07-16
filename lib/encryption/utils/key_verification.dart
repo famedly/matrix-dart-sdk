@@ -384,7 +384,6 @@ class KeyVerification {
 
           // ensure we have the other sides keys
           if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
-            await client.updateUserDeviceKeys(additionalUsers: {userId});
             if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
               await cancel('im.fluffychat.unknown_device');
               return;
@@ -432,7 +431,6 @@ class KeyVerification {
 
           // ensure we have the other sides keys
           if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
-            await client.updateUserDeviceKeys(additionalUsers: {userId});
             if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
               await cancel('im.fluffychat.unknown_device');
               return;
@@ -519,7 +517,6 @@ class KeyVerification {
 
           // ensure we have the other sides keys
           if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
-            await client.updateUserDeviceKeys(additionalUsers: {userId});
             if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
               await cancel('im.fluffychat.unknown_device');
               return;

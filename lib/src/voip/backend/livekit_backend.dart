@@ -325,7 +325,6 @@ class LiveKitBackend extends CallBackend {
     for (final participant in remoteParticipants) {
       if (participant.deviceId == null) continue;
       if (mustEncrypt) {
-        await groupCall.client.userDeviceKeysLoading;
         final deviceKey = groupCall
             .client
             .userDeviceKeys[participant.userId]
