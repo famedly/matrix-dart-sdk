@@ -3303,6 +3303,254 @@ class Client extends MatrixApi {
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
   Map<String, DeviceKeysList> _userDeviceKeys = {};
 
+  Future<Map<String, DeviceKeysList>> fetchUserDeviceKeysLists(
+    Set<String> userIds, {
+    Duration? queryKeysTimeout,
+  }) async {
+    final userDeviceKeys = <String, DeviceKeysList>{};
+    final oldDeviceKeys = <String, DeviceKeysList>{};
+    // Get from database:
+    for (final userId in userIds) {
+      final cachedList = await database.getUserDeviceKeysList(userId, this);
+      if (cachedList != null) {
+        if (cachedList.outdated) {
+          oldDeviceKeys[userId] = cachedList;
+        } else {
+          userDeviceKeys[userId] = cachedList;
+        }
+      }
+    }
+
+    userIds.removeWhere(userDeviceKeys.containsKey);
+    if (userIds.isEmpty) return userDeviceKeys;
+
+    // Fetch the rest from the server:
+    final missingUserIds = {for (final userId in userIds) userId: <String>[]};
+    final response = await queryKeys(
+      missingUserIds,
+      timeout: queryKeysTimeout?.inMilliseconds,
+    );
+
+    if (!isLogged()) return userDeviceKeys;
+
+    final dbActions = <Future<dynamic> Function()>[];
+
+    final deviceKeys = response.deviceKeys;
+    if (deviceKeys != null) {
+      for (final rawDeviceKeyListEntry in deviceKeys.entries) {
+        final userId = rawDeviceKeyListEntry.key;
+        final userKeys = userDeviceKeys[userId] ??= DeviceKeysList(
+          userId,
+          this,
+        );
+        final oldKeys = Map<String, DeviceKeys>.from(userKeys.deviceKeys);
+        userKeys.deviceKeys = {};
+        for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
+          final deviceId = rawDeviceKeyEntry.key;
+
+          // Set the new device key for this device
+          final entry = DeviceKeys.fromMatrixDeviceKeys(
+            rawDeviceKeyEntry.value,
+            this,
+            oldKeys[deviceId]?.lastActive,
+          );
+          final ed25519Key = entry.ed25519Key;
+          final curve25519Key = entry.curve25519Key;
+          if (entry.isValid &&
+              deviceId == entry.deviceId &&
+              ed25519Key != null &&
+              curve25519Key != null) {
+            // Check if deviceId or deviceKeys are known
+            if (!oldKeys.containsKey(deviceId)) {
+              final oldPublicKeys = await database.deviceIdSeen(
+                userId,
+                deviceId,
+              );
+              if (oldPublicKeys != null &&
+                  oldPublicKeys != curve25519Key + ed25519Key) {
+                Logs().w(
+                  'Already seen Device ID has been added again. This might be an attack!',
+                );
+                continue;
+              }
+              final oldDeviceId = await database.publicKeySeen(ed25519Key);
+              if (oldDeviceId != null && oldDeviceId != deviceId) {
+                Logs().w(
+                  'Already seen ED25519 has been added again. This might be an attack!',
+                );
+                continue;
+              }
+              final oldDeviceId2 = await database.publicKeySeen(curve25519Key);
+              if (oldDeviceId2 != null && oldDeviceId2 != deviceId) {
+                Logs().w(
+                  'Already seen Curve25519 has been added again. This might be an attack!',
+                );
+                continue;
+              }
+              dbActions.add(() async {
+                await database.addSeenDeviceId(
+                  userId,
+                  deviceId,
+                  curve25519Key + ed25519Key,
+                );
+                await database.addSeenPublicKey(ed25519Key, deviceId);
+                await database.addSeenPublicKey(curve25519Key, deviceId);
+              });
+            }
+
+            // is this a new key or the same one as an old one?
+            // better store an update - the signatures might have changed!
+            final oldKey = oldKeys[deviceId];
+            if (oldKey == null ||
+                (oldKey.ed25519Key == entry.ed25519Key &&
+                    oldKey.curve25519Key == entry.curve25519Key)) {
+              if (oldKey != null) {
+                // be sure to save the verified status
+                entry.setDirectVerified(oldKey.directVerified);
+                entry.blocked = oldKey.blocked;
+                entry.validSignatures = oldKey.validSignatures;
+              }
+              userKeys.deviceKeys[deviceId] = entry;
+              if (deviceId == deviceID && entry.ed25519Key == fingerprintKey) {
+                // Always trust the own device
+                entry.setDirectVerified(true);
+              }
+              dbActions.add(
+                () => database.storeUserDeviceKey(
+                  userId,
+                  deviceId,
+                  json.encode(entry.toJson()),
+                  entry.directVerified,
+                  entry.blocked,
+                  entry.lastActive.millisecondsSinceEpoch,
+                ),
+              );
+            } else if (oldKeys.containsKey(deviceId)) {
+              // This shouldn't ever happen. The same device ID has gotten
+              // a new public key. So we ignore the update. TODO: ask krille
+              // if we should instead use the new key with unknown verified / blocked status
+              userKeys.deviceKeys[deviceId] = oldKeys[deviceId]!;
+            }
+          } else {
+            Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
+          }
+        }
+        // delete old/unused entries
+        for (final oldDeviceKeyEntry in oldKeys.entries) {
+          final deviceId = oldDeviceKeyEntry.key;
+          if (!userKeys.deviceKeys.containsKey(deviceId)) {
+            // we need to remove an old key
+            dbActions.add(() => database.removeUserDeviceKey(userId, deviceId));
+          }
+        }
+        userKeys.outdated = false;
+        dbActions.add(() => database.storeUserDeviceKeysInfo(userId, false));
+      }
+    }
+    // next we parse and persist the cross signing keys
+    final crossSigningTypes = {
+      'master': response.masterKeys,
+      'self_signing': response.selfSigningKeys,
+      'user_signing': response.userSigningKeys,
+    };
+    for (final crossSigningKeysEntry in crossSigningTypes.entries) {
+      final keyType = crossSigningKeysEntry.key;
+      final keys = crossSigningKeysEntry.value;
+      if (keys == null) {
+        continue;
+      }
+      for (final crossSigningKeyListEntry in keys.entries) {
+        final userId = crossSigningKeyListEntry.key;
+        final userKeys = userDeviceKeys[userId] ??= DeviceKeysList(
+          userId,
+          this,
+        );
+        final oldKeys = Map<String, CrossSigningKey>.from(
+          userKeys.crossSigningKeys,
+        );
+        userKeys.crossSigningKeys = {};
+        // add the types we aren't handling atm back
+        for (final oldEntry in oldKeys.entries) {
+          if (!oldEntry.value.usage.contains(keyType)) {
+            userKeys.crossSigningKeys[oldEntry.key] = oldEntry.value;
+          } else {
+            // There is a previous cross-signing key with  this usage, that we no
+            // longer need/use. Clear it from the database.
+            dbActions.add(
+              () => database.removeUserCrossSigningKey(userId, oldEntry.key),
+            );
+          }
+        }
+        final entry = CrossSigningKey.fromMatrixCrossSigningKey(
+          crossSigningKeyListEntry.value,
+          this,
+        );
+        final publicKey = entry.publicKey;
+        if (entry.isValid && publicKey != null) {
+          final oldKey = oldKeys[publicKey];
+          if (oldKey == null || oldKey.ed25519Key == entry.ed25519Key) {
+            if (oldKey != null) {
+              // be sure to save the verification status
+              entry.setDirectVerified(oldKey.directVerified);
+              if (oldKey.trustOnFirstUseSince != null) {
+                entry.trustOnFirstUse(
+                  since: oldKey.trustOnFirstUseSince,
+                  updateInDatabase: false,
+                );
+              }
+              entry.blocked = oldKey.blocked;
+              entry.validSignatures = oldKey.validSignatures;
+            }
+            userKeys.crossSigningKeys[publicKey] = entry;
+          } else {
+            // This shouldn't ever happen. The same device ID has gotten
+            // a new public key. So we ignore the update. TODO: ask krille
+            // if we should instead use the new key with unknown verified / blocked status
+            userKeys.crossSigningKeys[publicKey] = oldKey;
+          }
+          dbActions.add(
+            () => database.storeUserCrossSigningKey(
+              userId,
+              publicKey,
+              json.encode(entry.toJson()),
+              entry.directVerified,
+              entry.blocked,
+              trustOnFirstUseSince: entry.trustOnFirstUseSince,
+            ),
+          );
+        }
+        userDeviceKeys[userId]?.outdated = false;
+        dbActions.add(() => database.storeUserDeviceKeysInfo(userId, false));
+      }
+    }
+
+    // now process all the failures
+    if (response.failures != null) {
+      for (final failureDomain in response.failures?.keys ?? <String>[]) {
+        _keyQueryFailures[failureDomain] = DateTime.now();
+      }
+    }
+
+    if (dbActions.isNotEmpty) {
+      if (!isLogged()) return userDeviceKeys;
+      Logs().i(
+        'Updating user device keys in database... (${dbActions.length} operations)',
+      );
+      await runBenchmarked(
+        'Updating user device keys in database...',
+        () => database.transaction(() async {
+          for (final f in dbActions) {
+            await f();
+          }
+        }),
+      );
+    }
+
+    // For migration also add to the legacy cache:
+    this.userDeviceKeys.addAll(userDeviceKeys);
+    return userDeviceKeys;
+  }
+
   /// A list of all not verified and not blocked device keys. Clients should
   /// display a warning if this list is not empty and suggest the user to
   /// verify or block those devices.
