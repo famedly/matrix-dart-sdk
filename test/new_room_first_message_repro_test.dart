@@ -109,7 +109,6 @@ void main() {
       await client.database.transaction(() async {
         await client.handleSync(update, direction: Direction.f);
       });
-      await client.updateUserDeviceKeys();
     }
 
     /// Registers keys/query + keys/claim handlers which behave like a real
