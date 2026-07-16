@@ -649,7 +649,6 @@ void main() {
         return oldResp;
       };
       client.userDeviceKeys['@alice:example.com']!.outdated = true;
-      await client.updateUserDeviceKeys();
       expect(
         client.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS'],
         null,

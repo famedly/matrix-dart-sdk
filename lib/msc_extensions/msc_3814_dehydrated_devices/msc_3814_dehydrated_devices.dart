@@ -193,7 +193,6 @@ extension DehydratedDeviceHandler on Client {
       encryption.olmManager.ourDeviceId = device;
 
       // cross sign the device from our currently signed in device
-      await updateUserDeviceKeys(additionalUsers: {userID!});
       final keysToSign = <SignableKey>[
         userDeviceKeys[userID]!.deviceKeys[device]!,
       ];

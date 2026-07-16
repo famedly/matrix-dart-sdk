@@ -2587,31 +2587,18 @@ class Room {
 
   /// Returns all known device keys for all participants in this room.
   Future<List<DeviceKeys>> getUserDeviceKeys() async {
-    await client.userDeviceKeysLoading;
     final deviceKeys = <DeviceKeys>[];
     final users = await requestParticipants();
     users.removeWhere(
       (user) => ![Membership.invite, Membership.join].contains(user.membership),
     );
 
-    // Safety net: if we have participants we have never fetched the device
-    // keys of (e.g. their membership event came down while the room was only
-    // partially loaded or got lost in a gappy sync), fetch them now instead
-    // of silently encrypting without them, as they would otherwise never be
-    // able to decrypt any message in this room.
-    final missingUserIds = users
-        .map((user) => user.id)
-        .where((userId) => client.userDeviceKeys[userId] == null)
-        .toSet();
-    if (missingUserIds.isNotEmpty) {
-      Logs().i(
-        '[E2EE] Fetching device keys of ${missingUserIds.length} untracked users in $id before encrypting',
-      );
-      await client.updateUserDeviceKeys(additionalUsers: missingUserIds);
-    }
+    final userDeviceKeysLists = await client.fetchUserDeviceKeysLists(
+      users.map((user) => user.id).toSet(),
+    );
 
     for (final user in users) {
-      final userDeviceKeys = client.userDeviceKeys[user.id]?.deviceKeys.values;
+      final userDeviceKeys = userDeviceKeysLists[user.id]?.deviceKeys.values;
       if (userDeviceKeys != null) {
         deviceKeys.addAll(userDeviceKeys);
       }
