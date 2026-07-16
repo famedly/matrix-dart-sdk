@@ -384,8 +384,10 @@ class OlmManager {
     if (type != 0 && type != 1) {
       throw DecryptException(DecryptException.unknownMessageType);
     }
-    final device = client.userDeviceKeys[event.sender]?.deviceKeys.values
-        .firstWhereOrNull((d) => d.curve25519Key == senderKey);
+    final senderKeys = await client.fetchUserDeviceKeysList(event.sender);
+    final device = senderKeys?.deviceKeys.values.firstWhereOrNull(
+      (d) => d.curve25519Key == senderKey,
+    );
     final existingSessions = olmSessions[senderKey];
     Future<void> updateSessionUsage([OlmSession? session]) async {
       try {
@@ -528,11 +530,13 @@ class OlmManager {
   final Map<String, DateTime> _restoredOlmSessionsTime = {};
 
   Future<void> restoreOlmSession(String userId, String senderKey) async {
-    if (!client.userDeviceKeys.containsKey(userId)) {
+    final userKeys = await client.fetchUserDeviceKeysList(userId);
+    if (userKeys == null) {
       return;
     }
-    final device = client.userDeviceKeys[userId]!.deviceKeys.values
-        .firstWhereOrNull((d) => d.curve25519Key == senderKey);
+    final device = userKeys.deviceKeys.values.firstWhereOrNull(
+      (d) => d.curve25519Key == senderKey,
+    );
     if (device == null) {
       return;
     }
@@ -599,10 +603,9 @@ class OlmManager {
       final userId = userKeysEntry.key;
       for (final deviceKeysEntry in userKeysEntry.value.entries) {
         final deviceId = deviceKeysEntry.key;
-        final fingerprintKey =
-            client.userDeviceKeys[userId]!.deviceKeys[deviceId]!.ed25519Key;
-        final identityKey =
-            client.userDeviceKeys[userId]!.deviceKeys[deviceId]!.curve25519Key;
+        final fetchedKeys = await client.fetchUserDeviceKeysList(userId);
+        final fingerprintKey = fetchedKeys!.deviceKeys[deviceId]!.ed25519Key;
+        final identityKey = fetchedKeys.deviceKeys[deviceId]!.curve25519Key;
         for (final deviceKey in deviceKeysEntry.value.values) {
           if (fingerprintKey == null ||
               identityKey == null ||
@@ -745,7 +748,7 @@ class OlmManager {
       if (encryptedContent == null || encryption.olmDatabase == null) {
         return;
       }
-      final device = client.getUserDeviceKeysByCurve25519Key(
+      final device = await client.getUserDeviceKeysByCurve25519Key(
         encryptedContent.tryGet<String>('sender_key') ?? '',
       );
       if (device == null) {
