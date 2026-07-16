@@ -1850,7 +1850,6 @@ class CallSession {
       };
 
       if (mustEncrypt) {
-        await client.userDeviceKeysLoading;
         if (client.userDeviceKeys[remoteUserId]?.deviceKeys[remoteDeviceId] !=
             null) {
           await client.sendToDeviceEncrypted(
