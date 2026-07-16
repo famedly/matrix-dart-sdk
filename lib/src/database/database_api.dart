@@ -126,6 +126,8 @@ abstract class DatabaseApi {
 
   Future storeRoomAccountData(String roomId, BasicEvent event);
 
+  Future<DeviceKeysList?> getUserDeviceKeysList(String userId, Client client);
+
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client);
 
   Future<SSSSCache?> getSSSSCache(String type);
