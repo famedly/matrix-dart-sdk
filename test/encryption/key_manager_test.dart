@@ -126,9 +126,10 @@ void main() {
       sess = await client.encryption!.keyManager.createOutboundGroupSession(
         roomId,
       );
-      await client
-          .userDeviceKeys['@alice:example.com']!
-          .deviceKeys['JLAFKJWSCS']!
+      final aliceKeys = await client.fetchUserDeviceKeysLists({
+        '@alice:example.com',
+      });
+      await aliceKeys['@alice:example.com']!.deviceKeys['JLAFKJWSCS']!
           .setBlocked(true);
       await client.encryption!.keyManager.clearOrUseOutboundGroupSession(
         roomId,
@@ -137,9 +138,7 @@ void main() {
         client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
         false,
       );
-      await client
-          .userDeviceKeys['@alice:example.com']!
-          .deviceKeys['JLAFKJWSCS']!
+      await aliceKeys['@alice:example.com']!.deviceKeys['JLAFKJWSCS']!
           .setBlocked(false);
 
       // lazy-create if it would rotate
@@ -147,9 +146,7 @@ void main() {
         roomId,
       );
       final oldSessKey = sess.outboundGroupSession!.sessionKey;
-      await client
-          .userDeviceKeys['@alice:example.com']!
-          .deviceKeys['JLAFKJWSCS']!
+      await aliceKeys['@alice:example.com']!.deviceKeys['JLAFKJWSCS']!
           .setBlocked(true);
       await client.encryption!.keyManager.prepareOutboundGroupSession(roomId);
       expect(
@@ -164,9 +161,7 @@ void main() {
             oldSessKey,
         true,
       );
-      await client
-          .userDeviceKeys['@alice:example.com']!
-          .deviceKeys['JLAFKJWSCS']!
+      await aliceKeys['@alice:example.com']!.deviceKeys['JLAFKJWSCS']!
           .setBlocked(false);
 
       // rotate if too far in the past
@@ -208,9 +203,7 @@ void main() {
       sess.outboundGroupSession!.encrypt(
         'foxies',
       ); // so that the new device will have a different index
-      client
-          .userDeviceKeys['@alice:example.com']
-          ?.deviceKeys['NEWDEVICE'] = DeviceKeys.fromJson({
+      final newDevice = DeviceKeys.fromJson({
         'user_id': '@alice:example.com',
         'device_id': 'NEWDEVICE',
         'algorithms': [
@@ -231,10 +224,7 @@ void main() {
       await client.database.storeUserDeviceKey(
         '@alice:example.com',
         'NEWDEVICE',
-        jsonEncode(
-          client.userDeviceKeys['@alice:example.com']!.deviceKeys['NEWDEVICE']!
-              .toJson(),
-        ),
+        jsonEncode(newDevice.toJson()),
         false,
         false,
         DateTime.now().millisecondsSinceEpoch,
@@ -612,14 +602,17 @@ void main() {
       Logs().level = Level.warning;
 
       // Ensure the device came from sync
+      var aliceKeys = await client.fetchUserDeviceKeysLists({
+        '@alice:example.com',
+      });
       expect(
-        client.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS'] !=
-            null,
+        aliceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS'] != null,
         true,
       );
 
       // Alice removes her device
-      client.userDeviceKeys['@alice:example.com']?.deviceKeys.remove(
+      await client.database.removeUserDeviceKey(
+        '@alice:example.com',
         'JLAFKJWSCS',
       );
 
@@ -648,11 +641,10 @@ void main() {
         };
         return oldResp;
       };
-      client.userDeviceKeys['@alice:example.com']!.outdated = true;
-      expect(
-        client.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS'],
-        null,
-      );
+      await client.database.storeUserDeviceKeysInfo('@alice:example.com', true);
+      aliceKeys = await client.fetchUserDeviceKeysLists({'@alice:example.com'});
+      // Attack should be rejected: reused device ID with different keys is not stored
+      expect(aliceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS'], null);
     });
 
     test('dispose client', () async {

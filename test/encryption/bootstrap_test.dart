@@ -63,11 +63,10 @@ void main() {
         );
         final keyObj = vod.PkSigning.fromSecretKey(privateKey);
         final pubKey = keyObj.publicKey.toBase64();
+        final keys = await client.fetchUserDeviceKeysLists({client.userID!});
         expect(
           pubKey,
-          client.userDeviceKeys[client.userID]
-              ?.getCrossSigningKey(keyType)
-              ?.publicKey,
+          keys[client.userID!]?.getCrossSigningKey(keyType)?.publicKey,
         );
       }
 
@@ -113,11 +112,10 @@ void main() {
         );
         final keyObj = vod.PkSigning.fromSecretKey(privateKey);
         final pubKey = keyObj.publicKey.toBase64();
+        final keys = await client.fetchUserDeviceKeysLists({client.userID!});
         expect(
           pubKey,
-          client.userDeviceKeys[client.userID]
-              ?.getCrossSigningKey(keyType)
-              ?.publicKey,
+          keys[client.userID!]?.getCrossSigningKey(keyType)?.publicKey,
         );
       }
 
@@ -168,11 +166,10 @@ void main() {
           );
           final keyObj = vod.PkSigning.fromSecretKey(privateKey);
           final pubKey = keyObj.publicKey.toBase64();
+          final keys = await client.fetchUserDeviceKeysLists({client.userID!});
           expect(
             pubKey,
-            client.userDeviceKeys[client.userID]
-                ?.getCrossSigningKey(keyType)
-                ?.publicKey,
+            keys[client.userID!]?.getCrossSigningKey(keyType)?.publicKey,
           );
         }
 

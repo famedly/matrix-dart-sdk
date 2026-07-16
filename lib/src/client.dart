@@ -393,8 +393,15 @@ class Client extends MatrixApi {
   String get fingerprintKey => encryption?.fingerprintKey ?? '';
 
   /// Whether this session is unknown to others
-  bool get isUnknownSession =>
-      userDeviceKeys[userID]?.deviceKeys[deviceID]?.signed != true;
+  Future<bool> get isUnknownSession async {
+    final userId = userID;
+    final deviceId = deviceID;
+    if (userId == null || deviceId == null) return true;
+    final keys = await fetchUserDeviceKeysLists({userId});
+    final deviceKey = keys[userId]?.deviceKeys[deviceId];
+    if (deviceKey == null) return true;
+    return !(await deviceKey.signed);
+  }
 
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
@@ -1016,7 +1023,10 @@ class Client extends MatrixApi {
   /// server to answer this.
   Future<bool> userOwnsEncryptionKeys(String userId) async {
     if (userId == userID) return encryptionEnabled;
-    if (_userDeviceKeys[userId]?.deviceKeys.isNotEmpty ?? false) {
+    if ((await fetchUserDeviceKeysLists({
+          userId,
+        }))[userId]?.deviceKeys.isNotEmpty ??
+        false) {
       return true;
     }
     final keys = await queryKeys({userId: []});
@@ -2294,7 +2304,7 @@ class Client extends MatrixApi {
     }
 
     _id = accessToken = _syncFilterId = homeserver = _userID = _deviceID =
-        _deviceName = _prevBatch = _trackedUserIds = null;
+        _deviceName = _prevBatch = null;
     _rooms = [];
     _eventsPendingDecryption.clear();
     await encryption?.dispose();
@@ -2607,24 +2617,15 @@ class Client extends MatrixApi {
   Future<void> _handleDeviceListsEvents(DeviceListsUpdate deviceLists) async {
     if (deviceLists.changed is List) {
       for (final userId in deviceLists.changed ?? []) {
-        final userKeys = _userDeviceKeys[userId];
-        if (userKeys != null) {
-          userKeys.outdated = true;
-          await database.storeUserDeviceKeysInfo(userId, true);
-        } else {
-          // Per spec `changed` also includes users who *now* share an
-          // encrypted room with us. We might not know about them yet, for
-          // example when their membership event was truncated out of a
-          // limited (gappy) sync timeline. Track them so that the next
-          // `updateUserDeviceKeys()` fetches their device keys.
-          _trackedUserIds?.add(userId);
-        }
+        // Mark as outdated in DB so the next fetchUserDeviceKeysLists call
+        // will re-fetch from the server.
+        await database.storeUserDeviceKeysInfo(userId, true);
       }
       for (final userId in deviceLists.left ?? []) {
-        if (_userDeviceKeys.containsKey(userId)) {
-          _userDeviceKeys.remove(userId);
-          _trackedUserIds?.remove(userId);
-        }
+        // We do not do that yet but we keep the key to later compare it to
+        // avoid MITM attacks. However, we mark it as outdated so if we
+        // want to access the key again, we need to update it.
+        await database.storeUserDeviceKeysInfo(userId, true);
       }
     }
   }
@@ -2899,11 +2900,6 @@ class Client extends MatrixApi {
             jsonEncode(event.toJson()),
           );
           continue;
-        } else {
-          // Encryption has been enabled in a room -> Reset tracked user IDs so
-          // sync they can be calculated again.
-          Logs().i('End to end encryption enabled in', room.id);
-          _trackedUserIds = null;
         }
       }
 
@@ -3139,19 +3135,6 @@ class Client extends MatrixApi {
           if (!room.partial || importantStateEvents.contains(event.type)) {
             room.setState(event);
           }
-
-          // New members must be added to the tracked user IDs for encryption
-          // even if the room is only partially loaded, as otherwise their
-          // device keys are never fetched and they never receive room keys:
-          if (room.encrypted &&
-              room.membership == Membership.join &&
-              event.type == EventTypes.RoomMember &&
-              {
-                'join',
-                'invite',
-              }.contains(event.content.tryGet<String>('membership'))) {
-            _trackedUserIds?.add(stateKey);
-          }
         }
 
         if (type != EventUpdateType.timeline) break;
@@ -3333,7 +3316,7 @@ class Client extends MatrixApi {
           this,
         );
         final oldKeys = Map<String, DeviceKeys>.from(userKeys.deviceKeys);
-        userKeys.deviceKeys = {};
+        userKeys.deviceKeys.clear();
         for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
           final deviceId = rawDeviceKeyEntry.key;
 
@@ -3457,7 +3440,7 @@ class Client extends MatrixApi {
         final oldKeys = Map<String, CrossSigningKey>.from(
           userKeys.crossSigningKeys,
         );
-        userKeys.crossSigningKeys = {};
+        userKeys.crossSigningKeys.clear();
         // add the types we aren't handling atm back
         for (final oldEntry in oldKeys.entries) {
           if (!oldEntry.value.usage.contains(keyType)) {
@@ -3540,35 +3523,34 @@ class Client extends MatrixApi {
   /// A list of all not verified and not blocked device keys. Clients should
   /// display a warning if this list is not empty and suggest the user to
   /// verify or block those devices.
-  List<DeviceKeys> get unverifiedDevices {
+  Future<List<DeviceKeys>> fetchUnverifiedDevices() async {
     final userId = userID;
     if (userId == null) return [];
-    return userDeviceKeys[userId]?.deviceKeys.values
-            .where((deviceKey) => !deviceKey.verified && !deviceKey.blocked)
-            .toList() ??
-        [];
+    final keys = await fetchUserDeviceKeysLists({userId});
+    final deviceKeys = keys[userId]?.deviceKeys.values;
+    if (deviceKeys == null) return [];
+    final unverified = <DeviceKeys>[];
+    for (final deviceKey in deviceKeys) {
+      if (!await deviceKey.verified && !deviceKey.blocked) {
+        unverified.add(deviceKey);
+      }
+    }
+    return unverified;
   }
 
   /// Gets user device keys by its curve25519 key. Returns null if it isn't found
-  DeviceKeys? getUserDeviceKeysByCurve25519Key(String senderKey) {
-    for (final user in userDeviceKeys.values) {
+  Future<DeviceKeys?> getUserDeviceKeysByCurve25519Key(String senderKey) async {
+    final allKeys = await database.getUserDeviceKeys(this);
+    for (final user in allKeys.values) {
       final device = user.deviceKeys.values.firstWhereOrNull(
         (e) => e.curve25519Key == senderKey,
       );
-      if (device != null) {
-        return device;
-      }
+      if (device != null) return device;
     }
     return null;
   }
 
   final Map<String, DateTime> _keyQueryFailures = {};
-
-  /// These are the user IDs we share an encrypted room with and need to track
-  /// the devices from, cached here for performance reasons.
-  /// It gets initialized after the first sync of every
-  /// instance and then updated on member changes or sync device changes.
-  Set<String>? _trackedUserIds;
 
   bool _toDeviceQueueNeedsProcessing = true;
 
@@ -3677,13 +3659,15 @@ class Client extends MatrixApi {
     // Don't send this message to blocked devices, and if specified onlyVerified
     // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
-      deviceKeys.removeWhere(
-        (DeviceKeys deviceKeys) =>
-            deviceKeys.blocked ||
-            (deviceKeys.userId == userID && deviceKeys.deviceId == deviceID) ||
-            (onlyVerified && !deviceKeys.verified),
-      );
-      if (deviceKeys.isEmpty) return;
+      final keysToSend = <DeviceKeys>[];
+      for (final dk in deviceKeys) {
+        if (dk.blocked) continue;
+        if (dk.userId == userID && dk.deviceId == deviceID) continue;
+        if (onlyVerified && !(await dk.verified)) continue;
+        keysToSend.add(dk);
+      }
+      if (keysToSend.isEmpty) return;
+      deviceKeys = keysToSend;
     }
 
     // So that we can guarantee order of encrypted to_device messages to be preserved we
@@ -3850,7 +3834,6 @@ class Client extends MatrixApi {
   Future<void> clearCache() async {
     await abortSync();
     _prevBatch = null;
-    _trackedUserIds = null;
     rooms.clear();
     await database.clearCache();
     encryption?.keyManager.clearOutboundGroupSessions();

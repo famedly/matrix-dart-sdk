@@ -20,8 +20,9 @@ class CrossSigning {
     ) async {
       try {
         final keyObj = vod.PkSigning.fromSecretKey(secret);
+        final ownKeys = await client.fetchUserDeviceKeysLists({client.userID!});
         return keyObj.publicKey.toBase64() ==
-            client.userDeviceKeys[client.userID]!.selfSigningKey!.ed25519Key;
+            ownKeys[client.userID]!.selfSigningKey!.ed25519Key;
       } catch (_) {
         return false;
       }
@@ -31,8 +32,9 @@ class CrossSigning {
     ) async {
       try {
         final keyObj = vod.PkSigning.fromSecretKey(secret);
+        final ownKeys = await client.fetchUserDeviceKeysLists({client.userID!});
         return keyObj.publicKey.toBase64() ==
-            client.userDeviceKeys[client.userID]!.userSigningKey!.ed25519Key;
+            ownKeys[client.userID]!.userSigningKey!.ed25519Key;
       } catch (_) {
         return false;
       }
@@ -85,12 +87,12 @@ class CrossSigning {
     } catch (e) {
       masterPubkey = null;
     }
-    final userDeviceKeys =
-        client.userDeviceKeys[client.userID]?.deviceKeys[client.deviceID];
+    final ownKeys = await client.fetchUserDeviceKeysLists({client.userID!});
+    final userDeviceKeys = ownKeys[client.userID]?.deviceKeys[client.deviceID];
     if (masterPubkey == null || userDeviceKeys == null) {
       throw Exception('Master or user keys not found');
     }
-    final masterKey = client.userDeviceKeys[client.userID]?.masterKey;
+    final masterKey = ownKeys[client.userID]?.masterKey;
     if (masterKey == null || masterKey.ed25519Key != masterPubkey) {
       throw Exception('Master pubkey key doesn\'t match');
     }
@@ -112,7 +114,8 @@ class CrossSigning {
     final signedKeys = <MatrixSignableKey>[];
     Uint8List? selfSigningKey;
     Uint8List? userSigningKey;
-    final userKeys = client.userDeviceKeys[client.userID];
+    final ownKeys = await client.fetchUserDeviceKeysLists({client.userID!});
+    final userKeys = ownKeys[client.userID];
     if (userKeys == null) {
       throw Exception('[sign] keys are not in cache but sign was called');
     }

@@ -249,7 +249,7 @@ class KeyVerification {
             : null);
   }
 
-  List<String> get knownVerificationMethods {
+  Future<List<String>> get knownVerificationMethods async {
     final methods = <String>{};
     if (client.verificationMethods.contains(KeyVerificationMethod.numbers) ||
         client.verificationMethods.contains(KeyVerificationMethod.emoji)) {
@@ -257,9 +257,12 @@ class KeyVerification {
     }
 
     /// `qrCanWork` -  qr cannot work if we are verifying another master key but our own is unverified
-    final qrCanWork =
-        (userId == client.userID) ||
-        ((client.userDeviceKeys[client.userID]?.masterKey?.verified ?? false));
+    final ownKeys = await client.fetchUserDeviceKeysLists({
+      if (client.userID != null) client.userID!,
+    });
+    final ownMasterVerified =
+        await ownKeys[client.userID]?.masterKey?.verified ?? false;
+    final qrCanWork = (userId == client.userID) || ownMasterVerified;
 
     if (client.verificationMethods.contains(KeyVerificationMethod.qrShow) &&
         qrCanWork) {
@@ -308,7 +311,7 @@ class KeyVerification {
 
   Future<void> sendRequest() async {
     await send(EventTypes.KeyVerificationRequest, {
-      'methods': knownVerificationMethods,
+      'methods': await knownVerificationMethods,
       if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
     startedVerification = true;
@@ -322,7 +325,7 @@ class KeyVerification {
     }
     if (encryption.crossSigning.enabled &&
         !(await encryption.crossSigning.isCached()) &&
-        !client.isUnknownSession) {
+        !await client.isUnknownSession) {
       setState(KeyVerificationState.askSSSS);
       _nextAction = 'request';
     } else {
@@ -332,13 +335,15 @@ class KeyVerification {
 
   bool _handlePayloadLock = false;
 
-  QRMode getOurQRMode() {
+  Future<QRMode> getOurQRMode() async {
     var mode = QRMode.verifyOtherUser;
     if (client.userID == userId) {
+      final ownKeys = await client.fetchUserDeviceKeysLists({
+        if (client.userID != null) client.userID!,
+      });
       if (client.encryption != null &&
           client.encryption!.enabled &&
-          (client.userDeviceKeys[client.userID]?.masterKey?.directVerified ??
-              false)) {
+          (ownKeys[client.userID]?.masterKey?.directVerified ?? false)) {
         mode = QRMode.verifySelfTrusted;
       } else {
         mode = QRMode.verifySelfUntrusted;
@@ -360,6 +365,9 @@ class KeyVerification {
     }
     _handlePayloadLock = true;
     Logs().i('[Key Verification] Received type $type: $payload');
+    // Fetch once upfront to avoid multiple DB round-trips within the switch.
+    final knownMethods = await knownVerificationMethods;
+    final userKeys = await client.fetchUserDeviceKeysLists({userId});
     try {
       var thisLastStep = lastStep;
       switch (type) {
@@ -383,8 +391,8 @@ class KeyVerification {
           }
 
           // ensure we have the other sides keys
-          if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
-            if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
+          if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
+            if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
               await cancel('im.fluffychat.unknown_device');
               return;
             }
@@ -393,7 +401,7 @@ class KeyVerification {
           oppositePossibleMethods = List<String>.from(payload['methods']);
           // verify it has a method we can use
           possibleMethods = _calculatePossibleMethods(
-            knownVerificationMethods,
+            knownMethods,
             payload['methods'],
           );
           if (possibleMethods.isEmpty) {
@@ -410,8 +418,7 @@ class KeyVerification {
             transactionId ??= eventId ?? payload['transaction_id'];
             // and broadcast the cancel to the other devices
             final devices = List<DeviceKeys>.from(
-              client.userDeviceKeys[userId]?.deviceKeys.values ??
-                  Iterable.empty(),
+              userKeys[userId]?.deviceKeys.values ?? Iterable.empty(),
             );
             devices.removeWhere(
               (d) => {deviceId, client.deviceID}.contains(d.deviceId),
@@ -430,8 +437,8 @@ class KeyVerification {
           _deviceId ??= payload['from_device'];
 
           // ensure we have the other sides keys
-          if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
-            if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
+          if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
+            if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
               await cancel('im.fluffychat.unknown_device');
               return;
             }
@@ -439,7 +446,7 @@ class KeyVerification {
 
           oppositePossibleMethods = List<String>.from(payload['methods']);
           possibleMethods = _calculatePossibleMethods(
-            knownVerificationMethods,
+            knownMethods,
             payload['methods'],
           );
           if (possibleMethods.isEmpty) {
@@ -456,8 +463,8 @@ class KeyVerification {
 
           // play nice with sdks < 0.20.5
           // https://matrix.to/#/!KBwfdofYJUmnsVoqwn:famedly.de/$wlHXlLQJdfrqKAF5KkuQrXydwOhY_uyqfH4ReasZqnA?via=neko.dev&via=famedly.de&via=lihotzki.de
-          if (!isQrSupported(knownVerificationMethods, payload['methods'])) {
-            if (knownVerificationMethods.contains(EventTypes.Sas)) {
+          if (!isQrSupported(knownMethods, payload['methods'])) {
+            if (knownMethods.contains(EventTypes.Sas)) {
               final method = _method = _makeVerificationMethod(
                 possibleMethods.first,
                 this,
@@ -503,7 +510,7 @@ class KeyVerification {
           ]))) {
             return; // abort
           }
-          if (!knownVerificationMethods.contains(payload['method'])) {
+          if (!knownMethods.contains(payload['method'])) {
             await cancel('m.unknown_method');
             return;
           }
@@ -516,8 +523,8 @@ class KeyVerification {
           }
 
           // ensure we have the other sides keys
-          if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
-            if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
+          if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
+            if (userKeys[userId]?.deviceKeys[deviceId!] == null) {
               await cancel('im.fluffychat.unknown_device');
               return;
             }
@@ -624,16 +631,17 @@ class KeyVerification {
     }
     setState(KeyVerificationState.waitingAccept);
     if (lastStep == EventTypes.KeyVerificationRequest) {
-      final copyKnownVerificationMethods = List<String>.from(
-        knownVerificationMethods,
-      );
+      final knownMethods = await knownVerificationMethods;
+      final copyKnownVerificationMethods = List<String>.from(knownMethods);
       // qr code only works when atleast one side has verified master key
       if (userId == client.userID) {
-        if (!(client.userDeviceKeys[client.userID]?.deviceKeys[deviceId]
+        final ownUserKeys = await client.fetchUserDeviceKeysLists({
+          if (client.userID != null) client.userID!,
+        });
+        if (!(await ownUserKeys[client.userID]?.deviceKeys[deviceId]
                     ?.hasValidSignatureChain(verifiedByTheirMasterKey: true) ??
                 false) &&
-            !(client.userDeviceKeys[client.userID]?.masterKey?.verified ??
-                false)) {
+            !(await ownUserKeys[client.userID]?.masterKey?.verified ?? false)) {
           copyKnownVerificationMethods.removeWhere(
             (element) => element.startsWith('m.qr_code'),
           );
@@ -758,7 +766,9 @@ class KeyVerification {
   ) async {
     _verifiedDevices = <SignableKey>[];
 
-    final userDeviceKey = client.userDeviceKeys[userId];
+    final userDeviceKey = (await client.fetchUserDeviceKeysLists({
+      userId,
+    }))[userId];
     if (userDeviceKey == null) {
       await cancel('m.key_mismatch');
       return;
@@ -778,7 +788,7 @@ class KeyVerification {
     }
     // okay, we reached this far, so all the devices are verified!
     var verifiedMasterKey = false;
-    final wasUnknownSession = client.isUnknownSession;
+    final wasUnknownSession = await client.isUnknownSession;
     for (final key in _verifiedDevices) {
       await key.setVerified(
         true,
@@ -819,9 +829,9 @@ class KeyVerification {
   /// shower is true only for reciprocated verifications (shower side)
   Future<void> verifyKeysQR(SignableKey key, {bool shower = true}) async {
     var verifiedMasterKey = false;
-    final wasUnknownSession = client.isUnknownSession;
+    final wasUnknownSession = await client.isUnknownSession;
 
-    key.setDirectVerified(true);
+    await key.setVerified(true, false);
     if (key is CrossSigningKey && key.usage.contains('master')) {
       verifiedMasterKey = true;
     }
@@ -939,19 +949,22 @@ class KeyVerification {
           EventTypes.KeyVerificationRequest,
           EventTypes.KeyVerificationCancel,
         }.contains(type)) {
-          final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys.values
-              .where(
-                (deviceKey) => deviceKey.hasValidSignatureChain(
-                  verifiedByTheirMasterKey: true,
-                ),
-              );
+          final userDeviceKeys = (await client.fetchUserDeviceKeysLists({
+            userId,
+          }))[userId];
+          final deviceKeysToSend = <DeviceKeys>[];
+          if (userDeviceKeys != null) {
+            for (final deviceKey in userDeviceKeys.deviceKeys.values) {
+              if (await deviceKey.hasValidSignatureChain(
+                verifiedByTheirMasterKey: true,
+              )) {
+                deviceKeysToSend.add(deviceKey);
+              }
+            }
+          }
 
-          if (deviceKeys != null) {
-            await client.sendToDeviceEncrypted(
-              deviceKeys.toList(),
-              type,
-              payload,
-            );
+          if (deviceKeysToSend.isNotEmpty) {
+            await client.sendToDeviceEncrypted(deviceKeysToSend, type, payload);
           }
         } else {
           Logs().e(
@@ -959,9 +972,12 @@ class KeyVerification {
           );
         }
       } else {
-        if (client.userDeviceKeys[userId]?.deviceKeys[deviceId] != null) {
+        final userDeviceKeys = (await client.fetchUserDeviceKeysLists({
+          userId,
+        }))[userId];
+        if (userDeviceKeys?.deviceKeys[deviceId] != null) {
           await client.sendToDeviceEncrypted(
-            [client.userDeviceKeys[userId]!.deviceKeys[deviceId]!],
+            [userDeviceKeys!.deviceKeys[deviceId]!],
             type,
             payload,
           );
@@ -1000,10 +1016,13 @@ class KeyVerification {
     if (utf8.decode(data.sublist(10, 10 + encodedTxnLen)) != transactionId) {
       return false;
     }
-    final keys = client.userDeviceKeys;
 
-    final ownKeys = keys[client.userID];
-    final otherUserKeys = keys[userId];
+    final ownKeys = (await client.fetchUserDeviceKeysLists({
+      client.userID!,
+    }))[client.userID!];
+    final otherUserKeys = (await client.fetchUserDeviceKeysLists({
+      userId,
+    }))[userId];
     final ownMasterKey = ownKeys?.getCrossSigningKey('master');
     final ownDeviceKey = ownKeys?.getKey(client.deviceID!);
     final ownOtherDeviceKey = ownKeys?.getKey(deviceId!);
@@ -1021,7 +1040,7 @@ class KeyVerification {
       QRMode.verifyOtherUser,
       QRMode.verifySelfUntrusted,
     }.contains(remoteQrMode)) {
-      if (!(ownMasterKey?.verified ?? false)) {
+      if (!(await ownMasterKey?.verified ?? false)) {
         Logs().e(
           '[KeyVerification] verifyQrData because you were in mode 0/2 and had untrusted msk',
         );
@@ -1059,10 +1078,13 @@ class KeyVerification {
   }
 
   Future<(String, String)?> getKeys(QRMode mode) async {
-    final keys = client.userDeviceKeys;
+    final allKeys = await client.fetchUserDeviceKeysLists({
+      userId,
+      if (client.userID != null) client.userID!,
+    });
 
-    final ownKeys = keys[client.userID];
-    final otherUserKeys = keys[userId];
+    final ownKeys = allKeys[client.userID];
+    final otherUserKeys = allKeys[userId];
     final ownDeviceKey = ownKeys?.getKey(client.deviceID!);
     final ownMasterKey = ownKeys?.getCrossSigningKey('master');
     final otherDeviceKey = otherUserKeys?.getKey(deviceId!);
@@ -1073,13 +1095,13 @@ class KeyVerification {
         otherMasterKey != null) {
       // we already have this check when sending `knownVerificationMethods`, but
       // just to be safe anyway
-      if (ownMasterKey.verified) {
+      if (await ownMasterKey.verified) {
         return (ownMasterKey.ed25519Key!, otherMasterKey.ed25519Key!);
       }
     } else if (mode == QRMode.verifySelfTrusted &&
         ownMasterKey != null &&
         otherDeviceKey != null) {
-      if (ownMasterKey.verified) {
+      if (await ownMasterKey.verified) {
         return (ownMasterKey.ed25519Key!, otherDeviceKey.ed25519Key!);
       }
     } else if (mode == QRMode.verifySelfUntrusted &&
@@ -1097,7 +1119,7 @@ class KeyVerification {
       uc.secureRandomBytes(11),
     );
 
-    final mode = getOurQRMode();
+    final mode = await getOurQRMode();
     data.addAll(ascii.encode(prefix));
     data.add(version);
     data.add(mode.code);
@@ -1181,16 +1203,19 @@ class _KeyVerificationMethodQRReciprocate extends _KeyVerificationMethod {
   Future<void> acceptQRScanConfirmation() async {
     // secret validation already done in validateStart
 
-    final ourQRMode = request.getOurQRMode();
+    final ourQRMode = await request.getOurQRMode();
     SignableKey? keyToVerify;
+    final allKeys = await client.fetchUserDeviceKeysLists({
+      request.userId,
+      if (client.userID != null) client.userID!,
+    });
 
     if (ourQRMode == QRMode.verifyOtherUser) {
-      keyToVerify = client.userDeviceKeys[request.userId]?.masterKey;
+      keyToVerify = allKeys[request.userId]?.masterKey;
     } else if (ourQRMode == QRMode.verifySelfTrusted) {
-      keyToVerify =
-          client.userDeviceKeys[client.userID]?.deviceKeys[request.deviceId];
+      keyToVerify = allKeys[client.userID]?.deviceKeys[request.deviceId];
     } else if (ourQRMode == QRMode.verifySelfUntrusted) {
-      keyToVerify = client.userDeviceKeys[client.userID]?.masterKey;
+      keyToVerify = allKeys[client.userID]?.masterKey;
     }
     if (keyToVerify != null) {
       await request.verifyKeysQR(keyToVerify, shower: true);
@@ -1506,8 +1531,10 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     );
     keyList.add(deviceKeyId);
 
-    final masterKey = client.userDeviceKeys[client.userID]?.masterKey;
-    if (masterKey != null && masterKey.verified) {
+    final masterKey = (await client.fetchUserDeviceKeysLists({
+      if (client.userID != null) client.userID!,
+    }))[client.userID]?.masterKey;
+    if (masterKey != null && await masterKey.verified) {
       // we have our own master key verified, let's send it!
       final masterKeyId = 'ed25519:${masterKey.publicKey}';
       mac[masterKeyId] = _calculateMac(
@@ -1535,7 +1562,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       return;
     }
 
-    if (!client.userDeviceKeys.containsKey(request.userId)) {
+    final userKeys = await client.fetchUserDeviceKeysLists({request.userId});
+    if (!userKeys.containsKey(request.userId)) {
       await request.cancel('m.key_mismatch');
       return;
     }

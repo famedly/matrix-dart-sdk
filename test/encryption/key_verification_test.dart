@@ -94,11 +94,15 @@ void main() async {
       // because then we can easily intercept the payloads and inject in the other client
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
-      client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-        false,
-      );
-      final req1 = await client1.userDeviceKeys[client2.userID]!
-          .startVerification(newDirectChatEnableEncryption: false);
+      await (await client1.fetchUserDeviceKeysLists({
+        client1.userID!,
+      }))[client1.userID!]!.masterKey!.setVerified(false, false);
+      final req1 =
+          await (await client1.fetchUserDeviceKeysLists({
+            client2.userID!,
+          }))[client2.userID!]!.startVerification(
+            newDirectChatEnableEncryption: false,
+          );
       await FakeMatrixApi.firstWhere(
         (e) => e.startsWith(
           '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message',
@@ -241,17 +245,15 @@ void main() async {
       expect(req1.state, KeyVerificationState.done);
       expect(req2.state, KeyVerificationState.done);
       expect(
-        client1
-            .userDeviceKeys[client2.userID]
-            ?.deviceKeys[client2.deviceID]
-            ?.directVerified,
+        (await client1.fetchUserDeviceKeysLists({
+          client2.userID!,
+        }))[client2.userID!]?.deviceKeys[client2.deviceID]?.directVerified,
         true,
       );
       expect(
-        client2
-            .userDeviceKeys[client1.userID]
-            ?.deviceKeys[client1.deviceID]
-            ?.directVerified,
+        (await client2.fetchUserDeviceKeysLists({
+          client1.userID!,
+        }))[client1.userID!]?.deviceKeys[client1.deviceID]?.directVerified,
         true,
       );
       await client1.encryption!.keyVerificationManager.cleanup();
@@ -259,12 +261,16 @@ void main() async {
     });
 
     test('ask SSSS start', () async {
-      client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-        true,
-      );
+      await (await client1.fetchUserDeviceKeysLists({
+        client1.userID!,
+      }))[client1.userID!]!.masterKey!.setVerified(true, false);
       await client1.encryption!.ssss.clearCache();
-      final req1 = await client1.userDeviceKeys[client2.userID]!
-          .startVerification(newDirectChatEnableEncryption: false);
+      final req1 =
+          await (await client1.fetchUserDeviceKeysLists({
+            client2.userID!,
+          }))[client2.userID!]!.startVerification(
+            newDirectChatEnableEncryption: false,
+          );
       expect(req1.state, KeyVerificationState.askSSSS);
       await req1.openSSSS(recoveryKey: ssssKey);
       await FakeMatrixApi.firstWhere(
@@ -281,15 +287,19 @@ void main() async {
     test('ask SSSS end', () async {
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
-      client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-        false,
-      );
+      await (await client1.fetchUserDeviceKeysLists({
+        client1.userID!,
+      }))[client1.userID!]!.masterKey!.setVerified(false, false);
       // the other one has to have their master key verified to trigger asking for ssss
-      client2.userDeviceKeys[client2.userID]!.masterKey!.setDirectVerified(
-        true,
-      );
-      final req1 = await client1.userDeviceKeys[client2.userID]!
-          .startVerification(newDirectChatEnableEncryption: false);
+      await (await client2.fetchUserDeviceKeysLists({
+        client2.userID!,
+      }))[client2.userID!]!.masterKey!.setVerified(true, false);
+      final req1 =
+          await (await client1.fetchUserDeviceKeysLists({
+            client2.userID!,
+          }))[client2.userID!]!.startVerification(
+            newDirectChatEnableEncryption: false,
+          );
       await FakeMatrixApi.firstWhere(
         (e) => e.startsWith(
           '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message',
@@ -382,9 +392,9 @@ void main() async {
       }
 
       // alright, they match
-      client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-        true,
-      );
+      await (await client1.fetchUserDeviceKeysLists({
+        client1.userID!,
+      }))[client1.userID!]!.masterKey!.setVerified(true, false);
       await client1.encryption!.ssss.clearCache();
 
       // send mac
@@ -431,11 +441,15 @@ void main() async {
     test('reject verification', () async {
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
-      client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-        false,
-      );
-      final req1 = await client1.userDeviceKeys[client2.userID]!
-          .startVerification(newDirectChatEnableEncryption: false);
+      await (await client1.fetchUserDeviceKeysLists({
+        client1.userID!,
+      }))[client1.userID!]!.masterKey!.setVerified(false, false);
+      final req1 =
+          await (await client1.fetchUserDeviceKeysLists({
+            client2.userID!,
+          }))[client2.userID!]!.startVerification(
+            newDirectChatEnableEncryption: false,
+          );
       await FakeMatrixApi.firstWhere(
         (e) => e.startsWith(
           '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message',
@@ -469,11 +483,15 @@ void main() async {
     test('reject sas', () async {
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
-      client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-        false,
-      );
-      final req1 = await client1.userDeviceKeys[client2.userID]!
-          .startVerification(newDirectChatEnableEncryption: false);
+      await (await client1.fetchUserDeviceKeysLists({
+        client1.userID!,
+      }))[client1.userID!]!.masterKey!.setVerified(false, false);
+      final req1 =
+          await (await client1.fetchUserDeviceKeysLists({
+            client2.userID!,
+          }))[client2.userID!]!.startVerification(
+            newDirectChatEnableEncryption: false,
+          );
       await FakeMatrixApi.firstWhere(
         (e) => e.startsWith(
           '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message',
@@ -574,11 +592,15 @@ void main() async {
     test('other device accepted', () async {
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
-      client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-        false,
-      );
-      final req1 = await client1.userDeviceKeys[client2.userID]!
-          .startVerification(newDirectChatEnableEncryption: false);
+      await (await client1.fetchUserDeviceKeysLists({
+        client1.userID!,
+      }))[client1.userID!]!.masterKey!.setVerified(false, false);
+      final req1 =
+          await (await client1.fetchUserDeviceKeysLists({
+            client2.userID!,
+          }))[client2.userID!]!.startVerification(
+            newDirectChatEnableEncryption: false,
+          );
       await FakeMatrixApi.firstWhere(
         (e) => e.startsWith(
           '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message',
@@ -623,27 +645,35 @@ void main() async {
 
     test('Run qr verification mode 0, ssss start', () async {
       expect(
-        client1.userDeviceKeys[client2.userID]?.masterKey!.directVerified,
+        (await client1.fetchUserDeviceKeysLists({
+          client2.userID!,
+        }))[client2.userID!]?.masterKey!.directVerified,
         false,
       );
       expect(
-        client2.userDeviceKeys[client1.userID]?.masterKey!.directVerified,
+        (await client2.fetchUserDeviceKeysLists({
+          client1.userID!,
+        }))[client1.userID!]?.masterKey!.directVerified,
         false,
       );
       // for a full run we test in-room verification in a cleartext room
       // because then we can easily intercept the payloads and inject in the other client
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
-      client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-        true,
-      );
-      client2.userDeviceKeys[client2.userID]!.masterKey!.setDirectVerified(
-        true,
-      );
+      await (await client1.fetchUserDeviceKeysLists({
+        client1.userID!,
+      }))[client1.userID!]!.masterKey!.setVerified(true, false);
+      await (await client2.fetchUserDeviceKeysLists({
+        client2.userID!,
+      }))[client2.userID!]!.masterKey!.setVerified(true, false);
       await client1.encryption!.ssss.clearCache();
 
-      final req1 = await client1.userDeviceKeys[client2.userID]!
-          .startVerification(newDirectChatEnableEncryption: false);
+      final req1 =
+          await (await client1.fetchUserDeviceKeysLists({
+            client2.userID!,
+          }))[client2.userID!]!.startVerification(
+            newDirectChatEnableEncryption: false,
+          );
 
       expect(req1.state, KeyVerificationState.askSSSS);
       await req1.openSSSS(recoveryKey: ssssKey);
@@ -727,11 +757,15 @@ void main() async {
       expect(req2.state, KeyVerificationState.done);
 
       expect(
-        client1.userDeviceKeys[client2.userID]?.masterKey!.directVerified,
+        (await client1.fetchUserDeviceKeysLists({
+          client2.userID!,
+        }))[client2.userID!]?.masterKey!.directVerified,
         true,
       );
       expect(
-        client2.userDeviceKeys[client1.userID]?.masterKey!.directVerified,
+        (await client2.fetchUserDeviceKeysLists({
+          client1.userID!,
+        }))[client1.userID!]?.masterKey!.directVerified,
         true,
       );
 
@@ -746,12 +780,15 @@ void main() async {
         // because then we can easily intercept the payloads and inject in the other client
         FakeMatrixApi.calledEndpoints.clear();
         // make sure our master key is *not* verified to not triger SSSS for now
-        client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-          false,
-        );
-
-        final req1 = await client1.userDeviceKeys[client2.userID]!
-            .startVerification(newDirectChatEnableEncryption: false);
+        await (await client1.fetchUserDeviceKeysLists({
+          client1.userID!,
+        }))[client1.userID!]!.masterKey!.setVerified(false, false);
+        final req1 =
+            await (await client1.fetchUserDeviceKeysLists({
+              client2.userID!,
+            }))[client2.userID!]!.startVerification(
+              newDirectChatEnableEncryption: false,
+            );
         await FakeMatrixApi.firstWhere(
           (e) => e.startsWith(
             '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message',
@@ -813,12 +850,15 @@ void main() async {
         // because then we can easily intercept the payloads and inject in the other client
         FakeMatrixApi.calledEndpoints.clear();
         // make sure our master key is *not* verified to not triger SSSS for now
-        client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-          false,
-        );
-
-        final req1 = await client1.userDeviceKeys[client2.userID]!
-            .startVerification(newDirectChatEnableEncryption: false);
+        await (await client1.fetchUserDeviceKeysLists({
+          client1.userID!,
+        }))[client1.userID!]!.masterKey!.setVerified(false, false);
+        final req1 =
+            await (await client1.fetchUserDeviceKeysLists({
+              client2.userID!,
+            }))[client2.userID!]!.startVerification(
+              newDirectChatEnableEncryption: false,
+            );
         await FakeMatrixApi.firstWhere(
           (e) => e.startsWith(
             '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message',
@@ -887,12 +927,15 @@ void main() async {
         // because then we can easily intercept the payloads and inject in the other client
         FakeMatrixApi.calledEndpoints.clear();
         // make sure our master key is *not* verified to not triger SSSS for now
-        client1.userDeviceKeys[client1.userID]!.masterKey!.setDirectVerified(
-          false,
-        );
-
-        final req1 = await client1.userDeviceKeys[client2.userID]!
-            .startVerification(newDirectChatEnableEncryption: false);
+        await (await client1.fetchUserDeviceKeysLists({
+          client1.userID!,
+        }))[client1.userID!]!.masterKey!.setVerified(false, false);
+        final req1 =
+            await (await client1.fetchUserDeviceKeysLists({
+              client2.userID!,
+            }))[client2.userID!]!.startVerification(
+              newDirectChatEnableEncryption: false,
+            );
         await FakeMatrixApi.firstWhere(
           (e) => e.startsWith(
             '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message',

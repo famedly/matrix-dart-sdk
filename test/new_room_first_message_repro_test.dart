@@ -336,7 +336,10 @@ void main() {
 
         // Was dave's device list ever fetched?
         final daveKnown =
-            client.userDeviceKeys[dave.userId]?.deviceKeys.isNotEmpty ?? false;
+            (await client.fetchUserDeviceKeysLists({
+              dave.userId,
+            }))[dave.userId]?.deviceKeys.isNotEmpty ??
+            false;
 
         // Now the app sends the first message.
         FakeMatrixApi.calledEndpoints.clear();
@@ -439,7 +442,10 @@ void main() {
         );
 
         final daveKnown =
-            client.userDeviceKeys[dave.userId]?.deviceKeys.isNotEmpty ?? false;
+            (await client.fetchUserDeviceKeysLists({
+              dave.userId,
+            }))[dave.userId]?.deviceKeys.isNotEmpty ??
+            false;
 
         FakeMatrixApi.calledEndpoints.clear();
         await room.sendTextEvent('first message');
@@ -499,7 +505,10 @@ void main() {
         );
 
         final daveKnown =
-            client.userDeviceKeys[dave.userId]?.deviceKeys.isNotEmpty ?? false;
+            (await client.fetchUserDeviceKeysLists({
+              dave.userId,
+            }))[dave.userId]?.deviceKeys.isNotEmpty ??
+            false;
 
         FakeMatrixApi.calledEndpoints.clear();
         await room.sendTextEvent('first message');
@@ -683,7 +692,10 @@ void main() {
         );
 
         final erinKnown =
-            client.userDeviceKeys[erin.userId]?.deviceKeys.isNotEmpty ?? false;
+            (await client.fetchUserDeviceKeysLists({
+              erin.userId,
+            }))[erin.userId]?.deviceKeys.isNotEmpty ??
+            false;
 
         FakeMatrixApi.calledEndpoints.clear();
         await room.sendTextEvent('first message');

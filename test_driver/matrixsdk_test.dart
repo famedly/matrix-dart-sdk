@@ -76,40 +76,42 @@ void main() => group('Integration tests', () {
       }
 
       Logs().i('++++ Check if own olm device is verified by default ++++');
-      expect(testClientA.userDeviceKeys, contains(testClientA.userID));
+      final aliceOwnKeys = await testClientA.fetchUserDeviceKeysLists({
+        testClientA.userID!,
+      });
+      expect(aliceOwnKeys, contains(testClientA.userID));
       expect(
-        testClientA.userDeviceKeys[testClientA.userID]!.deviceKeys,
+        aliceOwnKeys[testClientA.userID!]!.deviceKeys,
         contains(testClientA.deviceID),
       );
       expect(
-        testClientA
-            .userDeviceKeys[testClientA.userID]!
+        await aliceOwnKeys[testClientA.userID!]!
             .deviceKeys[testClientA.deviceID!]!
             .verified,
         isTrue,
       );
       expect(
-        !testClientA
-            .userDeviceKeys[testClientA.userID]!
+        !aliceOwnKeys[testClientA.userID!]!
             .deviceKeys[testClientA.deviceID!]!
             .blocked,
         isTrue,
       );
-      expect(testClientB.userDeviceKeys, contains(testClientB.userID));
+      final bobOwnKeys = await testClientB.fetchUserDeviceKeysLists({
+        testClientB.userID!,
+      });
+      expect(bobOwnKeys, contains(testClientB.userID));
       expect(
-        testClientB.userDeviceKeys[testClientB.userID]!.deviceKeys,
+        bobOwnKeys[testClientB.userID!]!.deviceKeys,
         contains(testClientB.deviceID),
       );
       expect(
-        testClientB
-            .userDeviceKeys[testClientB.userID]!
+        await bobOwnKeys[testClientB.userID!]!
             .deviceKeys[testClientB.deviceID!]!
             .verified,
         isTrue,
       );
       expect(
-        !testClientB
-            .userDeviceKeys[testClientB.userID]!
+        !bobOwnKeys[testClientB.userID!]!
             .deviceKeys[testClientB.deviceID!]!
             .blocked,
         isTrue,
@@ -148,70 +150,73 @@ void main() => group('Integration tests', () {
       );
 
       Logs().i('++++ (Alice) Check known olm devices ++++');
-      expect(testClientA.userDeviceKeys, contains(testClientB.userID));
+      final aliceKeys = await testClientA.fetchUserDeviceKeysLists({
+        testClientB.userID!,
+      });
+      expect(aliceKeys, contains(testClientB.userID));
       expect(
-        testClientA.userDeviceKeys[testClientB.userID]!.deviceKeys,
+        aliceKeys[testClientB.userID!]!.deviceKeys,
         contains(testClientB.deviceID),
       );
       expect(
-        testClientA
-            .userDeviceKeys[testClientB.userID]!
+        await aliceKeys[testClientB.userID!]!
             .deviceKeys[testClientB.deviceID!]!
             .verified,
         isFalse,
       );
       expect(
-        testClientA
-            .userDeviceKeys[testClientB.userID]!
+        aliceKeys[testClientB.userID!]!
             .deviceKeys[testClientB.deviceID!]!
             .blocked,
         isFalse,
       );
-      expect(testClientB.userDeviceKeys, contains(testClientA.userID));
+      final bobKeys = await testClientB.fetchUserDeviceKeysLists({
+        testClientA.userID!,
+      });
+      expect(bobKeys, contains(testClientA.userID));
       expect(
-        testClientB.userDeviceKeys[testClientA.userID]!.deviceKeys,
+        bobKeys[testClientA.userID!]!.deviceKeys,
         contains(testClientA.deviceID),
       );
       expect(
-        testClientB
-            .userDeviceKeys[testClientA.userID]!
+        await bobKeys[testClientA.userID!]!
             .deviceKeys[testClientA.deviceID!]!
             .verified,
         isFalse,
       );
       expect(
-        testClientB
-            .userDeviceKeys[testClientA.userID]!
+        bobKeys[testClientA.userID!]!
             .deviceKeys[testClientA.deviceID!]!
             .blocked,
         isFalse,
       );
-      await testClientA
-          .userDeviceKeys[testClientB.userID]!
-          .deviceKeys[testClientB.deviceID!]!
+      await aliceKeys[testClientB.userID!]!.deviceKeys[testClientB.deviceID!]!
           .setVerified(true);
 
       Logs().i('++++ Check if own olm device is verified by default ++++');
-      expect(testClientA.userDeviceKeys, contains(testClientA.userID));
+      final aliceOwnKeysAfterVerify = await testClientA
+          .fetchUserDeviceKeysLists({testClientA.userID!});
+      expect(aliceOwnKeysAfterVerify, contains(testClientA.userID));
       expect(
-        testClientA.userDeviceKeys[testClientA.userID]!.deviceKeys,
+        aliceOwnKeysAfterVerify[testClientA.userID!]!.deviceKeys,
         contains(testClientA.deviceID),
       );
       expect(
-        testClientA
-            .userDeviceKeys[testClientA.userID]!
+        await aliceOwnKeysAfterVerify[testClientA.userID!]!
             .deviceKeys[testClientA.deviceID!]!
             .verified,
         isTrue,
       );
-      expect(testClientB.userDeviceKeys, contains(testClientB.userID));
+      final bobOwnKeysAfterVerify = await testClientB.fetchUserDeviceKeysLists({
+        testClientB.userID!,
+      });
+      expect(bobOwnKeysAfterVerify, contains(testClientB.userID));
       expect(
-        testClientB.userDeviceKeys[testClientB.userID]!.deviceKeys,
+        bobOwnKeysAfterVerify[testClientB.userID!]!.deviceKeys,
         contains(testClientB.deviceID),
       );
       expect(
-        testClientB
-            .userDeviceKeys[testClientB.userID]!
+        await bobOwnKeysAfterVerify[testClientB.userID!]!
             .deviceKeys[testClientB.deviceID!]!
             .verified,
         isTrue,

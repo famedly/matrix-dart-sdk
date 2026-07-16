@@ -161,9 +161,8 @@ void main() {
 
     test('postUnlock', () async {
       await client.encryption!.ssss.clearCache();
-      client.userDeviceKeys[client.userID!]!.masterKey!.setDirectVerified(
-        false,
-      );
+      final ownKeys = await client.fetchUserDeviceKeysLists({client.userID!});
+      await ownKeys[client.userID!]!.masterKey!.setVerified(false, false);
       final handle = client.encryption!.ssss.open(
         EventTypes.CrossSigningSelfSigning,
       );
@@ -187,15 +186,13 @@ void main() {
             null,
         true,
       );
-      expect(
-        client.userDeviceKeys[client.userID!]!.masterKey!.directVerified,
-        true,
-      );
+      final updated = await client.fetchUserDeviceKeysLists({client.userID!});
+      expect(updated[client.userID!]!.masterKey!.directVerified, true);
     });
 
     test('make share requests', () async {
-      final key =
-          client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
+      final ownKeys = await client.fetchUserDeviceKeysLists({client.userID!});
+      final key = ownKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
       key.setDirectVerified(true);
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.ssss.request('some.type', [key]);
@@ -290,12 +287,10 @@ void main() {
       );
 
       // device not verified
-      final key =
-          client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
-      key.setDirectVerified(false);
-      client.userDeviceKeys[client.userID!]!.masterKey!.setDirectVerified(
-        false,
-      );
+      final ownKeys = await client.fetchUserDeviceKeysLists({client.userID!});
+      final key = ownKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
+      await key.setVerified(false, false);
+      await ownKeys[client.userID!]!.masterKey!.setVerified(false, false);
       event = ToDeviceEvent(
         sender: client.userID!,
         type: 'm.secret.request',
@@ -314,12 +309,12 @@ void main() {
         ),
         false,
       );
-      key.setDirectVerified(true);
+      await key.setVerified(true, false);
     });
 
     test('receive share requests', () async {
-      final key =
-          client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
+      final ownKeys = await client.fetchUserDeviceKeysLists({client.userID!});
+      final key = ownKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
       key.setDirectVerified(true);
       final handle = client.encryption!.ssss.open(
         EventTypes.CrossSigningSelfSigning,
@@ -448,8 +443,8 @@ void main() {
     });
 
     test('request all', () async {
-      final key =
-          client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
+      final ownKeys = await client.fetchUserDeviceKeysLists({client.userID!});
+      final key = ownKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
       key.setDirectVerified(true);
       await client.encryption!.ssss.clearCache();
       client.encryption!.ssss.pendingShareRequests.clear();
@@ -458,7 +453,8 @@ void main() {
     });
 
     test('periodicallyRequestMissingCache', () async {
-      client.userDeviceKeys[client.userID!]!.masterKey!.setDirectVerified(true);
+      final ownKeys = await client.fetchUserDeviceKeysLists({client.userID!});
+      ownKeys[client.userID!]!.masterKey!.setDirectVerified(true);
       client.encryption!.ssss = MockSSSS(client.encryption!);
       (client.encryption!.ssss as MockSSSS).requestedSecrets = false;
       await client.encryption!.ssss.periodicallyRequestMissingCache();

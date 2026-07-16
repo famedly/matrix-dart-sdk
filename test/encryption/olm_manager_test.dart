@@ -141,8 +141,9 @@ void main() {
     test('startOutgoingOlmSessions', () async {
       // start an olm session.....with ourself!
       client.encryption!.olmManager.olmSessions.clear();
+      final keys = await client.fetchUserDeviceKeysLists({client.userID!});
       await client.encryption!.olmManager.startOutgoingOlmSessions([
-        client.userDeviceKeys[client.userID!]!.deviceKeys[client.deviceID]!,
+        keys[client.userID!]!.deviceKeys[client.deviceID]!,
       ]);
       expect(
         client.encryption!.olmManager.olmSessions.containsKey(

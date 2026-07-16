@@ -113,11 +113,11 @@ void main() async {
     });
 
     test('set blocked / verified', () async {
-      final key =
-          client.userDeviceKeys[client.userID]!.deviceKeys['OTHERDEVICE']!;
-      client
-          .userDeviceKeys[client.userID]
-          ?.deviceKeys['UNSIGNEDDEVICE'] = DeviceKeys.fromJson({
+      final ownKeys = (await client.fetchUserDeviceKeysLists({
+        client.userID!,
+      }))[client.userID!]!;
+      final key = ownKeys.deviceKeys['OTHERDEVICE']!;
+      ownKeys.deviceKeys['UNSIGNEDDEVICE'] = DeviceKeys.fromJson({
         'user_id': '@test:fakeServer.notExisting',
         'device_id': 'UNSIGNEDDEVICE',
         'algorithms': [
@@ -139,63 +139,54 @@ void main() async {
       }, client);
 
       client.shareKeysWith = ShareKeysWith.all;
-      expect(key.encryptToDevice, true);
+      expect(await key.encryptToDevice, true);
 
       client.shareKeysWith = ShareKeysWith.directlyVerifiedOnly;
-      expect(key.encryptToDevice, false);
+      expect(await key.encryptToDevice, false);
       await key.setVerified(true);
-      expect(key.encryptToDevice, true);
+      expect(await key.encryptToDevice, true);
       await key.setVerified(false);
 
       client.shareKeysWith = ShareKeysWith.crossVerified;
-      expect(key.encryptToDevice, true);
+      expect(await key.encryptToDevice, true);
 
       client.shareKeysWith = ShareKeysWith.crossVerified;
       // Disable cross signing for this user manually so encryptToDevice should return `false`
-      final dropUserDeviceKeys = client.userDeviceKeys.remove(key.userId);
-      expect(key.encryptToDevice, false);
+      final savedCrossSigningKeys = Map<String, CrossSigningKey>.from(
+        ownKeys.crossSigningKeys,
+      );
+      ownKeys.crossSigningKeys.clear();
+      expect(await key.encryptToDevice, false);
       // But crossVerifiedIfEnabled should return `true` now:
       client.shareKeysWith = ShareKeysWith.crossVerifiedIfEnabled;
-      expect(key.encryptToDevice, true);
+      expect(await key.encryptToDevice, true);
 
-      client.userDeviceKeys[key.userId] = dropUserDeviceKeys!;
+      ownKeys.crossSigningKeys.addAll(savedCrossSigningKeys);
       client.shareKeysWith = ShareKeysWith.all;
-      final masterKey = client.userDeviceKeys[client.userID]!.masterKey!;
+      final masterKey = ownKeys.masterKey!;
       masterKey.setDirectVerified(true);
       // we need to populate the ssss cache to be able to test signing easily
       final handle = client.encryption!.ssss.open();
       await handle.unlock(recoveryKey: ssssKey);
       await handle.maybeCacheAll();
 
-      expect(key.verified, true);
-      expect(key.encryptToDevice, true);
+      expect(await key.verified, true);
+      expect(await key.encryptToDevice, true);
       await key.setBlocked(true);
-      expect(key.verified, false);
-      expect(key.encryptToDevice, false);
+      expect(await key.verified, false);
+      expect(await key.encryptToDevice, false);
       await key.setBlocked(false);
       expect(key.directVerified, false);
-      expect(key.verified, true); // still verified via cross-sgining
-      expect(key.encryptToDevice, true);
-      expect(
-        client
-            .userDeviceKeys[client.userID]
-            ?.deviceKeys['UNSIGNEDDEVICE']
-            ?.encryptToDevice,
-        true,
-      );
+      expect(await key.verified, true); // still verified via cross-sgining
+      expect(await key.encryptToDevice, true);
+      expect(await ownKeys.deviceKeys['UNSIGNEDDEVICE']?.encryptToDevice, true);
 
-      expect(masterKey.verified, true);
+      expect(await masterKey.verified, true);
       await masterKey.setBlocked(true);
-      expect(masterKey.verified, false);
-      expect(
-        client
-            .userDeviceKeys[client.userID]
-            ?.deviceKeys['UNSIGNEDDEVICE']
-            ?.encryptToDevice,
-        true,
-      );
+      expect(await masterKey.verified, false);
+      expect(await ownKeys.deviceKeys['UNSIGNEDDEVICE']?.encryptToDevice, true);
       await masterKey.setBlocked(false);
-      expect(masterKey.verified, true);
+      expect(await masterKey.verified, true);
 
       FakeMatrixApi.calledEndpoints.clear();
       await key.setVerified(true);
@@ -218,32 +209,34 @@ void main() async {
         false,
       );
       expect(key.directVerified, false);
-      client.userDeviceKeys[client.userID]?.deviceKeys.remove('UNSIGNEDDEVICE');
+      ownKeys.deviceKeys.remove('UNSIGNEDDEVICE');
     });
 
     test('verification based on signatures', () async {
-      final user = client.userDeviceKeys[client.userID]!;
+      final user = (await client.fetchUserDeviceKeysLists({
+        client.userID!,
+      }))[client.userID!]!;
       user.masterKey?.setDirectVerified(true);
-      expect(user.deviceKeys['GHTYAJCE']?.crossVerified, true);
-      expect(user.deviceKeys['GHTYAJCE']?.signed, true);
-      expect(user.getKey('GHTYAJCE')?.crossVerified, true);
-      expect(user.deviceKeys['OTHERDEVICE']?.crossVerified, true);
-      expect(user.selfSigningKey?.crossVerified, true);
+      expect(await user.deviceKeys['GHTYAJCE']?.crossVerified, true);
+      expect(await user.deviceKeys['GHTYAJCE']?.signed, true);
+      expect(await user.getKey('GHTYAJCE')?.crossVerified, true);
+      expect(await user.deviceKeys['OTHERDEVICE']?.crossVerified, true);
+      expect(await user.selfSigningKey?.crossVerified, true);
       expect(
-        user
+        await user
             .getKey('F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY')
             ?.crossVerified,
         true,
       );
-      expect(user.userSigningKey?.crossVerified, true);
-      expect(user.verified, UserVerifiedStatus.verified);
+      expect(await user.userSigningKey?.crossVerified, true);
+      expect(await user.verified, UserVerifiedStatus.verified);
       user.masterKey?.setDirectVerified(false);
-      expect(user.deviceKeys['GHTYAJCE']?.crossVerified, false);
-      expect(user.deviceKeys['OTHERDEVICE']?.crossVerified, false);
-      expect(user.verified, UserVerifiedStatus.unknown);
+      expect(await user.deviceKeys['GHTYAJCE']?.crossVerified, false);
+      expect(await user.deviceKeys['OTHERDEVICE']?.crossVerified, false);
+      expect(await user.verified, UserVerifiedStatus.unknown);
 
       user.deviceKeys['OTHERDEVICE']?.setDirectVerified(true);
-      expect(user.verified, UserVerifiedStatus.verified);
+      expect(await user.verified, UserVerifiedStatus.verified);
       user.deviceKeys['OTHERDEVICE']?.setDirectVerified(false);
 
       user.masterKey?.setDirectVerified(true);
@@ -251,22 +244,22 @@ void main() async {
         (k, v) => k != 'ed25519:GHTYAJCE',
       );
       expect(
-        user.deviceKeys['GHTYAJCE']?.verified,
+        await user.deviceKeys['GHTYAJCE']?.verified,
         true,
       ); // it's our own device, should be direct verified
       expect(
-        user.deviceKeys['GHTYAJCE']?.signed,
+        await user.deviceKeys['GHTYAJCE']?.signed,
         false,
       ); // not verified for others
       user.deviceKeys['OTHERDEVICE']?.signatures?.clear();
-      expect(user.verified, UserVerifiedStatus.unknownDevice);
+      expect(await user.verified, UserVerifiedStatus.unknownDevice);
     });
 
     test('start verification', () async {
-      var req = await client
-          .userDeviceKeys['@alice:example.com']
-          ?.deviceKeys['JLAFKJWSCS']
-          ?.startVerification();
+      final aliceKeys = (await client.fetchUserDeviceKeysLists({
+        '@alice:example.com',
+      }))['@alice:example.com']!;
+      var req = await aliceKeys.deviceKeys['JLAFKJWSCS']?.startVerification();
       expect(req != null, true);
       expect(req?.room != null, false);
 
@@ -274,8 +267,9 @@ void main() async {
           FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.length ?? 0;
 
       Future<void> verifyDeviceKeys() async {
-        req = await client.userDeviceKeys['@alice:example.com']
-            ?.startVerification(newDirectChatEnableEncryption: false);
+        req = await aliceKeys.startVerification(
+          newDirectChatEnableEncryption: false,
+        );
         expect(req != null, true);
         expect(req?.room != null, true);
       }
