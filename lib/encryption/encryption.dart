@@ -394,7 +394,7 @@ class Encryption {
     final masterKey = ownKeys?.masterKey;
     if (masterKey != null &&
         !masterKey.directVerified &&
-        await masterKey.hasValidSignatureChain(onlyValidateUserIds: {userId})) {
+        masterKey.hasValidSignatureChain(onlyValidateUserIds: {userId})) {
       await masterKey.setVerified(true);
     }
   }

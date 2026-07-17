@@ -67,7 +67,7 @@ extension DehydratedDeviceHandler on Client {
       final ownKeys = await fetchUserDeviceKeysList(userID!);
       final dehydratedDeviceIdentity = ownKeys?.deviceKeys[device.deviceId];
       if (dehydratedDeviceIdentity == null ||
-          !await dehydratedDeviceIdentity.hasValidSignatureChain()) {
+          !dehydratedDeviceIdentity.hasValidSignatureChain()) {
         Logs().w(
           'Dehydrated device ${device.deviceId} is unknown or unverified, replacing it',
         );

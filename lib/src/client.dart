@@ -400,7 +400,7 @@ class Client extends MatrixApi {
     final keys = await fetchUserDeviceKeysList(userId);
     final deviceKey = keys?.deviceKeys[deviceId];
     if (deviceKey == null) return true;
-    return !(await deviceKey.signed);
+    return !deviceKey.signed;
   }
 
   /// Warning! This endpoint is for testing only!
@@ -3275,6 +3275,11 @@ class Client extends MatrixApi {
 
   /// Fetches the user device keys first from the database. If those are
   /// missing or marked as outdated will then get fetched from the server.
+  ///
+  /// Returns a **snapshot**. [SignableKey.setVerified] / [SignableKey.setBlocked]
+  /// on this list update the DB, but other previously fetched lists stay stale.
+  /// Fetch again after trust changes (or before acting on trust flags) if you
+  /// might be holding an older instance.
   Future<DeviceKeysList?> fetchUserDeviceKeysList(
     String userId, {
     Duration? queryKeysTimeout,
@@ -3287,6 +3292,8 @@ class Client extends MatrixApi {
 
   /// Fetches the user device keys first from the database. Those which are
   /// missing or marked as outdated will then get fetched from the server.
+  ///
+  /// Returns snapshots — see [fetchUserDeviceKeysList].
   Future<Map<String, DeviceKeysList>> fetchUserDeviceKeysLists(
     Set<String> userIds, {
     Duration? queryKeysTimeout,
@@ -3326,14 +3333,26 @@ class Client extends MatrixApi {
       }
     }
 
+    // Single list instance for our own keys — always passed into SignableKey
+    // constructors for cross-user signature chains. Must be resolved after the
+    // trust reload above, and reused as userKeys when updating our own user.
+    final ownUserId = userID!;
+    final ownKeys =
+        oldDeviceKeys[ownUserId] ??
+        userDeviceKeys[ownUserId] ??
+        await database.getUserDeviceKeysList(ownUserId, this) ??
+        DeviceKeysList(ownUserId, this);
+
     final dbActions = <Future<dynamic> Function()>[];
 
     final deviceKeys = response.deviceKeys;
     if (deviceKeys != null) {
       for (final rawDeviceKeyListEntry in deviceKeys.entries) {
         final userId = rawDeviceKeyListEntry.key;
-        final userKeys = userDeviceKeys[userId] ??=
-            oldDeviceKeys.remove(userId) ?? DeviceKeysList(userId, this);
+        final userKeys = userDeviceKeys[userId] ??= userId == ownUserId
+            ? ownKeys
+            : (oldDeviceKeys.remove(userId) ?? DeviceKeysList(userId, this));
+        if (userId == ownUserId) oldDeviceKeys.remove(userId);
         final oldKeys = Map<String, DeviceKeys>.from(userKeys.deviceKeys);
         userKeys.deviceKeys.clear();
         for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
@@ -3342,6 +3361,8 @@ class Client extends MatrixApi {
           // Set the new device key for this device
           final entry = DeviceKeys.fromMatrixDeviceKeys(
             rawDeviceKeyEntry.value,
+            userKeys,
+            ownKeys,
             this,
             oldKeys[deviceId]?.lastActive,
           );
@@ -3452,8 +3473,10 @@ class Client extends MatrixApi {
       }
       for (final crossSigningKeyListEntry in keys.entries) {
         final userId = crossSigningKeyListEntry.key;
-        final userKeys = userDeviceKeys[userId] ??=
-            oldDeviceKeys.remove(userId) ?? DeviceKeysList(userId, this);
+        final userKeys = userDeviceKeys[userId] ??= userId == ownUserId
+            ? ownKeys
+            : (oldDeviceKeys.remove(userId) ?? DeviceKeysList(userId, this));
+        if (userId == ownUserId) oldDeviceKeys.remove(userId);
         final oldKeys = Map<String, CrossSigningKey>.from(
           userKeys.crossSigningKeys,
         );
@@ -3472,6 +3495,8 @@ class Client extends MatrixApi {
         }
         final entry = CrossSigningKey.fromMatrixCrossSigningKey(
           crossSigningKeyListEntry.value,
+          userKeys,
+          ownKeys,
           this,
         );
         final publicKey = entry.publicKey;
@@ -3554,7 +3579,7 @@ class Client extends MatrixApi {
     if (deviceKeys == null) return [];
     final unverified = <DeviceKeys>[];
     for (final deviceKey in deviceKeys) {
-      if (!await deviceKey.verified && !deviceKey.blocked) {
+      if (!deviceKey.verified && !deviceKey.blocked) {
         unverified.add(deviceKey);
       }
     }
@@ -3686,7 +3711,7 @@ class Client extends MatrixApi {
       for (final dk in deviceKeys) {
         if (dk.blocked) continue;
         if (dk.userId == userID && dk.deviceId == deviceID) continue;
-        if (onlyVerified && !(await dk.verified)) continue;
+        if (onlyVerified && !(dk.verified)) continue;
         keysToSend.add(dk);
       }
       if (keysToSend.isEmpty) return;

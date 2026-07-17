@@ -29,11 +29,11 @@ void main() async {
       final ownKeys = await req2.client.fetchUserDeviceKeysList(
         req2.client.userID!,
       );
-      if (!(await ownKeys?.deviceKeys[req2.deviceId]?.hasValidSignatureChain(
+      if (!(ownKeys?.deviceKeys[req2.deviceId]?.hasValidSignatureChain(
                 verifiedByTheirMasterKey: true,
               ) ??
               false) &&
-          !(await ownKeys?.masterKey?.verified ?? false)) {
+          !(ownKeys?.masterKey?.verified ?? false)) {
         copyKnownVerificationMethods.removeWhere(
           (element) => element.startsWith('m.qr_code'),
         );
@@ -69,6 +69,9 @@ void main() async {
       await vodInit;
       client1 = await getClient();
       client2 = await getOtherClient();
+      // Avoid background key refreshes racing with setVerified/setBlocked.
+      await client1.abortSync();
+      await client2.abortSync();
 
       await Future.delayed(Duration(milliseconds: 10));
       client1.verificationMethods = {
@@ -91,25 +94,25 @@ void main() async {
 
     test('Run qr verification mode 1', () async {
       expect(
-        await (await client1.fetchUserDeviceKeysList(
+        (await client1.fetchUserDeviceKeysList(
           client2.userID!,
         ))?.masterKey!.verified,
         false,
       );
       expect(
-        await (await client2.fetchUserDeviceKeysList(
+        (await client2.fetchUserDeviceKeysList(
           client1.userID!,
         ))?.masterKey!.verified,
         false,
       );
       expect(
-        await (await client1.fetchUserDeviceKeysList(
+        (await client1.fetchUserDeviceKeysList(
           client2.userID!,
         ))?.deviceKeys[client2.deviceID]?.verified,
         false,
       );
       expect(
-        await (await client2.fetchUserDeviceKeysList(
+        (await client2.fetchUserDeviceKeysList(
           client1.userID!,
         ))?.deviceKeys[client1.deviceID]?.verified,
         false,
@@ -219,26 +222,26 @@ void main() async {
       expect(req2.state, KeyVerificationState.done);
 
       expect(
-        await (await client1.fetchUserDeviceKeysList(
+        (await client1.fetchUserDeviceKeysList(
           client2.userID!,
         ))?.masterKey!.verified,
         true,
       );
       expect(
-        await (await client2.fetchUserDeviceKeysList(
+        (await client2.fetchUserDeviceKeysList(
           client1.userID!,
         ))?.masterKey!.verified,
         true,
       );
 
       expect(
-        await (await client1.fetchUserDeviceKeysList(
+        (await client1.fetchUserDeviceKeysList(
           client2.userID!,
         ))?.deviceKeys[client2.deviceID]?.verified,
         true,
       );
       expect(
-        await (await client2.fetchUserDeviceKeysList(
+        (await client2.fetchUserDeviceKeysList(
           client1.userID!,
         ))?.deviceKeys[client1.deviceID]?.verified,
         true,
@@ -252,25 +255,25 @@ void main() async {
 
     test('Run qr verification mode 2', () async {
       expect(
-        await (await client1.fetchUserDeviceKeysList(
+        (await client1.fetchUserDeviceKeysList(
           client2.userID!,
         ))?.masterKey!.verified,
         false,
       );
       expect(
-        await (await client2.fetchUserDeviceKeysList(
+        (await client2.fetchUserDeviceKeysList(
           client1.userID!,
         ))?.masterKey!.verified,
         false,
       );
       expect(
-        await (await client1.fetchUserDeviceKeysList(
+        (await client1.fetchUserDeviceKeysList(
           client2.userID!,
         ))?.deviceKeys[client2.deviceID]?.verified,
         false,
       );
       expect(
-        await (await client2.fetchUserDeviceKeysList(
+        (await client2.fetchUserDeviceKeysList(
           client1.userID!,
         ))?.deviceKeys[client1.deviceID]?.verified,
         false,
@@ -380,26 +383,26 @@ void main() async {
       expect(req2.state, KeyVerificationState.done);
 
       expect(
-        await (await client1.fetchUserDeviceKeysList(
+        (await client1.fetchUserDeviceKeysList(
           client2.userID!,
         ))?.masterKey!.verified,
         true,
       );
       expect(
-        await (await client2.fetchUserDeviceKeysList(
+        (await client2.fetchUserDeviceKeysList(
           client1.userID!,
         ))?.masterKey!.verified,
         true,
       );
 
       expect(
-        await (await client1.fetchUserDeviceKeysList(
+        (await client1.fetchUserDeviceKeysList(
           client2.userID!,
         ))?.deviceKeys[client2.deviceID]?.verified,
         true,
       );
       expect(
-        await (await client2.fetchUserDeviceKeysList(
+        (await client2.fetchUserDeviceKeysList(
           client1.userID!,
         ))?.deviceKeys[client1.deviceID]?.verified,
         true,
@@ -526,6 +529,19 @@ void main() async {
         await (await client2.fetchUserDeviceKeysList(
           client2.userID!,
         ))!.masterKey!.setBlocked(true);
+        // Re-fetch so later checks use snapshots that include the block.
+        expect(
+          (await client1.fetchUserDeviceKeysList(
+            client1.userID!,
+          ))!.masterKey!.blocked,
+          true,
+        );
+        expect(
+          (await client2.fetchUserDeviceKeysList(
+            client2.userID!,
+          ))!.masterKey!.blocked,
+          true,
+        );
         // await client1.encryption!.ssss.clearCache();
         final req1 = await (await client1.fetchUserDeviceKeysList(
           client2.userID!,

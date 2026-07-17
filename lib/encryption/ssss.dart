@@ -525,7 +525,7 @@ class SSSS {
     final verifiedDevices = <DeviceKeys>[];
     for (final d in devices) {
       if (d.userId == client.userID &&
-          await d.verified &&
+          d.verified &&
           !d.blocked &&
           d.deviceId != client.deviceID) {
         verifiedDevices.add(d);
@@ -591,7 +591,7 @@ class SSSS {
         return; // not actually requesting, so ignore
       }
       final device = ownKeys.deviceKeys[event.content['requesting_device_id']];
-      if (device == null || !(await device.verified) || device.blocked) {
+      if (device == null || !(device.verified) || device.blocked) {
         Logs().i('[SSSS] Unknown / unverified devices, ignoring');
         return; // nope....unknown or untrusted device
       }

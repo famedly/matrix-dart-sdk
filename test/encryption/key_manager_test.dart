@@ -199,24 +199,31 @@ void main() {
       sess.outboundGroupSession!.encrypt(
         'foxies',
       ); // so that the new device will have a different index
-      final newDevice = DeviceKeys.fromJson({
-        'user_id': '@alice:example.com',
-        'device_id': 'NEWDEVICE',
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2,
-        ],
-        'keys': {
-          'curve25519:NEWDEVICE': 'bnKQp6pPW0l9cGoIgHpBoK5OUi4h0gylJ7upc4asFV8',
-          'ed25519:NEWDEVICE': 'ZZhPdvWYg3MRpGy2MwtI+4MHXe74wPkBli5hiEOUi8Y',
-        },
-        'signatures': {
-          '@alice:example.com': {
-            'ed25519:NEWDEVICE':
-                '94GSg8N9vNB8wyWHJtKaaX3MGNWPVOjBatJM+TijY6B1RlDFJT5Cl1h/tjr17AoQz0CDdOf6uFhrYsBkH1/ABg',
+      final aliceList = DeviceKeysList('@alice:example.com', client);
+      final newDevice = DeviceKeys.fromJson(
+        {
+          'user_id': '@alice:example.com',
+          'device_id': 'NEWDEVICE',
+          'algorithms': [
+            AlgorithmTypes.olmV1Curve25519AesSha2,
+            AlgorithmTypes.megolmV1AesSha2,
+          ],
+          'keys': {
+            'curve25519:NEWDEVICE':
+                'bnKQp6pPW0l9cGoIgHpBoK5OUi4h0gylJ7upc4asFV8',
+            'ed25519:NEWDEVICE': 'ZZhPdvWYg3MRpGy2MwtI+4MHXe74wPkBli5hiEOUi8Y',
+          },
+          'signatures': {
+            '@alice:example.com': {
+              'ed25519:NEWDEVICE':
+                  '94GSg8N9vNB8wyWHJtKaaX3MGNWPVOjBatJM+TijY6B1RlDFJT5Cl1h/tjr17AoQz0CDdOf6uFhrYsBkH1/ABg',
+            },
           },
         },
-      }, client);
+        aliceList,
+        aliceList,
+        client,
+      );
       await client.database.storeUserDeviceKey(
         '@alice:example.com',
         'NEWDEVICE',

@@ -321,14 +321,20 @@ class FakeMatrixApi extends BaseClient {
             'user_signing_key',
           }) {
             if (jsonBody[keyType] == null) continue;
-            final key = sdk.CrossSigningKey.fromJson(jsonBody[keyType], client);
-            final publicKey = key.publicKey;
-            if (publicKey == null || !key.isValid) continue;
-
             final existing = await database.getUserDeviceKeysList(
               userId,
               client,
             );
+            final list = existing ?? sdk.DeviceKeysList(userId, client);
+            final key = sdk.CrossSigningKey.fromJson(
+              jsonBody[keyType],
+              list,
+              list,
+              client,
+            );
+            final publicKey = key.publicKey;
+            if (publicKey == null || !key.isValid) continue;
+
             CrossSigningKey? oldKey;
             if (existing != null) {
               for (final entry in existing.crossSigningKeys.entries) {

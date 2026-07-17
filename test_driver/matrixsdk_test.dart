@@ -81,20 +81,14 @@ void main() => group('Integration tests', () {
       );
       expect(aliceOwnKeys, isNotNull);
       expect(aliceOwnKeys!.deviceKeys, contains(testClientA.deviceID));
-      expect(
-        await aliceOwnKeys.deviceKeys[testClientA.deviceID!]!.verified,
-        isTrue,
-      );
+      expect(aliceOwnKeys.deviceKeys[testClientA.deviceID!]!.verified, isTrue);
       expect(!aliceOwnKeys.deviceKeys[testClientA.deviceID!]!.blocked, isTrue);
       final bobOwnKeys = await testClientB.fetchUserDeviceKeysList(
         testClientB.userID!,
       );
       expect(bobOwnKeys, isNotNull);
       expect(bobOwnKeys!.deviceKeys, contains(testClientB.deviceID));
-      expect(
-        await bobOwnKeys.deviceKeys[testClientB.deviceID!]!.verified,
-        isTrue,
-      );
+      expect(bobOwnKeys.deviceKeys[testClientB.deviceID!]!.verified, isTrue);
       expect(!bobOwnKeys.deviceKeys[testClientB.deviceID!]!.blocked, isTrue);
 
       Logs().i('++++ (Alice) Create room and invite Bob ++++');
@@ -135,20 +129,14 @@ void main() => group('Integration tests', () {
       );
       expect(aliceKeys, isNotNull);
       expect(aliceKeys!.deviceKeys, contains(testClientB.deviceID));
-      expect(
-        await aliceKeys.deviceKeys[testClientB.deviceID!]!.verified,
-        isFalse,
-      );
+      expect(aliceKeys.deviceKeys[testClientB.deviceID!]!.verified, isFalse);
       expect(aliceKeys.deviceKeys[testClientB.deviceID!]!.blocked, isFalse);
       final bobKeys = await testClientB.fetchUserDeviceKeysList(
         testClientA.userID!,
       );
       expect(bobKeys, isNotNull);
       expect(bobKeys!.deviceKeys, contains(testClientA.deviceID));
-      expect(
-        await bobKeys.deviceKeys[testClientA.deviceID!]!.verified,
-        isFalse,
-      );
+      expect(bobKeys.deviceKeys[testClientA.deviceID!]!.verified, isFalse);
       expect(bobKeys.deviceKeys[testClientA.deviceID!]!.blocked, isFalse);
       await aliceKeys.deviceKeys[testClientB.deviceID!]!.setVerified(true);
 
@@ -162,9 +150,7 @@ void main() => group('Integration tests', () {
         contains(testClientA.deviceID),
       );
       expect(
-        await aliceOwnKeysAfterVerify
-            .deviceKeys[testClientA.deviceID!]!
-            .verified,
+        aliceOwnKeysAfterVerify.deviceKeys[testClientA.deviceID!]!.verified,
         isTrue,
       );
       final bobOwnKeysAfterVerify = await testClientB.fetchUserDeviceKeysList(
@@ -173,7 +159,7 @@ void main() => group('Integration tests', () {
       expect(bobOwnKeysAfterVerify, isNotNull);
       expect(bobOwnKeysAfterVerify!.deviceKeys, contains(testClientB.deviceID));
       expect(
-        await bobOwnKeysAfterVerify.deviceKeys[testClientB.deviceID!]!.verified,
+        bobOwnKeysAfterVerify.deviceKeys[testClientB.deviceID!]!.verified,
         isTrue,
       );
 
