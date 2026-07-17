@@ -743,7 +743,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           final userDeviceKeys = await _userDeviceKeysBox.getAllValues();
           final userCrossSigningKeys = await _userCrossSigningKeysBox
               .getAllValues();
-          for (final userId in deviceKeysOutdated.keys) {
+          final ownUserId = client.userID;
+
+          DeviceKeysList buildList(String userId, {DeviceKeysList? ownKeys}) {
             final deviceKeysBoxKeys = userDeviceKeys.keys.where((tuple) {
               final tupleKey = TupleKey.fromString(tuple);
               return tupleKey.parts.first == userId;
@@ -764,7 +766,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
               if (crossSigningKey == null) return null;
               return copyMap(crossSigningKey);
             });
-            res[userId] = DeviceKeysList.fromDbJson(
+            return DeviceKeysList.fromDbJson(
               {
                 'client_id': client.id,
                 'user_id': userId,
@@ -779,7 +781,19 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
                   .toList()
                   .cast<Map<String, dynamic>>(),
               client,
+              ownKeys: ownKeys,
             );
+          }
+
+          if (ownUserId != null && deviceKeysOutdated.containsKey(ownUserId)) {
+            res[ownUserId] = buildList(ownUserId);
+          }
+          final ownKeys =
+              res[ownUserId] ??
+              (ownUserId != null ? DeviceKeysList(ownUserId, client) : null);
+          for (final userId in deviceKeysOutdated.keys) {
+            if (userId == ownUserId) continue;
+            res[userId] = buildList(userId, ownKeys: ownKeys);
           }
           return res;
         },
@@ -1829,6 +1843,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         return copyMap(crossSigningKey);
       }),
     );
+
+    DeviceKeysList? ownKeys;
+    final ownUserId = client.userID;
+    if (ownUserId != null && userId != ownUserId) {
+      ownKeys = await getUserDeviceKeysList(ownUserId, client);
+      ownKeys ??= DeviceKeysList(ownUserId, client);
+    }
+
     return DeviceKeysList.fromDbJson(
       {'client_id': client.id, 'user_id': userId, 'outdated': outdated},
       childEntries
@@ -1840,6 +1862,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           .toList()
           .cast<Map<String, dynamic>>(),
       client,
+      ownKeys: ownKeys,
     );
   }
 }

@@ -42,7 +42,7 @@ Future<List<User>> getUntrustedUsers(Room room) async {
 
         if (keys == null ||
             masterKey == null ||
-            await masterKey.verified ||
+            masterKey.verified ||
             masterKey.trustOnFirstUseSince != null) {
             continue;
         }

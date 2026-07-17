@@ -301,7 +301,7 @@ class KeyManager {
         continue;
       }
       final userDeviceKeyIds = deviceKeyIds[device.userId] ??= <String, bool>{};
-      userDeviceKeyIds[deviceId] = !(await device.encryptToDevice);
+      userDeviceKeyIds[deviceId] = !(device.encryptToDevice);
     }
     return deviceKeyIds;
   }
@@ -441,7 +441,7 @@ class KeyManager {
         try {
           final encryptableDevices = <DeviceKeys>[];
           for (final device in devicesToReceive) {
-            if (await device.encryptToDevice) {
+            if (device.encryptToDevice) {
               encryptableDevices.add(device);
             }
           }
@@ -559,7 +559,7 @@ class KeyManager {
     final deviceKeyIds = await _getDeviceKeyIdMap(allDeviceKeys);
     final deviceKeys = <DeviceKeys>[];
     for (final device in allDeviceKeys) {
-      if (await device.encryptToDevice) {
+      if (device.encryptToDevice) {
         deviceKeys.add(device);
       }
     }
@@ -917,7 +917,7 @@ class KeyManager {
           args.dbSessions.add(
             DbInboundGroupSessionBundle(
               dbSession: dbSession,
-              verified: (await device?.verified) ?? false,
+              verified: (device?.verified) ?? false,
             ),
           );
           i++;
@@ -1035,12 +1035,12 @@ class KeyManager {
           request,
         );
         if (device.userId == client.userID &&
-            await device.verified &&
+            device.verified &&
             !device.blocked) {
           Logs().i('[KeyManager] All checks out, forwarding key...');
           // alright, we can forward the key
           await roomKeyRequest.forwardKey();
-        } else if (await device.encryptToDevice &&
+        } else if (device.encryptToDevice &&
             session.allowedAtIndex
                     .tryGet<Map<String, Object?>>(device.userId)
                     ?.tryGet(device.curve25519Key!) !=
