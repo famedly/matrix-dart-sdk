@@ -1185,8 +1185,7 @@ class Room {
     users.removeWhere((u) => !allDeviceKeys.containsKey(u.id));
 
     for (final u in users) {
-      if ((await allDeviceKeys[u.id]!.verified) !=
-          UserVerifiedStatus.verified) {
+      if ((allDeviceKeys[u.id]!.verified) != UserVerifiedStatus.verified) {
         return EncryptionHealthState.unverifiedDevices;
       }
     }

@@ -260,7 +260,7 @@ class KeyVerification {
     final ownKeys = client.userID != null
         ? await client.fetchUserDeviceKeysList(client.userID!)
         : null;
-    final ownMasterVerified = await ownKeys?.masterKey?.verified ?? false;
+    final ownMasterVerified = ownKeys?.masterKey?.verified ?? false;
     final qrCanWork = (userId == client.userID) || ownMasterVerified;
 
     if (client.verificationMethods.contains(KeyVerificationMethod.qrShow) &&
@@ -641,11 +641,11 @@ class KeyVerification {
         final ownUserKeys = await client.fetchUserDeviceKeysList(
           client.userID!,
         );
-        if (!(await ownUserKeys?.deviceKeys[deviceId]?.hasValidSignatureChain(
+        if (!(ownUserKeys?.deviceKeys[deviceId]?.hasValidSignatureChain(
                   verifiedByTheirMasterKey: true,
                 ) ??
                 false) &&
-            !(await ownUserKeys?.masterKey?.verified ?? false)) {
+            !(ownUserKeys?.masterKey?.verified ?? false)) {
           copyKnownVerificationMethods.removeWhere(
             (element) => element.startsWith('m.qr_code'),
           );
@@ -955,7 +955,7 @@ class KeyVerification {
           final deviceKeysToSend = <DeviceKeys>[];
           if (userDeviceKeys != null) {
             for (final deviceKey in userDeviceKeys.deviceKeys.values) {
-              if (await deviceKey.hasValidSignatureChain(
+              if (deviceKey.hasValidSignatureChain(
                 verifiedByTheirMasterKey: true,
               )) {
                 deviceKeysToSend.add(deviceKey);
@@ -1034,7 +1034,7 @@ class KeyVerification {
       QRMode.verifyOtherUser,
       QRMode.verifySelfUntrusted,
     }.contains(remoteQrMode)) {
-      if (!(await ownMasterKey?.verified ?? false)) {
+      if (!(ownMasterKey?.verified ?? false)) {
         Logs().e(
           '[KeyVerification] verifyQrData because you were in mode 0/2 and had untrusted msk',
         );
@@ -1089,13 +1089,13 @@ class KeyVerification {
         otherMasterKey != null) {
       // we already have this check when sending `knownVerificationMethods`, but
       // just to be safe anyway
-      if (await ownMasterKey.verified) {
+      if (ownMasterKey.verified) {
         return (ownMasterKey.ed25519Key!, otherMasterKey.ed25519Key!);
       }
     } else if (mode == QRMode.verifySelfTrusted &&
         ownMasterKey != null &&
         otherDeviceKey != null) {
-      if (await ownMasterKey.verified) {
+      if (ownMasterKey.verified) {
         return (ownMasterKey.ed25519Key!, otherDeviceKey.ed25519Key!);
       }
     } else if (mode == QRMode.verifySelfUntrusted &&
@@ -1530,7 +1530,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
                 ? await client.fetchUserDeviceKeysList(client.userID!)
                 : null)
             ?.masterKey;
-    if (masterKey != null && await masterKey.verified) {
+    if (masterKey != null && masterKey.verified) {
       // we have our own master key verified, let's send it!
       final masterKeyId = 'ed25519:${masterKey.publicKey}';
       mac[masterKeyId] = _calculateMac(

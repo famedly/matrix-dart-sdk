@@ -251,7 +251,7 @@ void main() {
       expect(keys['@alice:example.com']?.outdated, false);
       expect(keys['@alice:example.com']!.deviceKeys.length, 2);
       expect(
-        await keys['@alice:example.com']?.deviceKeys['JLAFKJWSCS']?.verified,
+        keys['@alice:example.com']?.deviceKeys['JLAFKJWSCS']?.verified,
         false,
       );
 
@@ -1172,7 +1172,8 @@ void main() {
         keyObj['signatures'] = {
           userId: {'ed25519:$deviceId': signature.toBase64()},
         };
-        deviceKeys.add(DeviceKeys.fromJson(keyObj, matrix));
+        final list = DeviceKeysList(userId, matrix);
+        deviceKeys.add(DeviceKeys.fromJson(keyObj, list, list, matrix));
       }
       FakeMatrixApi.calledEndpoints.clear();
       await matrix.sendToDeviceEncryptedChunked(deviceKeys, 'm.message', {

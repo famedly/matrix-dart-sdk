@@ -47,18 +47,24 @@ void main() async {
       await otherClient.abortSync();
 
       await Future.delayed(Duration(milliseconds: 10));
-      device = DeviceKeys.fromJson({
-        'user_id': client.userID,
-        'device_id': client.deviceID,
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2,
-        ],
-        'keys': {
-          'curve25519:${client.deviceID}': client.identityKey,
-          'ed25519:${client.deviceID}': client.fingerprintKey,
+      final deviceList = DeviceKeysList(client.userID!, client);
+      device = DeviceKeys.fromJson(
+        {
+          'user_id': client.userID,
+          'device_id': client.deviceID,
+          'algorithms': [
+            AlgorithmTypes.olmV1Curve25519AesSha2,
+            AlgorithmTypes.megolmV1AesSha2,
+          ],
+          'keys': {
+            'curve25519:${client.deviceID}': client.identityKey,
+            'ed25519:${client.deviceID}': client.fingerprintKey,
+          },
         },
-      }, client);
+        deviceList,
+        deviceList,
+        client,
+      );
     });
 
     test('encryptToDeviceMessage', () async {
