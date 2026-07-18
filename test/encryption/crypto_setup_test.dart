@@ -95,8 +95,8 @@ void main() {
         final client = await getClient();
         final recoveryKey = await client.initCryptoIdentity();
         final defaultKeyId = client.encryption!.ssss.defaultKeyId;
-        final masterPub =
-            client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key;
+        final ownKeys = await client.fetchUserDeviceKeysList(client.userID!);
+        final masterPub = ownKeys!.masterKey!.ed25519Key;
 
         Future<String> healInPlace() async {
           final ssss = client.encryption!.ssss;
@@ -123,10 +123,7 @@ void main() {
         expect(state.initialized, true);
         expect(state.connected, true);
         expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
-        expect(
-          client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key,
-          masterPub,
-        );
+        expect(ownKeys.masterKey!.ed25519Key, masterPub);
 
         // Preserve master: only self/user signing secrets missing.
         for (final type in [
@@ -146,10 +143,7 @@ void main() {
         expect(state.initialized, true);
         expect(state.connected, true);
         expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
-        expect(
-          client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key,
-          masterPub,
-        );
+        expect(ownKeys.masterKey!.ed25519Key, masterPub);
 
         await client.encryption!.ssss.clearCache();
         var open = client.encryption!.ssss.open();

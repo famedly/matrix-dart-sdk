@@ -1369,18 +1369,23 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String publicKey,
     String content,
-    bool verified,
-    bool blocked, {
+    bool? verified,
+    bool? blocked, {
     DateTime? trustOnFirstUseSince,
   }) async {
-    await _userCrossSigningKeysBox.put(TupleKey(userId, publicKey).toString(), {
+    final boxKey = TupleKey(userId, publicKey).toString();
+    final existing = await _userCrossSigningKeysBox.get(boxKey);
+    final existingMap = existing != null ? copyMap(existing) : null;
+    await _userCrossSigningKeysBox.put(boxKey, {
       'user_id': userId,
       'public_key': publicKey,
       'content': content,
-      'verified': verified,
-      'blocked': blocked,
+      'verified': verified ?? existingMap?['verified'] ?? false,
+      'blocked': blocked ?? existingMap?['blocked'] ?? false,
       if (trustOnFirstUseSince != null)
-        'tofu': trustOnFirstUseSince.millisecondsSinceEpoch,
+        'tofu': trustOnFirstUseSince.millisecondsSinceEpoch
+      else if (existingMap?['tofu'] != null)
+        'tofu': existingMap!['tofu'],
     });
   }
 
@@ -1389,16 +1394,19 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String deviceId,
     String content,
-    bool verified,
-    bool blocked,
+    bool? verified,
+    bool? blocked,
     int lastActive,
   ) async {
-    await _userDeviceKeysBox.put(TupleKey(userId, deviceId).toString(), {
+    final boxKey = TupleKey(userId, deviceId).toString();
+    final existing = await _userDeviceKeysBox.get(boxKey);
+    final existingMap = existing != null ? copyMap(existing) : null;
+    await _userDeviceKeysBox.put(boxKey, {
       'user_id': userId,
       'device_id': deviceId,
       'content': content,
-      'verified': verified,
-      'blocked': blocked,
+      'verified': verified ?? existingMap?['verified'] ?? false,
+      'blocked': blocked ?? existingMap?['blocked'] ?? false,
       'last_active': lastActive,
       'last_sent_message': '',
     });
@@ -1864,6 +1872,30 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       client,
       ownKeys: ownKeys,
     );
+  }
+
+  @override
+  Future<DeviceKeys?> getUserDeviceKeysByCurve25519Key(
+    String senderKey,
+    Client client,
+  ) async {
+    final deviceId = await _seenDeviceKeysBox.get(senderKey);
+    if (deviceId == null) return null;
+
+    final seenDevicesKeys = await _seenDeviceIdsBox.getAllKeys();
+
+    for (final key in seenDevicesKeys) {
+      final tuple = TupleKey.fromString(key);
+      if (tuple.parts.last != deviceId) continue;
+      final publicKeys = await _seenDeviceIdsBox.get(key);
+      if (publicKeys == null || !publicKeys.startsWith(senderKey)) continue;
+      final deviceKeysList = await getUserDeviceKeysList(
+        tuple.parts.first,
+        client,
+      );
+      return deviceKeysList?.deviceKeys[deviceId];
+    }
+    return null;
   }
 }
 
