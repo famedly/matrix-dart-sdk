@@ -216,12 +216,17 @@ abstract class DatabaseApi {
 
   Future storeUserDeviceKeysInfo(String userId, bool outdated);
 
+  /// Stores a device key.
+  ///
+  /// When [verified] or [blocked] is `null`, keeps the existing DB value if any,
+  /// otherwise falls back to `false`. Pass explicit booleans only when trust
+  /// should be overwritten (e.g. migration or intentional trust writes).
   Future storeUserDeviceKey(
     String userId,
     String deviceId,
     String content,
-    bool verified,
-    bool blocked,
+    bool? verified,
+    bool? blocked,
     int lastActive,
   );
 
@@ -229,12 +234,17 @@ abstract class DatabaseApi {
 
   Future removeUserCrossSigningKey(String userId, String publicKey);
 
+  /// Stores a cross-signing key.
+  ///
+  /// When [verified] or [blocked] is `null`, keeps the existing DB value if any,
+  /// otherwise falls back to `false`. Pass explicit booleans only when trust
+  /// should be overwritten (e.g. migration or intentional trust writes).
   Future storeUserCrossSigningKey(
     String userId,
     String publicKey,
     String content,
-    bool verified,
-    bool blocked, {
+    bool? verified,
+    bool? blocked, {
     DateTime? trustOnFirstUseSince,
   });
 
