@@ -3337,18 +3337,9 @@ class Client extends MatrixApi {
 
     if (!isLogged()) return userDeviceKeys;
 
-    // Trust may have been updated (setVerified/setBlocked) while /keys/query
-    // was in flight. Reload so we merge against the latest trust flags.
-    for (final userId in userIds) {
-      final latest = await database.getUserDeviceKeysList(userId, this);
-      if (latest != null) {
-        oldDeviceKeys[userId] = latest;
-      }
-    }
-
     // Single list instance for our own keys — always passed into SignableKey
-    // constructors for cross-user signature chains. Must be resolved after the
-    // trust reload above, and reused as userKeys when updating our own user.
+    // constructors for cross-user signature chains. Reused as userKeys when
+    // updating our own user.
     final ownUserId = userID!;
     final ownKeys =
         oldDeviceKeys[ownUserId] ??
@@ -3445,8 +3436,11 @@ class Client extends MatrixApi {
                   userId,
                   deviceId,
                   json.encode(entry.toJson()),
-                  entry.directVerified,
-                  entry.blocked,
+                  // Own device is always trusted.
+                  deviceId == deviceID && entry.ed25519Key == fingerprintKey
+                      ? true
+                      : null,
+                  null,
                   entry.lastActive.millisecondsSinceEpoch,
                 ),
               );
@@ -3540,8 +3534,8 @@ class Client extends MatrixApi {
               userId,
               publicKey,
               json.encode(entry.toJson()),
-              entry.directVerified,
-              entry.blocked,
+              null,
+              null,
               trustOnFirstUseSince: entry.trustOnFirstUseSince,
             ),
           );
@@ -3559,16 +3553,11 @@ class Client extends MatrixApi {
 
     // now process all the failures
     if (response.failures != null) {
-      for (final failureDomain in response.failures?.keys ?? <String>[]) {
-        _keyQueryFailures[failureDomain] = DateTime.now();
-      }
+      Logs().w('Failed to fetch device keys from:', response.failures?.keys);
     }
 
     if (dbActions.isNotEmpty) {
       if (!isLogged()) return userDeviceKeys;
-      Logs().i(
-        'Updating user device keys in database... (${dbActions.length} operations)',
-      );
       await runBenchmarked(
         'Updating user device keys in database...',
         () => database.transaction(() async {
@@ -3610,8 +3599,6 @@ class Client extends MatrixApi {
     }
     return null;
   }
-
-  final Map<String, DateTime> _keyQueryFailures = {};
 
   bool _toDeviceQueueNeedsProcessing = true;
 

@@ -95,8 +95,8 @@ void main() {
         final client = await getClient();
         final recoveryKey = await client.initCryptoIdentity();
         final defaultKeyId = client.encryption!.ssss.defaultKeyId;
-        final masterPub =
-            client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key;
+        final ownKeys = await client.fetchUserDeviceKeysList(client.userID!);
+        final masterPub = ownKeys!.masterKey!.ed25519Key;
 
         Future<String> healInPlace() async {
           final ssss = client.encryption!.ssss;
@@ -123,10 +123,7 @@ void main() {
         expect(state.initialized, true);
         expect(state.connected, true);
         expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
-        expect(
-          client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key,
-          masterPub,
-        );
+        expect(ownKeys.masterKey!.ed25519Key, masterPub);
 
         // Preserve master: only self/user signing secrets missing.
         for (final type in [
@@ -146,10 +143,7 @@ void main() {
         expect(state.initialized, true);
         expect(state.connected, true);
         expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
-        expect(
-          client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key,
-          masterPub,
-        );
+        expect(ownKeys.masterKey!.ed25519Key, masterPub);
 
         await client.encryption!.ssss.clearCache();
         var open = client.encryption!.ssss.open();
@@ -250,37 +244,43 @@ void main() {
       timeout: Timeout(Duration(minutes: 2)),
     );
 
-    test('initCryptoIdentity selfSign controls device signing', () async {
-      final client = await getClient();
-      final userId = client.userID!;
-      final deviceId = client.deviceID!;
+    test(
+      'initCryptoIdentity selfSign controls device signing',
+      () async {
+        final client = await getClient();
+        final userId = client.userID!;
+        final deviceId = client.deviceID!;
 
-      bool uploadContainsDevice(List<dynamic> uploads) {
-        for (final upload in uploads) {
-          final body = jsonDecode(upload as String) as Map;
-          final userKeys = body[userId] as Map?;
-          if (userKeys?.containsKey(deviceId) ?? false) {
-            return true;
+        bool uploadContainsDevice(List<dynamic> uploads) {
+          for (final upload in uploads) {
+            final body = jsonDecode(upload as String) as Map;
+            final userKeys = body[userId] as Map?;
+            if (userKeys?.containsKey(deviceId) ?? false) {
+              return true;
+            }
           }
+          return false;
         }
-        return false;
-      }
 
-      FakeMatrixApi.calledEndpoints.clear();
-      await client.initCryptoIdentity(selfSign: false);
-      final noSelfSignUploads =
-          FakeMatrixApi.calledEndpoints['/client/v3/keys/signatures/upload'] ??
-          [];
-      expect(uploadContainsDevice(noSelfSignUploads), false);
+        FakeMatrixApi.calledEndpoints.clear();
+        await client.initCryptoIdentity(selfSign: false);
+        final noSelfSignUploads =
+            FakeMatrixApi
+                .calledEndpoints['/client/v3/keys/signatures/upload'] ??
+            [];
+        expect(uploadContainsDevice(noSelfSignUploads), false);
 
-      FakeMatrixApi.calledEndpoints.clear();
-      final recoveryKey = await client.initCryptoIdentity(selfSign: true);
-      final selfSignUploads =
-          FakeMatrixApi.calledEndpoints['/client/v3/keys/signatures/upload'] ??
-          [];
-      expect(uploadContainsDevice(selfSignUploads), true);
-      expect(recoveryKey.length, 59);
-    }, timeout: Timeout(Duration(minutes: 2)));
+        FakeMatrixApi.calledEndpoints.clear();
+        final recoveryKey = await client.initCryptoIdentity(selfSign: true);
+        final selfSignUploads =
+            FakeMatrixApi
+                .calledEndpoints['/client/v3/keys/signatures/upload'] ??
+            [];
+        expect(uploadContainsDevice(selfSignUploads), true);
+        expect(recoveryKey.length, 59);
+      },
+      timeout: Timeout(Duration(minutes: 2)),
+    );
 
     test('Add a second recovery key', () async {
       final client = await getClient();
