@@ -3296,28 +3296,34 @@ class Client extends MatrixApi {
   Future<DeviceKeysList?> fetchUserDeviceKeysList(
     String userId, {
     Duration? queryKeysTimeout,
+    bool alwaysFetchFromServer = false,
   }) async {
-    final keys = await fetchUserDeviceKeysLists({
-      userId,
-    }, queryKeysTimeout: queryKeysTimeout);
+    final keys = await fetchUserDeviceKeysLists(
+      {userId},
+      queryKeysTimeout: queryKeysTimeout,
+      alwaysFetchFromServer: alwaysFetchFromServer,
+    );
     return keys[userId];
   }
 
   /// Fetches the user device keys first from the database. Those which are
   /// missing or marked as outdated will then get fetched from the server.
+  /// Always contains the own keys as well!
   ///
   /// Returns snapshots — see [fetchUserDeviceKeysList].
   Future<Map<String, DeviceKeysList>> fetchUserDeviceKeysLists(
     Set<String> userIds, {
     Duration? queryKeysTimeout,
+    bool alwaysFetchFromServer = false,
   }) async {
+    userIds.add(userID!); // Ensure own keys are always up2date
     final userDeviceKeys = <String, DeviceKeysList>{};
     final oldDeviceKeys = <String, DeviceKeysList>{};
     // Get from database:
     for (final userId in userIds) {
       final cachedList = await database.getUserDeviceKeysList(userId, this);
       if (cachedList != null) {
-        if (cachedList.outdated) {
+        if (cachedList.outdated || alwaysFetchFromServer) {
           oldDeviceKeys[userId] = cachedList;
         } else {
           userDeviceKeys[userId] = cachedList;
@@ -3337,18 +3343,9 @@ class Client extends MatrixApi {
 
     if (!isLogged()) return userDeviceKeys;
 
-    // Trust may have been updated (setVerified/setBlocked) while /keys/query
-    // was in flight. Reload so we merge against the latest trust flags.
-    for (final userId in userIds) {
-      final latest = await database.getUserDeviceKeysList(userId, this);
-      if (latest != null) {
-        oldDeviceKeys[userId] = latest;
-      }
-    }
-
     // Single list instance for our own keys — always passed into SignableKey
-    // constructors for cross-user signature chains. Must be resolved after the
-    // trust reload above, and reused as userKeys when updating our own user.
+    // constructors for cross-user signature chains. Reused as userKeys when
+    // updating our own user.
     final ownUserId = userID!;
     final ownKeys =
         oldDeviceKeys[ownUserId] ??
@@ -3445,8 +3442,11 @@ class Client extends MatrixApi {
                   userId,
                   deviceId,
                   json.encode(entry.toJson()),
-                  entry.directVerified,
-                  entry.blocked,
+                  // Own device is always trusted.
+                  deviceId == deviceID && entry.ed25519Key == fingerprintKey
+                      ? true
+                      : null,
+                  null,
                   entry.lastActive.millisecondsSinceEpoch,
                 ),
               );
@@ -3559,16 +3559,11 @@ class Client extends MatrixApi {
 
     // now process all the failures
     if (response.failures != null) {
-      for (final failureDomain in response.failures?.keys ?? <String>[]) {
-        _keyQueryFailures[failureDomain] = DateTime.now();
-      }
+      Logs().w('Failed to fetch device keys from:', response.failures?.keys);
     }
 
     if (dbActions.isNotEmpty) {
       if (!isLogged()) return userDeviceKeys;
-      Logs().i(
-        'Updating user device keys in database... (${dbActions.length} operations)',
-      );
       await runBenchmarked(
         'Updating user device keys in database...',
         () => database.transaction(() async {
@@ -3600,18 +3595,8 @@ class Client extends MatrixApi {
   }
 
   /// Gets user device keys by its curve25519 key. Returns null if it isn't found
-  Future<DeviceKeys?> getUserDeviceKeysByCurve25519Key(String senderKey) async {
-    final allKeys = await database.getUserDeviceKeys(this);
-    for (final user in allKeys.values) {
-      final device = user.deviceKeys.values.firstWhereOrNull(
-        (e) => e.curve25519Key == senderKey,
-      );
-      if (device != null) return device;
-    }
-    return null;
-  }
-
-  final Map<String, DateTime> _keyQueryFailures = {};
+  Future<DeviceKeys?> getUserDeviceKeysByCurve25519Key(String senderKey) =>
+      database.getUserDeviceKeysByCurve25519Key(senderKey, this);
 
   bool _toDeviceQueueNeedsProcessing = true;
 
