@@ -120,11 +120,23 @@ extension PollEventExtension on Event {
     );
   }
 
+  /// Ends this poll by sending an `m.poll.end` reference event into the
+  /// room.
+  ///
+  /// Per MSC3381, a poll may be ended by its creator or by a user with
+  /// permission to redact other users' messages in the room (the redaction
+  /// power level). This matches the receiving-side validation in
+  /// [_getEndPollEvent], which ignores `m.poll.end` events from any other
+  /// sender.
+  ///
+  /// Throws an [Exception] if this event is not a poll start event or if the
+  /// current user is neither the poll creator nor allowed to redact in the
+  /// room.
   Future<String?> endPoll({String? txid}) {
     if (type != PollEventContent.startType) {
       throw Exception('Event is not a poll.');
     }
-    if (senderId != room.client.userID) {
+    if (senderId != room.client.userID && !room.canRedact) {
       throw Exception('You can not end a poll created by someone else.');
     }
     return room.sendEvent(
