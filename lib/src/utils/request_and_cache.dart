@@ -25,10 +25,9 @@ extension RequestAndCache on Client {
       final content = await requestFunc();
       await database.cacheCustomObject(cacheKey, toJson(content));
       return content;
-    } catch (error) {
-      Logs().v('Unable to update cache for $cacheKey', error);
-
+    } catch (error, stackTrace) {
       if (!throwOnUpdateFailure && cachedResponse != null) {
+        Logs().v('Unable to update cache for $cacheKey', error, stackTrace);
         return fromJson(cachedResponse.content);
       }
       rethrow;
