@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # MSC extensions
 
 This folder contains non-spec feature implementations, usually proposed in Matrix Specification Changes (MSCs).

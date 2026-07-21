@@ -1,26 +1,12 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:convert';
 
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 
 void _testMatch(PushRuleSet ruleset, Event event) {
@@ -334,18 +320,15 @@ void main() {
 
     test('match_display_name rule', () async {
       final event = Event.fromJson(jsonObj, room);
-      (event.room.states[EventTypes.RoomMember] ??= {})[client.userID!] =
-          Event.fromJson(
-        {
-          'type': EventTypes.RoomMember,
-          'sender': senderID,
-          'state_key': 'client.senderID',
-          'content': {'displayname': 'Nico', 'membership': 'join'},
-          'room_id': room.id,
-          'origin_server_ts': 5,
-        },
-        room,
-      );
+      (event.room.states[EventTypes.RoomMember] ??=
+          {})[client.userID!] = Event.fromJson({
+        'type': EventTypes.RoomMember,
+        'sender': senderID,
+        'state_key': 'client.senderID',
+        'content': {'displayname': 'Nico', 'membership': 'join'},
+        'room_id': room.id,
+        'origin_server_ts': 5,
+      }, room);
 
       final ruleset = PushRuleSet(
         override: [
@@ -358,9 +341,7 @@ void main() {
               {'set_tweak': 'highlight', 'value': true},
               {'set_tweak': 'sound', 'value': 'goose.wav'},
             ],
-            conditions: [
-              PushCondition(kind: 'contains_display_name'),
-            ],
+            conditions: [PushCondition(kind: 'contains_display_name')],
           ),
         ],
       );
@@ -374,18 +355,15 @@ void main() {
 
     test('member_count rule', () async {
       final event = Event.fromJson(jsonObj, room);
-      (event.room.states[EventTypes.RoomMember] ??= {})[client.userID!] =
-          Event.fromJson(
-        {
-          'type': EventTypes.RoomMember,
-          'sender': senderID,
-          'state_key': 'client.senderID',
-          'content': {'displayname': 'Nico', 'membership': 'join'},
-          'room_id': room.id,
-          'origin_server_ts': 5,
-        },
-        room,
-      );
+      (event.room.states[EventTypes.RoomMember] ??=
+          {})[client.userID!] = Event.fromJson({
+        'type': EventTypes.RoomMember,
+        'sender': senderID,
+        'state_key': 'client.senderID',
+        'content': {'displayname': 'Nico', 'membership': 'join'},
+        'room_id': room.id,
+        'origin_server_ts': 5,
+      }, room);
 
       final ruleset = PushRuleSet(
         override: [
@@ -398,9 +376,7 @@ void main() {
               {'set_tweak': 'highlight', 'value': true},
               {'set_tweak': 'sound', 'value': 'goose.wav'},
             ],
-            conditions: [
-              PushCondition(kind: 'room_member_count', is$: '<5'),
-            ],
+            conditions: [PushCondition(kind: 'room_member_count', is$: '<5')],
           ),
         ],
       );
@@ -428,21 +404,18 @@ void main() {
 
     test('notification permissions rule', () async {
       final event = Event.fromJson(jsonObj, room);
-      (event.room.states[EventTypes.RoomPowerLevels] ??= {})[''] =
-          Event.fromJson(
-        {
-          'type': EventTypes.RoomMember,
-          'sender': senderID,
-          'state_key': 'client.senderID',
-          'content': {
-            'notifications': {'broom': 20},
-            'users': {senderID: 20},
-          },
-          'room_id': room.id,
-          'origin_server_ts': 5,
+      (event.room.states[EventTypes.RoomPowerLevels] ??=
+          {})[''] = Event.fromJson({
+        'type': EventTypes.RoomMember,
+        'sender': senderID,
+        'state_key': 'client.senderID',
+        'content': {
+          'notifications': {'broom': 20},
+          'users': {senderID: 20},
         },
-        room,
-      );
+        'room_id': room.id,
+        'origin_server_ts': 5,
+      }, room);
 
       final ruleset = PushRuleSet(
         override: [

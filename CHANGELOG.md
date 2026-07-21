@@ -1,4 +1,79 @@
+<!--
+SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
+## [8.1.0] 13th July 2026
+- fix: avoid concurrent modification when updating group calls (Marco Attanasio)
+- fix: clear LiveKit key debounce timestamp on dispose (Marco Attanasio)
+- fix: get user device keys for gappy syncs and partial rooms (td)
+
+## [8.0.0] 9th July 2026
+- chore: better error handling for soft logout (Christian Kußowski)
+- docs: correct Dart SDK version in cloud setup notes (Cursor Agent)
+- fix: do not assume room member count is 1 if absent (Christian Kußowski)
+- fix: ensure not soft logged out in pushhelper (Christian Kußowski)
+- fix: (BREAKING) Soft logout with Matrix native OIDC does not send soft_logout flag (Christian Kußowski)
+- fix: use thumbnail only if present (Christian Kußowski)
+- refactor: No longer set timeline event as state event (Christian Kußowski)
+
+## [7.5.0] 2nd July 2026
+- build: (BREAKING) update to matrix spec 1.18 (Christian Kußowski)
+- build: (deps): bump actions/checkout from 6 to 7 (dependabot[bot])
+- build: update dart to 3.11 and enable null aware elements in lists (Christian Kußowski)
+- build: update to matrix spec 1.17 (Christian Kußowski)
+- ci: enable sort_pub_dependencies lint (Cursor Agent)
+- fix: database operation not in transaction (Christian Kußowski)
+- fix: load keys for decryption separately for [Room].searchEvents (Karthikeyan S)
+- fix: selfSign() with passphrase fails sometimes when using existing ssss instead of just the passphrase (Christian Kußowski)
+- fix: type error in model (Christian Kußowski)
+- refactor: use new formatting for code generated files (Christian Kußowski)
+
+## [7.4.0] 23rd June 2026
+- feat: add skipScanner flag to download methods for per-call content scanner bypass (Khalil Amor)
+
+## [7.3.0] 18th June 2026
+- feat: add isValidMatrixIdStrict for spec-compliant matrix id validation (Cursor Agent)
+- fix: return null when thumbnail was not found and make cast nullable (yurtemre7)
+
+## [7.2.4] 16th June 2026
+- chore: Follow up actually store updated tofu state in db (Christian Kußowski)
+- fix: Allow image resizer to return new mime type (Christian Kußowski)
+
+## [7.2.3] 11th June 2026
+- feat: Flag cross signing keys as tofu (Christian Kußowski)
+- chore: Increase timeout for create key (Christian Kußowski)
+- fix: Do not request keys when already logged out (Christian Kußowski)
+
+## [7.2.2] 29th May 2026
+
+- fix: fail tests if they fail (#2348) (td)
+
+## [7.2.1] 28th May 2026
+
+- feat: update ssss to centralise key logic (Abrish Sabri)
+- fix: Account data not existing throws exception while function expects empty json object (Christian Kußowski)
+- fix: encryption loop iteration (Abrish Sabri)
+
+## [7.2.0] 26th May 2026
+
+- build: (deps): bump actions/checkout from 4 to 6 (dependabot[bot])
+- feat: add matrix content scanner support (Khalil)
+- fix: Actually throw error on failed download (Christian Kußowski)
+- fix: Workaround that synapse's initial sync account data may not be up to date (Christian Kußowski)
+
+## [7.1.2] 12th May 2026
+- fix: do not send notify rtc event in direct chats (td)
+
+## [7.1.1] 12th May 2026
+
+- fix: call delayed event canceller should not use application and actually remove it from local state on leave (td)
+- fix: Do not send dozens of key request to device messages on timeline export (krille-chan)
+- fix: Pass correct event to redaction localization (Christian Kußowski)
+
 ## [7.1.0] 29th April 2026
+
 - feat: custom rooms list sorter (Karthikeyan S)
 - feat: gate LaTeX markdown parsing behind enableLatexMarkdown flag (Khalil)
 - fix: clear database if onSoftLogout fails instead of logout (td)

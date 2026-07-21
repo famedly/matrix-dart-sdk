@@ -1,25 +1,6 @@
-/* MIT License
-* 
-* Copyright (C) 2019, 2020, 2021 Famedly GmbH
-* 
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-* 
-* The above copyright notice and this permission notice shall be included in all
-* copies or substantial portions of the Software.
-* 
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-* SOFTWARE.
-*/
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /// Lightweight wrapper around the raw matrix API.
 library;
@@ -39,6 +20,7 @@ export 'matrix_api_lite/model/auth/authentication_types.dart';
 export 'matrix_api_lite/model/auth/authentication_user_identifier.dart';
 export 'matrix_api_lite/model/basic_event.dart';
 export 'matrix_api_lite/model/basic_event_with_sender.dart';
+export 'matrix_api_lite/model/children_state.dart';
 export 'matrix_api_lite/model/event_types.dart';
 export 'matrix_api_lite/model/events/forwarded_room_key_content.dart';
 export 'matrix_api_lite/model/events/image_pack_content.dart';
@@ -50,7 +32,6 @@ export 'matrix_api_lite/model/events/room_key_request_content.dart';
 export 'matrix_api_lite/model/events/secret_storage_default_key_content.dart';
 export 'matrix_api_lite/model/events/secret_storage_key_content.dart';
 export 'matrix_api_lite/model/events/tombstone_content.dart';
-export 'matrix_api_lite/model/children_state.dart';
 export 'matrix_api_lite/model/matrix_event.dart';
 export 'matrix_api_lite/model/matrix_exception.dart';
 export 'matrix_api_lite/model/matrix_keys.dart';

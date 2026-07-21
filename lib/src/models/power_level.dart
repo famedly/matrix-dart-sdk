@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 extension type PowerLevel(int level) {
   /// 2^53 - 1 from https://spec.matrix.org/v1.15/appendices/#canonical-json
   static const int ownerPowerLevel = 9007199254740991;
@@ -13,10 +17,10 @@ extension type PowerLevel(int level) {
   PowerLevelRole get role => level == ownerPowerLevel
       ? PowerLevelRole.owner
       : level >= defaultAdminLevel
-          ? PowerLevelRole.admin
-          : level >= defaultModeratorLevel
-              ? PowerLevelRole.moderator
-              : PowerLevelRole.user;
+      ? PowerLevelRole.admin
+      : level >= defaultModeratorLevel
+      ? PowerLevelRole.moderator
+      : PowerLevelRole.user;
 
   bool operator <(PowerLevel other) => level < other.level;
   bool operator >(PowerLevel other) => level > other.level;

@@ -1,9 +1,12 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:sqflite_common/sqflite.dart';
-
 import 'package:matrix/src/database/zone_transaction_mixin.dart';
+import 'package:sqflite_common/sqflite.dart';
 
 /// Key-Value store abstraction over Sqflite so that the sdk database can use
 /// a single interface for all platforms. API is inspired by Hive.
@@ -49,22 +52,19 @@ class BoxCollection with ZoneTransactionMixin {
     Future<void> Function() action, {
     List<String>? boxNames,
     bool readOnly = false,
-  }) =>
-      zoneTransaction(() async {
-        final batch = _db.batch();
-        _activeBatch = batch;
-        await action();
-        _activeBatch = null;
-        await batch.commit(noResult: true);
-      });
+  }) => zoneTransaction(() async {
+    final batch = _db.batch();
+    _activeBatch = batch;
+    await action();
+    _activeBatch = null;
+    await batch.commit(noResult: true);
+  });
 
-  Future<void> clear() => transaction(
-        () async {
-          for (final name in boxNames) {
-            await _db.delete(name);
-          }
-        },
-      );
+  Future<void> clear() => transaction(() async {
+    for (final name in boxNames) {
+      await _db.delete(name);
+    }
+  });
 
   Future<void> close() => zoneTransaction(_db.close);
 
@@ -164,10 +164,7 @@ class Box<V> {
     final result = await executor.query(name);
     return Map.fromEntries(
       result.map(
-        (row) => MapEntry(
-          row['k'] as String,
-          _fromString(row['v']) as V,
-        ),
+        (row) => MapEntry(row['k'] as String, _fromString(row['v']) as V),
       ),
     );
   }
@@ -231,10 +228,7 @@ class Box<V> {
   Future<void> put(String key, V val) async {
     final txn = boxCollection._activeBatch;
 
-    final params = {
-      'k': key,
-      'v': _toString(val),
-    };
+    final params = {'k': key, 'v': _toString(val)};
     if (txn == null) {
       await boxCollection._db.insert(
         name,
@@ -242,11 +236,7 @@ class Box<V> {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } else {
-      txn.insert(
-        name,
-        params,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      txn.insert(name, params, conflictAlgorithm: ConflictAlgorithm.replace);
     }
 
     _quickAccessCache[key] = val;
@@ -281,11 +271,7 @@ class Box<V> {
         whereArgs: keys,
       );
     } else {
-      txn.delete(
-        name,
-        where: 'k IN ($placeholder)',
-        whereArgs: keys,
-      );
+      txn.delete(name, where: 'k IN ($placeholder)', whereArgs: keys);
     }
 
     for (final key in keys) {

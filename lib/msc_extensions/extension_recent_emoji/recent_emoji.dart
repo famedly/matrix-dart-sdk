@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// Extension to synchronize the recently used widgets with Element clients
 library;
 
@@ -26,16 +30,15 @@ extension RecentEmojiExtension on Client {
   Map<String, int> get recentEmojis {
     final recents = <String, int>{};
 
-    accountData['io.element.recent_emoji']
-        ?.content
+    accountData['io.element.recent_emoji']?.content
         .tryGetList('recent_emoji')
         ?.forEach((item) {
-      if (item is List) {
-        if (item.length > 1 && item[0] is String && item[1] is int) {
-          recents[item[0]] = item[1];
-        }
-      }
-    });
+          if (item is List) {
+            if (item.length > 1 && item[0] is String && item[1] is int) {
+              recents[item[0]] = item[1];
+            }
+          }
+        });
 
     return recents;
   }
@@ -55,10 +58,8 @@ extension RecentEmojiExtension on Client {
   Future<void> setRecentEmojiData(Map<String, int> data) async {
     if (userID == null) return;
     final content = List.from(data.entries.map((e) => [e.key, e.value]));
-    return setAccountData(
-      userID!,
-      'io.element.recent_emoji',
-      {'recent_emoji': content},
-    );
+    return setAccountData(userID!, 'io.element.recent_emoji', {
+      'recent_emoji': content,
+    });
   }
 }

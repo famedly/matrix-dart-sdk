@@ -1,13 +1,14 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:collection/collection.dart';
 
 class PollEventContent {
   final String mText;
   final PollStartContent pollStartContent;
 
-  const PollEventContent({
-    required this.mText,
-    required this.pollStartContent,
-  });
+  const PollEventContent({required this.mText, required this.pollStartContent});
   static const String mTextJsonKey = 'org.matrix.msc1767.text';
   static const String startType = 'org.matrix.msc3381.poll.start';
   static const String responseType = 'org.matrix.msc3381.poll.response';
@@ -20,9 +21,9 @@ class PollEventContent {
       );
 
   Map<String, dynamic> toJson() => {
-        mTextJsonKey: mText,
-        startType: pollStartContent.toJson(),
-      };
+    mTextJsonKey: mText,
+    startType: pollStartContent.toJson(),
+  };
 }
 
 class PollStartContent {
@@ -40,8 +41,9 @@ class PollStartContent {
 
   factory PollStartContent.fromJson(Map<String, dynamic> json) =>
       PollStartContent(
-        kind: PollKind.values
-            .singleWhereOrNull((kind) => kind.name == json['kind']),
+        kind: PollKind.values.singleWhereOrNull(
+          (kind) => kind.name == json['kind'],
+        ),
         maxSelections: json['max_selections'],
         question: PollQuestion.fromJson(json['question']),
         answers: (json['answers'] as List)
@@ -50,30 +52,27 @@ class PollStartContent {
       );
 
   Map<String, dynamic> toJson() => {
-        if (kind != null) 'kind': kind?.name,
-        'max_selections': maxSelections,
-        'question': question.toJson(),
-        'answers': answers.map((i) => i.toJson()).toList(),
-      };
+    if (kind != null) 'kind': kind?.name,
+    'max_selections': maxSelections,
+    'question': question.toJson(),
+    'answers': answers.map((i) => i.toJson()).toList(),
+  };
 }
 
 class PollQuestion {
   final String mText;
 
-  const PollQuestion({
-    required this.mText,
-  });
+  const PollQuestion({required this.mText});
 
-  factory PollQuestion.fromJson(Map<String, dynamic> json) => PollQuestion(
-        mText: json[PollEventContent.mTextJsonKey] ?? json['body'],
-      );
+  factory PollQuestion.fromJson(Map<String, dynamic> json) =>
+      PollQuestion(mText: json[PollEventContent.mTextJsonKey] ?? json['body']);
 
   Map<String, dynamic> toJson() => {
-        PollEventContent.mTextJsonKey: mText,
-        // Compatible with older Element versions
-        'msgtype': 'm.text',
-        'body': mText,
-      };
+    PollEventContent.mTextJsonKey: mText,
+    // Compatible with older Element versions
+    'msgtype': 'm.text',
+    'body': mText,
+  };
 }
 
 class PollAnswer {
@@ -83,14 +82,14 @@ class PollAnswer {
   const PollAnswer({required this.id, required this.mText});
 
   factory PollAnswer.fromJson(Map<String, Object?> json) => PollAnswer(
-        id: json['id'] as String,
-        mText: json[PollEventContent.mTextJsonKey] as String,
-      );
+    id: json['id'] as String,
+    mText: json[PollEventContent.mTextJsonKey] as String,
+  );
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        PollEventContent.mTextJsonKey: mText,
-      };
+    'id': id,
+    PollEventContent.mTextJsonKey: mText,
+  };
 }
 
 enum PollKind {

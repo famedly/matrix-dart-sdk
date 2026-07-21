@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:matrix/matrix.dart';
 
@@ -27,8 +13,9 @@ class CachedPresence {
 
   factory CachedPresence.fromJson(Map<String, Object?> json) =>
       CachedPresence._(
-        presence: PresenceType.values
-            .singleWhere((type) => type.name == json['presence']),
+        presence: PresenceType.values.singleWhere(
+          (type) => type.name == json['presence'],
+        ),
         lastActiveTimestamp: json['last_active_timestamp'] != null
             ? DateTime.fromMillisecondsSinceEpoch(
                 json['last_active_timestamp'] as int,
@@ -40,13 +27,13 @@ class CachedPresence {
       );
 
   Map<String, Object?> toJson() => {
-        'user_id': userid,
-        'presence': presence.name,
-        if (lastActiveTimestamp != null)
-          'last_active_timestamp': lastActiveTimestamp?.millisecondsSinceEpoch,
-        if (statusMsg != null) 'status_msg': statusMsg,
-        if (currentlyActive != null) 'currently_active': currentlyActive,
-      };
+    'user_id': userid,
+    'presence': presence.name,
+    if (lastActiveTimestamp != null)
+      'last_active_timestamp': lastActiveTimestamp?.millisecondsSinceEpoch,
+    if (statusMsg != null) 'status_msg': statusMsg,
+    if (currentlyActive != null) 'currently_active': currentlyActive,
+  };
 
   CachedPresence._({
     required this.userid,
@@ -64,39 +51,39 @@ class CachedPresence {
     this.userid,
   ) {
     if (lastActiveAgo != null) {
-      lastActiveTimestamp =
-          DateTime.now().subtract(Duration(milliseconds: lastActiveAgo));
+      lastActiveTimestamp = DateTime.now().subtract(
+        Duration(milliseconds: lastActiveAgo),
+      );
     }
   }
 
   CachedPresence.fromMatrixEvent(Presence event)
-      : this(
-          event.presence.presence,
-          event.presence.lastActiveAgo,
-          event.presence.statusMsg,
-          event.presence.currentlyActive,
-          event.senderId,
-        );
+    : this(
+        event.presence.presence,
+        event.presence.lastActiveAgo,
+        event.presence.statusMsg,
+        event.presence.currentlyActive,
+        event.senderId,
+      );
 
   CachedPresence.fromPresenceResponse(GetPresenceResponse event, String userid)
-      : this(
-          event.presence,
-          event.lastActiveAgo,
-          event.statusMsg,
-          event.currentlyActive,
-          userid,
-        );
+    : this(
+        event.presence,
+        event.lastActiveAgo,
+        event.statusMsg,
+        event.currentlyActive,
+        userid,
+      );
 
   CachedPresence.neverSeen(this.userid) : presence = PresenceType.offline;
 
   Presence toPresence() {
-    final content = <String, dynamic>{
-      'presence': presence.name,
-    };
+    final content = <String, dynamic>{'presence': presence.name};
     if (currentlyActive != null) content['currently_active'] = currentlyActive;
     if (lastActiveTimestamp != null) {
-      content['last_active_ago'] =
-          DateTime.now().difference(lastActiveTimestamp!).inMilliseconds;
+      content['last_active_ago'] = DateTime.now()
+          .difference(lastActiveTimestamp!)
+          .inMilliseconds;
     }
     if (statusMsg != null) content['status_msg'] = statusMsg;
 

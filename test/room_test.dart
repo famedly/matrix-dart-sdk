@@ -1,29 +1,15 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 
 Future<void> updateLastEvent(Event event) {
@@ -35,9 +21,7 @@ Future<void> updateLastEvent(Event event) {
       rooms: RoomsUpdate(
         join: {
           event.room.id: JoinedRoomUpdate(
-            timeline: TimelineUpdate(
-              events: [event],
-            ),
+            timeline: TimelineUpdate(events: [event]),
           ),
         },
       ),
@@ -432,51 +416,48 @@ void main() {
       expect(room.lastEvent?.status, EventStatus.sent);
     });
 
-    test('MatrixRTC member leave does not overwrite call reject lastEvent',
-        () async {
-      final rejectEvent = Event(
-        senderId: '@callee:example.com',
-        type: EventTypes.CallReject,
-        room: room,
-        eventId: 'call-reject',
-        originServerTs: DateTime.now(),
-        content: {
-          'call_id': '',
-          'application': 'm.call.audio',
-        },
-      );
-      await updateLastEvent(rejectEvent);
-      expect(room.lastEvent?.eventId, 'call-reject');
-
-      await updateLastEvent(
-        Event(
-          senderId: '@caller:example.com',
-          type: EventTypes.GroupCallMember,
+    test(
+      'MatrixRTC member leave does not overwrite call reject lastEvent',
+      () async {
+        final rejectEvent = Event(
+          senderId: '@callee:example.com',
+          type: EventTypes.CallReject,
           room: room,
-          eventId: 'caller-left-call',
-          originServerTs: rejectEvent.originServerTs.add(
-            const Duration(seconds: 1),
-          ),
-          content: {
-            'memberships': [],
-          },
-          unsigned: {
-            'prev_content': {
-              'memberships': [
-                {
-                  'call_id': '',
-                  'application': 'm.call.audio',
-                  'scope': 'm.room',
-                },
-              ],
-            },
-          },
-          stateKey: '@caller:example.com',
-        ),
-      );
+          eventId: 'call-reject',
+          originServerTs: DateTime.now(),
+          content: {'call_id': '', 'application': 'm.call.audio'},
+        );
+        await updateLastEvent(rejectEvent);
+        expect(room.lastEvent?.eventId, 'call-reject');
 
-      expect(room.lastEvent?.eventId, 'call-reject');
-    });
+        await updateLastEvent(
+          Event(
+            senderId: '@caller:example.com',
+            type: EventTypes.GroupCallMember,
+            room: room,
+            eventId: 'caller-left-call',
+            originServerTs: rejectEvent.originServerTs.add(
+              const Duration(seconds: 1),
+            ),
+            content: {'memberships': []},
+            unsigned: {
+              'prev_content': {
+                'memberships': [
+                  {
+                    'call_id': '',
+                    'application': 'm.call.audio',
+                    'scope': 'm.room',
+                  },
+                ],
+              },
+            },
+            stateKey: '@caller:example.com',
+          ),
+        );
+
+        expect(room.lastEvent?.eventId, 'call-reject');
+      },
+    );
 
     test('lastEvent when edited and deleted', () async {
       await room.client.handleSync(
@@ -731,18 +712,18 @@ void main() {
       final newParticipants = room.getParticipants();
       expect(oldParticipants.length < newParticipants.length, true);
       expect(fetchedParticipants.length, newParticipants.length);
+      room.summary.mJoinedMemberCount = 3;
+      expect(room.participantListComplete, true);
+      room.summary.mJoinedMemberCount = null;
+      expect(room.participantListComplete, false);
     });
 
-    test(
-      'calcEncryptionHealthState',
-      () async {
-        expect(
-          await room.calcEncryptionHealthState(),
-          EncryptionHealthState.unverifiedDevices,
-        );
-      },
-      tags: 'olm',
-    );
+    test('calcEncryptionHealthState', () async {
+      expect(
+        await room.calcEncryptionHealthState(),
+        EncryptionHealthState.unverifiedDevices,
+      );
+    }, tags: 'olm');
 
     test('getEventByID', () async {
       final event = await room.getEventById('1234');
@@ -889,8 +870,10 @@ void main() {
     });
 
     test('setPower', () async {
-      final powerLevelMap =
-          room.getState(EventTypes.RoomPowerLevels, '')!.content.copy();
+      final powerLevelMap = room
+          .getState(EventTypes.RoomPowerLevels, '')!
+          .content
+          .copy();
 
       // Request to fake api does not update anything:
       await room.setPower('@bob:fakeServer.notExisting', 100);
@@ -985,18 +968,16 @@ void main() {
 
     test('Refresh last event', () async {
       expect(room.lastEvent?.eventId, '12');
-      final lastEventUpdate =
-          room.client.onSync.stream.firstWhere((u) => u.nextBatch.isEmpty);
+      final lastEventUpdate = room.client.onSync.stream.firstWhere(
+        (u) => u.nextBatch.isEmpty,
+      );
       await room.client.handleSync(
         SyncUpdate(
           nextBatch: 'abcd',
           rooms: RoomsUpdate(
             join: {
               room.id: JoinedRoomUpdate(
-                timeline: TimelineUpdate(
-                  events: [],
-                  limited: true,
-                ),
+                timeline: TimelineUpdate(events: [], limited: true),
               ),
             },
           ),
@@ -1038,11 +1019,7 @@ void main() {
       expect(user?.membership, Membership.knock);
 
       // Yield for the onUpdate
-      await Future.delayed(
-        Duration(
-          milliseconds: 1,
-        ),
-      );
+      await Future.delayed(Duration(milliseconds: 1));
       expect(called.length, 1);
       expect(called2.length, 1);
 
@@ -1057,11 +1034,7 @@ void main() {
       expect(user2?.membership, Membership.leave);
 
       // Yield for the onUpdate
-      await Future.delayed(
-        Duration(
-          milliseconds: 1,
-        ),
-      );
+      await Future.delayed(Duration(milliseconds: 1));
       expect(called.length, 2);
       expect(called2.length, 2);
 
@@ -1073,11 +1046,7 @@ void main() {
       expect(userAgain?.membership, Membership.knock);
 
       // Yield for the onUpdate
-      await Future.delayed(
-        Duration(
-          milliseconds: 1,
-        ),
-      );
+      await Future.delayed(Duration(milliseconds: 1));
       expect(called.length, 2, reason: 'onUpdate should not have been called.');
       expect(
         called2.length,
@@ -1096,11 +1065,7 @@ void main() {
       expect(user3?.membership, Membership.leave);
 
       // Yield for the onUpdate
-      await Future.delayed(
-        Duration(
-          milliseconds: 1,
-        ),
-      );
+      await Future.delayed(Duration(milliseconds: 1));
       expect(called.length, 3);
       expect(called2.length, 3);
 
@@ -1115,25 +1080,25 @@ void main() {
     });
 
     test('sendEvent', () async {
-      final dynamic resp = await room.sendEvent(
-        {'msgtype': 'm.text', 'body': 'hello world'},
-        txid: 'testtxid',
-      );
+      final dynamic resp = await room.sendEvent({
+        'msgtype': 'm.text',
+        'body': 'hello world',
+      }, txid: 'testtxid');
       expect(resp?.startsWith('\$event'), true);
     });
 
     test('sendEvent', () async {
       FakeMatrixApi.calledEndpoints.clear();
-      final dynamic resp =
-          await room.sendTextEvent('Hello world', txid: 'testtxid');
+      final dynamic resp = await room.sendTextEvent(
+        'Hello world',
+        txid: 'testtxid',
+      );
       expect(resp?.startsWith('\$event'), true);
-      final entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.room.message/'),
+      );
       final content = json.decode(entry.value.first);
-      expect(content, {
-        'body': 'Hello world',
-        'msgtype': 'm.text',
-      });
+      expect(content, {'body': 'Hello world', 'msgtype': 'm.text'});
     });
 
     test('sendEvent with room mention', () async {
@@ -1144,8 +1109,9 @@ void main() {
         addMentions: true,
       );
       expect(resp?.startsWith('\$event'), true);
-      final entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.room.message/'),
+      );
       final content = json.decode(entry.value.first);
       expect(content['m.mentions'], {'room': true});
     });
@@ -1158,8 +1124,9 @@ void main() {
         txid: 'testtxid',
       );
       expect(resp?.startsWith('\$event'), true);
-      final entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.room.message/'),
+      );
       final content = json.decode(entry.value.first);
       expect(content['m.mentions'], {
         'user_ids': ['@alice:matrix.org'],
@@ -1174,36 +1141,25 @@ void main() {
         editEventId: '\$otherEvent',
       );
       expect(resp?.startsWith('\$event'), true);
-      final entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.room.message/'),
+      );
       final content = json.decode(entry.value.first);
       expect(content, {
         'body': '* Hello world',
         'msgtype': 'm.text',
-        'm.new_content': {
-          'body': 'Hello world',
-          'msgtype': 'm.text',
-        },
-        'm.relates_to': {
-          'event_id': '\$otherEvent',
-          'rel_type': 'm.replace',
-        },
+        'm.new_content': {'body': 'Hello world', 'msgtype': 'm.text'},
+        'm.relates_to': {'event_id': '\$otherEvent', 'rel_type': 'm.replace'},
       });
     });
 
     test('send reply', () async {
-      var event = Event.fromJson(
-        {
-          'event_id': '\$replyEvent',
-          'content': {
-            'body': 'Blah',
-            'msgtype': 'm.text',
-          },
-          'type': 'm.room.message',
-          'sender': '@alice:example.org',
-        },
-        room,
-      );
+      var event = Event.fromJson({
+        'event_id': '\$replyEvent',
+        'content': {'body': 'Blah', 'msgtype': 'm.text'},
+        'type': 'm.room.message',
+        'sender': '@alice:example.org',
+      }, room);
       FakeMatrixApi.calledEndpoints.clear();
       var resp = await room.sendTextEvent(
         'Hello world',
@@ -1211,8 +1167,9 @@ void main() {
         inReplyTo: event,
       );
       expect(resp?.startsWith('\$event'), true);
-      var entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      var entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.room.message/'),
+      );
       var content = json.decode(entry.value.first);
       expect(content, {
         'body': '> <@alice:example.org> Blah\n\nHello world',
@@ -1224,24 +1181,16 @@ void main() {
         'formatted_body':
             '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Blah</blockquote></mx-reply>Hello world',
         'm.relates_to': {
-          'm.in_reply_to': {
-            'event_id': '\$replyEvent',
-          },
+          'm.in_reply_to': {'event_id': '\$replyEvent'},
         },
       });
 
-      event = Event.fromJson(
-        {
-          'event_id': '\$replyEvent',
-          'content': {
-            'body': '<b>Blah</b>\nbeep',
-            'msgtype': 'm.text',
-          },
-          'type': 'm.room.message',
-          'sender': '@alice:example.org',
-        },
-        room,
-      );
+      event = Event.fromJson({
+        'event_id': '\$replyEvent',
+        'content': {'body': '<b>Blah</b>\nbeep', 'msgtype': 'm.text'},
+        'type': 'm.room.message',
+        'sender': '@alice:example.org',
+      }, room);
       FakeMatrixApi.calledEndpoints.clear();
       resp = await room.sendTextEvent(
         'Hello world\nfox',
@@ -1249,8 +1198,9 @@ void main() {
         inReplyTo: event,
       );
       expect(resp?.startsWith('\$event'), true);
-      entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.room.message/'),
+      );
       content = json.decode(entry.value.first);
       expect(content, {
         'body':
@@ -1263,26 +1213,21 @@ void main() {
         'formatted_body':
             '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>&lt;b&gt;Blah&lt;&#47;b&gt;<br>beep</blockquote></mx-reply>Hello world<br/>fox',
         'm.relates_to': {
-          'm.in_reply_to': {
-            'event_id': '\$replyEvent',
-          },
+          'm.in_reply_to': {'event_id': '\$replyEvent'},
         },
       });
 
-      event = Event.fromJson(
-        {
-          'event_id': '\$replyEvent',
-          'content': {
-            'format': 'org.matrix.custom.html',
-            'formatted_body': '<mx-reply>heya</mx-reply>meow',
-            'body': 'plaintext meow',
-            'msgtype': 'm.text',
-          },
-          'type': 'm.room.message',
-          'sender': '@alice:example.org',
+      event = Event.fromJson({
+        'event_id': '\$replyEvent',
+        'content': {
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<mx-reply>heya</mx-reply>meow',
+          'body': 'plaintext meow',
+          'msgtype': 'm.text',
         },
-        room,
-      );
+        'type': 'm.room.message',
+        'sender': '@alice:example.org',
+      }, room);
       FakeMatrixApi.calledEndpoints.clear();
       resp = await room.sendTextEvent(
         'Hello world',
@@ -1290,8 +1235,9 @@ void main() {
         inReplyTo: event,
       );
       expect(resp?.startsWith('\$event'), true);
-      entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.room.message/'),
+      );
       content = json.decode(entry.value.first);
       expect(content, {
         'body': '> <@alice:example.org> plaintext meow\n\nHello world',
@@ -1303,24 +1249,16 @@ void main() {
         'formatted_body':
             '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>meow</blockquote></mx-reply>Hello world',
         'm.relates_to': {
-          'm.in_reply_to': {
-            'event_id': '\$replyEvent',
-          },
+          'm.in_reply_to': {'event_id': '\$replyEvent'},
         },
       });
 
-      event = Event.fromJson(
-        {
-          'event_id': '\$replyEvent',
-          'content': {
-            'body': 'Hey @room',
-            'msgtype': 'm.text',
-          },
-          'type': 'm.room.message',
-          'sender': '@alice:example.org',
-        },
-        room,
-      );
+      event = Event.fromJson({
+        'event_id': '\$replyEvent',
+        'content': {'body': 'Hey @room', 'msgtype': 'm.text'},
+        'type': 'm.room.message',
+        'sender': '@alice:example.org',
+      }, room);
       FakeMatrixApi.calledEndpoints.clear();
       resp = await room.sendTextEvent(
         'Hello world',
@@ -1328,8 +1266,9 @@ void main() {
         inReplyTo: event,
       );
       expect(resp?.startsWith('\$event'), true);
-      entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.room.message/'),
+      );
       content = json.decode(entry.value.first);
       expect(content, {
         'body': '> <@alice:example.org> Hey @\u{200b}room\n\nHello world',
@@ -1341,42 +1280,39 @@ void main() {
         'formatted_body':
             '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hey @room</blockquote></mx-reply>Hello world',
         'm.relates_to': {
-          'm.in_reply_to': {
-            'event_id': '\$replyEvent',
-          },
+          'm.in_reply_to': {'event_id': '\$replyEvent'},
         },
       });
 
       // Reply to a reply
-      event = Event.fromJson(
-        {
-          'event_id': '\$replyEvent',
-          'content': {
-            'body': '> <@alice:example.org> Hey\n\nHello world',
-            'msgtype': 'm.text',
-            'm.mentions': {
-              'user_ids': ['@alice:example.org'],
-            },
-            'format': 'org.matrix.custom.html',
-            'formatted_body':
-                '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hey</blockquote></mx-reply>Hello world',
-            'm.relates_to': {
-              'm.in_reply_to': {
-                'event_id': '\$replyEvent',
-              },
-            },
+      event = Event.fromJson({
+        'event_id': '\$replyEvent',
+        'content': {
+          'body': '> <@alice:example.org> Hey\n\nHello world',
+          'msgtype': 'm.text',
+          'm.mentions': {
+            'user_ids': ['@alice:example.org'],
           },
-          'type': 'm.room.message',
-          'sender': '@alice:example.org',
+          'format': 'org.matrix.custom.html',
+          'formatted_body':
+              '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hey</blockquote></mx-reply>Hello world',
+          'm.relates_to': {
+            'm.in_reply_to': {'event_id': '\$replyEvent'},
+          },
         },
-        room,
-      );
+        'type': 'm.room.message',
+        'sender': '@alice:example.org',
+      }, room);
       FakeMatrixApi.calledEndpoints.clear();
-      resp =
-          await room.sendTextEvent('Fox', txid: 'testtxid', inReplyTo: event);
+      resp = await room.sendTextEvent(
+        'Fox',
+        txid: 'testtxid',
+        inReplyTo: event,
+      );
       expect(resp?.startsWith('\$event'), true);
-      entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.room.message/'),
+      );
       content = json.decode(entry.value.first);
       expect(content, {
         'body': '> <@alice:example.org> Hello world\n\nFox',
@@ -1388,20 +1324,22 @@ void main() {
         'formatted_body':
             '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hello world</blockquote></mx-reply>Fox',
         'm.relates_to': {
-          'm.in_reply_to': {
-            'event_id': '\$replyEvent',
-          },
+          'm.in_reply_to': {'event_id': '\$replyEvent'},
         },
       });
     });
 
     test('send reaction', () async {
       FakeMatrixApi.calledEndpoints.clear();
-      final dynamic resp =
-          await room.sendReaction('\$otherEvent', '🦊', txid: 'testtxid');
+      final dynamic resp = await room.sendReaction(
+        '\$otherEvent',
+        '🦊',
+        txid: 'testtxid',
+      );
       expect(resp?.startsWith('\$event'), true);
-      final entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.reaction/'));
+      final entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.reaction/'),
+      );
       final content = json.decode(entry.value.first);
       expect(content, {
         'm.relates_to': {
@@ -1417,12 +1355,16 @@ void main() {
 
       const body = 'Middle of the ocean';
       const geoUri = 'geo:0.0,0.0';
-      final dynamic resp =
-          await room.sendLocation(body, geoUri, txid: 'testtxid');
+      final dynamic resp = await room.sendLocation(
+        body,
+        geoUri,
+        txid: 'testtxid',
+      );
       expect(resp?.startsWith('\$event'), true);
 
-      final entry = FakeMatrixApi.calledEndpoints.entries
-          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+        (p) => p.key.contains('/send/m.room.message/'),
+      );
       final content = json.decode(entry.value.first);
       expect(content, {
         'msgtype': 'm.location',
@@ -1437,11 +1379,7 @@ void main() {
       expect(resp.toString(), '\$event12');
       expect(
         await room.client.database.getFile(
-          Uri(
-            scheme: 'cache',
-            host: 'file',
-            path: 'testtxid',
-          ),
+          Uri(scheme: 'cache', host: 'file', path: 'testtxid'),
         ),
         null, // It is sent so shouldn't be in cache anymore
       );
@@ -1449,7 +1387,8 @@ void main() {
       const txnid = 'test_send_file_txnid';
       testFile = MatrixFile(bytes: Uint8List(0), name: 'crash.jpeg');
       FakeMatrixApi
-          .currentApi!.api['POST']!['/media/v3/upload?filename=crash.jpeg'] = {
+          .currentApi!
+          .api['POST']!['/media/v3/upload?filename=crash.jpeg'] = {
         'errcode': 'M_UNKNOWN',
         'error': 'Boom!',
       };
@@ -1460,11 +1399,7 @@ void main() {
 
       expect(
         await room.client.database.getFile(
-          Uri(
-            scheme: 'cache',
-            host: 'file',
-            path: txnid,
-          ),
+          Uri(scheme: 'cache', host: 'file', path: txnid),
         ),
         testFile.bytes,
       );
@@ -1473,11 +1408,13 @@ void main() {
     test('pushRuleState', () async {
       expect(room.pushRuleState, PushRuleState.mentionsOnly);
       ((matrix.accountData['m.push_rules']?.content['global']
-              as Map<String, Object?>)['override'] as List)
+                  as Map<String, Object?>)['override']
+              as List)
           .add(
-        ((matrix.accountData['m.push_rules']?.content['global']
-            as Map<String, Object?>)['room'] as List)[0],
-      );
+            ((matrix.accountData['m.push_rules']?.content['global']
+                    as Map<String, Object?>)['room']
+                as List)[0],
+          );
       expect(room.pushRuleState, PushRuleState.dontNotify);
     });
 
@@ -1549,19 +1486,16 @@ void main() {
       expect(room.canChangeJoinRules, false);
       expect(room.joinRules, JoinRules.public);
       room.setState(
-        Event.fromJson(
-          {
-            'content': {'join_rule': 'invite'},
-            'event_id': '\$143273582443PhrSn:example.org',
-            'origin_server_ts': 1432735824653,
-            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-            'sender': '@example:example.org',
-            'state_key': '',
-            'type': 'm.room.join_rules',
-            'unsigned': {'age': 1234},
-          },
-          room,
-        ),
+        Event.fromJson({
+          'content': {'join_rule': 'invite'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'state_key': '',
+          'type': 'm.room.join_rules',
+          'unsigned': {'age': 1234},
+        }, room),
       );
       expect(room.joinRules, JoinRules.invite);
       await room.setJoinRules(JoinRules.invite);
@@ -1571,19 +1505,16 @@ void main() {
       expect(room.canChangeGuestAccess, false);
       expect(room.guestAccess, GuestAccess.forbidden);
       room.setState(
-        Event.fromJson(
-          {
-            'content': {'guest_access': 'can_join'},
-            'event_id': '\$143273582443PhrSn:example.org',
-            'origin_server_ts': 1432735824653,
-            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-            'sender': '@example:example.org',
-            'state_key': '',
-            'type': 'm.room.guest_access',
-            'unsigned': {'age': 1234},
-          },
-          room,
-        ),
+        Event.fromJson({
+          'content': {'guest_access': 'can_join'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'state_key': '',
+          'type': 'm.room.guest_access',
+          'unsigned': {'age': 1234},
+        }, room),
       );
       expect(room.guestAccess, GuestAccess.canJoin);
       await room.setGuestAccess(GuestAccess.canJoin);
@@ -1593,19 +1524,16 @@ void main() {
       expect(room.canChangeHistoryVisibility, false);
       expect(room.historyVisibility, null);
       room.setState(
-        Event.fromJson(
-          {
-            'content': {'history_visibility': 'shared'},
-            'event_id': '\$143273582443PhrSn:example.org',
-            'origin_server_ts': 1432735824653,
-            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-            'sender': '@example:example.org',
-            'state_key': '',
-            'type': 'm.room.history_visibility',
-            'unsigned': {'age': 1234},
-          },
-          room,
-        ),
+        Event.fromJson({
+          'content': {'history_visibility': 'shared'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'state_key': '',
+          'type': 'm.room.history_visibility',
+          'unsigned': {'age': 1234},
+        }, room),
       );
       expect(room.historyVisibility, HistoryVisibility.shared);
       await room.setHistoryVisibility(HistoryVisibility.joined);
@@ -1615,55 +1543,46 @@ void main() {
       // not set non-state-events
       try {
         room.setState(
-          Event.fromJson(
-            {
-              'content': {'history_visibility': 'shared'},
-              'event_id': '\$143273582443PhrSn:example.org',
-              'origin_server_ts': 1432735824653,
-              'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-              'sender': '@example:example.org',
-              'type': 'm.custom',
-              'unsigned': {'age': 1234},
-            },
-            room,
-          ),
+          Event.fromJson({
+            'content': {'history_visibility': 'shared'},
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': 'm.custom',
+            'unsigned': {'age': 1234},
+          }, room),
         );
       } catch (_) {}
       expect(room.getState('m.custom') != null, false);
 
       // set state events
       room.setState(
-        Event.fromJson(
-          {
-            'content': {'history_visibility': 'shared'},
-            'event_id': '\$143273582443PhrSn:example.org',
-            'origin_server_ts': 1432735824653,
-            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-            'sender': '@example:example.org',
-            'state_key': '',
-            'type': 'm.custom',
-            'unsigned': {'age': 1234},
-          },
-          room,
-        ),
+        Event.fromJson({
+          'content': {'history_visibility': 'shared'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'state_key': '',
+          'type': 'm.custom',
+          'unsigned': {'age': 1234},
+        }, room),
       );
       expect(room.getState('m.custom') != null, true);
 
       // sets messages as state events
       try {
         room.setState(
-          Event.fromJson(
-            {
-              'content': {'history_visibility': 'shared'},
-              'event_id': '\$143273582443PhrSn:example.org',
-              'origin_server_ts': 1432735824653,
-              'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-              'sender': '@example:example.org',
-              'type': 'm.room.message',
-              'unsigned': {'age': 1234},
-            },
-            room,
-          ),
+          Event.fromJson({
+            'content': {'history_visibility': 'shared'},
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': 'm.room.message',
+            'unsigned': {'age': 1234},
+          }, room),
         );
       } catch (_) {}
       expect(room.getState('m.room.message') == null, true);
@@ -1672,68 +1591,59 @@ void main() {
     test('Widgets', () {
       expect(room.widgets.isEmpty, true);
       room.states['m.widget'] = {
-        'test': Event.fromJson(
-          {
-            'content': {
-              'creatorUserId': '@rxl881:matrix.org',
-              'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
-              'id': 'grafana_@rxl881:matrix.org_1514573757015',
-              'name': 'Grafana',
-              'type': 'm.grafana',
-              'url': 'https://matrix.org/grafana/whatever',
-              'waitForIframeLoad': true,
-            },
-            'room_id': '!foo:bar',
-            'event_id': '\$15104760642668662QICBu:matrix.org',
-            'sender': '@rxl881:matrix.org',
-            'state_key': 'test',
-            'origin_server_ts': 1432735824653,
-            'type': 'm.widget',
+        'test': Event.fromJson({
+          'content': {
+            'creatorUserId': '@rxl881:matrix.org',
+            'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
+            'id': 'grafana_@rxl881:matrix.org_1514573757015',
+            'name': 'Grafana',
+            'type': 'm.grafana',
+            'url': 'https://matrix.org/grafana/whatever',
+            'waitForIframeLoad': true,
           },
-          room,
-        ),
+          'room_id': '!foo:bar',
+          'event_id': '\$15104760642668662QICBu:matrix.org',
+          'sender': '@rxl881:matrix.org',
+          'state_key': 'test',
+          'origin_server_ts': 1432735824653,
+          'type': 'm.widget',
+        }, room),
       };
       expect(room.widgets.length, 1);
       room.states['m.widget'] = {
-        'test2': Event.fromJson(
-          {
-            'content': {
-              'creatorUserId': '@rxl881:matrix.org',
-              'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
-              'id': 'grafana_@rxl881:matrix.org_1514573757016',
-              'type': 'm.grafana',
-              'url': 'https://matrix.org/grafana/whatever',
-              'waitForIframeLoad': true,
-            },
-            'room_id': '!foo:bar',
-            'event_id': '\$15104760642668663QICBu:matrix.org',
-            'sender': '@rxl881:matrix.org',
-            'state_key': 'test2',
-            'origin_server_ts': 1432735824653,
-            'type': 'm.widget',
+        'test2': Event.fromJson({
+          'content': {
+            'creatorUserId': '@rxl881:matrix.org',
+            'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
+            'id': 'grafana_@rxl881:matrix.org_1514573757016',
+            'type': 'm.grafana',
+            'url': 'https://matrix.org/grafana/whatever',
+            'waitForIframeLoad': true,
           },
-          room,
-        ),
+          'room_id': '!foo:bar',
+          'event_id': '\$15104760642668663QICBu:matrix.org',
+          'sender': '@rxl881:matrix.org',
+          'state_key': 'test2',
+          'origin_server_ts': 1432735824653,
+          'type': 'm.widget',
+        }, room),
       };
       expect(room.widgets.length, 1);
       room.states['m.widget'] = {
-        'test3': Event.fromJson(
-          {
-            'content': {
-              'creatorUserId': '@rxl881:matrix.org',
-              'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
-              'type': 'm.grafana',
-              'waitForIframeLoad': true,
-            },
-            'room_id': '!foo:bar',
-            'event_id': '\$15104760642668662QICBu:matrix.org',
-            'sender': '@rxl881:matrix.org',
-            'state_key': 'test3',
-            'origin_server_ts': 1432735824655,
-            'type': 'm.widget',
+        'test3': Event.fromJson({
+          'content': {
+            'creatorUserId': '@rxl881:matrix.org',
+            'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
+            'type': 'm.grafana',
+            'waitForIframeLoad': true,
           },
-          room,
-        ),
+          'room_id': '!foo:bar',
+          'event_id': '\$15104760642668662QICBu:matrix.org',
+          'sender': '@rxl881:matrix.org',
+          'state_key': 'test3',
+          'origin_server_ts': 1432735824655,
+          'type': 'm.widget',
+        }, room),
       };
       expect(room.widgets.length, 0);
     });
@@ -1741,107 +1651,89 @@ void main() {
     test('Spaces', () async {
       expect(room.isSpace, false);
       room.states['m.room.create'] = {
-        '': Event.fromJson(
-          {
-            'content': {'type': 'm.space'},
-            'event_id': '\$143273582443PhrSn:example.org',
-            'origin_server_ts': 1432735824653,
-            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-            'sender': '@example:example.org',
-            'type': 'm.room.create',
-            'unsigned': {'age': 1234},
-            'state_key': '',
-          },
-          room,
-        ),
+        '': Event.fromJson({
+          'content': {'type': 'm.space'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': 'm.room.create',
+          'unsigned': {'age': 1234},
+          'state_key': '',
+        }, room),
       };
       expect(room.isSpace, true);
 
       expect(room.spaceParents.isEmpty, true);
       room.states[EventTypes.SpaceParent] = {
-        '!1234:example.invalid': Event.fromJson(
-          {
-            'content': {
-              'via': ['example.invalid'],
-            },
-            'event_id': '\$143273582443PhrSn:example.org',
-            'origin_server_ts': 1432735824653,
-            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-            'sender': '@example:example.org',
-            'type': EventTypes.SpaceParent,
-            'unsigned': {'age': 1234},
-            'state_key': '!1234:example.invalid',
+        '!1234:example.invalid': Event.fromJson({
+          'content': {
+            'via': ['example.invalid'],
           },
-          room,
-        ),
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': EventTypes.SpaceParent,
+          'unsigned': {'age': 1234},
+          'state_key': '!1234:example.invalid',
+        }, room),
       };
       expect(room.spaceParents.length, 1);
 
       expect(room.spaceChildren.isEmpty, true);
       room.states[EventTypes.SpaceChild] = {
-        '!b:example.invalid': Event.fromJson(
-          {
-            'content': {
-              'via': ['example.invalid'],
-              'order': 'b',
-            },
-            'event_id': '\$143273582443PhrSn:example.org',
-            'origin_server_ts': 1432735824653,
-            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-            'sender': '@example:example.org',
-            'type': EventTypes.SpaceChild,
-            'unsigned': {'age': 1234},
-            'state_key': '!b:example.invalid',
+        '!b:example.invalid': Event.fromJson({
+          'content': {
+            'via': ['example.invalid'],
+            'order': 'b',
           },
-          room,
-        ),
-        '!c:example.invalid': Event.fromJson(
-          {
-            'content': {
-              'via': ['example.invalid'],
-              'order': 'c',
-            },
-            'event_id': '\$143273582443PhrSn:example.org',
-            'origin_server_ts': 1432735824653,
-            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-            'sender': '@example:example.org',
-            'type': EventTypes.SpaceChild,
-            'unsigned': {'age': 1234},
-            'state_key': '!c:example.invalid',
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': EventTypes.SpaceChild,
+          'unsigned': {'age': 1234},
+          'state_key': '!b:example.invalid',
+        }, room),
+        '!c:example.invalid': Event.fromJson({
+          'content': {
+            'via': ['example.invalid'],
+            'order': 'c',
           },
-          room,
-        ),
-        '!noorder:example.invalid': Event.fromJson(
-          {
-            'content': {
-              'via': ['example.invalid'],
-            },
-            'event_id': '\$143273582443PhrSn:example.org',
-            'origin_server_ts': 1432735824653,
-            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-            'sender': '@example:example.org',
-            'type': EventTypes.SpaceChild,
-            'unsigned': {'age': 1234},
-            'state_key': '!noorder:example.invalid',
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': EventTypes.SpaceChild,
+          'unsigned': {'age': 1234},
+          'state_key': '!c:example.invalid',
+        }, room),
+        '!noorder:example.invalid': Event.fromJson({
+          'content': {
+            'via': ['example.invalid'],
           },
-          room,
-        ),
-        '!a:example.invalid': Event.fromJson(
-          {
-            'content': {
-              'via': ['example.invalid'],
-              'order': 'a',
-            },
-            'event_id': '\$143273582443PhrSn:example.org',
-            'origin_server_ts': 1432735824653,
-            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-            'sender': '@example:example.org',
-            'type': EventTypes.SpaceChild,
-            'unsigned': {'age': 1234},
-            'state_key': '!a:example.invalid',
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': EventTypes.SpaceChild,
+          'unsigned': {'age': 1234},
+          'state_key': '!noorder:example.invalid',
+        }, room),
+        '!a:example.invalid': Event.fromJson({
+          'content': {
+            'via': ['example.invalid'],
+            'order': 'a',
           },
-          room,
-        ),
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': EventTypes.SpaceChild,
+          'unsigned': {'age': 1234},
+          'state_key': '!a:example.invalid',
+        }, room),
       };
       expect(room.spaceChildren.length, 4);
 
@@ -1896,14 +1788,13 @@ void main() {
 
     test('cancelSend because EventTooLarge in postLoaded room', () async {
       expect(room.partial, false);
-      await room.sendTextEvent(
-        'older_event',
-        txid: 'older_event',
-      );
+      await room.sendTextEvent('older_event', txid: 'older_event');
 
       // check if persisted in db
-      final sentEventFromDB =
-          await matrix.database.getEventById('older_event', room);
+      final sentEventFromDB = await matrix.database.getEventById(
+        'older_event',
+        room,
+      );
       expect(sentEventFromDB?.eventId, 'older_event');
       Room? roomFromDB;
 
@@ -1919,9 +1810,7 @@ void main() {
         await room.sendTextEvent(
           txid: 'event_too_large',
           // data just bigger than maxBodySize
-          base64Encode(
-            List<int>.generate(60001, (i) => Random().nextInt(256)),
-          ),
+          base64Encode(List<int>.generate(60001, (i) => Random().nextInt(256))),
         );
       } catch (e) {
         expect(e.runtimeType, EventTooLarge);
@@ -1943,8 +1832,10 @@ void main() {
       );
 
       // check if persisted in db
-      final lastEventFromDB =
-          await matrix.database.getEventById('event_too_large', room);
+      final lastEventFromDB = await matrix.database.getEventById(
+        'event_too_large',
+        room,
+      );
 
       // null here because cancelSend removes event.
       expect(lastEventFromDB, null);
@@ -1972,78 +1863,67 @@ void main() {
     });
 
     test('searchEvents', () async {
-      FakeMatrixApi.currentApi!.api['GET']![
-              '/client/v3/rooms/!localpart%3Aserver.abc/messages?from&dir=b&limit=1000&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%5D%7D'] =
+      FakeMatrixApi
+              .currentApi!
+              .api['GET']!['/client/v3/rooms/!localpart%3Aserver.abc/messages?from&dir=b&limit=1000&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%5D%7D'] =
           (_) => {
-                'chunk': [
-                  {
-                    'content': {
-                      'body': 'This is an example text message',
-                      'format': 'org.matrix.custom.html',
-                      'formatted_body':
-                          '<b>This is an example text message</b>',
-                      'msgtype': 'm.text',
+            'chunk': [
+              {
+                'content': {
+                  'body': 'This is an example text message',
+                  'format': 'org.matrix.custom.html',
+                  'formatted_body': '<b>This is an example text message</b>',
+                  'msgtype': 'm.text',
+                },
+                'event_id': '\$history1',
+                'origin_server_ts': 1432735824653,
+                'room_id': '!636q39766251:example.com',
+                'sender': '@example:example.org',
+                'type': 'm.room.message',
+                'unsigned': {'age': 1234, 'membership': 'join'},
+              },
+              {
+                'content': {'name': 'The room name'},
+                'event_id': '\$history2',
+                'origin_server_ts': 1432735824653,
+                'room_id': '!636q39766251:example.com',
+                'sender': '@example:example.org',
+                'state_key': '',
+                'type': 'm.room.name',
+                'unsigned': {'age': 1234, 'membership': 'join'},
+              },
+              {
+                'content': {
+                  'body': 'Gangnam Style',
+                  'info': {
+                    'duration': 2140786,
+                    'h': 320,
+                    'mimetype': 'video/mp4',
+                    'size': 1563685,
+                    'thumbnail_info': {
+                      'h': 300,
+                      'mimetype': 'image/jpeg',
+                      'size': 46144,
+                      'w': 300,
                     },
-                    'event_id': '\$history1',
-                    'origin_server_ts': 1432735824653,
-                    'room_id': '!636q39766251:example.com',
-                    'sender': '@example:example.org',
-                    'type': 'm.room.message',
-                    'unsigned': {
-                      'age': 1234,
-                      'membership': 'join',
-                    },
+                    'thumbnail_url':
+                        'mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe',
+                    'w': 480,
                   },
-                  {
-                    'content': {
-                      'name': 'The room name',
-                    },
-                    'event_id': '\$history2',
-                    'origin_server_ts': 1432735824653,
-                    'room_id': '!636q39766251:example.com',
-                    'sender': '@example:example.org',
-                    'state_key': '',
-                    'type': 'm.room.name',
-                    'unsigned': {
-                      'age': 1234,
-                      'membership': 'join',
-                    },
-                  },
-                  {
-                    'content': {
-                      'body': 'Gangnam Style',
-                      'info': {
-                        'duration': 2140786,
-                        'h': 320,
-                        'mimetype': 'video/mp4',
-                        'size': 1563685,
-                        'thumbnail_info': {
-                          'h': 300,
-                          'mimetype': 'image/jpeg',
-                          'size': 46144,
-                          'w': 300,
-                        },
-                        'thumbnail_url':
-                            'mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe',
-                        'w': 480,
-                      },
-                      'msgtype': 'm.video',
-                      'url': 'mxc://example.org/a526eYUSFFxlgbQYZmo442',
-                    },
-                    'event_id': '\$history3',
-                    'origin_server_ts': 1432735824653,
-                    'room_id': '!636q39766251:example.com',
-                    'sender': '@example:example.org',
-                    'type': 'm.room.message',
-                    'unsigned': {
-                      'age': 1234,
-                      'membership': 'join',
-                    },
-                  }
-                ],
-                'end': 't47409-4357353_219380_26003_2265',
-                'start': 't47429-4392820_219380_26003_2265',
-              };
+                  'msgtype': 'm.video',
+                  'url': 'mxc://example.org/a526eYUSFFxlgbQYZmo442',
+                },
+                'event_id': '\$history3',
+                'origin_server_ts': 1432735824653,
+                'room_id': '!636q39766251:example.com',
+                'sender': '@example:example.org',
+                'type': 'm.room.message',
+                'unsigned': {'age': 1234, 'membership': 'join'},
+              },
+            ],
+            'end': 't47409-4357353_219380_26003_2265',
+            'start': 't47429-4392820_219380_26003_2265',
+          };
       final searchResult = await room.searchEvents(searchFunc: (_) => true);
       expect(searchResult.events.length, 19);
       expect(searchResult.nextBatch, 't47409-4357353_219380_26003_2265');
@@ -2058,12 +1938,10 @@ void main() {
         reason: 'No events are duplicated',
       );
 
-      FakeMatrixApi.currentApi!.api['GET']![
-              '/client/v3/rooms/!localpart%3Aserver.abc/messages?from=t47409-4357353_219380_26003_2265&dir=b&limit=1000&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%5D%7D'] =
-          (_) => {
-                'start': 't47409-4357353_219380_26003_2265',
-                'chunk': [],
-              };
+      FakeMatrixApi
+              .currentApi!
+              .api['GET']!['/client/v3/rooms/!localpart%3Aserver.abc/messages?from=t47409-4357353_219380_26003_2265&dir=b&limit=1000&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%5D%7D'] =
+          (_) => {'start': 't47409-4357353_219380_26003_2265', 'chunk': []};
       final secondResult = await room.searchEvents(
         searchFunc: (_) => true,
         nextBatch: searchResult.nextBatch,

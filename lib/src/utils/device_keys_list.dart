@@ -1,29 +1,14 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:convert';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart' show IterableExtension;
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 enum UserVerifiedStatus { verified, unknown, unknownDevice }
 
@@ -109,12 +94,16 @@ class DeviceKeysList {
           waitForSync: false,
           skipExistingChat: true, // to create a new room directly
         );
-        room = client.getRoomById(newRoomId) ??
+        room =
+            client.getRoomById(newRoomId) ??
             Room(id: newRoomId, client: client);
       }
 
-      final request =
-          KeyVerification(encryption: encryption, room: room, userId: userId);
+      final request = KeyVerification(
+        encryption: encryption,
+        room: room,
+        userId: userId,
+      );
       await request.start();
       // no need to add to the request client object. As we are doing a room
       // verification request that'll happen automatically once we know the transaction id
@@ -170,7 +159,7 @@ class SimpleSignableKey extends MatrixSignableKey {
   String? identifier;
 
   SimpleSignableKey.fromJson(Map<String, dynamic> super.json)
-      : super.fromJson();
+    : super.fromJson();
 }
 
 abstract class SignableKey extends MatrixSignableKey {
@@ -212,7 +201,7 @@ abstract class SignableKey extends MatrixSignableKey {
   bool get signed => hasValidSignatureChain(verifiedOnly: false);
 
   SignableKey.fromJson(Map<String, dynamic> super.json, this.client)
-      : super.fromJson() {
+    : super.fromJson() {
     _verified = false;
     _blocked = false;
   }
@@ -298,7 +287,8 @@ abstract class SignableKey extends MatrixSignableKey {
           continue;
         }
 
-        final key = client.userDeviceKeys[otherUserId]?.deviceKeys[keyId] ??
+        final key =
+            client.userDeviceKeys[otherUserId]?.deviceKeys[keyId] ??
             client.userDeviceKeys[otherUserId]?.crossSigningKeys[keyId];
         if (key == null) {
           continue;
@@ -391,7 +381,8 @@ abstract class SignableKey extends MatrixSignableKey {
   String toString() => json.encode(toJson());
 
   @override
-  bool operator ==(Object other) => (other is SignableKey &&
+  bool operator ==(Object other) =>
+      (other is SignableKey &&
       other.userId == userId &&
       other.identifier == identifier);
 
@@ -403,6 +394,10 @@ class CrossSigningKey extends SignableKey {
   @override
   String? identifier;
 
+  DateTime? _trustOnFirstUseSince;
+
+  DateTime? get trustOnFirstUseSince => _trustOnFirstUseSince;
+
   String? get publicKey => identifier;
   late List<String> usage;
 
@@ -412,14 +407,34 @@ class CrossSigningKey extends SignableKey {
       keys.isNotEmpty &&
       ed25519Key != null;
 
+  Future<void> trustOnFirstUse({
+    DateTime? since,
+    bool updateInDatabase = true,
+  }) async {
+    since ??= DateTime.now();
+    if (updateInDatabase) {
+      await client.database.setVerifiedUserCrossSigningKey(
+        verified,
+        userId,
+        publicKey!,
+        trustOnFirstUseSince: since,
+      );
+    }
+    _trustOnFirstUseSince = since;
+  }
+
   @override
   Future<void> setVerified(bool newVerified, [bool sign = true]) async {
     if (!isValid) {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database
-        .setVerifiedUserCrossSigningKey(newVerified, userId, publicKey!);
+    await client.database.setVerifiedUserCrossSigningKey(
+      newVerified,
+      userId,
+      publicKey!,
+      trustOnFirstUseSince: trustOnFirstUseSince,
+    );
   }
 
   @override
@@ -428,8 +443,11 @@ class CrossSigningKey extends SignableKey {
       throw Exception('setBlocked called on invalid key');
     }
     _blocked = newBlocked;
-    await client.database
-        .setBlockedUserCrossSigningKey(newBlocked, userId, publicKey!);
+    await client.database.setBlockedUserCrossSigningKey(
+      newBlocked,
+      userId,
+      publicKey!,
+    );
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(
@@ -439,21 +457,30 @@ class CrossSigningKey extends SignableKey {
     final json = toJson();
     identifier = key.publicKey;
     usage = json['usage'].cast<String>();
+    _trustOnFirstUseSince = json['tofu'] == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(json['tofu'] as int);
   }
 
   CrossSigningKey.fromDbJson(Map<String, dynamic> dbEntry, Client client)
-      : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
+    : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
     final json = toJson();
     identifier = dbEntry['public_key'];
     usage = json['usage'].cast<String>();
     _verified = dbEntry['verified'];
     _blocked = dbEntry['blocked'];
+    _trustOnFirstUseSince = dbEntry['tofu'] == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(dbEntry['tofu'] as int);
   }
 
   CrossSigningKey.fromJson(Map<String, dynamic> json, Client client)
-      : super.fromJson(json.copy(), client) {
+    : super.fromJson(json.copy(), client) {
     final json = toJson();
     usage = json['usage'].cast<String>();
+    _trustOnFirstUseSince = json['tofu'] == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(json['tofu'] as int);
     if (keys.isNotEmpty) {
       identifier = keys.values.first;
     }
@@ -475,7 +502,8 @@ class DeviceKeys extends SignableKey {
   bool? _validSelfSignature;
   bool get selfSigned =>
       _validSelfSignature ??
-      (_validSelfSignature = deviceId != null &&
+      (_validSelfSignature =
+          deviceId != null &&
           signatures
                   ?.tryGetMap<String, Object?>(userId)
                   ?.tryGet<String>('ed25519:$deviceId') !=
@@ -504,8 +532,11 @@ class DeviceKeys extends SignableKey {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database
-        .setVerifiedUserDeviceKey(newVerified, userId, deviceId!);
+    await client.database.setVerifiedUserDeviceKey(
+      newVerified,
+      userId,
+      deviceId!,
+    );
   }
 
   @override
@@ -514,8 +545,11 @@ class DeviceKeys extends SignableKey {
       throw Exception('setBlocked called on invalid key');
     }
     _blocked = newBlocked;
-    await client.database
-        .setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
+    await client.database.setBlockedUserDeviceKey(
+      newBlocked,
+      userId,
+      deviceId!,
+    );
   }
 
   DeviceKeys.fromMatrixDeviceKeys(
@@ -530,18 +564,19 @@ class DeviceKeys extends SignableKey {
   }
 
   DeviceKeys.fromDb(Map<String, dynamic> dbEntry, Client client)
-      : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
+    : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
     final json = toJson();
     identifier = dbEntry['device_id'];
     algorithms = json['algorithms'].cast<String>();
     _verified = dbEntry['verified'];
     _blocked = dbEntry['blocked'];
-    lastActive =
-        DateTime.fromMillisecondsSinceEpoch(dbEntry['last_active'] ?? 0);
+    lastActive = DateTime.fromMillisecondsSinceEpoch(
+      dbEntry['last_active'] ?? 0,
+    );
   }
 
   DeviceKeys.fromJson(Map<String, dynamic> json, Client client)
-      : super.fromJson(json.copy(), client) {
+    : super.fromJson(json.copy(), client) {
     final json = toJson();
     identifier = json['device_id'];
     algorithms = json['algorithms'].cast<String>();

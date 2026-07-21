@@ -1,25 +1,10 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- *
- */
-
-import 'package:test/test.dart';
+// SPDX-FileCopyrightText: 2019-Present, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:matrix/matrix.dart';
+import 'package:test/test.dart';
+
 import 'fake_database.dart';
 
 void main() {
@@ -30,10 +15,7 @@ void main() {
       final database = await getDatabase();
       room = Room(
         id: '!room:blubb',
-        client: Client(
-          'testclient',
-          database: database,
-        ),
+        client: Client('testclient', database: database),
       );
       await database.insertClient(
         'testclient',
@@ -56,15 +38,13 @@ void main() {
       // store a simple update
       await database.storeEventUpdate(
         room.id,
-        MatrixEvent.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': <String, dynamic>{'blah': 'blubb'},
-            'event_id': '\$event-1',
-            'sender': '@blah:blubb',
-          },
-        ),
+        MatrixEvent.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': <String, dynamic>{'blah': 'blubb'},
+          'event_id': '\$event-1',
+          'sender': '@blah:blubb',
+        }),
         EventUpdateType.timeline,
         client,
       );
@@ -74,17 +54,14 @@ void main() {
       // insert a transaction id
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': <String, dynamic>{'blah': 'blubb'},
-            'event_id': 'transaction-1',
-            'sender': '@blah:blubb',
-            'status': EventStatus.sending.intValue,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': <String, dynamic>{'blah': 'blubb'},
+          'event_id': 'transaction-1',
+          'sender': '@blah:blubb',
+          'status': EventStatus.sending.intValue,
+        }, room),
         EventUpdateType.timeline,
         client,
       );
@@ -93,20 +70,15 @@ void main() {
 
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': <String, dynamic>{'blah': 'blubb'},
-            'event_id': '\$event-2',
-            'sender': '@blah:blubb',
-            'unsigned': <String, dynamic>{
-              'transaction_id': 'transaction-1',
-            },
-            'status': EventStatus.sent.intValue,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': <String, dynamic>{'blah': 'blubb'},
+          'event_id': '\$event-2',
+          'sender': '@blah:blubb',
+          'unsigned': <String, dynamic>{'transaction_id': 'transaction-1'},
+          'status': EventStatus.sent.intValue,
+        }, room),
         EventUpdateType.timeline,
         client,
       );
@@ -117,17 +89,14 @@ void main() {
       // insert a transaction id if the event id for it already exists
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': {'blah': 'blubb'},
-            'event_id': '\$event-3',
-            'sender': '@blah:blubb',
-            'status': EventStatus.sending.intValue,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': {'blah': 'blubb'},
+          'event_id': '\$event-3',
+          'sender': '@blah:blubb',
+          'status': EventStatus.sending.intValue,
+        }, room),
         EventUpdateType.timeline,
         client,
       );
@@ -136,20 +105,15 @@ void main() {
 
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': {'blah': 'blubb'},
-            'event_id': '\$event-3',
-            'sender': '@blah:blubb',
-            'status': EventStatus.sent.intValue,
-            'unsigned': <String, dynamic>{
-              'transaction_id': 'transaction-2',
-            },
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': {'blah': 'blubb'},
+          'event_id': '\$event-3',
+          'sender': '@blah:blubb',
+          'status': EventStatus.sent.intValue,
+          'unsigned': <String, dynamic>{'transaction_id': 'transaction-2'},
+        }, room),
         EventUpdateType.timeline,
         client,
       );
@@ -162,17 +126,14 @@ void main() {
       // insert transaction id and not update status
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': {'blah': 'blubb'},
-            'event_id': '\$event-4',
-            'sender': '@blah:blubb',
-            'status': EventStatus.synced.intValue,
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': {'blah': 'blubb'},
+          'event_id': '\$event-4',
+          'sender': '@blah:blubb',
+          'status': EventStatus.synced.intValue,
+        }, room),
         EventUpdateType.timeline,
         client,
       );
@@ -181,20 +142,15 @@ void main() {
 
       await database.storeEventUpdate(
         room.id,
-        Event.fromJson(
-          {
-            'type': 'm.room.message',
-            'origin_server_ts': 100,
-            'content': {'blah': 'blubb'},
-            'event_id': '\$event-4',
-            'sender': '@blah:blubb',
-            'status': EventStatus.sent.intValue,
-            'unsigned': <String, dynamic>{
-              'transaction_id': 'transaction-3',
-            },
-          },
-          room,
-        ),
+        Event.fromJson({
+          'type': 'm.room.message',
+          'origin_server_ts': 100,
+          'content': {'blah': 'blubb'},
+          'event_id': '\$event-4',
+          'sender': '@blah:blubb',
+          'status': EventStatus.sent.intValue,
+          'unsigned': <String, dynamic>{'transaction_id': 'transaction-3'},
+        }, room),
         EventUpdateType.timeline,
         client,
       );

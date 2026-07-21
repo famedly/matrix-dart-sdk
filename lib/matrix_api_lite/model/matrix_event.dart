@@ -1,25 +1,6 @@
-/* MIT License
-* 
-* Copyright (C) 2019, 2020, 2021 Famedly GmbH
-* 
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-* 
-* The above copyright notice and this permission notice shall be included in all
-* copies or substantial portions of the Software.
-* 
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-* SOFTWARE.
-*/
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:matrix/matrix_api_lite/model/stripped_state_event.dart';
 import 'package:matrix/matrix_api_lite/utils/map_copy_extension.dart';
@@ -46,15 +27,15 @@ class MatrixEvent extends StrippedStateEvent {
   });
 
   MatrixEvent.fromJson(super.json)
-      : eventId = json['event_id'] as String,
-        roomId = json['room_id'] as String?,
-        originServerTs = DateTime.fromMillisecondsSinceEpoch(
-          json['origin_server_ts'] as int,
-        ),
-        unsigned = (json['unsigned'] as Map<String, Object?>?)?.copy(),
-        prevContent = (json['prev_content'] as Map<String, Object?>?)?.copy(),
-        redacts = json['redacts'] as String?,
-        super.fromJson();
+    : eventId = json['event_id'] as String,
+      roomId = json['room_id'] as String?,
+      originServerTs = DateTime.fromMillisecondsSinceEpoch(
+        json['origin_server_ts'] as int,
+      ),
+      unsigned = (json['unsigned'] as Map<String, Object?>?)?.copy(),
+      prevContent = (json['prev_content'] as Map<String, Object?>?)?.copy(),
+      redacts = json['redacts'] as String?,
+      super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

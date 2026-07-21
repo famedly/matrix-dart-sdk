@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:convert';
 
 import 'package:matrix/matrix_api_lite.dart';
@@ -110,8 +114,10 @@ extension TimelineExportExtension on Timeline {
       }
 
       // From the database
-      final eventsFromStore =
-          await room.client.database.getEventList(room, start: events.length);
+      final eventsFromStore = await room.client.database.getEventList(
+        room,
+        start: events.length,
+      );
       if (eventsFromStore.isNotEmpty) {
         if (until == null ||
             eventsFromStore.last.originServerTs.isBefore(until)) {
@@ -162,12 +168,6 @@ extension TimelineExportExtension on Timeline {
             var event = Event.fromMatrixEvent(matrixEvent, room);
             if (event.type == EventTypes.Encrypted && encryption != null) {
               event = await encryption.decryptRoomEvent(event);
-              if (event.type == EventTypes.Encrypted &&
-                  event.messageType == MessageTypes.BadEncrypted &&
-                  event.content['can_request_session'] == true) {
-                // Await requestKey() here to ensure decrypted message bodies
-                await event.requestKey().catchError((_) {});
-              }
             }
             if (from != null && event.originServerTs.isBefore(from)) break;
             if (until != null && event.originServerTs.isAfter(until)) continue;
@@ -240,11 +240,7 @@ sealed class ExportResult {
   });
 }
 
-enum ExportSource {
-  timeline,
-  database,
-  server,
-}
+enum ExportSource { timeline, database, server }
 
 /// Represents progress during export
 final class ExportProgress extends ExportResult {

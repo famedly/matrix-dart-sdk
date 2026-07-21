@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:sqflite_common/sqlite_api.dart';
 
 /// A helper utility for SQfLite related encryption operations
@@ -20,18 +24,6 @@ class SQfLiteEncryptionHelper {
     required this.path,
     required this.cipher,
   });
-
-  /// Loads the correct [DynamicLibrary] required for SQLCipher
-  ///
-  /// To be used with `package:sqlite3/open.dart`:
-  /// ```dart
-  /// void main() {
-  ///   final factory = createDatabaseFactoryFfi(
-  ///     ffiInit: SQfLiteEncryptionHelper.ffiInit,
-  ///   );
-  /// }
-  /// ```
-  static void ffiInit() => throw UnimplementedError();
 
   /// checks whether the database exists and is encrypted
   ///

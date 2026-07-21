@@ -1,9 +1,13 @@
-import 'dart:async';
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:test/test.dart';
+import 'dart:async';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
+import 'package:test/test.dart';
+
 import '../fake_client.dart';
 
 void main() {
@@ -21,14 +25,8 @@ void main() {
         kind: PollKind.undisclosed,
         maxSelections: 2,
         answers: [
-          PollAnswer(
-            id: 'pepsi',
-            mText: 'Pepsi',
-          ),
-          PollAnswer(
-            id: 'coca',
-            mText: 'Coca Cola',
-          ),
+          PollAnswer(id: 'pepsi', mText: 'Pepsi'),
+          PollAnswer(id: 'coca', mText: 'Coca Cola'),
         ],
         txid: '1234',
       );
@@ -60,9 +58,7 @@ void main() {
 
       final timeline = Timeline(
         room: room,
-        chunk: TimelineChunk(
-          events: [pollEvent],
-        ),
+        chunk: TimelineChunk(events: [pollEvent]),
       );
 
       expect(pollEvent.getPollResponses(timeline), {});
@@ -90,12 +86,9 @@ void main() {
         ),
       );
 
-      expect(
-        pollEvent.getPollResponses(timeline),
-        {
-          '@test:fakeServer.notExisting': ['pepsi'],
-        },
-      );
+      expect(pollEvent.getPollResponses(timeline), {
+        '@test:fakeServer.notExisting': ['pepsi'],
+      });
 
       timeline.aggregatedEvents['testevent']!['m.reference']!.add(
         Event(
@@ -115,10 +108,9 @@ void main() {
       );
       expect(pollEvent.getPollHasBeenEnded(timeline), true);
 
-      final respondeEventId = await pollEvent.answerPoll(
-        ['pepsi'],
-        txid: '1234',
-      );
+      final respondeEventId = await pollEvent.answerPoll([
+        'pepsi',
+      ], txid: '1234');
       expect(respondeEventId, '1234');
     });
 
@@ -162,43 +154,43 @@ void main() {
       final responseTs = DateTime.now().subtract(const Duration(minutes: 30));
       final relationsPath =
           '/client/v1/rooms/${Uri.encodeComponent(roomId)}/relations/poll_frag_1/m.reference?limit=50';
-      (FakeMatrixApi.currentApi!.api['GET'] ??= {})[relationsPath] =
-          (dynamic data) => {
-                'chunk': [
-                  {
-                    'event_id': '\$response_1',
-                    'type': PollEventContent.responseType,
-                    'sender': '@alice:example.com',
-                    'origin_server_ts': responseTs.millisecondsSinceEpoch,
-                    'content': {
-                      'm.relates_to': {
-                        'rel_type': RelationshipTypes.reference,
-                        'event_id': 'poll_frag_1',
-                      },
-                      PollEventContent.responseType: {
-                        'answers': ['pepsi'],
-                      },
-                    },
-                  },
-                  {
-                    'event_id': '\$response_2',
-                    'type': PollEventContent.responseType,
-                    'sender': '@bob:example.com',
-                    'origin_server_ts': responseTs
-                        .add(const Duration(minutes: 5))
-                        .millisecondsSinceEpoch,
-                    'content': {
-                      'm.relates_to': {
-                        'rel_type': RelationshipTypes.reference,
-                        'event_id': 'poll_frag_1',
-                      },
-                      PollEventContent.responseType: {
-                        'answers': ['coca'],
-                      },
-                    },
-                  },
-                ],
-              };
+      (FakeMatrixApi.currentApi!.api['GET'] ??=
+          {})[relationsPath] = (dynamic data) => {
+        'chunk': [
+          {
+            'event_id': '\$response_1',
+            'type': PollEventContent.responseType,
+            'sender': '@alice:example.com',
+            'origin_server_ts': responseTs.millisecondsSinceEpoch,
+            'content': {
+              'm.relates_to': {
+                'rel_type': RelationshipTypes.reference,
+                'event_id': 'poll_frag_1',
+              },
+              PollEventContent.responseType: {
+                'answers': ['pepsi'],
+              },
+            },
+          },
+          {
+            'event_id': '\$response_2',
+            'type': PollEventContent.responseType,
+            'sender': '@bob:example.com',
+            'origin_server_ts': responseTs
+                .add(const Duration(minutes: 5))
+                .millisecondsSinceEpoch,
+            'content': {
+              'm.relates_to': {
+                'rel_type': RelationshipTypes.reference,
+                'event_id': 'poll_frag_1',
+              },
+              PollEventContent.responseType: {
+                'answers': ['coca'],
+              },
+            },
+          },
+        ],
+      };
 
       // Fetch poll responses from the server
       await pollEvent.fetchPollResponses(timeline);
@@ -217,83 +209,82 @@ void main() {
       FakeMatrixApi.currentApi!.api['GET']!.remove(relationsPath);
     });
 
-    test('auto-fetches poll responses via getTimeline with eventContextId',
-        () async {
+    test('auto-fetches poll responses via getTimeline with eventContextId', () async {
       final room = client.getRoomById(roomId)!;
       final responseTs = DateTime.now().subtract(const Duration(minutes: 30));
 
       // Mock /context endpoint to return a poll start event in a fragmented chunk
       final contextPath =
           '/client/v3/rooms/${Uri.encodeComponent(roomId)}/context/poll_ctx_1?limit=${Room.defaultHistoryCount}';
-      (FakeMatrixApi.currentApi!.api['GET'] ??= {})[contextPath] =
-          (dynamic data) => {
-                'start': 'ctx_start_token',
-                'end': 'ctx_end_token',
-                'event': {
-                  'event_id': 'poll_ctx_1',
-                  'type': PollEventContent.startType,
-                  'sender': client.userID!,
-                  'origin_server_ts': DateTime.now()
-                      .subtract(const Duration(hours: 1))
-                      .millisecondsSinceEpoch,
-                  'room_id': roomId,
-                  'content': PollEventContent(
-                    mText: 'AutoFetchPoll',
-                    pollStartContent: PollStartContent(
-                      maxSelections: 1,
-                      question: PollQuestion(mText: 'Best language?'),
-                      answers: [
-                        PollAnswer(id: 'dart', mText: 'Dart'),
-                        PollAnswer(id: 'rust', mText: 'Rust'),
-                      ],
-                    ),
-                  ).toJson(),
-                },
-                'events_before': <Map<String, Object?>>[],
-                'events_after': <Map<String, Object?>>[],
-                'state': <Map<String, Object?>>[],
-              };
+      (FakeMatrixApi.currentApi!.api['GET'] ??=
+          {})[contextPath] = (dynamic data) => {
+        'start': 'ctx_start_token',
+        'end': 'ctx_end_token',
+        'event': {
+          'event_id': 'poll_ctx_1',
+          'type': PollEventContent.startType,
+          'sender': client.userID!,
+          'origin_server_ts': DateTime.now()
+              .subtract(const Duration(hours: 1))
+              .millisecondsSinceEpoch,
+          'room_id': roomId,
+          'content': PollEventContent(
+            mText: 'AutoFetchPoll',
+            pollStartContent: PollStartContent(
+              maxSelections: 1,
+              question: PollQuestion(mText: 'Best language?'),
+              answers: [
+                PollAnswer(id: 'dart', mText: 'Dart'),
+                PollAnswer(id: 'rust', mText: 'Rust'),
+              ],
+            ),
+          ).toJson(),
+        },
+        'events_before': <Map<String, Object?>>[],
+        'events_after': <Map<String, Object?>>[],
+        'state': <Map<String, Object?>>[],
+      };
 
       // Mock /relations endpoint to return poll response events
       final relationsPath =
           '/client/v1/rooms/${Uri.encodeComponent(roomId)}/relations/poll_ctx_1/m.reference?limit=50';
-      (FakeMatrixApi.currentApi!.api['GET'] ??= {})[relationsPath] =
-          (dynamic data) => {
-                'chunk': [
-                  {
-                    'event_id': '\$auto_response_1',
-                    'type': PollEventContent.responseType,
-                    'sender': '@alice:example.com',
-                    'origin_server_ts': responseTs.millisecondsSinceEpoch,
-                    'content': {
-                      'm.relates_to': {
-                        'rel_type': RelationshipTypes.reference,
-                        'event_id': 'poll_ctx_1',
-                      },
-                      PollEventContent.responseType: {
-                        'answers': ['dart'],
-                      },
-                    },
-                  },
-                  {
-                    'event_id': '\$auto_response_2',
-                    'type': PollEventContent.responseType,
-                    'sender': '@bob:example.com',
-                    'origin_server_ts': responseTs
-                        .add(const Duration(minutes: 5))
-                        .millisecondsSinceEpoch,
-                    'content': {
-                      'm.relates_to': {
-                        'rel_type': RelationshipTypes.reference,
-                        'event_id': 'poll_ctx_1',
-                      },
-                      PollEventContent.responseType: {
-                        'answers': ['rust'],
-                      },
-                    },
-                  },
-                ],
-              };
+      (FakeMatrixApi.currentApi!.api['GET'] ??=
+          {})[relationsPath] = (dynamic data) => {
+        'chunk': [
+          {
+            'event_id': '\$auto_response_1',
+            'type': PollEventContent.responseType,
+            'sender': '@alice:example.com',
+            'origin_server_ts': responseTs.millisecondsSinceEpoch,
+            'content': {
+              'm.relates_to': {
+                'rel_type': RelationshipTypes.reference,
+                'event_id': 'poll_ctx_1',
+              },
+              PollEventContent.responseType: {
+                'answers': ['dart'],
+              },
+            },
+          },
+          {
+            'event_id': '\$auto_response_2',
+            'type': PollEventContent.responseType,
+            'sender': '@bob:example.com',
+            'origin_server_ts': responseTs
+                .add(const Duration(minutes: 5))
+                .millisecondsSinceEpoch,
+            'content': {
+              'm.relates_to': {
+                'rel_type': RelationshipTypes.reference,
+                'event_id': 'poll_ctx_1',
+              },
+              PollEventContent.responseType: {
+                'answers': ['rust'],
+              },
+            },
+          },
+        ],
+      };
 
       // Call getTimeline with eventContextId — this exercises the full
       // production path: getEventContext → fragmented TimelineChunk →
@@ -303,8 +294,9 @@ void main() {
       expect(timeline.isFragmentedTimeline, true);
 
       // Find the poll event in the returned timeline
-      final pollEvent =
-          timeline.events.firstWhere((e) => e.eventId == 'poll_ctx_1');
+      final pollEvent = timeline.events.firstWhere(
+        (e) => e.eventId == 'poll_ctx_1',
+      );
 
       // Poll responses should already be fetched automatically
       final responses = pollEvent.getPollResponses(timeline);
@@ -326,24 +318,24 @@ void main() {
     test('getRoomEvents waits for poll aggregation requests', () async {
       final messagesPath =
           '/client/v3/rooms/${Uri.encodeComponent(roomId)}/messages?from=poll_next_batch&dir=f&limit=${Room.defaultHistoryCount}&filter=%7B%22lazy_load_members%22%3Atrue%7D';
-      (FakeMatrixApi.currentApi!.api['GET'] ??= {})[messagesPath] =
-          (dynamic data) => {
-                'start': 'poll_next_batch',
-                'end': 'poll_next_batch_after',
-                'chunk': [
-                  {
-                    'event_id': 'poll_future_1',
-                    'type': PollEventContent.startType,
-                    'sender': client.userID!,
-                    'origin_server_ts': DateTime.now()
-                        .subtract(const Duration(hours: 1))
-                        .millisecondsSinceEpoch,
-                    'room_id': roomId,
-                    'content': <String, Object?>{},
-                  },
-                ],
-                'state': <Map<String, Object?>>[],
-              };
+      (FakeMatrixApi.currentApi!.api['GET'] ??=
+          {})[messagesPath] = (dynamic data) => {
+        'start': 'poll_next_batch',
+        'end': 'poll_next_batch_after',
+        'chunk': [
+          {
+            'event_id': 'poll_future_1',
+            'type': PollEventContent.startType,
+            'sender': client.userID!,
+            'origin_server_ts': DateTime.now()
+                .subtract(const Duration(hours: 1))
+                .millisecondsSinceEpoch,
+            'room_id': roomId,
+            'content': <String, Object?>{},
+          },
+        ],
+        'state': <Map<String, Object?>>[],
+      };
       final aggregationStarted = Completer<void>();
       final releaseAggregation = Completer<void>();
       final aggregationFinished = Completer<void>();
@@ -363,8 +355,9 @@ void main() {
         aggregationFinished: aggregationFinished,
       );
 
-      final getRoomEventsFuture =
-          timeline.getRoomEvents(direction: Direction.f);
+      final getRoomEventsFuture = timeline.getRoomEvents(
+        direction: Direction.f,
+      );
       await aggregationStarted.future.timeout(const Duration(seconds: 1));
 
       await expectLater(
@@ -374,12 +367,76 @@ void main() {
       expect(timeline.events.single.eventId, 'poll_future_1');
 
       releaseAggregation.complete();
-      expect(
-        await getRoomEventsFuture.timeout(const Duration(seconds: 1)),
-        1,
-      );
+      expect(await getRoomEventsFuture.timeout(const Duration(seconds: 1)), 1);
       await aggregationFinished.future.timeout(const Duration(seconds: 1));
     });
+
+    test(
+      'endPoll: only the creator or a user with redact power may end (MSC3381)',
+      () async {
+        final room = client.getRoomById(roomId)!;
+        room.membership = Membership.join;
+        final content = PollEventContent(
+          mText: 'EndPoll',
+          pollStartContent: PollStartContent(
+            maxSelections: 1,
+            question: PollQuestion(mText: 'Who?'),
+            answers: [PollAnswer(id: 'a', mText: 'A')],
+          ),
+        ).toJson();
+
+        Event poll(String sender) => Event(
+          content: content,
+          type: PollEventContent.startType,
+          eventId: 'poll_$sender',
+          senderId: sender,
+          originServerTs: DateTime.now(),
+          room: room,
+        );
+
+        void stubEnd(String txid) =>
+            (FakeMatrixApi.currentApi!.api['PUT'] ??=
+                    {})['/client/v3/rooms/!696r7674%3Aexample.com/send/org.matrix.msc3381.poll.end/$txid'] =
+                (var req) => {'event_id': txid};
+
+        const other = '@someone:example.com';
+
+        // A non-creator without redact power may not end the poll.
+        await expectLater(
+          () => poll(other).endPoll(),
+          throwsA(
+            predicate(
+              (Object? e) => e.toString().contains(
+                'You can not end a poll created by someone else.',
+              ),
+            ),
+          ),
+        );
+
+        // Grant redact power; the same non-creator may now end it.
+        (room.states[EventTypes.RoomPowerLevels] ??= {})[''] = Event.fromJson({
+          'type': EventTypes.RoomPowerLevels,
+          'sender': other,
+          'state_key': '',
+          'content': {
+            'redact': 0,
+            'users': {client.userID!: 0},
+            'users_default': 0,
+          },
+          'room_id': room.id,
+          'origin_server_ts': 1,
+        }, room);
+        stubEnd('end_mod');
+        expect(await poll(other).endPoll(txid: 'end_mod'), 'end_mod');
+
+        // The creator may always end their own poll.
+        stubEnd('end_creator');
+        expect(
+          await poll(client.userID!).endPoll(txid: 'end_creator'),
+          'end_creator',
+        );
+      },
+    );
   });
 }
 

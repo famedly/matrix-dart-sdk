@@ -1,25 +1,6 @@
-/* MIT License
-*
-* Copyright (C) 2019, 2020, 2021 Famedly GmbH
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in all
-* copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-* SOFTWARE.
-*/
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
@@ -49,8 +30,9 @@ class MatrixApi extends Api {
   Never unexpectedResponse(http.BaseResponse response, Uint8List body) {
     MatrixException? matrixException;
     try {
-      matrixException =
-          MatrixException.fromJson(json.decode(utf8.decode(body)));
+      matrixException = MatrixException.fromJson(
+        json.decode(utf8.decode(body)),
+      );
     } catch (_) {} // Is not a MatrixException!
 
     // Throw MatrixException if response contains 'errcode' (error) or
@@ -70,11 +52,8 @@ class MatrixApi extends Api {
     throw EventTooLarge(expected, actual);
   }
 
-  MatrixApi({
-    Uri? homeserver,
-    String? accessToken,
-    super.httpClient,
-  }) : super(baseUri: homeserver, bearerToken: accessToken);
+  MatrixApi({Uri? homeserver, String? accessToken, super.httpClient})
+    : super(baseUri: homeserver, bearerToken: accessToken);
 
   /// Used for all Matrix json requests using the [c2s API](https://matrix.org/docs/spec/client_server/r0.6.0.html).
   ///
@@ -108,8 +87,9 @@ class MatrixApi extends Api {
     (data is! String) ? json = jsonEncode(data) : json = data;
     if (data is List<int> || action.startsWith('/media/v3/upload')) json = data;
 
-    final url = homeserver!
-        .resolveUri(Uri(path: '_matrix$action', queryParameters: query));
+    final url = homeserver!.resolveUri(
+      Uri(path: '_matrix$action', queryParameters: query),
+    );
 
     final headers = <String, String>{};
     if (type == RequestType.PUT || type == RequestType.POST) {
@@ -149,8 +129,9 @@ class MatrixApi extends Api {
     if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
       jsonString = '{"chunk":$jsonString}';
     }
-    jsonResp = jsonDecode(jsonString)
-        as Map<String, Object?>?; // May throw FormatException
+    jsonResp =
+        jsonDecode(jsonString)
+            as Map<String, Object?>?; // May throw FormatException
 
     if (resp.statusCode >= 400 && resp.statusCode < 500) {
       throw MatrixException(resp);
@@ -171,11 +152,7 @@ class MatrixApi extends Api {
     if (append != null) {
       data['append'] = append;
     }
-    await request(
-      RequestType.POST,
-      '/client/v3/pushers/set',
-      data: data,
-    );
+    await request(RequestType.POST, '/client/v3/pushers/set', data: data);
     return;
   }
 
@@ -185,11 +162,7 @@ class MatrixApi extends Api {
   Future<void> deletePusher(PusherId pusher) async {
     final data = PusherData.fromJson(pusher.toJson()).toJson();
     data['kind'] = null;
-    await request(
-      RequestType.POST,
-      '/client/v3/pushers/set',
-      data: data,
-    );
+    await request(RequestType.POST, '/client/v3/pushers/set', data: data);
     return;
   }
 

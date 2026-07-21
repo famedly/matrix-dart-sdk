@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 // Helper for fast evaluation of push conditions on a bunch of events
 
@@ -89,8 +75,9 @@ class _PatternCondition {
     if (tempPat == null) {
       throw 'PushCondition is missing pattern';
     }
-    tempPat =
-        RegExp.escape(tempPat).replaceAll('\\*', '.*').replaceAll('\\?', '.');
+    tempPat = RegExp.escape(
+      tempPat,
+    ).replaceAll('\\*', '.*').replaceAll('\\?', '.');
 
     if (field == 'content.body') {
       pattern = RegExp('(^|\\W)$tempPat(\$|\\W)', caseSensitive: false);
@@ -154,13 +141,7 @@ class _EventPropertyCondition {
   }
 }
 
-enum _CountComparisonOp {
-  eq,
-  lt,
-  le,
-  ge,
-  gt,
-}
+enum _CountComparisonOp { eq, lt, le, ge, gt }
 
 class _MemberCountCondition {
   _CountComparisonOp op = _CountComparisonOp.eq;
@@ -238,8 +219,9 @@ class _OptimizedRules {
           break;
         case PushRuleConditions.eventPropertyIs:
         case PushRuleConditions.eventPropertyContains:
-          eventProperties
-              .add(_EventPropertyCondition.fromEventMatch(condition));
+          eventProperties.add(
+            _EventPropertyCondition.fromEventMatch(condition),
+          );
           break;
         case PushRuleConditions.containsDisplayName:
           matchDisplayname = true;
@@ -359,8 +341,9 @@ class PushruleEvaluator {
     }
     for (final r in ruleset.sender ?? <PushRule>[]) {
       if (r.enabled) {
-        _sender_rules[r.ruleId] =
-            EvaluatedPushRuleAction.fromActions(r.actions);
+        _sender_rules[r.ruleId] = EvaluatedPushRuleAction.fromActions(
+          r.actions,
+        );
       }
     }
   }
@@ -393,8 +376,12 @@ class PushruleEvaluator {
     flattenedEventJson['room_id'] = event.room.id;
 
     for (final o in _override) {
-      final actions =
-          o.match(flattenedEventJson, displayName, memberCount, event.room);
+      final actions = o.match(
+        flattenedEventJson,
+        displayName,
+        memberCount,
+        event.room,
+      );
       if (actions != null) {
         return actions;
       }
@@ -411,16 +398,24 @@ class PushruleEvaluator {
     }
 
     for (final o in _content_rules) {
-      final actions =
-          o.match(flattenedEventJson, displayName, memberCount, event.room);
+      final actions = o.match(
+        flattenedEventJson,
+        displayName,
+        memberCount,
+        event.room,
+      );
       if (actions != null) {
         return actions;
       }
     }
 
     for (final o in _underride) {
-      final actions =
-          o.match(flattenedEventJson, displayName, memberCount, event.room);
+      final actions = o.match(
+        flattenedEventJson,
+        displayName,
+        memberCount,
+        event.room,
+      );
       if (actions != null) {
         return actions;
       }

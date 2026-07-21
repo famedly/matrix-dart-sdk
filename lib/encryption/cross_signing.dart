@@ -1,37 +1,23 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:convert';
 import 'dart:typed_data';
-
-import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/matrix.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 class CrossSigning {
   final Encryption encryption;
   Client get client => encryption.client;
   CrossSigning(this.encryption) {
-    encryption.ssss.setValidator(EventTypes.CrossSigningSelfSigning,
-        (String secret) async {
+    encryption.ssss.setValidator(EventTypes.CrossSigningSelfSigning, (
+      String secret,
+    ) async {
       try {
         final keyObj = vod.PkSigning.fromSecretKey(secret);
         return keyObj.publicKey.toBase64() ==
@@ -40,8 +26,9 @@ class CrossSigning {
         return false;
       }
     });
-    encryption.ssss.setValidator(EventTypes.CrossSigningUserSigning,
-        (String secret) async {
+    encryption.ssss.setValidator(EventTypes.CrossSigningUserSigning, (
+      String secret,
+    ) async {
       try {
         final keyObj = vod.PkSigning.fromSecretKey(secret);
         return keyObj.publicKey.toBase64() ==
@@ -62,8 +49,9 @@ class CrossSigning {
     if (!enabled) {
       return false;
     }
-    return (await encryption.ssss
-                .getCached(EventTypes.CrossSigningSelfSigning)) !=
+    return (await encryption.ssss.getCached(
+              EventTypes.CrossSigningSelfSigning,
+            )) !=
             null &&
         (await encryption.ssss.getCached(EventTypes.CrossSigningUserSigning)) !=
             null;
@@ -91,9 +79,9 @@ class CrossSigning {
     );
     String? masterPubkey;
     try {
-      masterPubkey = vod.PkSigning.fromSecretKey(base64Encode(masterPrivateKey))
-          .publicKey
-          .toBase64();
+      masterPubkey = vod.PkSigning.fromSecretKey(
+        base64Encode(masterPrivateKey),
+      ).publicKey.toBase64();
     } catch (e) {
       masterPubkey = null;
     }
@@ -109,19 +97,16 @@ class CrossSigning {
     // master key is valid, set it to verified
     await masterKey.setVerified(true, false);
     // and now sign both our own key and our master key
-    await sign([
-      masterKey,
-      userDeviceKeys,
-    ]);
+    await sign([masterKey, userDeviceKeys]);
   }
 
   bool signable(List<SignableKey> keys) => keys.any(
-        (key) =>
-            key is CrossSigningKey && key.usage.contains('master') ||
-            key is DeviceKeys &&
-                key.userId == client.userID &&
-                key.identifier != client.deviceID,
-      );
+    (key) =>
+        key is CrossSigningKey && key.usage.contains('master') ||
+        key is DeviceKeys &&
+            key.userId == client.userID &&
+            key.identifier != client.deviceID,
+  );
 
   Future<void> sign(List<SignableKey> keys) async {
     final signedKeys = <MatrixSignableKey>[];
@@ -139,8 +124,9 @@ class CrossSigning {
     ) {
       final signedKey = key.cloneForSigning();
       ((signedKey.signatures ??=
-              <String, Map<String, String>>{})[signedWith.userId] ??=
-          <String, String>{})['ed25519:${signedWith.identifier}'] = signature;
+                  <String, Map<String, String>>{})[signedWith.userId] ??=
+              <String, String>{})['ed25519:${signedWith.identifier}'] =
+          signature;
       signedKeys.add(signedKey);
     }
 
@@ -150,16 +136,18 @@ class CrossSigning {
         if (key is CrossSigningKey) {
           if (key.usage.contains('master')) {
             // okay, we'll sign our own master key
-            final signature =
-                encryption.olmManager.signString(key.signingContent);
+            final signature = encryption.olmManager.signString(
+              key.signingContent,
+            );
             addSignature(key, userKeys.deviceKeys[client.deviceID]!, signature);
           }
           // we don't care about signing other cross-signing keys
         } else {
           // okay, we'll sign a device key with our self signing key
           selfSigningKey ??= base64decodeUnpadded(
-            await encryption.ssss
-                    .getCached(EventTypes.CrossSigningSelfSigning) ??
+            await encryption.ssss.getCached(
+                  EventTypes.CrossSigningSelfSigning,
+                ) ??
                 '',
           );
           if (selfSigningKey.isNotEmpty) {

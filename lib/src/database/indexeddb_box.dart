@@ -1,10 +1,13 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:async';
 import 'dart:js_interop';
 
-import 'package:web/web.dart';
-
 import 'package:matrix/matrix_api_lite/utils/logs.dart';
 import 'package:matrix/src/database/zone_transaction_mixin.dart';
+import 'package:web/web.dart';
 
 /// Key-Value store abstraction over IndexedDB so that the sdk database can use
 /// a single interface for all platforms. API is inspired by Hive.
@@ -28,9 +31,7 @@ class BoxCollection with ZoneTransactionMixin {
     final request = idbFactory.open(name, version);
 
     request.onerror = (Event event) {
-      Logs().e(
-        '[IndexedDBBox] Error loading database - ${request.error}',
-      );
+      Logs().e('[IndexedDBBox] Error loading database - ${request.error}');
       dbOpenCompleter.completeError(
         'Error loading database - ${request.error}',
       );
@@ -41,8 +42,9 @@ class BoxCollection with ZoneTransactionMixin {
 
       db.onerror = (Event event) {
         Logs().e('[IndexedDBBox] [onupgradeneeded] Error loading database');
-        dbOpenCompleter
-            .completeError('Error loading database onupgradeneeded.');
+        dbOpenCompleter.completeError(
+          'Error loading database onupgradeneeded.',
+        );
       }.toJS;
 
       for (final name in boxNames) {
@@ -74,43 +76,41 @@ class BoxCollection with ZoneTransactionMixin {
     Future<void> Function() action, {
     List<String>? boxNames,
     bool readOnly = false,
-  }) =>
-      zoneTransaction(() async {
-        final txnCache = _txnCache = [];
-        await action();
-        final cache =
-            List<Future<void> Function(IDBTransaction txn)>.from(txnCache);
-        _txnCache = null;
-        if (cache.isEmpty) return;
+  }) => zoneTransaction(() async {
+    final txnCache = _txnCache = [];
+    await action();
+    final cache = List<Future<void> Function(IDBTransaction txn)>.from(
+      txnCache,
+    );
+    _txnCache = null;
+    if (cache.isEmpty) return;
 
-        final transactionCompleter = Completer<void>();
-        final txn = _db.transaction(
-          boxNames?.jsify() ?? _db.objectStoreNames,
-          readOnly ? 'readonly' : 'readwrite',
-        );
-        for (final fun in cache) {
-          // The IDB methods return a Future in Dart but must not be awaited in
-          // order to have an actual transaction. They must only be performed and
-          // then the transaction object must call `txn.completed;` which then
-          // returns the actual future.
-          // https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction
-          unawaited(fun(txn));
-        }
+    final transactionCompleter = Completer<void>();
+    final txn = _db.transaction(
+      boxNames?.jsify() ?? _db.objectStoreNames,
+      readOnly ? 'readonly' : 'readwrite',
+    );
+    for (final fun in cache) {
+      // The IDB methods return a Future in Dart but must not be awaited in
+      // order to have an actual transaction. They must only be performed and
+      // then the transaction object must call `txn.completed;` which then
+      // returns the actual future.
+      // https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction
+      unawaited(fun(txn));
+    }
 
-        txn.onerror = (Event event) {
-          Logs().e(
-            '[IndexedDBBox] [transaction] Error - ${txn.error}',
-          );
-          transactionCompleter.completeError(
-            'Transaction not completed due to an error - ${txn.error}'.toJS,
-          );
-        }.toJS;
+    txn.onerror = (Event event) {
+      Logs().e('[IndexedDBBox] [transaction] Error - ${txn.error}');
+      transactionCompleter.completeError(
+        'Transaction not completed due to an error - ${txn.error}'.toJS,
+      );
+    }.toJS;
 
-        txn.oncomplete = (Event event) {
-          transactionCompleter.complete();
-        }.toJS;
-        return transactionCompleter.future;
-      });
+    txn.oncomplete = (Event event) {
+      transactionCompleter.complete();
+    }.toJS;
+    return transactionCompleter.future;
+  });
 
   Future<void> clear() async {
     final transactionCompleter = Completer();
@@ -154,12 +154,10 @@ class BoxCollection with ZoneTransactionMixin {
   Future<void> deleteDatabase(String name, [dynamic factory]) async {
     await close();
     final deleteDatabaseCompleter = Completer();
-    final request =
-        ((factory ?? window.indexedDB) as IDBFactory).deleteDatabase(name);
+    final request = ((factory ?? window.indexedDB) as IDBFactory)
+        .deleteDatabase(name);
     request.onerror = (Event event) {
-      Logs().e(
-        '[IndexedDBBox] [deleteDatabase] Error - ${request.error}',
-      );
+      Logs().e('[IndexedDBBox] [deleteDatabase] Error - ${request.error}');
       deleteDatabaseCompleter.completeError(
         'Error deleting database - ${request.error}'.toJS,
       );
@@ -193,9 +191,7 @@ class Box<V> {
     final getAllKeysCompleter = Completer();
     final request = store.getAllKeys();
     request.onerror = (Event event) {
-      Logs().e(
-        '[IndexedDBBox] [getAllKeys] Error - ${request.error}',
-      );
+      Logs().e('[IndexedDBBox] [getAllKeys] Error - ${request.error}');
       getAllKeysCompleter.completeError(
         '[IndexedDBBox] [getAllKeys] Error - ${request.error}'.toJS,
       );
@@ -248,9 +244,7 @@ class Box<V> {
     final getObjectRequest = store.get(key.toJS);
     final getObjectCompleter = Completer();
     getObjectRequest.onerror = (Event event) {
-      Logs().e(
-        '[IndexedDBBox] [get] Error - ${getObjectRequest.error}',
-      );
+      Logs().e('[IndexedDBBox] [get] Error - ${getObjectRequest.error}');
       getObjectCompleter.completeError(
         '[IndexedDBBox] [get] Error - ${getObjectRequest.error}'.toJS,
       );
@@ -308,9 +302,7 @@ class Box<V> {
     final putRequest = store.put(val.jsify(), key.toJS);
     final putCompleter = Completer();
     putRequest.onerror = (Event event) {
-      Logs().e(
-        '[IndexedDBBox] [put] Error - ${putRequest.error}',
-      );
+      Logs().e('[IndexedDBBox] [put] Error - ${putRequest.error}');
       putCompleter.completeError(
         '[IndexedDBBox] [put] Error - ${putRequest.error}'.toJS,
       );
@@ -337,9 +329,7 @@ class Box<V> {
     final deleteRequest = store.delete(key.toJS);
     final deleteCompleter = Completer();
     deleteRequest.onerror = (Event event) {
-      Logs().e(
-        '[IndexedDBBox] [delete] Error - ${deleteRequest.error}',
-      );
+      Logs().e('[IndexedDBBox] [delete] Error - ${deleteRequest.error}');
       deleteCompleter.completeError(
         '[IndexedDBBox] [delete] Error - ${deleteRequest.error}'.toJS,
       );
@@ -404,9 +394,7 @@ class Box<V> {
       final clearRequest = store.clear();
       final clearCompleter = Completer();
       clearRequest.onerror = (Event event) {
-        Logs().e(
-          '[IndexedDBBox] [clear] Error - ${clearRequest.error}',
-        );
+        Logs().e('[IndexedDBBox] [clear] Error - ${clearRequest.error}');
         clearCompleter.completeError(
           '[IndexedDBBox] [clear] Error - ${clearRequest.error}'.toJS,
         );

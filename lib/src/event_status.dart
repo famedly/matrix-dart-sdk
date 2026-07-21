@@ -1,15 +1,14 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// Defines event status:
 /// - removed
 /// - error: (http request failed)
 /// - sending: (http request started)
 /// - sent: (http request successful)
 /// - synced: (event came from sync loop)
-enum EventStatus {
-  error,
-  sending,
-  sent,
-  synced,
-}
+enum EventStatus { error, sending, sent, synced }
 
 /// Returns `EventStatusEnum` value from `intValue`.
 ///
@@ -42,10 +41,7 @@ extension EventStatusExtension on EventStatus {
 
   /// Returns `true` if the status is sent or later:
   /// [EventStatus.sent] or [EventStatus.synced].
-  bool get isSent => [
-        EventStatus.sent,
-        EventStatus.synced,
-      ].contains(this);
+  bool get isSent => [EventStatus.sent, EventStatus.synced].contains(this);
 
   /// Returns `true` if the status is `synced`: [EventStatus.synced]
   bool get isSynced => this == EventStatus.synced;

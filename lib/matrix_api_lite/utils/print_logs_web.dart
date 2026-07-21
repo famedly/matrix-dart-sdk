@@ -1,8 +1,11 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:js_interop';
 
-import 'package:web/web.dart';
-
 import 'package:matrix/matrix_api_lite.dart';
+import 'package:web/web.dart';
 
 // ignore_for_file: unused-code
 extension PrintLogs on LogEvent {

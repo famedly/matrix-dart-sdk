@@ -1,27 +1,13 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:convert';
 
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
-import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 
 Map<String, dynamic> jsonDecode(dynamic payload) {
@@ -42,10 +28,7 @@ void main() {
     Logs().level = Level.error;
 
     setUpAll(() async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
+      await vod.init(wasmPath: './pkg/', libraryPath: './rust/target/debug/');
     });
 
     const validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
@@ -62,8 +45,9 @@ void main() {
       var foundEvent = false;
       for (final entry in FakeMatrixApi.calledEndpoints.entries) {
         final payload = jsonDecode(entry.value.first);
-        if (entry.key
-                .startsWith('/client/v3/sendToDevice/m.room_key_request') &&
+        if (entry.key.startsWith(
+              '/client/v3/sendToDevice/m.room_key_request',
+            ) &&
             (payload['messages'] is Map) &&
             (payload['messages']['@alice:example.com'] is Map) &&
             (payload['messages']['@alice:example.com']['*'] is Map)) {
@@ -86,10 +70,12 @@ void main() {
       matrix.setUserId('@alice:example.com'); // we need to pretend to be alice
       FakeMatrixApi.calledEndpoints.clear();
       await matrix
-          .userDeviceKeys['@alice:example.com']!.deviceKeys['OTHERDEVICE']!
+          .userDeviceKeys['@alice:example.com']!
+          .deviceKeys['OTHERDEVICE']!
           .setBlocked(false);
       await matrix
-          .userDeviceKeys['@alice:example.com']!.deviceKeys['OTHERDEVICE']!
+          .userDeviceKeys['@alice:example.com']!
+          .deviceKeys['OTHERDEVICE']!
           .setVerified(true);
       final session = await matrix.encryption!.keyManager
           .loadInboundGroupSession('!726s6s6q:example.com', validSessionId);
@@ -121,8 +107,11 @@ void main() {
       // test a successful foreign share
       FakeMatrixApi.calledEndpoints.clear();
       session!.allowedAtIndex['@test:fakeServer.notExisting'] = <String, int>{
-        matrix.userDeviceKeys['@test:fakeServer.notExisting']!
-            .deviceKeys['OTHERDEVICE']!.curve25519Key!: 0,
+        matrix
+                .userDeviceKeys['@test:fakeServer.notExisting']!
+                .deviceKeys['OTHERDEVICE']!
+                .curve25519Key!:
+            0,
       };
       event = ToDeviceEvent(
         sender: '@test:fakeServer.notExisting',
@@ -332,8 +321,10 @@ void main() {
       );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-        matrix.encryption!.keyManager
-                .getInboundGroupSession(requestRoom.id, validSessionId) !=
+        matrix.encryption!.keyManager.getInboundGroupSession(
+              requestRoom.id,
+              validSessionId,
+            ) !=
             null,
         true,
       );
@@ -379,15 +370,21 @@ void main() {
       );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-        matrix.encryption!.keyManager
-                .getInboundGroupSession(requestRoom.id, validSessionId) !=
+        matrix.encryption!.keyManager.getInboundGroupSession(
+              requestRoom.id,
+              validSessionId,
+            ) !=
             null,
         false,
       );
 
       // unknown device
-      await matrix.encryption!.keyManager
-          .request(requestRoom, validSessionId, null, tryOnlineBackup: false);
+      await matrix.encryption!.keyManager.request(
+        requestRoom,
+        validSessionId,
+        null,
+        tryOnlineBackup: false,
+      );
       matrix.encryption!.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
         sender: '@alice:example.com',
@@ -402,14 +399,14 @@ void main() {
           'sender_claimed_ed25519_key':
               'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
         },
-        encryptedContent: {
-          'sender_key': 'invalid',
-        },
+        encryptedContent: {'sender_key': 'invalid'},
       );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-        matrix.encryption!.keyManager
-                .getInboundGroupSession(requestRoom.id, validSessionId) !=
+        matrix.encryption!.keyManager.getInboundGroupSession(
+              requestRoom.id,
+              validSessionId,
+            ) !=
             null,
         false,
       );
@@ -438,8 +435,10 @@ void main() {
       );
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-        matrix.encryption!.keyManager
-                .getInboundGroupSession(requestRoom.id, validSessionId) !=
+        matrix.encryption!.keyManager.getInboundGroupSession(
+              requestRoom.id,
+              validSessionId,
+            ) !=
             null,
         false,
       );

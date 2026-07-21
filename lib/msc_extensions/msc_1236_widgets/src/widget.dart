@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:matrix/src/room.dart';
 
 class MatrixWidget {
@@ -26,8 +30,9 @@ class MatrixWidget {
   factory MatrixWidget.fromJson(Map<String, dynamic> json, Room room) =>
       MatrixWidget(
         room: room,
-        creatorUserId:
-            json.containsKey('creatorUserId') ? json['creatorUserId'] : null,
+        creatorUserId: json.containsKey('creatorUserId')
+            ? json['creatorUserId']
+            : null,
         data: json.containsKey('data') ? json['data'] : {},
         id: json.containsKey('id') ? json['id'] : null,
         name: json['name'],
@@ -45,9 +50,7 @@ class MatrixWidget {
         name: name,
         type: 'm.etherpad',
         url: url.toString(),
-        data: {
-          'url': url.toString(),
-        },
+        data: {'url': url.toString()},
       );
 
   /// creates an `m.jitsi` [MatrixWidget]
@@ -56,40 +59,35 @@ class MatrixWidget {
     String name,
     Uri url, {
     bool isAudioOnly = false,
-  }) =>
-      MatrixWidget(
-        room: room,
-        name: name,
-        type: 'm.jitsi',
-        url: url.toString(),
-        data: {
-          'domain': url.host,
-          'conferenceId': url.pathSegments.last,
-          'isAudioOnly': isAudioOnly,
-        },
-      );
+  }) => MatrixWidget(
+    room: room,
+    name: name,
+    type: 'm.jitsi',
+    url: url.toString(),
+    data: {
+      'domain': url.host,
+      'conferenceId': url.pathSegments.last,
+      'isAudioOnly': isAudioOnly,
+    },
+  );
 
   /// creates an `m.video` [MatrixWidget]
   factory MatrixWidget.video(Room room, String name, Uri url) => MatrixWidget(
-        room: room,
-        name: name,
-        type: 'm.video',
-        url: url.toString(),
-        data: {
-          'url': url.toString(),
-        },
-      );
+    room: room,
+    name: name,
+    type: 'm.video',
+    url: url.toString(),
+    data: {'url': url.toString()},
+  );
 
   /// creates an `m.custom` [MatrixWidget]
   factory MatrixWidget.custom(Room room, String name, Uri url) => MatrixWidget(
-        room: room,
-        name: name,
-        type: 'm.custom',
-        url: url.toString(),
-        data: {
-          'url': url.toString(),
-        },
-      );
+    room: room,
+    name: name,
+    type: 'm.custom',
+    url: url.toString(),
+    data: {'url': url.toString()},
+  );
 
   Future<Uri> buildWidgetUrl() async {
     // See https://github.com/matrix-org/matrix-doc/issues/1236 for a
@@ -123,12 +121,12 @@ class MatrixWidget {
   }
 
   Map<String, dynamic> toJson() => {
-        'creatorUserId': creatorUserId,
-        'data': data,
-        'id': id,
-        'name': name,
-        'type': type,
-        'url': url,
-        'waitForIframeLoad': waitForIframeLoad,
-      };
+    'creatorUserId': creatorUserId,
+    'data': data,
+    'id': id,
+    'name': name,
+    'type': type,
+    'url': url,
+    'waitForIframeLoad': waitForIframeLoad,
+  };
 }

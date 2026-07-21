@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:convert';
 
 /// Push Notification object from https://spec.matrix.org/v1.2/push-gateway-api/
@@ -35,26 +39,26 @@ class PushNotification {
         content: json['content'] is Map
             ? Map<String, Object?>.from(json['content'] as Map)
             : json['content'] is String
-                ? jsonDecode(json['content'] as String)
-                : null,
+            ? jsonDecode(json['content'] as String)
+            : null,
         counts: json['counts'] is Map
             ? PushNotificationCounts.fromJson(
                 json['counts'] as Map<String, Object?>,
               )
             : json['counts'] is String
-                ? PushNotificationCounts.fromJson(
-                    jsonDecode(json['counts'] as String),
-                  )
-                : null,
+            ? PushNotificationCounts.fromJson(
+                jsonDecode(json['counts'] as String),
+              )
+            : null,
         devices: json['devices'] is List
             ? (json['devices'] as List)
-                .map((d) => PushNotificationDevice.fromJson(d))
-                .toList()
+                  .map((d) => PushNotificationDevice.fromJson(d))
+                  .toList()
             : json['devices'] is String
-                ? (jsonDecode(json['devices'] as String) as List)
-                    .map((d) => PushNotificationDevice.fromJson(d))
-                    .toList()
-                : null,
+            ? (jsonDecode(json['devices'] as String) as List)
+                  .map((d) => PushNotificationDevice.fromJson(d))
+                  .toList()
+            : null,
         eventId: json['event_id'] as String?,
         prio: json['prio'] as String?,
         roomAlias: json['room_alias'] as String?,
@@ -66,29 +70,25 @@ class PushNotification {
       );
 
   Map<String, Object?> toJson() => {
-        if (content != null) 'content': content,
-        if (counts != null) 'counts': counts?.toJson(),
-        if (devices != null)
-          'devices': devices?.map((i) => i.toJson()).toList(),
-        if (eventId != null) 'event_id': eventId,
-        if (prio != null) 'prio': prio,
-        if (roomAlias != null) 'room_alias': roomAlias,
-        if (roomId != null) 'room_id': roomId,
-        if (roomName != null) 'room_name': roomName,
-        if (sender != null) 'sender': sender,
-        if (senderDisplayName != null) 'sender_display_name': senderDisplayName,
-        if (type != null) 'type': type,
-      };
+    if (content != null) 'content': content,
+    if (counts != null) 'counts': counts?.toJson(),
+    if (devices != null) 'devices': devices?.map((i) => i.toJson()).toList(),
+    if (eventId != null) 'event_id': eventId,
+    if (prio != null) 'prio': prio,
+    if (roomAlias != null) 'room_alias': roomAlias,
+    if (roomId != null) 'room_id': roomId,
+    if (roomName != null) 'room_name': roomName,
+    if (sender != null) 'sender': sender,
+    if (senderDisplayName != null) 'sender_display_name': senderDisplayName,
+    if (type != null) 'type': type,
+  };
 }
 
 class PushNotificationCounts {
   final int? missedCalls;
   final int? unread;
 
-  const PushNotificationCounts({
-    this.missedCalls,
-    this.unread,
-  });
+  const PushNotificationCounts({this.missedCalls, this.unread});
 
   factory PushNotificationCounts.fromJson(Map<String, Object?> json) =>
       PushNotificationCounts(
@@ -97,9 +97,9 @@ class PushNotificationCounts {
       );
 
   Map<String, Object?> toJson() => {
-        if (missedCalls != null) 'missed_calls': missedCalls,
-        if (unread != null) 'unread': unread,
-      };
+    if (missedCalls != null) 'missed_calls': missedCalls,
+    if (unread != null) 'unread': unread,
+  };
 }
 
 class PushNotificationDevice {
@@ -131,26 +131,21 @@ class PushNotificationDevice {
       );
 
   Map<String, Object?> toJson() => {
-        'app_id': appId,
-        if (data != null) 'data': data,
-        'pushkey': pushkey,
-        if (pushkeyTs != null) 'pushkey_ts': pushkeyTs,
-        if (tweaks != null) 'tweaks': tweaks?.toJson(),
-      };
+    'app_id': appId,
+    if (data != null) 'data': data,
+    'pushkey': pushkey,
+    if (pushkeyTs != null) 'pushkey_ts': pushkeyTs,
+    if (tweaks != null) 'tweaks': tweaks?.toJson(),
+  };
 }
 
 class Tweaks {
   final String? sound;
 
-  const Tweaks({
-    this.sound,
-  });
+  const Tweaks({this.sound});
 
-  factory Tweaks.fromJson(Map<String, Object?> json) => Tweaks(
-        sound: json['sound'] as String?,
-      );
+  factory Tweaks.fromJson(Map<String, Object?> json) =>
+      Tweaks(sound: json['sound'] as String?);
 
-  Map<String, Object?> toJson() => {
-        if (sound != null) 'sound': sound,
-      };
+  Map<String, Object?> toJson() => {if (sound != null) 'sound': sound};
 }

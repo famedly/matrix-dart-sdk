@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// Extensions related to widgets in a room. Widgets are not part of the Matrix specification yet.
 library;
 
@@ -7,7 +11,8 @@ export 'src/widget.dart';
 
 extension MatrixWidgets on Room {
   /// Returns all present Widgets in the room.
-  List<MatrixWidget> get widgets => {
+  List<MatrixWidget> get widgets =>
+      {
         ...states['m.widget'] ?? states['im.vector.modular.widgets'] ?? {},
       }.values.expand((e) {
         try {

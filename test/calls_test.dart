@@ -1,14 +1,40 @@
-import 'dart:async';
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:test/test.dart';
-import 'package:webrtc_interface/webrtc_interface.dart';
+import 'dart:async';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/delayed_event_canceller.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
+import 'package:test/test.dart';
+import 'package:webrtc_interface/webrtc_interface.dart';
+
 import 'fake_client.dart';
 import 'webrtc_stub.dart';
+
+class MockMutatingGroupCallSession extends GroupCallSession {
+  MockMutatingGroupCallSession({
+    required super.client,
+    required super.room,
+    required super.voip,
+    required super.backend,
+    required super.groupCallId,
+    required super.application,
+    required super.scope,
+    this.onMemberStateChangedHook,
+  });
+
+  final FutureOr<void> Function()? onMemberStateChangedHook;
+  int onMemberStateChangedCalls = 0;
+
+  @override
+  Future<void> onMemberStateChanged() async {
+    onMemberStateChangedCalls++;
+    await onMemberStateChangedHook?.call();
+  }
+}
 
 void main() {
   late Client matrix;
@@ -219,7 +245,7 @@ void main() {
                                 'candidate:31TCP2105524479uwu9typhosttcptypeactive',
                             'sdpMid': '0',
                             'sdpMLineIndex': 0,
-                          }
+                          },
                         ],
                       },
                       senderId: '@alice:testing.com',
@@ -247,29 +273,24 @@ void main() {
       expect(call.state, CallState.kRinging);
       await call.answer(txid: '1234');
 
-      call.pc!.onIceGatheringState!
-          .call(RTCIceGatheringState.RTCIceGatheringStateComplete);
+      call.pc!.onIceGatheringState!.call(
+        RTCIceGatheringState.RTCIceGatheringStateComplete,
+      );
       // we send them manually anyway because our stub sends empty list of
       // candidates
-      await call.sendCallCandidates(
-        room,
-        'originTsValidCall',
-        'GHTYAJCE',
-        [
-          {
-            'candidate': 'candidate:0 1 UDP 2122252543 uwu 50184 typ host',
-            'sdpMid': '0',
-            'sdpMLineIndex': 0,
-          },
-          {
-            'candidate':
-                'candidate:3 1 TCP 2105524479 uwu 9 typ host tcptype active',
-            'sdpMid': '0',
-            'sdpMLineIndex': 0,
-          }
-        ],
-        txid: '1234',
-      );
+      await call.sendCallCandidates(room, 'originTsValidCall', 'GHTYAJCE', [
+        {
+          'candidate': 'candidate:0 1 UDP 2122252543 uwu 50184 typ host',
+          'sdpMid': '0',
+          'sdpMLineIndex': 0,
+        },
+        {
+          'candidate':
+              'candidate:3 1 TCP 2105524479 uwu 9 typ host tcptype active',
+          'sdpMid': '0',
+          'sdpMLineIndex': 0,
+        },
+      ], txid: '1234');
 
       expect(call.state, CallState.kConnecting);
 
@@ -303,10 +324,12 @@ void main() {
         ),
       );
 
-      call.pc!.onIceConnectionState!
-          .call(RTCIceConnectionState.RTCIceConnectionStateChecking);
-      call.pc!.onIceConnectionState!
-          .call(RTCIceConnectionState.RTCIceConnectionStateConnected);
+      call.pc!.onIceConnectionState!.call(
+        RTCIceConnectionState.RTCIceConnectionStateChecking,
+      );
+      call.pc!.onIceConnectionState!.call(
+        RTCIceConnectionState.RTCIceConnectionStateConnected,
+      );
       // just to make sure there are no errors after running functions
       // that are supposed to run once iceConnectionState is connected
       await Future.delayed(Duration(seconds: 2));
@@ -374,7 +397,7 @@ void main() {
                                 'candidate:31TCP2105524479uwu9typhosttcptypeactive',
                             'sdpMid': '0',
                             'sdpMLineIndex': 0,
-                          }
+                          },
                         ],
                       },
                       senderId: '@alice:testing.com',
@@ -494,7 +517,7 @@ void main() {
                                 'candidate:31TCP2105524479uwu9typhosttcptypeactive',
                             'sdpMid': '0',
                             'sdpMLineIndex': 0,
-                          }
+                          },
                         ],
                       },
                       senderId: '@alice:testing.com',
@@ -508,8 +531,8 @@ void main() {
           ),
         ),
       );
-      while (
-          voip.currentCID != VoipId(roomId: room.id, callId: 'reject_call')) {
+      while (voip.currentCID !=
+          VoipId(roomId: room.id, callId: 'reject_call')) {
         // call invite looks valid, call should be created now :D
         await Future.delayed(Duration(milliseconds: 50));
         Logs().d('Waiting for currentCID to update');
@@ -944,8 +967,9 @@ void main() {
 
     group('application-agnostic membership tests', () {
       test('CallMembership equality does not depend on application field', () {
-        final expiresTs =
-            DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch;
+        final expiresTs = DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch;
 
         final mem1 = CallMembership(
           userId: '@alice:example.com',
@@ -1056,8 +1080,9 @@ void main() {
             isTrue,
           );
           expect(
-            groupCall.participants
-                .any((p) => p.userId == '@remoteuser:example.com'),
+            groupCall.participants.any(
+              (p) => p.userId == '@remoteuser:example.com',
+            ),
             isTrue,
           );
         },
@@ -1113,17 +1138,19 @@ void main() {
           const callId = 'test_delayed_cleanup';
 
           // Simulate a delayed event canceller that was set up for this call
-          voip.delayedEventCancellers['$callId|m.call|m.room'] =
+          voip.delayedEventCancellers['${room.id}|$callId|m.room'] =
               DelayedEventCanceller(
-            delayedEventId: 'fake_delayed_event_id',
-            restartTimer: Timer.periodic(
-              Duration(hours: 1),
-              (_) {}, // intentionally long; will be cancelled
-            ),
-          );
+                delayedEventId: 'fake_delayed_event_id',
+                restartTimer: Timer.periodic(
+                  Duration(hours: 1),
+                  (_) {}, // intentionally long; will be cancelled
+                ),
+              );
 
           expect(
-            voip.delayedEventCancellers.containsKey('$callId|m.call|m.room'),
+            voip.delayedEventCancellers.containsKey(
+              '${room.id}|$callId|m.room',
+            ),
             isTrue,
           );
 
@@ -1134,7 +1161,9 @@ void main() {
           await room.removeFamedlyCallMemberEvent(callId, voip);
 
           expect(
-            voip.delayedEventCancellers.containsKey('$callId|m.call|m.room'),
+            voip.delayedEventCancellers.containsKey(
+              '${room.id}|$callId|m.room',
+            ),
             isFalse,
           );
         },
@@ -1269,5 +1298,66 @@ void main() {
       expect(incomingCall, isNotNull);
       expect(incomingCall?.pc, isNotNull);
     });
+
+    test(
+      'updates all room group calls when member-state handling mutates the map',
+      () async {
+        final firstGroupCall = MockMutatingGroupCallSession(
+          client: matrix,
+          room: room,
+          voip: voip,
+          backend: MeshBackend(),
+          groupCallId: 'group-call-a',
+          application: 'm.call',
+          scope: 'm.room',
+          onMemberStateChangedHook: () {
+            voip.setGroupCallById(
+              GroupCallSession(
+                client: matrix,
+                room: room,
+                voip: voip,
+                backend: MeshBackend(),
+                groupCallId: 'group-call-c',
+                application: 'm.call',
+                scope: 'm.room',
+              ),
+            );
+          },
+        );
+        final secondGroupCall = MockMutatingGroupCallSession(
+          client: matrix,
+          room: room,
+          voip: voip,
+          backend: MeshBackend(),
+          groupCallId: 'group-call-b',
+          application: 'm.call',
+          scope: 'm.room',
+        );
+
+        voip.setGroupCallById(firstGroupCall);
+        voip.setGroupCallById(secondGroupCall);
+
+        room.setState(
+          Event(
+            content: {'memberships': []},
+            type: EventTypes.GroupCallMember,
+            eventId: 'member-state-update',
+            senderId: '@alice:example.com',
+            originServerTs: DateTime.now(),
+            room: room,
+            stateKey: '@alice:example.com',
+          ),
+        );
+
+        await pumpEventQueue();
+
+        expect(firstGroupCall.onMemberStateChangedCalls, 1);
+        expect(secondGroupCall.onMemberStateChangedCalls, 1);
+        expect(
+          voip.groupCalls,
+          contains(VoipId(roomId: room.id, callId: 'group-call-c')),
+        );
+      },
+    );
   });
 }

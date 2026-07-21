@@ -1,8 +1,8 @@
-enum PushRuleState {
-  notify,
-  mentionsOnly,
-  dontNotify,
-}
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+enum PushRuleState { notify, mentionsOnly, dontNotify }
 
 enum JoinRules {
   public('public'),

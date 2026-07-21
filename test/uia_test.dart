@@ -1,26 +1,11 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 
-import 'package:test/test.dart';
-
 import 'package:matrix/matrix.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('UIA', () {
@@ -52,7 +37,7 @@ void main() {
             'flows': [
               <String, dynamic>{
                 'stages': ['stage1', 'stage2'],
-              }
+              },
             ],
             'params': <String, dynamic>{},
           };
@@ -75,8 +60,9 @@ void main() {
       expect(request.nextStages.length, 1);
       expect(updated, 3);
       expect(finished, false);
-      final res =
-          await request.completeStage(AuthenticationData(type: 'stage2'));
+      final res = await request.completeStage(
+        AuthenticationData(type: 'stage2'),
+      );
       expect(res, 'FOXIES ARE FLOOOOOFY!!!!!');
       expect(request.result, 'FOXIES ARE FLOOOOOFY!!!!!');
       expect(request.state, UiaRequestState.done);

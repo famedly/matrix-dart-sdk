@@ -1,24 +1,43 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 const Set<String> validSigils = {'@', '!', '#', '\$', '+'};
 
 const int maxLength = 255;
+
+// Spec grammar for user ID localparts (since v1.8). Excludes legacy ids.
+final RegExp _strictUserLocalpartRegExp = RegExp(r'^[0-9a-z\-.=_/+]+$');
+
+// server_name = hostname [ ":" port ]
+final RegExp _portRegExp = RegExp(r'^[0-9]{1,5}$');
+final RegExp _dnsNameRegExp = RegExp(r'^[0-9A-Za-z\-.]{1,255}$');
+final RegExp _ipv6RegExp = RegExp(r'^[0-9A-Fa-f:.]{2,45}$');
+
+bool _isValidServerName(String serverName) {
+  if (serverName.isEmpty) return false;
+
+  // IPv6 literal in brackets, optionally followed by a port.
+  if (serverName.startsWith('[')) {
+    final closingBracket = serverName.indexOf(']');
+    if (closingBracket == -1) return false;
+    if (!_ipv6RegExp.hasMatch(serverName.substring(1, closingBracket))) {
+      return false;
+    }
+    final rest = serverName.substring(closingBracket + 1);
+    if (rest.isEmpty) return true;
+    return rest.startsWith(':') && _portRegExp.hasMatch(rest.substring(1));
+  }
+
+  // DNS name / IPv4 don't contain a colon, so any colon separates the port.
+  var host = serverName;
+  final colon = serverName.indexOf(':');
+  if (colon != -1) {
+    if (!_portRegExp.hasMatch(serverName.substring(colon + 1))) return false;
+    host = serverName.substring(0, colon);
+  }
+  return _dnsNameRegExp.hasMatch(host);
+}
 
 extension MatrixIdExtension on String {
   List<String> _getParts() {
@@ -30,31 +49,56 @@ extension MatrixIdExtension on String {
     return [s.substring(0, ix), s.substring(ix + 1)];
   }
 
-  bool get isValidMatrixId {
+  @Deprecated('Use isValidMatrixIdStrict() instead')
+  bool get isValidMatrixId => isValidMatrixIdStrict();
+
+  /// Whether this is a valid matrix id (user, room, alias, event or group).
+  ///
+  /// Lenient by default. Pass [allowHistoricalUserIds] as `false` to enforce
+  /// the spec user id localpart charset and [strictDomainCheck] as `true` to
+  /// validate the domain (dns/ipv4/ipv6/port).
+  ///
+  /// See: https://spec.matrix.org/v1.16/appendices/#identifier-grammar
+  bool isValidMatrixIdStrict({
+    bool allowHistoricalUserIds = true,
+    bool strictDomainCheck = false,
+  }) {
     if (isEmpty) return false;
     if (length > maxLength) return false;
     final sigil = substring(0, 1);
-    if (!validSigils.contains(sigil)) {
-      return false;
-    }
-    // event IDs and room IDs do not have to have a domain
-    if ({'\$', '!'}.contains(sigil)) {
-      return true;
-    }
-    // all other matrix IDs have to have a domain
+    if (!validSigils.contains(sigil)) return false;
+
     final parts = _getParts();
-    // the localpart can be an empty string, e.g. for aliases
-    if (parts.length != 2 || parts[1].isEmpty) {
-      return false;
+    final localpart = parts.first;
+    final hasDomain = parts.length == 2;
+    final domain = hasDomain ? parts[1] : null;
+
+    switch (sigil) {
+      case '!': // room id
+      case '\$': // event id, domain optional
+        if (hasDomain && strictDomainCheck) return _isValidServerName(domain!);
+        return true;
+      case '@': // user id
+      case '#': // room alias
+      case '+': // group
+        if (!hasDomain || domain!.isEmpty) return false;
+        if (sigil == '@' &&
+            !allowHistoricalUserIds &&
+            !_strictUserLocalpartRegExp.hasMatch(localpart)) {
+          return false;
+        }
+        if (strictDomainCheck && !_isValidServerName(domain)) return false;
+        return true;
+      default:
+        return false;
     }
-    return true;
   }
 
-  String? get sigil => isValidMatrixId ? substring(0, 1) : null;
+  String? get sigil => isValidMatrixIdStrict() ? substring(0, 1) : null;
 
-  String? get localpart => isValidMatrixId ? _getParts().first : null;
+  String? get localpart => isValidMatrixIdStrict() ? _getParts().first : null;
 
-  String? get domain => isValidMatrixId ? _getParts().last : null;
+  String? get domain => isValidMatrixIdStrict() ? _getParts().last : null;
 
   bool equals(String? other) => toLowerCase() == other?.toLowerCase();
 
@@ -87,11 +131,12 @@ extension MatrixIdExtension on String {
       );
     } else {
       return Uri(
-        pathSegments: RegExp(r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?')
-            .allMatches('/$this')
-            .map((m) => m[1]!),
-        query: RegExp(r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)')
-            .firstMatch('/$this')?[1],
+        pathSegments: RegExp(
+          r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?',
+        ).allMatches('/$this').map((m) => m[1]!),
+        query: RegExp(
+          r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)',
+        ).firstMatch('/$this')?[1],
       );
     }
   }
@@ -103,9 +148,9 @@ extension MatrixIdExtension on String {
     final uri = _parseIdentifierIntoUri();
     if (uri == null) return null;
     final primary = uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : null;
-    if (primary == null || !primary.isValidMatrixId) return null;
+    if (primary == null || !primary.isValidMatrixIdStrict()) return null;
     final secondary = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
-    if (secondary != null && !secondary.isValidMatrixId) return null;
+    if (secondary != null && !secondary.isValidMatrixIdStrict()) return null;
 
     return MatrixIdentifierStringExtensionResults(
       primaryIdentifier: primary,

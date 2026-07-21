@@ -1,8 +1,11 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:collection/collection.dart';
+import 'package:matrix/matrix.dart';
 import 'package:random_string/random_string.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
-
-import 'package:matrix/matrix.dart';
 
 Future<void> stopMediaStream(MediaStream? stream) async {
   if (stream != null) {
@@ -43,8 +46,9 @@ Future<void> updateMediaDevice(
   List<RTCRtpSender> userRtpSenders, [
   MediaStreamTrack? track,
 ]) async {
-  final sender = userRtpSenders
-      .firstWhereOrNull((element) => element.track!.kind == kind.name);
+  final sender = userRtpSenders.firstWhereOrNull(
+    (element) => element.track!.kind == kind.name,
+  );
   await sender?.track?.stop();
   if (track != null) {
     await sender?.replaceTrack(track);

@@ -1,27 +1,13 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 
 void main() {
@@ -50,10 +36,7 @@ void main() {
       );
 
       if (resp.statusCode == 200) {
-        final file = MatrixImageFile(
-          name: 'file.jpg',
-          bytes: resp.bodyBytes,
-        );
+        final file = MatrixImageFile(name: 'file.jpg', bytes: resp.bodyBytes);
         expect(file.bytes.isNotEmpty, true);
         expect(file.height, null);
         expect(file.width, null);

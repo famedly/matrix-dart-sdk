@@ -1,25 +1,10 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-import 'package:slugify/slugify.dart';
+// SPDX-FileCopyrightText: 2019-Present, 2020, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:matrix/matrix_api_lite.dart';
 import 'package:matrix/src/room.dart';
+import 'package:slugify/slugify.dart';
 
 extension ImagePackRoomExtension on Room {
   /// Get all the active image packs for the specified [usage], mapped by their slug
@@ -43,16 +28,18 @@ extension ImagePackRoomExtension on Room {
           continue;
         }
         packs
-            .putIfAbsent(
-              finalSlug,
-              () => ImagePackContent.fromJson({})
-                ..pack.displayName = imagePack.pack.displayName ??
-                    room?.getLocalizedDisplayname() ??
-                    finalSlug
-                ..pack.avatarUrl = imagePack.pack.avatarUrl ?? room?.avatar
-                ..pack.attribution = imagePack.pack.attribution,
-            )
-            .images[entry.key] = image;
+                .putIfAbsent(
+                  finalSlug,
+                  () => ImagePackContent.fromJson({})
+                    ..pack.displayName =
+                        imagePack.pack.displayName ??
+                        room?.getLocalizedDisplayname() ??
+                        finalSlug
+                    ..pack.avatarUrl = imagePack.pack.avatarUrl ?? room?.avatar
+                    ..pack.attribution = imagePack.pack.attribution,
+                )
+                .images[entry.key] =
+            image;
         allMxcs.add(image.url);
       }
     }

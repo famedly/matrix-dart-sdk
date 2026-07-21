@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:typed_data';
 
@@ -134,9 +120,7 @@ abstract class DatabaseApi {
 
   Future<bool> deleteFile(Uri mxcUri);
 
-  Future storeSyncFilterId(
-    String syncFilterId,
-  );
+  Future storeSyncFilterId(String syncFilterId);
 
   Future storeAccountData(String type, Map<String, Object?> content);
 
@@ -175,10 +159,7 @@ abstract class DatabaseApi {
     String senderClaimedKey,
   );
 
-  Future markInboundGroupSessionAsUploaded(
-    String roomId,
-    String sessionId,
-  );
+  Future markInboundGroupSessionAsUploaded(String roomId, String sessionId);
 
   Future updateInboundGroupSessionAllowedAtIndex(
     String allowedAtIndex,
@@ -195,9 +176,7 @@ abstract class DatabaseApi {
     int creationTime,
   );
 
-  Future updateClientKeys(
-    String olmAccount,
-  );
+  Future updateClientKeys(String olmAccount);
 
   Future storeOlmSession(
     String identityKey,
@@ -229,16 +208,11 @@ abstract class DatabaseApi {
 
   Future markInboundGroupSessionsAsNeedingUpload();
 
-  Future storePrevBatch(
-    String prevBatch,
-  );
+  Future storePrevBatch(String prevBatch);
 
   Future deleteOldFiles(int savedAt);
 
-  Future storeUserDeviceKeysInfo(
-    String userId,
-    bool outdated,
-  );
+  Future storeUserDeviceKeysInfo(String userId, bool outdated);
 
   Future storeUserDeviceKey(
     String userId,
@@ -249,39 +223,31 @@ abstract class DatabaseApi {
     int lastActive,
   );
 
-  Future removeUserDeviceKey(
-    String userId,
-    String deviceId,
-  );
+  Future removeUserDeviceKey(String userId, String deviceId);
 
-  Future removeUserCrossSigningKey(
-    String userId,
-    String publicKey,
-  );
+  Future removeUserCrossSigningKey(String userId, String publicKey);
 
   Future storeUserCrossSigningKey(
     String userId,
     String publicKey,
     String content,
     bool verified,
-    bool blocked,
-  );
+    bool blocked, {
+    DateTime? trustOnFirstUseSince,
+  });
 
   Future deleteFromToDeviceQueue(int id);
 
   Future removeEvent(String eventId, String roomId);
 
-  Future setRoomPrevBatch(
-    String? prevBatch,
-    String roomId,
-    Client client,
-  );
+  Future setRoomPrevBatch(String? prevBatch, String roomId, Client client);
 
   Future setVerifiedUserCrossSigningKey(
     bool verified,
     String userId,
-    String publicKey,
-  );
+    String publicKey, {
+    DateTime? trustOnFirstUseSince,
+  });
 
   Future setBlockedUserCrossSigningKey(
     bool blocked,
@@ -295,21 +261,14 @@ abstract class DatabaseApi {
     String deviceId,
   );
 
-  Future setBlockedUserDeviceKey(
-    bool blocked,
-    String userId,
-    String deviceId,
-  );
+  Future setBlockedUserDeviceKey(bool blocked, String userId, String deviceId);
 
   Future<List<Event>> getUnimportantRoomEventStatesForRoom(
     List<String> events,
     Room room,
   );
 
-  Future<List<OlmSession>> getOlmSessions(
-    String identityKey,
-    String userId,
-  );
+  Future<List<OlmSession>> getOlmSessions(String identityKey, String userId);
 
   Future<Map<String, Map>> getAllOlmSessions();
 
@@ -322,11 +281,7 @@ abstract class DatabaseApi {
 
   /// Please do `jsonEncode(content)` in your code to stay compatible with
   /// auto generated methods here.
-  Future insertIntoToDeviceQueue(
-    String type,
-    String txnId,
-    String content,
-  );
+  Future insertIntoToDeviceQueue(String type, String txnId, String content);
 
   Future<List<String>> getLastSentMessageUserDeviceKey(
     String userId,
@@ -362,7 +317,7 @@ abstract class DatabaseApi {
   Future<void> cacheCustomObject(String cacheKey, Map<String, Object?> object);
 
   Future<({Map<String, Object?> content, DateTime savedAt})?>
-      getCustomCacheObject(String cacheKey);
+  getCustomCacheObject(String cacheKey);
 
   /// Deletes the whole database. The database needs to be created again after
   /// this.

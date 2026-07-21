@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
@@ -24,10 +10,8 @@ import 'package:matrix/matrix.dart';
 /// callback taking [CommandArgs] as input and a [StringBuffer] as standard output
 /// optionally returns an event ID as in the [Room.sendEvent] syntax.
 /// a [CommandException] should be thrown if the specified arguments are considered invalid
-typedef CommandExecutionCallback = FutureOr<String?> Function(
-  CommandArgs,
-  StringBuffer? stdout,
-);
+typedef CommandExecutionCallback =
+    FutureOr<String?> Function(CommandArgs, StringBuffer? stdout);
 
 extension CommandsClientExtension on Client {
   /// Add a command to the command handler. `command` is its name, and `callback` is the
@@ -139,7 +123,7 @@ extension CommandsClientExtension on Client {
     addCommand('dm', (args, stdout) async {
       final parts = args.msg.split(' ');
       final mxid = parts.first;
-      if (!mxid.isValidMatrixId) {
+      if (!mxid.isValidMatrixIdStrict()) {
         throw CommandException('You must enter a valid mxid when using /dm');
       }
 
@@ -148,10 +132,7 @@ extension CommandsClientExtension on Client {
         enableEncryption: !parts.any((part) => part == '--no-encryption'),
       );
       stdout?.write(
-        DefaultCommandOutput(
-          rooms: [roomId],
-          users: [mxid],
-        ).toString(),
+        DefaultCommandOutput(rooms: [roomId], users: [mxid]).toString(),
       );
       return null;
     });
@@ -237,7 +218,7 @@ extension CommandsClientExtension on Client {
         throw RoomCommandException();
       }
       final parts = args.msg.split(' ');
-      if (parts.isEmpty || !parts.first.isValidMatrixId) {
+      if (parts.isEmpty || !parts.first.isValidMatrixIdStrict()) {
         throw CommandException('You must enter a valid mxid when using /op');
       }
       int? pl;
@@ -259,7 +240,7 @@ extension CommandsClientExtension on Client {
       }
       final parts = args.msg.split(' ');
       final mxid = parts.first;
-      if (!mxid.isValidMatrixId) {
+      if (!mxid.isValidMatrixIdStrict()) {
         throw CommandException('You must enter a valid mxid when using /kick');
       }
       await room.kick(mxid);
@@ -273,7 +254,7 @@ extension CommandsClientExtension on Client {
       }
       final parts = args.msg.split(' ');
       final mxid = parts.first;
-      if (!mxid.isValidMatrixId) {
+      if (!mxid.isValidMatrixIdStrict()) {
         throw CommandException('You must enter a valid mxid when using /ban');
       }
       await room.ban(mxid);
@@ -287,7 +268,7 @@ extension CommandsClientExtension on Client {
       }
       final parts = args.msg.split(' ');
       final mxid = parts.first;
-      if (!mxid.isValidMatrixId) {
+      if (!mxid.isValidMatrixIdStrict()) {
         throw CommandException('You must enter a valid mxid when using /unban');
       }
       await room.unban(mxid);
@@ -302,7 +283,7 @@ extension CommandsClientExtension on Client {
 
       final parts = args.msg.split(' ');
       final mxid = parts.first;
-      if (!mxid.isValidMatrixId) {
+      if (!mxid.isValidMatrixIdStrict()) {
         throw CommandException(
           'You must enter a valid mxid when using /invite',
         );
@@ -317,7 +298,8 @@ extension CommandsClientExtension on Client {
         throw RoomCommandException();
       }
 
-      final currentEventJson = room
+      final currentEventJson =
+          room
               .getState(EventTypes.RoomMember, args.client.userID!)
               ?.content
               .copy() ??
@@ -337,7 +319,8 @@ extension CommandsClientExtension on Client {
         throw RoomCommandException();
       }
 
-      final currentEventJson = room
+      final currentEventJson =
+          room
               .getState(EventTypes.RoomMember, args.client.userID!)
               ?.content
               .copy() ??
@@ -356,8 +339,10 @@ extension CommandsClientExtension on Client {
       if (room == null) {
         throw RoomCommandException();
       }
-      await encryption?.keyManager
-          .clearOrUseOutboundGroupSession(room.id, wipe: true);
+      await encryption?.keyManager.clearOrUseOutboundGroupSession(
+        room.id,
+        wipe: true,
+      );
       return null;
     });
     addCommand('clearcache', (args, stdout) async {
@@ -371,7 +356,7 @@ extension CommandsClientExtension on Client {
       }
 
       final mxid = args.msg.split(' ').first;
-      if (!mxid.isValidMatrixId) {
+      if (!mxid.isValidMatrixIdStrict()) {
         throw CommandException(
           'You must enter a valid mxid when using /maskasdm',
         );
@@ -465,8 +450,10 @@ extension CommandsClientExtension on Client {
       if (version.isEmpty) {
         throw CommandException('Please provide a room version');
       }
-      final newRoomId =
-          await args.room!.client.upgradeRoom(args.room!.id, version);
+      final newRoomId = await args.room!.client.upgradeRoom(
+        args.room!.id,
+        version,
+      );
       stdout?.write(DefaultCommandOutput(rooms: [newRoomId]).toString());
       return null;
     });

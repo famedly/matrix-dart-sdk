@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:collection/collection.dart';
 import 'package:html/dom.dart';
@@ -49,9 +35,11 @@ class HtmlToText {
 
   static String _parsePreContent(_ConvertOpts opts, Element node) {
     var text = node.innerHtml;
-    final match =
-        RegExp(r'^<code([^>]*)>', multiLine: false, caseSensitive: false)
-            .firstMatch(text);
+    final match = RegExp(
+      r'^<code([^>]*)>',
+      multiLine: false,
+      caseSensitive: false,
+    ).firstMatch(text);
     if (match == null) {
       text = HtmlUnescape().convert(text);
       if (text.isNotEmpty) {
@@ -80,9 +68,11 @@ class HtmlToText {
         text += '\n';
       }
     }
-    final language =
-        RegExp(r'language-(\w+)', multiLine: false, caseSensitive: false)
-            .firstMatch(match.group(1)!);
+    final language = RegExp(
+      r'language-(\w+)',
+      multiLine: false,
+      caseSensitive: false,
+    ).firstMatch(match.group(1)!);
     if (language != null) {
       text = language.group(1)! + text;
     }
@@ -127,7 +117,8 @@ class HtmlToText {
     final entries = _listChildNodes(opts, node, {'li'});
     opts.listDepth--;
     final startStr = node.attributes['start'];
-    final start = (startStr is String &&
+    final start =
+        (startStr is String &&
             RegExp(r'^[0-9]+$', multiLine: false).hasMatch(startStr))
         ? int.parse(startStr)
         : 1;

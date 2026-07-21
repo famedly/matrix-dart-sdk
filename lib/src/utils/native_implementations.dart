@@ -1,9 +1,16 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:matrix/encryption.dart';
+import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/compute_callback.dart';
+import 'package:vodozemac/vodozemac.dart';
 
 /// provides native implementations for demanding arithmetic operations
 /// in order to prevent the UI from blocking
@@ -50,6 +57,8 @@ abstract class NativeImplementations {
     bool retryInDummy = false,
   });
 
+  FutureOr<bool> checkSecretStorageKey(CheckSecretStorageKeyArgs args);
+
   /// this implementation will catch any non-implemented method
   @override
   dynamic noSuchMethod(Invocation invocation) {
@@ -76,10 +85,24 @@ abstract class NativeImplementations {
         return dummy.shrinkImage(argument);
       case 'calcImageMetadata':
         return dummy.calcImageMetadata(argument);
+      case 'checkSecretStorageKey':
+        return dummy.checkSecretStorageKey(argument);
       default:
         return super.noSuchMethod(invocation);
     }
   }
+}
+
+class CheckSecretStorageKeyArgs {
+  final Uint8List key;
+  final String iv;
+  final String mac;
+
+  const CheckSecretStorageKeyArgs({
+    required this.key,
+    required this.iv,
+    required this.mac,
+  });
 }
 
 class NativeImplementationsDummy extends NativeImplementations {
@@ -124,6 +147,44 @@ class NativeImplementationsDummy extends NativeImplementations {
   }) {
     return MatrixImageFile.calcMetadataImplementation(bytes);
   }
+
+  @override
+  FutureOr<bool> checkSecretStorageKey(CheckSecretStorageKeyArgs args) {
+    final iv = base64decodeUnpadded(args.iv);
+    iv[8] &= 0x7f;
+
+    final zerosalt = Uint8List(8);
+    final prk = CryptoUtils.hmac(key: zerosalt, input: args.key);
+    final b = Uint8List(1);
+
+    b[0] = 1;
+    final aesKey = CryptoUtils.hmac(key: prk, input: utf8.encode('') + b);
+
+    b[0] = 2;
+    final hmacKey = CryptoUtils.hmac(
+      key: prk,
+      input: aesKey + utf8.encode('') + b,
+    );
+
+    const zeroStr =
+        '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00';
+
+    final plain = Uint8List.fromList(utf8.encode(zeroStr));
+    final ciphertext = CryptoUtils.aesCtr(
+      input: plain,
+      key: Uint8List.fromList(aesKey),
+      iv: iv,
+    );
+    final computedMac = CryptoUtils.hmac(
+      key: Uint8List.fromList(hmacKey),
+      input: ciphertext,
+    );
+
+    final expected = args.mac.replaceAll(RegExp(r'=+$'), '');
+    final actual = base64.encode(computedMac).replaceAll(RegExp(r'=+$'), '');
+    return expected == actual;
+  }
 }
 
 /// a [NativeImplementations] based on Flutter's `compute` function
@@ -137,6 +198,7 @@ class NativeImplementationsIsolate extends NativeImplementations {
 
   NativeImplementationsIsolate(
     this.compute, {
+
     /// To generate upload keys, vodozemac needs to be initialized in the isolate.
     this.vodozemacInit,
   });
@@ -154,13 +216,12 @@ class NativeImplementationsIsolate extends NativeImplementations {
     EncryptedFile file, {
     bool retryInDummy = true,
   }) {
-    return runInBackground<Uint8List?, EncryptedFile>(
-      (EncryptedFile args) async {
-        await vodozemacInit?.call();
-        return NativeImplementations.dummy.decryptFile(args);
-      },
-      file,
-    );
+    return runInBackground<Uint8List?, EncryptedFile>((
+      EncryptedFile args,
+    ) async {
+      await vodozemacInit?.call();
+      return NativeImplementations.dummy.decryptFile(args);
+    }, file);
   }
 
   @override
@@ -168,13 +229,12 @@ class NativeImplementationsIsolate extends NativeImplementations {
     GenerateUploadKeysArgs args, {
     bool retryInDummy = true,
   }) async {
-    return runInBackground<RoomKeys, GenerateUploadKeysArgs>(
-      (GenerateUploadKeysArgs args) async {
-        await vodozemacInit?.call();
-        return NativeImplementations.dummy.generateUploadKeys(args);
-      },
-      args,
-    );
+    return runInBackground<RoomKeys, GenerateUploadKeysArgs>((
+      GenerateUploadKeysArgs args,
+    ) async {
+      await vodozemacInit?.call();
+      return NativeImplementations.dummy.generateUploadKeys(args);
+    }, args);
   }
 
   @override
@@ -182,13 +242,12 @@ class NativeImplementationsIsolate extends NativeImplementations {
     KeyFromPassphraseArgs args, {
     bool retryInDummy = true,
   }) {
-    return runInBackground<Uint8List, KeyFromPassphraseArgs>(
-      (KeyFromPassphraseArgs args) async {
-        await vodozemacInit?.call();
-        return NativeImplementations.dummy.keyFromPassphrase(args);
-      },
-      args,
-    );
+    return runInBackground<Uint8List, KeyFromPassphraseArgs>((
+      KeyFromPassphraseArgs args,
+    ) async {
+      await vodozemacInit?.call();
+      return NativeImplementations.dummy.keyFromPassphrase(args);
+    }, args);
   }
 
   @override
@@ -196,11 +255,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
     MatrixImageFileResizeArguments args, {
     bool retryInDummy = false,
   }) {
-    return runInBackground<MatrixImageFileResizedResponse?,
-        MatrixImageFileResizeArguments>(
-      NativeImplementations.dummy.shrinkImage,
-      args,
-    );
+    return runInBackground<
+      MatrixImageFileResizedResponse?,
+      MatrixImageFileResizeArguments
+    >(NativeImplementations.dummy.shrinkImage, args);
   }
 
   @override
@@ -212,5 +270,15 @@ class NativeImplementationsIsolate extends NativeImplementations {
       NativeImplementations.dummy.calcImageMetadata,
       bytes,
     );
+  }
+
+  @override
+  Future<bool> checkSecretStorageKey(CheckSecretStorageKeyArgs args) {
+    return runInBackground<bool, CheckSecretStorageKeyArgs>((
+      CheckSecretStorageKeyArgs args,
+    ) async {
+      await vodozemacInit?.call();
+      return NativeImplementations.dummy.checkSecretStorageKey(args);
+    }, args);
   }
 }

@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:matrix/matrix.dart';
 
@@ -45,9 +31,9 @@ class User extends StrippedStateEvent {
       stateKey: id,
       senderId: id,
       content: {
-        if (membership != null) 'membership': membership,
-        if (displayName != null) 'displayname': displayName,
-        if (avatarUrl != null) 'avatar_url': avatarUrl,
+        'membership': ?membership,
+        'displayname': ?displayName,
+        'avatar_url': ?avatarUrl,
       },
       typeKey: EventTypes.RoomMember,
       room: room,
@@ -63,9 +49,7 @@ class User extends StrippedStateEvent {
     required this.room,
     this.originServerTs,
     this.prevContent,
-  }) : super(
-          type: typeKey,
-        );
+  }) : super(type: typeKey);
 
   /// The full qualified Matrix ID in the format @username:server.abc.
   String get id => stateKey ?? '@unknown:unknown';
@@ -85,19 +69,17 @@ class User extends StrippedStateEvent {
   /// invite
   /// leave
   /// ban
-  Membership get membership => Membership.values.firstWhere(
-        (e) {
-          if (content['membership'] != null) {
-            return e.toString() == 'Membership.${content['membership']}';
-          }
-          return false;
-        },
-        orElse: () => Membership.join,
-      );
+  Membership get membership => Membership.values.firstWhere((e) {
+    if (content['membership'] != null) {
+      return e.toString() == 'Membership.${content['membership']}';
+    }
+    return false;
+  }, orElse: () => Membership.join);
 
   /// The avatar if the user has one.
   Uri? get avatarUrl {
-    final uri = content.tryGet<String>('avatar_url') ??
+    final uri =
+        content.tryGet<String>('avatar_url') ??
         (membership == Membership.join
             ? null
             : prevContent?.tryGet<String>('avatar_url'));
@@ -155,13 +137,12 @@ class User extends StrippedStateEvent {
     bool? enableEncryption,
     List<StateEvent>? initialState,
     bool waitForSync = true,
-  }) async =>
-      room.client.startDirectChat(
-        id,
-        enableEncryption: enableEncryption,
-        initialState: initialState,
-        waitForSync: waitForSync,
-      );
+  }) async => room.client.startDirectChat(
+    id,
+    enableEncryption: enableEncryption,
+    initialState: initialState,
+    waitForSync: waitForSync,
+  );
 
   /// The newest presence of this user if there is any and null if not.
   @Deprecated('Deprecated in favour of currentPresence.')
@@ -198,7 +179,8 @@ class User extends StrippedStateEvent {
       (powerLevel < room.ownPowerLevel || id == room.client.userID);
 
   @override
-  bool operator ==(Object other) => (other is User &&
+  bool operator ==(Object other) =>
+      (other is User &&
       other.id == id &&
       other.room == room &&
       other.membership == membership);
@@ -265,12 +247,12 @@ String _hash(String s) =>
 
 extension FromStrippedStateEventExtension on StrippedStateEvent {
   User asUser(Room room) => User.fromState(
-        // state key should always be set for member events
-        stateKey: stateKey!,
-        content: content,
-        typeKey: type,
-        senderId: senderId,
-        room: room,
-        originServerTs: null,
-      );
+    // state key should always be set for member events
+    stateKey: stateKey!,
+    content: content,
+    typeKey: type,
+    senderId: senderId,
+    room: room,
+    originServerTs: null,
+  );
 }

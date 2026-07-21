@@ -1,31 +1,17 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:async/async.dart';
 import 'package:canonical_json/canonical_json.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/key_manager.dart';
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/matrix.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 enum BootstrapState {
   /// Is loading.
@@ -77,7 +63,7 @@ class Bootstrap {
   BootstrapState _state = BootstrapState.loading;
   Map<String, OpenSSSS>? oldSsssKeys;
   OpenSSSS? newSsssKey;
-  Map<String, String>? secretMap;
+  ErrorResult? errorResult;
 
   Bootstrap({required this.encryption, this.onUpdate}) {
     if (analyzeSecrets().isNotEmpty) {
@@ -101,42 +87,14 @@ class Bootstrap {
       }
       return newSecrets;
     }
-    final secrets = <String, Set<String>>{};
+    final secrets = encryption.ssss.analyzeEncryptedSecrets();
     for (final entry in client.accountData.entries) {
       final type = entry.key;
-      final event = entry.value;
-      final encryptedContent =
-          event.content.tryGetMap<String, Object?>('encrypted');
-      if (encryptedContent == null) {
-        continue;
+      if (secrets.containsKey(type)) continue;
+      if (encryption.ssss.hasInvalidEncryptedEntries(type)) {
+        // no valid keys for this type, but invalid encrypted entries exist
+        secrets[type] = {};
       }
-      final validKeys = <String>{};
-      final invalidKeys = <String>{};
-      for (final keyEntry in encryptedContent.entries) {
-        final key = keyEntry.key;
-        final value = keyEntry.value;
-        if (value is! Map) {
-          // we don't add the key to invalidKeys as this was not a proper secret anyways!
-          continue;
-        }
-        if (value['iv'] is! String ||
-            value['ciphertext'] is! String ||
-            value['mac'] is! String) {
-          invalidKeys.add(key);
-          continue;
-        }
-        if (!encryption.ssss.isKeyValid(key)) {
-          invalidKeys.add(key);
-          continue;
-        }
-        validKeys.add(key);
-      }
-      if (validKeys.isEmpty && invalidKeys.isEmpty) {
-        continue; // this didn't contain any keys anyways!
-      }
-      // if there are no valid keys and only invalid keys then the validKeys set will be empty
-      // from that we know that there were errors with this secret and that we won't be able to migrate it
-      secrets[type] = validKeys;
     }
     _secretsCache = secrets;
     return analyzeSecrets();
@@ -214,6 +172,7 @@ class Bootstrap {
         state = BootstrapState.openExistingSsss;
       } catch (e, s) {
         Logs().e('[Bootstrapping] Error open SSSS', e, s);
+        errorResult = ErrorResult(e, s);
         state = BootstrapState.error;
         return;
       }
@@ -245,6 +204,7 @@ class Bootstrap {
       }
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error construction ssss key', e, s);
+      errorResult = ErrorResult(e, s);
       state = BootstrapState.error;
       return;
     }
@@ -267,32 +227,18 @@ class Bootstrap {
       Logs().v('Create key...');
       newSsssKey = await encryption.ssss.createKey(passphrase, name);
       if (oldSsssKeys != null) {
-        // alright, we have to re-encrypt old secrets with the new key
-        final secrets = analyzeSecrets();
-        Set<String> removeKey(String key) {
-          final s = secrets.entries
-              .where((e) => e.value.contains(key))
-              .map((e) => e.key)
-              .toSet();
-          secrets.removeWhere((k, v) => v.contains(key));
-          return s;
+        final existingOldKeys = oldSsssKeys!;
+        if (existingOldKeys.isNotEmpty) {
+          final primaryUnlockedKey =
+              existingOldKeys[encryption.ssss.defaultKeyId] ??
+              existingOldKeys.values.first;
+          await encryption.ssss.migrateSecretsToKey(
+            primaryUnlockedKey: primaryUnlockedKey,
+            destinationKey: newSsssKey!,
+            candidateOldKeys: existingOldKeys,
+            stripKeys: true,
+          );
         }
-
-        secretMap = <String, String>{};
-        for (final entry in oldSsssKeys!.entries) {
-          final key = entry.value;
-          final keyId = entry.key;
-          if (!key.isUnlocked) {
-            continue;
-          }
-          for (final s in removeKey(keyId)) {
-            Logs().v('Get stored key of type $s...');
-            secretMap![s] = await key.getStored(s);
-            Logs().v('Store new secret with this key...');
-            await newSsssKey!.store(s, secretMap![s]!, add: true);
-          }
-        }
-        // alright, we re-encrypted all the secrets. We delete the dead weight only *after* we set our key to the default key
       }
       await encryption.ssss.setDefaultKeyId(newSsssKey!.keyId);
       while (encryption.ssss.defaultKeyId != newSsssKey!.keyId) {
@@ -301,16 +247,9 @@ class Bootstrap {
         );
         await client.oneShotSync();
       }
-      if (oldSsssKeys != null) {
-        for (final entry in secretMap!.entries) {
-          Logs().v('Validate and stripe other keys ${entry.key}...');
-          await newSsssKey!.validateAndStripOtherKeys(entry.key, entry.value);
-        }
-        Logs().v('And make super sure we have everything cached...');
-        await newSsssKey!.maybeCacheAll();
-      }
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error trying to migrate old secrets', e, s);
+      errorResult = ErrorResult(e, s);
       state = BootstrapState.error;
       return;
     }
@@ -383,9 +322,7 @@ class Bootstrap {
         final json = <String, dynamic>{
           'user_id': userID,
           'usage': ['master'],
-          'keys': <String, dynamic>{
-            'ed25519:$masterPub': masterPub,
-          },
+          'keys': <String, dynamic>{'ed25519:$masterPub': masterPub},
         };
         masterKey = MatrixCrossSigningKey.fromJson(json);
         secretsToStore[EventTypes.CrossSigningMasterKey] = masterSigningKey;
@@ -414,15 +351,11 @@ class Bootstrap {
         final json = <String, dynamic>{
           'user_id': userID,
           'usage': ['self_signing'],
-          'keys': <String, dynamic>{
-            'ed25519:$selfSigningPub': selfSigningPub,
-          },
+          'keys': <String, dynamic>{'ed25519:$selfSigningPub': selfSigningPub},
         };
         final signature = sign(json);
         json['signatures'] = <String, dynamic>{
-          userID: <String, dynamic>{
-            'ed25519:$masterPub': signature,
-          },
+          userID: <String, dynamic>{'ed25519:$masterPub': signature},
         };
         selfSigningKey = MatrixCrossSigningKey.fromJson(json);
         secretsToStore[EventTypes.CrossSigningSelfSigning] = selfSigningPriv;
@@ -434,15 +367,11 @@ class Bootstrap {
         final json = <String, dynamic>{
           'user_id': userID,
           'usage': ['user_signing'],
-          'keys': <String, dynamic>{
-            'ed25519:$userSigningPub': userSigningPub,
-          },
+          'keys': <String, dynamic>{'ed25519:$userSigningPub': userSigningPub},
         };
         final signature = sign(json);
         json['signatures'] = <String, dynamic>{
-          userID: <String, dynamic>{
-            'ed25519:$masterPub': signature,
-          },
+          userID: <String, dynamic>{'ed25519:$masterPub': signature},
         };
         userSigningKey = MatrixCrossSigningKey.fromJson(json);
         secretsToStore[EventTypes.CrossSigningUserSigning] = userSigningPriv;
@@ -486,8 +415,10 @@ class Bootstrap {
           );
         }
         Logs().v('Set own master key to verified...');
-        await client.userDeviceKeys[client.userID]!.masterKey!
-            .setVerified(true, false);
+        await client.userDeviceKeys[client.userID]!.masterKey!.setVerified(
+          true,
+          false,
+        );
         keysToSign.add(client.userDeviceKeys[client.userID]!.masterKey!);
       }
       if (selfSigningKey != null) {
@@ -499,6 +430,7 @@ class Bootstrap {
       await encryption.crossSigning.sign(keysToSign);
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error setting up cross signing', e, s);
+      errorResult = ErrorResult(e, s);
       state = BootstrapState.error;
       return;
     }
@@ -546,9 +478,7 @@ class Bootstrap {
       Logs().v('Create the new backup version...');
       await client.postRoomKeysVersion(
         BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2,
-        <String, dynamic>{
-          'public_key': pubKey,
-        },
+        <String, dynamic>{'public_key': pubKey},
       );
       Logs().v('Store the secret...');
       await newSsssKey?.store(megolmKey, base64.encode(privKey));
@@ -561,10 +491,8 @@ class Bootstrap {
       await client.encryption?.keyManager.uploadInboundGroupSessions();
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error setting up online key backup', e, s);
+      errorResult = ErrorResult(e, s);
       state = BootstrapState.error;
-      encryption.client.onEncryptionError.add(
-        SdkError(exception: e, stackTrace: s),
-      );
       return;
     }
     state = BootstrapState.done;

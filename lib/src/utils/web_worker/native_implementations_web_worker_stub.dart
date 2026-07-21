@@ -1,6 +1,11 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:async';
 
 import 'package:matrix/matrix.dart';
+import '../native_implementations.dart';
 
 class NativeImplementationsWebWorker extends NativeImplementations {
   /// the default handler for stackTraces in web workers
@@ -13,6 +18,12 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     Duration timeout = const Duration(seconds: 30),
     WebWorkerStackTraceCallback onStackTrace = defaultStackTraceHandler,
   });
+
+  @override
+  FutureOr<bool> checkSecretStorageKey(CheckSecretStorageKeyArgs args) {
+    // Fallback: stub is only used when web workers are unavailable.
+    return NativeImplementations.dummy.checkSecretStorageKey(args);
+  }
 }
 
 class WebWorkerError extends Error {
@@ -32,6 +43,5 @@ class WebWorkerError extends Error {
 }
 
 /// converts a stringifyed, obfuscated [StackTrace] into a [StackTrace]
-typedef WebWorkerStackTraceCallback = FutureOr<StackTrace> Function(
-  String obfuscatedStackTrace,
-);
+typedef WebWorkerStackTraceCallback =
+    FutureOr<StackTrace> Function(String obfuscatedStackTrace);

@@ -1,9 +1,12 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:path/path.dart';
-
 import 'package:matrix/matrix.dart';
+import 'package:path/path.dart';
 
 // ignore: unused-code
 mixin DatabaseFileStorage {
@@ -21,9 +24,7 @@ mixin DatabaseFileStorage {
         .map((entry) => '${entry.key}${entry.value}')
         .join('_');
     final fileName = '${host}_${path}_$query';
-    return File(
-      join(Directory.fromUri(fileStorageLocation!).path, fileName),
-    );
+    return File(join(Directory.fromUri(fileStorageLocation!).path, fileName));
   }
 
   Future<void> storeFile(Uri mxcUri, Uint8List bytes, int time) async {

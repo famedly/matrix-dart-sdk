@@ -1,28 +1,14 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/matrix.dart';
 import 'fake_database.dart';
 
 String createLargeString(String character, int desiredSize) {
@@ -115,10 +101,7 @@ void main() {
       });
       test('getSingleRoom', () async {
         final room = await database.getSingleRoom(
-          Client(
-            'testclient',
-            database: await getMatrixSdkDatabase(),
-          ),
+          Client('testclient', database: await getMatrixSdkDatabase()),
           '!testroom',
         );
         expect(room?.id, '!testroom');
@@ -139,19 +122,13 @@ void main() {
           ),
         );
         final room = await database.getSingleRoom(
-          Client(
-            'testclient',
-            database: await getMatrixSdkDatabase(),
-          ),
+          Client('testclient', database: await getMatrixSdkDatabase()),
           '!testroom',
         );
         expect(room?.id, '!testroom');
         expect(room!.receiptState.global.latestOwnReceipt!.eventId, '\$1234');
         final rooms = await database.getRoomList(
-          Client(
-            'testclient',
-            database: await getMatrixSdkDatabase(),
-          ),
+          Client('testclient', database: await getMatrixSdkDatabase()),
         );
         expect(rooms.single.id, '!testroom');
         expect(
@@ -161,10 +138,7 @@ void main() {
       });
       test('getRoomList', () async {
         final list = await database.getRoomList(
-          Client(
-            'testclient',
-            database: await getMatrixSdkDatabase(),
-          ),
+          Client('testclient', database: await getMatrixSdkDatabase()),
         );
         expect(list.single.id, '!testroom');
       });
@@ -180,10 +154,7 @@ void main() {
       test('forgetRoom', () async {
         await database.forgetRoom('!testroom');
         final rooms = await database.getRoomList(
-          Client(
-            'testclient',
-            database: await getMatrixSdkDatabase(),
-          ),
+          Client('testclient', database: await getMatrixSdkDatabase()),
         );
         expect(rooms.isEmpty, true);
       });
@@ -230,16 +201,12 @@ void main() {
         expect(client?['token'], 'token_different');
       });
       test('updateClientKeys', () async {
-        await database.updateClientKeys(
-          'olmAccount2',
-        );
+        await database.updateClientKeys('olmAccount2');
         final client = await database.getClient('name');
         expect(client?['olm_account'], 'olmAccount2');
       });
       test('storeSyncFilterId', () async {
-        await database.storeSyncFilterId(
-          '1234',
-        );
+        await database.storeSyncFilterId('1234');
         final client = await database.getClient('name');
         expect(client?['sync_filter_id'], '1234');
       });
@@ -261,10 +228,7 @@ void main() {
       test('Database can write and read 5MB data', () async {
         final hugeDataObject = {'foo': createLargeString('A', 5 * 1000 * 1000)};
 
-        await database.storeAccountData(
-          'm.huge_data_test',
-          hugeDataObject,
-        );
+        await database.storeAccountData('m.huge_data_test', hugeDataObject);
 
         final events = await database.getAccountData();
 
@@ -276,31 +240,23 @@ void main() {
       test('storeEventUpdate', () async {
         await database.storeEventUpdate(
           '!testroom:example.com',
-          MatrixEvent.fromJson(
-            {
-              'type': EventTypes.Message,
-              'content': {
-                'body': '* edit 3',
-                'msgtype': 'm.text',
-                'm.new_content': {
-                  'body': 'edit 3',
-                  'msgtype': 'm.text',
-                },
-                'm.relates_to': {
-                  'event_id': '\$source',
-                  'rel_type': RelationshipTypes.edit,
-                },
+          MatrixEvent.fromJson({
+            'type': EventTypes.Message,
+            'content': {
+              'body': '* edit 3',
+              'msgtype': 'm.text',
+              'm.new_content': {'body': 'edit 3', 'msgtype': 'm.text'},
+              'm.relates_to': {
+                'event_id': '\$source',
+                'rel_type': RelationshipTypes.edit,
               },
-              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-              'event_id': '\$event:example.com',
-              'sender': '@bob:example.org',
             },
-          ),
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+            'event_id': '\$event:example.com',
+            'sender': '@bob:example.org',
+          }),
           EventUpdateType.timeline,
-          Client(
-            'testclient',
-            database: await getMatrixSdkDatabase(),
-          ),
+          Client('testclient', database: await getMatrixSdkDatabase()),
         );
       });
       test('storeEventUpdate (state)', () async {
@@ -319,26 +275,19 @@ void main() {
 
         await database.storeRoomAccountData(
           roomid,
-          BasicEvent(
-            content: {'foo': 'bar'},
-            type: 'm.test',
-          ),
+          BasicEvent(content: {'foo': 'bar'}, type: 'm.test'),
         );
 
         await database.storeEventUpdate(
           roomid,
-          MatrixEvent.fromJson(
-            {
-              'type': EventTypes.RoomName,
-              'content': {
-                'name': 'start',
-              },
-              'event_id': '\$eventstart:example.com',
-              'sender': '@bob:example.org',
-              'state_key': '',
-              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-            },
-          ),
+          MatrixEvent.fromJson({
+            'type': EventTypes.RoomName,
+            'content': {'name': 'start'},
+            'event_id': '\$eventstart:example.com',
+            'sender': '@bob:example.org',
+            'state_key': '',
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+          }),
           EventUpdateType.timeline,
           client,
         );
@@ -353,18 +302,14 @@ void main() {
 
         await database.storeEventUpdate(
           roomid,
-          MatrixEvent.fromJson(
-            {
-              'type': EventTypes.RoomName,
-              'content': {
-                'name': 'update',
-              },
-              'event_id': '\$eventupdate:example.com',
-              'sender': '@bob:example.org',
-              'state_key': '',
-              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-            },
-          ),
+          MatrixEvent.fromJson({
+            'type': EventTypes.RoomName,
+            'content': {'name': 'update'},
+            'event_id': '\$eventupdate:example.com',
+            'sender': '@bob:example.org',
+            'state_key': '',
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+          }),
           EventUpdateType.timeline,
           client,
         );
@@ -375,18 +320,14 @@ void main() {
 
         await database.storeEventUpdate(
           roomid,
-          MatrixEvent.fromJson(
-            {
-              'type': EventTypes.RoomName,
-              'content': {
-                'name': 'update2',
-              },
-              'event_id': '\$eventupdate2:example.com',
-              'sender': '@bob:example.org',
-              'state_key': '',
-              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-            },
-          ),
+          MatrixEvent.fromJson({
+            'type': EventTypes.RoomName,
+            'content': {'name': 'update2'},
+            'event_id': '\$eventupdate2:example.com',
+            'sender': '@bob:example.org',
+            'state_key': '',
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+          }),
           EventUpdateType.state,
           client,
         );
@@ -397,17 +338,13 @@ void main() {
 
         await database.storeEventUpdate(
           roomid,
-          StrippedStateEvent.fromJson(
-            {
-              'type': EventTypes.RoomName,
-              'content': {
-                'name': 'update3',
-              },
-              'event_id': '\$eventupdate3:example.com',
-              'sender': '@bob:example.org',
-              'state_key': '',
-            },
-          ),
+          StrippedStateEvent.fromJson({
+            'type': EventTypes.RoomName,
+            'content': {'name': 'update3'},
+            'event_id': '\$eventupdate3:example.com',
+            'sender': '@bob:example.org',
+            'state_key': '',
+          }),
           EventUpdateType.inviteState,
           client,
         );
@@ -418,18 +355,14 @@ void main() {
 
         await database.storeEventUpdate(
           roomid,
-          MatrixEvent.fromJson(
-            {
-              'type': EventTypes.RoomName,
-              'content': {
-                'name': 'notupdate',
-              },
-              'event_id': '\$eventnotupdate:example.com',
-              'sender': '@bob:example.org',
-              'state_key': '',
-              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-            },
-          ),
+          MatrixEvent.fromJson({
+            'type': EventTypes.RoomName,
+            'content': {'name': 'notupdate'},
+            'event_id': '\$eventnotupdate:example.com',
+            'sender': '@bob:example.org',
+            'state_key': '',
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+          }),
           EventUpdateType.history,
           client,
         );
@@ -571,21 +504,13 @@ void main() {
         expect(cache.content, '{}');
       });
       test('getOlmSessions', () async {
-        final olm = await database.getOlmSessions(
-          'identityKey',
-          'userId',
-        );
+        final olm = await database.getOlmSessions('identityKey', 'userId');
         expect(olm.isEmpty, true);
       });
       test('getAllOlmSessions', () async {
         var sessions = await database.getAllOlmSessions();
         expect(sessions.isEmpty, true);
-        await database.storeOlmSession(
-          'identityKey',
-          'sessionId',
-          'pickle',
-          0,
-        );
+        await database.storeOlmSession('identityKey', 'sessionId', 'pickle', 0);
         await database.storeOlmSession(
           'identityKey',
           'sessionId2',
@@ -593,44 +518,32 @@ void main() {
           0,
         );
         sessions = await database.getAllOlmSessions();
-        expect(
-          sessions,
-          {
-            'identityKey': {
-              'sessionId': {
-                'identity_key': 'identityKey',
-                'pickle': 'pickle',
-                'session_id': 'sessionId',
-                'last_received': 0,
-              },
-              'sessionId2': {
-                'identity_key': 'identityKey',
-                'pickle': 'pickle',
-                'session_id': 'sessionId2',
-                'last_received': 0,
-              },
+        expect(sessions, {
+          'identityKey': {
+            'sessionId': {
+              'identity_key': 'identityKey',
+              'pickle': 'pickle',
+              'session_id': 'sessionId',
+              'last_received': 0,
+            },
+            'sessionId2': {
+              'identity_key': 'identityKey',
+              'pickle': 'pickle',
+              'session_id': 'sessionId2',
+              'last_received': 0,
             },
           },
-        );
+        });
       });
       test('getOlmSessionsForDevices', () async {
-        final olm = await database.getOlmSessionsForDevices(
-          ['identityKeys'],
-          'userId',
-        );
+        final olm = await database.getOlmSessionsForDevices([
+          'identityKeys',
+        ], 'userId');
         expect(olm.isEmpty, true);
       });
       test('storeOlmSession', () async {
-        await database.storeOlmSession(
-          'identityKey',
-          'sessionId',
-          'pickle',
-          0,
-        );
-        final olm = await database.getOlmSessions(
-          'identityKey',
-          'userId',
-        );
+        await database.storeOlmSession('identityKey', 'sessionId', 'pickle', 0);
+        final olm = await database.getOlmSessions('identityKey', 'userId');
         expect(olm.isNotEmpty, true);
       });
       test('getOutboundGroupSession', () async {
@@ -675,10 +588,7 @@ void main() {
       });
       test('getUserDeviceKeys', () async {
         await database.getUserDeviceKeys(
-          Client(
-            'testclient',
-            database: await getMatrixSdkDatabase(),
-          ),
+          Client('testclient', database: await getMatrixSdkDatabase()),
         );
       });
       test('storeUserCrossSigningKey', () async {
@@ -695,6 +605,7 @@ void main() {
           true,
           '@alice:example.com',
           'publicKey',
+          trustOnFirstUseSince: DateTime(2000),
         );
       });
       test('setBlockedUserCrossSigningKey', () async {
@@ -711,18 +622,12 @@ void main() {
         );
       });
       test('storeUserDeviceKeysInfo', () async {
-        await database.storeUserDeviceKeysInfo(
-          '@alice:example.com',
-          true,
-        );
+        await database.storeUserDeviceKeysInfo('@alice:example.com', true);
       });
       test('storeUserDeviceKeysInfo', () async {
         var cache = await database.getCustomCacheObject('test');
         expect(cache, null);
-        await database.cacheCustomObject(
-          'test',
-          {'foo': 'bar', 'num': 42},
-        );
+        await database.cacheCustomObject('test', {'foo': 'bar', 'num': 42});
         cache = await database.getCustomCacheObject('test');
         expect(cache!.content, {'foo': 'bar', 'num': 42});
 
@@ -763,43 +668,34 @@ void main() {
           true,
           '@alice:example.com',
         );
-        await database.storePresence(
-          userId,
-          presence,
-        );
+        await database.storePresence(userId, presence);
         final storedPresence = await database.getPresence(userId);
-        expect(
-          presence.toJson(),
-          storedPresence?.toJson(),
-        );
+        expect(presence.toJson(), storedPresence?.toJson());
       });
-      test(
-        'storeUserProfile',
-        () async {
-          final profile1 = await database.getUserProfile('@alice:example.com');
-          expect(profile1, null);
+      test('storeUserProfile', () async {
+        final profile1 = await database.getUserProfile('@alice:example.com');
+        expect(profile1, null);
 
-          await database.storeUserProfile(
-            '@alice:example.com',
-            CachedProfileInformation.fromProfile(
-              ProfileInformation(
-                avatarUrl: Uri.parse('mxc://test'),
-                displayname: 'Alice M',
-              ),
-              outdated: false,
-              updated: DateTime.now(),
+        await database.storeUserProfile(
+          '@alice:example.com',
+          CachedProfileInformation.fromProfile(
+            ProfileInformation(
+              avatarUrl: Uri.parse('mxc://test'),
+              displayname: 'Alice M',
             ),
-          );
-          final profile2 = await database.getUserProfile('@alice:example.com');
-          expect(profile2?.displayname, 'Alice M');
-          expect(profile2?.outdated, false);
-          await database.markUserProfileAsOutdated('@alice:example.com');
+            outdated: false,
+            updated: DateTime.now(),
+          ),
+        );
+        final profile2 = await database.getUserProfile('@alice:example.com');
+        expect(profile2?.displayname, 'Alice M');
+        expect(profile2?.outdated, false);
+        await database.markUserProfileAsOutdated('@alice:example.com');
 
-          final profile3 = await database.getUserProfile('@alice:example.com');
-          expect(profile3?.displayname, 'Alice M');
-          expect(profile3?.outdated, true);
-        },
-      );
+        final profile3 = await database.getUserProfile('@alice:example.com');
+        expect(profile3?.displayname, 'Alice M');
+        expect(profile3?.outdated, true);
+      });
 
       // Clearing up from here
       test('clearSSSSCache', () async {
@@ -816,10 +712,7 @@ void main() {
       });
       test('Delete', () async {
         final database = await getMatrixSdkDatabase();
-        await database.storeAccountData(
-          'm.test.data',
-          {'foo': 'bar'},
-        );
+        await database.storeAccountData('m.test.data', {'foo': 'bar'});
         await database.delete();
 
         // Check if previously stored data is gone:

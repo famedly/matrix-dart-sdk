@@ -1,25 +1,6 @@
-/* MIT License
-* 
-* Copyright (C) 2019, 2020, 2021, 2022 Famedly GmbH
-* 
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-* 
-* The above copyright notice and this permission notice shall be included in all
-* copies or substantial portions of the Software.
-* 
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-* SOFTWARE.
-*/
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:matrix/matrix_api_lite.dart';
 import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/model/dehydrated_device.dart';
@@ -43,14 +24,11 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
       '/client/unstable/org.matrix.msc3814.v1/dehydrated_device',
       data: {
         'device_id': deviceId,
-        if (initialDeviceDisplayName != null)
-          'initial_device_display_name': initialDeviceDisplayName,
-        if (deviceData != null) 'device_data': deviceData,
+        'initial_device_display_name': ?initialDeviceDisplayName,
+        'device_data': ?deviceData,
         if (deviceKeys != null) 'device_keys': deviceKeys.toJson(),
-        if (oneTimeKeys != null) 'one_time_keys': oneTimeKeys,
-        if (fallbackKeys != null) ...{
-          'fallback_keys': fallbackKeys,
-        },
+        'one_time_keys': ?oneTimeKeys,
+        if (fallbackKeys != null) ...{'fallback_keys': fallbackKeys},
       },
     );
     return response['device_id'] as String;
@@ -76,12 +54,8 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
     final response = await request(
       RequestType.POST,
       '/client/unstable/org.matrix.msc3814.v1/dehydrated_device/$deviceId/events',
-      query: {
-        'limit': limit.toString(),
-      },
-      data: {
-        if (nextBatch != null) 'next_batch': nextBatch,
-      },
+      query: {'limit': limit.toString()},
+      data: {'next_batch': ?nextBatch},
     );
     return DehydratedDeviceEvents.fromJson(response);
   }

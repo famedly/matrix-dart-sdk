@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/key_verification.dart';
@@ -31,7 +17,8 @@ class KeyVerificationManager {
   Future<void> cleanup() async {
     final Set entriesToDispose = <String>{};
     for (final entry in _requests.entries) {
-      var dispose = entry.value.canceled ||
+      var dispose =
+          entry.value.canceled ||
           entry.value.state == KeyVerificationState.done ||
           entry.value.state == KeyVerificationState.error;
       if (!dispose) {
@@ -71,12 +58,16 @@ class KeyVerificationManager {
         await request.handlePayload(event.type, event.content);
       }
     } else {
-      if (!{EventTypes.KeyVerificationRequest, EventTypes.KeyVerificationStart}
-          .contains(event.type)) {
+      if (!{
+        EventTypes.KeyVerificationRequest,
+        EventTypes.KeyVerificationStart,
+      }.contains(event.type)) {
         return; // we can only start on these
       }
-      final newKeyRequest =
-          KeyVerification(encryption: encryption, userId: event.sender);
+      final newKeyRequest = KeyVerification(
+        encryption: encryption,
+        userId: event.sender,
+      );
       await newKeyRequest.handlePayload(event.type, event.content);
       if (newKeyRequest.state != KeyVerificationState.askAccept) {
         // okay, something went wrong (unknown transaction id?), just dispose it
@@ -119,22 +110,21 @@ class KeyVerificationManager {
         _requests.remove(transactionId);
       }
     } else if (update.senderId != client.userID) {
-      if (!{EventTypes.KeyVerificationRequest, EventTypes.KeyVerificationStart}
-          .contains(type)) {
+      if (!{
+        EventTypes.KeyVerificationRequest,
+        EventTypes.KeyVerificationStart,
+      }.contains(type)) {
         return; // we can only start on these
       }
-      final room = client.getRoomById(update.roomId!) ??
+      final room =
+          client.getRoomById(update.roomId!) ??
           Room(id: update.roomId!, client: client);
       final newKeyRequest = KeyVerification(
         encryption: encryption,
         userId: update.senderId,
         room: room,
       );
-      await newKeyRequest.handlePayload(
-        type,
-        update.content,
-        update.eventId,
-      );
+      await newKeyRequest.handlePayload(type, update.content, update.eventId);
       if (newKeyRequest.state != KeyVerificationState.askAccept) {
         // something went wrong, let's just dispose the request
         newKeyRequest.dispose();

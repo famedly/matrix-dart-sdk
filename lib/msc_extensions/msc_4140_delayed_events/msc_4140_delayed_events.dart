@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -76,17 +80,13 @@ extension DelayedEventsHandler on Client {
     String delayedId,
     DelayedEventAction delayedEventAction,
   ) async {
-    final requestUri = Uri(
-      path: '$_delayedEventsEndpoint/$delayedId',
-    );
+    final requestUri = Uri(path: '$_delayedEventsEndpoint/$delayedId');
 
     final request = http.Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(
-      jsonEncode({
-        'action': delayedEventAction.name,
-      }),
+      jsonEncode({'action': delayedEventAction.name}),
     );
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -100,7 +100,7 @@ extension DelayedEventsHandler on Client {
   }) async {
     final requestUri = Uri(
       path: _delayedEventsEndpoint,
-      queryParameters: {if (from != null) 'from': from},
+      queryParameters: {'from': ?from},
     );
 
     final request = http.Request('GET', baseUri!.resolveUri(requestUri));
@@ -119,12 +119,10 @@ extension DelayedEventsHandler on Client {
 
   // maybe the synapse impl changes, I don't want stuff to break
   Future<ScheduledDelayedEventsResponse>
-      _getScheduledDelayedEventsAccordingToSpec({
-    String? from,
-  }) async {
+  _getScheduledDelayedEventsAccordingToSpec({String? from}) async {
     final requestUri = Uri(
       path: '$_delayedEventsEndpoint/scheduled',
-      queryParameters: {if (from != null) 'from': from},
+      queryParameters: {'from': ?from},
     );
 
     final request = http.Request('GET', baseUri!.resolveUri(requestUri));

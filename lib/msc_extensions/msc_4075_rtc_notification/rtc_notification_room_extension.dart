@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// MSC4075: MatrixRTC Notification Event (https://github.com/matrix-org/matrix-spec-proposals/pull/4075)
 library;
 
@@ -34,15 +38,9 @@ extension RtcNotificationRoomExtension on Room {
           if (userIds != null && userIds.isNotEmpty) 'user_ids': userIds,
         },
       if (memberEventId != null)
-        'm.relates_to': {
-          'rel_type': 'm.reference',
-          'event_id': memberEventId,
-        },
+        'm.relates_to': {'rel_type': 'm.reference', 'event_id': memberEventId},
     };
 
-    return sendEvent(
-      content,
-      type: RtcNotificationContent.eventType,
-    );
+    return sendEvent(content, type: RtcNotificationContent.eventType);
   }
 }

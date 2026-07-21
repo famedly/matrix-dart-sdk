@@ -1,8 +1,12 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'dart:convert';
 
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 
 void main() {
@@ -52,20 +56,17 @@ void main() {
     });
 
     test('fromEvent parses correctly and handles defaults', () {
-      final validEvent = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event1',
-          'origin_server_ts': now.millisecondsSinceEpoch,
-          'content': {
-            'sender_ts': now.millisecondsSinceEpoch,
-            'lifetime': 45000,
-            'notification_type': 'ring',
-          },
+      final validEvent = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event1',
+        'origin_server_ts': now.millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': now.millisecondsSinceEpoch,
+          'lifetime': 45000,
+          'notification_type': 'ring',
         },
-        room,
-      );
+      }, room);
       final content = RtcNotificationContent.fromEvent(validEvent);
       expect(
         content.senderTs,
@@ -74,19 +75,16 @@ void main() {
       expect(content.lifetime, Duration(milliseconds: 45000));
       expect(content.notificationType, RtcNotificationType.ring);
 
-      final missingLifetimeEvent = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event2',
-          'origin_server_ts': now.millisecondsSinceEpoch,
-          'content': {
-            'sender_ts': now.millisecondsSinceEpoch,
-            'notification_type': 'notification',
-          },
+      final missingLifetimeEvent = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event2',
+        'origin_server_ts': now.millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': now.millisecondsSinceEpoch,
+          'notification_type': 'notification',
         },
-        room,
-      );
+      }, room);
       expect(
         RtcNotificationContent.fromEvent(missingLifetimeEvent).lifetime,
         RtcNotificationContent.defaultLifetime,
@@ -94,19 +92,16 @@ void main() {
     });
 
     test('fromEvent throws on invalid notification_type', () {
-      final event = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event1',
-          'origin_server_ts': now.millisecondsSinceEpoch,
-          'content': {
-            'sender_ts': now.millisecondsSinceEpoch,
-            'notification_type': 'invalid',
-          },
+      final event = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event1',
+        'origin_server_ts': now.millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': now.millisecondsSinceEpoch,
+          'notification_type': 'invalid',
         },
-        room,
-      );
+      }, room);
 
       expect(
         () => RtcNotificationContent.fromEvent(event),
@@ -187,22 +182,19 @@ void main() {
     });
 
     test('shouldNotifyUser validates notification rules', () {
-      final userMentionedEvent = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event1',
-          'origin_server_ts': now.millisecondsSinceEpoch,
-          'content': {
-            'sender_ts': now.millisecondsSinceEpoch,
-            'notification_type': 'ring',
-            'm.mentions': {
-              'user_ids': ['@bob:example.com'],
-            },
+      final userMentionedEvent = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event1',
+        'origin_server_ts': now.millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': now.millisecondsSinceEpoch,
+          'notification_type': 'ring',
+          'm.mentions': {
+            'user_ids': ['@bob:example.com'],
           },
         },
-        room,
-      );
+      }, room);
       expect(
         RtcNotificationContent.fromEvent(userMentionedEvent).shouldNotifyUser(
           event: userMentionedEvent,
@@ -218,20 +210,17 @@ void main() {
         false,
       );
 
-      final roomMentionEvent = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event2',
-          'origin_server_ts': now.millisecondsSinceEpoch,
-          'content': {
-            'sender_ts': now.millisecondsSinceEpoch,
-            'notification_type': 'notification',
-            'm.mentions': {'room': true},
-          },
+      final roomMentionEvent = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event2',
+        'origin_server_ts': now.millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': now.millisecondsSinceEpoch,
+          'notification_type': 'notification',
+          'm.mentions': {'room': true},
         },
-        room,
-      );
+      }, room);
       expect(
         RtcNotificationContent.fromEvent(roomMentionEvent).shouldNotifyUser(
           event: roomMentionEvent,
@@ -240,24 +229,23 @@ void main() {
         true,
       );
 
-      final expiredEvent = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event3',
-          'origin_server_ts':
-              now.subtract(Duration(minutes: 5)).millisecondsSinceEpoch,
-          'content': {
-            'sender_ts':
-                now.subtract(Duration(minutes: 5)).millisecondsSinceEpoch,
-            'notification_type': 'ring',
-            'm.mentions': {
-              'user_ids': ['@bob:example.com'],
-            },
+      final expiredEvent = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event3',
+        'origin_server_ts': now
+            .subtract(Duration(minutes: 5))
+            .millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': now
+              .subtract(Duration(minutes: 5))
+              .millisecondsSinceEpoch,
+          'notification_type': 'ring',
+          'm.mentions': {
+            'user_ids': ['@bob:example.com'],
           },
         },
-        room,
-      );
+      }, room);
       expect(
         RtcNotificationContent.fromEvent(expiredEvent).shouldNotifyUser(
           event: expiredEvent,
@@ -268,22 +256,19 @@ void main() {
     });
 
     test('shouldNotifyUser handles isAlreadyRinging flag', () {
-      final ringEvent = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event1',
-          'origin_server_ts': now.millisecondsSinceEpoch,
-          'content': {
-            'sender_ts': now.millisecondsSinceEpoch,
-            'notification_type': 'ring',
-            'm.mentions': {
-              'user_ids': ['@bob:example.com'],
-            },
+      final ringEvent = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event1',
+        'origin_server_ts': now.millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': now.millisecondsSinceEpoch,
+          'notification_type': 'ring',
+          'm.mentions': {
+            'user_ids': ['@bob:example.com'],
           },
         },
-        room,
-      );
+      }, room);
       expect(
         RtcNotificationContent.fromEvent(ringEvent).shouldNotifyUser(
           event: ringEvent,
@@ -293,22 +278,19 @@ void main() {
         false,
       );
 
-      final notificationEvent = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event2',
-          'origin_server_ts': now.millisecondsSinceEpoch,
-          'content': {
-            'sender_ts': now.millisecondsSinceEpoch,
-            'notification_type': 'notification',
-            'm.mentions': {
-              'user_ids': ['@bob:example.com'],
-            },
+      final notificationEvent = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event2',
+        'origin_server_ts': now.millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': now.millisecondsSinceEpoch,
+          'notification_type': 'notification',
+          'm.mentions': {
+            'user_ids': ['@bob:example.com'],
           },
         },
-        room,
-      );
+      }, room);
       expect(
         RtcNotificationContent.fromEvent(notificationEvent).shouldNotifyUser(
           event: notificationEvent,
@@ -322,77 +304,62 @@ void main() {
 
   group('RtcNotificationEventExtension', () {
     test('isRtcNotificationEvent identifies event type', () {
-      final rtcEvent = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event1',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          'content': {
-            'sender_ts': DateTime.now().millisecondsSinceEpoch,
-            'notification_type': 'ring',
-          },
+      final rtcEvent = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event1',
+        'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': DateTime.now().millisecondsSinceEpoch,
+          'notification_type': 'ring',
         },
-        room,
-      );
+      }, room);
       expect(rtcEvent.isRtcNotificationEvent, true);
 
-      final normalEvent = Event.fromJson(
-        {
-          'type': 'm.room.message',
-          'sender': '@alice:example.com',
-          'event_id': '\$event2',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          'content': {'body': 'Hello'},
-        },
-        room,
-      );
+      final normalEvent = Event.fromJson({
+        'type': 'm.room.message',
+        'sender': '@alice:example.com',
+        'event_id': '\$event2',
+        'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        'content': {'body': 'Hello'},
+      }, room);
       expect(normalEvent.isRtcNotificationEvent, false);
     });
 
     test('tryParseRtcNotificationContent handles valid and invalid events', () {
-      final validEvent = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event1',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          'content': {
-            'sender_ts': DateTime.now().millisecondsSinceEpoch,
-            'notification_type': 'ring',
-          },
+      final validEvent = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event1',
+        'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': DateTime.now().millisecondsSinceEpoch,
+          'notification_type': 'ring',
         },
-        room,
-      );
+      }, room);
       final content = validEvent.tryParseRtcNotificationContent();
       expect(content, isNotNull);
       expect(content!.notificationType, RtcNotificationType.ring);
 
-      final wrongTypeEvent = Event.fromJson(
-        {
-          'type': 'm.room.message',
-          'sender': '@alice:example.com',
-          'event_id': '\$event2',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          'content': {'body': 'Hello'},
-        },
-        room,
-      );
+      final wrongTypeEvent = Event.fromJson({
+        'type': 'm.room.message',
+        'sender': '@alice:example.com',
+        'event_id': '\$event2',
+        'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        'content': {'body': 'Hello'},
+      }, room);
       expect(wrongTypeEvent.tryParseRtcNotificationContent(), null);
 
-      final malformedEvent = Event.fromJson(
-        {
-          'type': RtcNotificationContent.eventType,
-          'sender': '@alice:example.com',
-          'event_id': '\$event3',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          'content': {
-            'sender_ts': DateTime.now().millisecondsSinceEpoch,
-            'notification_type': 'invalid',
-          },
+      final malformedEvent = Event.fromJson({
+        'type': RtcNotificationContent.eventType,
+        'sender': '@alice:example.com',
+        'event_id': '\$event3',
+        'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        'content': {
+          'sender_ts': DateTime.now().millisecondsSinceEpoch,
+          'notification_type': 'invalid',
         },
-        room,
-      );
+      }, room);
       expect(malformedEvent.tryParseRtcNotificationContent(), null);
     });
   });
@@ -411,10 +378,10 @@ void main() {
       );
       var content = json.decode(entry.value.first);
       expect(content['notification_type'], 'ring');
-      expect(
-        content['m.mentions']['user_ids'],
-        ['@bob:example.com', '@charlie:example.com'],
-      );
+      expect(content['m.mentions']['user_ids'], [
+        '@bob:example.com',
+        '@charlie:example.com',
+      ]);
 
       FakeMatrixApi.calledEndpoints.clear();
       final roomMentionEvent = await room.sendRtcNotification(
@@ -445,28 +412,30 @@ void main() {
       });
     });
 
-    test('sendRtcNotification with member relation and custom lifetime',
-        () async {
-      FakeMatrixApi.calledEndpoints.clear();
-      const memberEventId = '\$member123';
-      final eventId = await room.sendRtcNotification(
-        type: RtcNotificationType.ring,
-        userIds: ['@bob:example.com'],
-        memberEventId: memberEventId,
-        lifetime: Duration(seconds: 60),
-      );
+    test(
+      'sendRtcNotification with member relation and custom lifetime',
+      () async {
+        FakeMatrixApi.calledEndpoints.clear();
+        const memberEventId = '\$member123';
+        final eventId = await room.sendRtcNotification(
+          type: RtcNotificationType.ring,
+          userIds: ['@bob:example.com'],
+          memberEventId: memberEventId,
+          lifetime: Duration(seconds: 60),
+        );
 
-      expect(eventId, isNotNull);
-      final entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
-        (e) => e.key.contains('send/${RtcNotificationContent.eventType}/'),
-      );
-      final content = json.decode(entry.value.first);
-      expect(content['sender_ts'], isA<int>());
-      expect(content['lifetime'], 60000);
-      expect(content['m.relates_to'], {
-        'rel_type': 'm.reference',
-        'event_id': memberEventId,
-      });
-    });
+        expect(eventId, isNotNull);
+        final entry = FakeMatrixApi.calledEndpoints.entries.firstWhere(
+          (e) => e.key.contains('send/${RtcNotificationContent.eventType}/'),
+        );
+        final content = json.decode(entry.value.first);
+        expect(content['sender_ts'], isA<int>());
+        expect(content['lifetime'], 60000);
+        expect(content['m.relates_to'], {
+          'rel_type': 'm.reference',
+          'event_id': memberEventId,
+        });
+      },
+    );
   });
 }

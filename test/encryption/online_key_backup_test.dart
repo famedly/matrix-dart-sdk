@@ -1,27 +1,13 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:convert';
 
+import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
-import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 
 void main() {
@@ -35,10 +21,7 @@ void main() {
     const senderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
 
     setUpAll(() async {
-      await vod.init(
-        wasmPath: './pkg/',
-        libraryPath: './rust/target/debug/',
-      );
+      await vod.init(wasmPath: './pkg/', libraryPath: './rust/target/debug/');
 
       client = await getClient();
     });
@@ -54,8 +37,11 @@ void main() {
 
     test('load key', () async {
       client.encryption!.keyManager.clearInboundGroupSessions();
-      await client.encryption!.keyManager
-          .request(client.getRoomById(roomId)!, sessionId, senderKey);
+      await client.encryption!.keyManager.request(
+        client.getRoomById(roomId)!,
+        sessionId,
+        senderKey,
+      );
       expect(
         client.encryption!.keyManager
             .getInboundGroupSession(roomId, sessionId)
@@ -120,20 +106,128 @@ void main() {
         '/client/v3/room_keys/keys?version=5',
       );
       final payload = FakeMatrixApi
-          .calledEndpoints['/client/v3/room_keys/keys?version=5']!.first;
+          .calledEndpoints['/client/v3/room_keys/keys?version=5']!
+          .first;
       dbSessions = await client.database.getInboundGroupSessionsToUpload();
       expect(dbSessions.isEmpty, true);
 
       final onlineKeys = RoomKeys.fromJson(json.decode(payload));
       client.encryption!.keyManager.clearInboundGroupSessions();
-      var ret = client.encryption!.keyManager
-          .getInboundGroupSession(roomId, sessionId);
+      var ret = client.encryption!.keyManager.getInboundGroupSession(
+        roomId,
+        sessionId,
+      );
       expect(ret, null);
       await client.encryption!.keyManager.loadFromResponse(onlineKeys);
-      ret = client.encryption!.keyManager
-          .getInboundGroupSession(roomId, sessionId);
+      ret = client.encryption!.keyManager.getInboundGroupSession(
+        roomId,
+        sessionId,
+      );
       expect(ret != null, true);
     });
+
+    test(
+      'Room.searchEvents decrypts an event whose session is only in online key backup',
+      () async {
+        // 1. Fresh outbound + inbound megolm session the client has never seen.
+        final outbound = vod.GroupSession();
+        final inbound = vod.InboundGroupSession(outbound.sessionKey);
+        final newSessionId = inbound.sessionId;
+        final newSenderKey = client.identityKey;
+
+        // 2. Real ciphertext that the matching inbound session can decrypt.
+        final ciphertext = outbound.encrypt(
+          json.encode({
+            'type': 'm.room.message',
+            'content': {
+              'msgtype': 'm.text',
+              'body': 'a needle in the encrypted haystack',
+            },
+          }),
+        );
+
+        // 3. Encrypt the inbound session for the FakeMatrixApi backup using
+        //    the same backup public key the FakeMatrixApi advertises.
+        const backupPubKey = 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM';
+        final encryptor = vod.PkEncryption.fromPublicKey(
+          vod.Curve25519PublicKey.fromBase64(backupPubKey),
+        );
+        final encryptedSession = encryptor.encrypt(
+          json.encode({
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'forwarding_curve25519_key_chain': <String>[],
+            'sender_key': newSenderKey,
+            'sender_claimed_keys': {'ed25519': client.fingerprintKey},
+            'session_key': inbound.exportAt(0),
+          }),
+        );
+        final (ct, mac, ephemeral) = encryptedSession.toBase64();
+
+        // 4. A fresh room that exists in client.rooms (required for
+        //    keyManager.maybeAutoRequest's lookup) and has no DB history.
+        const newRoomId = '!searchBackupOnly:example.com';
+        final newRoom = Room(client: client, id: newRoomId, prev_batch: '');
+        client.rooms.add(newRoom);
+
+        // 5. Mock the online key backup GET for this specific session.
+        FakeMatrixApi
+                .currentApi!
+                .api['GET']!['/client/v3/room_keys/keys/${Uri.encodeComponent(newRoomId)}/${Uri.encodeComponent(newSessionId)}?version=5'] =
+            (_) => {
+              'first_message_index': 0,
+              'forwarded_count': 0,
+              'is_verified': true,
+              'session_data': {
+                'ephemeral': ephemeral,
+                'ciphertext': ct,
+                'mac': mac,
+              },
+            };
+
+        // 6. Mock /messages with our encrypted event.
+        FakeMatrixApi
+                .currentApi!
+                .api['GET']!['/client/v3/rooms/${Uri.encodeComponent(newRoomId)}/messages?from&dir=b&limit=1000&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%5D%7D'] =
+            (_) => {
+              'chunk': [
+                {
+                  'content': {
+                    'algorithm': AlgorithmTypes.megolmV1AesSha2,
+                    'sender_key': newSenderKey,
+                    'session_id': newSessionId,
+                    'ciphertext': ciphertext,
+                    'device_id': client.deviceID,
+                  },
+                  'type': EventTypes.Encrypted,
+                  'event_id': '\$searchEnc',
+                  'origin_server_ts': 1432735824653,
+                  'sender': '@alice:example.com',
+                },
+              ],
+              'end': 't_search_end',
+              'start': 't_search_start',
+            };
+
+        // Pre-condition: the session is in neither memory nor DB.
+        expect(
+          client.encryption!.keyManager.getInboundGroupSession(
+            newRoomId,
+            newSessionId,
+          ),
+          isNull,
+        );
+
+        final result = await newRoom.searchEvents(searchFunc: (_) => true);
+
+        // The event was decrypted via the backup-load path that searchEvents
+        // performs internally.
+        final decrypted = result.events.where(
+          (e) => e.eventId == '\$searchEnc',
+        );
+        expect(decrypted, isNotEmpty);
+        expect(decrypted.first.body, 'a needle in the encrypted haystack');
+      },
+    );
 
     test('dispose client', () async {
       await client.dispose(closeDatabase: false);

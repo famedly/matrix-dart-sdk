@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// MSC4075: MatrixRTC Notification Event (https://github.com/matrix-org/matrix-spec-proposals/pull/4075)
 library;
 
@@ -13,9 +17,9 @@ enum RtcNotificationType {
   static RtcNotificationType? fromValue(String? value) {
     if (value == null) return null;
     return RtcNotificationType.values.cast<RtcNotificationType?>().firstWhere(
-          (t) => t!.value == value,
-          orElse: () => null,
-        );
+      (t) => t!.value == value,
+      orElse: () => null,
+    );
   }
 }
 
@@ -64,8 +68,9 @@ class RtcNotificationContent {
 
   factory RtcNotificationContent.fromEvent(Event event) {
     final content = event.content;
-    final notificationType =
-        RtcNotificationType.fromValue(content['notification_type'] as String?);
+    final notificationType = RtcNotificationType.fromValue(
+      content['notification_type'] as String?,
+    );
     if (notificationType == null) {
       throw ArgumentError(
         'Invalid or missing notification_type: ${content['notification_type']}',
@@ -73,8 +78,9 @@ class RtcNotificationContent {
     }
 
     return RtcNotificationContent(
-      senderTs:
-          DateTime.fromMillisecondsSinceEpoch(content['sender_ts'] as int),
+      senderTs: DateTime.fromMillisecondsSinceEpoch(
+        content['sender_ts'] as int,
+      ),
       lifetime: Duration(
         milliseconds:
             content['lifetime'] as int? ?? defaultLifetime.inMilliseconds,
@@ -108,8 +114,9 @@ class RtcNotificationContent {
 
   /// Checks if this notification has expired
   bool isExpired(DateTime originServerTs) {
-    final expiryTime =
-        getEffectiveTimestamp(originServerTs).add(cappedLifetime);
+    final expiryTime = getEffectiveTimestamp(
+      originServerTs,
+    ).add(cappedLifetime);
     return DateTime.now().isAfter(expiryTime);
   }
 

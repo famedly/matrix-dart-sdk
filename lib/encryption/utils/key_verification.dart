@@ -1,33 +1,18 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2020, 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2020, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
-import 'package:typed_data/typed_data.dart';
-import 'package:vodozemac/vodozemac.dart' as vod;
-
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart' as uc;
+import 'package:typed_data/typed_data.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 /*
     +-------------+                    +-----------+
@@ -129,7 +114,7 @@ enum KeyVerificationState {
   confirmQRScan, // shower after getting start
   waitingSas,
   done,
-  error
+  error,
 }
 
 enum KeyVerificationMethod { emoji, numbers, qrShow, qrScan, reciprocate }
@@ -152,8 +137,9 @@ List<String> _calculatePossibleMethods(
   final copyKnownMethods = List<String>.from(knownMethods);
   final copyPayloadMethods = List.from(payloadMethods);
 
-  copyKnownMethods
-      .removeWhere((element) => !copyPayloadMethods.contains(element));
+  copyKnownMethods.removeWhere(
+    (element) => !copyPayloadMethods.contains(element),
+  );
 
   // remove qr modes for now, check if they are possible and add later
   copyKnownMethods.removeWhere((element) => element.startsWith('m.qr_code'));
@@ -247,8 +233,8 @@ class KeyVerification {
     required this.userId,
     String? deviceId,
     this.onUpdate,
-  })  : _deviceId = deviceId,
-        lastActivity = DateTime.now();
+  }) : _deviceId = deviceId,
+       lastActivity = DateTime.now();
 
   void dispose() {
     Logs().i('[Key Verification] disposing object...');
@@ -271,7 +257,8 @@ class KeyVerification {
     }
 
     /// `qrCanWork` -  qr cannot work if we are verifying another master key but our own is unverified
-    final qrCanWork = (userId == client.userID) ||
+    final qrCanWork =
+        (userId == client.userID) ||
         ((client.userDeviceKeys[client.userID]?.masterKey?.verified ?? false));
 
     if (client.verificationMethods.contains(KeyVerificationMethod.qrShow) &&
@@ -320,13 +307,10 @@ class KeyVerification {
   }
 
   Future<void> sendRequest() async {
-    await send(
-      EventTypes.KeyVerificationRequest,
-      {
-        'methods': knownVerificationMethods,
-        if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
-    );
+    await send(EventTypes.KeyVerificationRequest, {
+      'methods': knownVerificationMethods,
+      if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
     startedVerification = true;
     setState(KeyVerificationState.waitingAccept);
     lastActivity = DateTime.now();
@@ -384,8 +368,9 @@ class KeyVerification {
           transactionId ??= eventId ?? payload['transaction_id'];
           // verify the timestamp
           final now = DateTime.now();
-          final verifyTime =
-              DateTime.fromMillisecondsSinceEpoch(payload['timestamp']);
+          final verifyTime = DateTime.fromMillisecondsSinceEpoch(
+            payload['timestamp'],
+          );
           if (now.subtract(Duration(minutes: 10)).isAfter(verifyTime) ||
               now.add(Duration(minutes: 5)).isBefore(verifyTime)) {
             // if the request is more than 20min in the past we just silently fail it
@@ -475,8 +460,10 @@ class KeyVerification {
           // https://matrix.to/#/!KBwfdofYJUmnsVoqwn:famedly.de/$wlHXlLQJdfrqKAF5KkuQrXydwOhY_uyqfH4ReasZqnA?via=neko.dev&via=famedly.de&via=lihotzki.de
           if (!isQrSupported(knownVerificationMethods, payload['methods'])) {
             if (knownVerificationMethods.contains(EventTypes.Sas)) {
-              final method = _method =
-                  _makeVerificationMethod(possibleMethods.first, this);
+              final method = _method = _makeVerificationMethod(
+                possibleMethods.first,
+                this,
+              );
               await method.sendStart();
               setState(KeyVerificationState.waitingAccept);
             }
@@ -640,8 +627,9 @@ class KeyVerification {
     }
     setState(KeyVerificationState.waitingAccept);
     if (lastStep == EventTypes.KeyVerificationRequest) {
-      final copyKnownVerificationMethods =
-          List<String>.from(knownVerificationMethods);
+      final copyKnownVerificationMethods = List<String>.from(
+        knownVerificationMethods,
+      );
       // qr code only works when atleast one side has verified master key
       if (userId == client.userID) {
         if (!(client.userDeviceKeys[client.userID]?.deviceKeys[deviceId]
@@ -649,8 +637,9 @@ class KeyVerification {
                 false) &&
             !(client.userDeviceKeys[client.userID]?.masterKey?.verified ??
                 false)) {
-          copyKnownVerificationMethods
-              .removeWhere((element) => element.startsWith('m.qr_code'));
+          copyKnownVerificationMethods.removeWhere(
+            (element) => element.startsWith('m.qr_code'),
+          );
           copyKnownVerificationMethods.remove(EventTypes.Reciprocate);
 
           // we are removing stuff only using the old possibleMethods should be ok here.
@@ -670,8 +659,10 @@ class KeyVerification {
       setState(KeyVerificationState.askChoice);
     } else {
       // we need to send an accept event
-      await _method!
-          .handlePayload(EventTypes.KeyVerificationStart, startPayload!);
+      await _method!.handlePayload(
+        EventTypes.KeyVerificationStart,
+        startPayload!,
+      );
     }
   }
 
@@ -713,9 +704,10 @@ class KeyVerification {
 
   List<int> get sasNumbers {
     if (_method is _KeyVerificationMethodSas) {
-      return _bytesToInt((_method as _KeyVerificationMethodSas).makeSas(5), 13)
-          .map((n) => n + 1000)
-          .toList();
+      return _bytesToInt(
+        (_method as _KeyVerificationMethodSas).makeSas(5),
+        13,
+      ).map((n) => n + 1000).toList();
     }
     return [];
   }
@@ -729,8 +721,10 @@ class KeyVerification {
 
   List<KeyVerificationEmoji> get sasEmojis {
     if (_method is _KeyVerificationMethodSas) {
-      final numbers =
-          _bytesToInt((_method as _KeyVerificationMethodSas).makeSas(6), 6);
+      final numbers = _bytesToInt(
+        (_method as _KeyVerificationMethodSas).makeSas(6),
+        6,
+      );
       return numbers.map(KeyVerificationEmoji.new).toList().sublist(0, 7);
     }
     return [];
@@ -748,8 +742,9 @@ class KeyVerification {
       return;
     }
     unawaited(
-      encryption.ssss
-          .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList()),
+      encryption.ssss.maybeRequestAll(
+        _verifiedDevices.whereType<DeviceKeys>().toList(),
+      ),
     );
     if (requestInterval.length <= i) {
       return;
@@ -923,10 +918,7 @@ class KeyVerification {
     }
   }
 
-  Future<void> send(
-    String type,
-    Map<String, dynamic> payload,
-  ) async {
+  Future<void> send(String type, Map<String, dynamic> payload) async {
     makePayload(payload);
     Logs().i('[Key Verification] Sending type $type: $payload');
     if (room != null) {
@@ -950,12 +942,12 @@ class KeyVerification {
           EventTypes.KeyVerificationRequest,
           EventTypes.KeyVerificationCancel,
         }.contains(type)) {
-          final deviceKeys =
-              client.userDeviceKeys[userId]?.deviceKeys.values.where(
-            (deviceKey) => deviceKey.hasValidSignatureChain(
-              verifiedByTheirMasterKey: true,
-            ),
-          );
+          final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys.values
+              .where(
+                (deviceKey) => deviceKey.hasValidSignatureChain(
+                  verifiedByTheirMasterKey: true,
+                ),
+              );
 
           if (deviceKeys != null) {
             await client.sendToDeviceEncrypted(
@@ -1001,8 +993,9 @@ class KeyVerification {
       return false;
     }
     if (data[6] != version) return false;
-    final remoteQrMode =
-        QRMode.values.singleWhere((mode) => mode.code == data[7]);
+    final remoteQrMode = QRMode.values.singleWhere(
+      (mode) => mode.code == data[7],
+    );
     if (ascii.decode(data.sublist(0, 6)) != prefix) return false;
     if (data[6] != version) return false;
     final tmpBuf = Uint8List.fromList([data[8], data[9]]);
@@ -1022,12 +1015,15 @@ class KeyVerification {
     final secondKey = encodeBase64Unpadded(
       data.sublist(10 + encodedTxnLen + 32, 10 + encodedTxnLen + 32 + 32),
     );
-    final randomSharedSecret =
-        encodeBase64Unpadded(data.sublist(10 + encodedTxnLen + 32 + 32));
+    final randomSharedSecret = encodeBase64Unpadded(
+      data.sublist(10 + encodedTxnLen + 32 + 32),
+    );
 
     /// `request.randomSharedSecretForQRCode` is overwritten below to send with `sendStart`
-    if ({QRMode.verifyOtherUser, QRMode.verifySelfUntrusted}
-        .contains(remoteQrMode)) {
+    if ({
+      QRMode.verifyOtherUser,
+      QRMode.verifySelfUntrusted,
+    }.contains(remoteQrMode)) {
       if (!(ownMasterKey?.verified ?? false)) {
         Logs().e(
           '[KeyVerification] verifyQrData because you were in mode 0/2 and had untrusted msk',
@@ -1100,8 +1096,9 @@ class KeyVerification {
   Future<QRCode?> generateQrCode() async {
     final data = Uint8Buffer();
     // why 11? https://github.com/matrix-org/matrix-js-sdk/commit/275ea6aacbfc6623e7559a7649ca5cab207903d9
-    randomSharedSecretForQRCode =
-        encodeBase64Unpadded(uc.secureRandomBytes(11));
+    randomSharedSecretForQRCode = encodeBase64Unpadded(
+      uc.secureRandomBytes(11),
+    );
 
     final mode = getOurQRMode();
     data.addAll(ascii.encode(prefix));
@@ -1264,12 +1261,14 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
 
   List<String> get knownAuthentificationTypes {
     final types = <String>[];
-    if (request.client.verificationMethods
-        .contains(KeyVerificationMethod.emoji)) {
+    if (request.client.verificationMethods.contains(
+      KeyVerificationMethod.emoji,
+    )) {
       types.add('emoji');
     }
-    if (request.client.verificationMethods
-        .contains(KeyVerificationMethod.numbers)) {
+    if (request.client.verificationMethods.contains(
+      KeyVerificationMethod.numbers,
+    )) {
       types.add('decimal');
     }
     return types;
@@ -1425,8 +1424,9 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   bool _handleAccept(Map<String, dynamic> payload) {
-    if (!knownKeyAgreementProtocols
-        .contains(payload['key_agreement_protocol'])) {
+    if (!knownKeyAgreementProtocols.contains(
+      payload['key_agreement_protocol'],
+    )) {
       return false;
     }
     keyAgreementProtocol = payload['key_agreement_protocol'];
@@ -1434,8 +1434,9 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       return false;
     }
     hash = payload['hash'];
-    if (!knownHashesAuthentificationCodes
-        .contains(payload['message_authentication_code'])) {
+    if (!knownHashesAuthentificationCodes.contains(
+      payload['message_authentication_code'],
+    )) {
       return false;
     }
     messageAuthenticationCode = payload['message_authentication_code'];
@@ -1453,9 +1454,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   Future<void> _sendKey() async {
-    await request.send('m.key.verification.key', {
-      'key': sas!.publicKey,
-    });
+    await request.send('m.key.verification.key', {'key': sas!.publicKey});
   }
 
   void _handleKey(Map<String, dynamic> payload) {
@@ -1468,8 +1467,10 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   Future<bool> _validateCommitment() async {
-    final checkCommitment =
-        await _makeCommitment(theirPublicKey, startCanonicalJson);
+    final checkCommitment = await _makeCommitment(
+      theirPublicKey,
+      startCanonicalJson,
+    );
     return commitment == checkCommitment;
   }
 
@@ -1502,25 +1503,26 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     // for now it is just our device key, once we have cross-signing
     // we would also add the cross signing key here
     final deviceKeyId = 'ed25519:${client.deviceID}';
-    mac[deviceKeyId] =
-        _calculateMac(encryption.fingerprintKey!, baseInfo + deviceKeyId);
+    mac[deviceKeyId] = _calculateMac(
+      encryption.fingerprintKey!,
+      baseInfo + deviceKeyId,
+    );
     keyList.add(deviceKeyId);
 
     final masterKey = client.userDeviceKeys[client.userID]?.masterKey;
     if (masterKey != null && masterKey.verified) {
       // we have our own master key verified, let's send it!
       final masterKeyId = 'ed25519:${masterKey.publicKey}';
-      mac[masterKeyId] =
-          _calculateMac(masterKey.publicKey!, baseInfo + masterKeyId);
+      mac[masterKeyId] = _calculateMac(
+        masterKey.publicKey!,
+        baseInfo + masterKeyId,
+      );
       keyList.add(masterKeyId);
     }
 
     keyList.sort();
     final keys = _calculateMac(keyList.join(','), '${baseInfo}KEY_IDS');
-    await request.send('m.key.verification.mac', {
-      'mac': mac,
-      'keys': keys,
-    });
+    await request.send('m.key.verification.mac', {'mac': mac, 'keys': keys});
   }
 
   Future<void> _processMac() async {
@@ -1576,262 +1578,70 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
 }
 
 const _emojiMap = [
-  {
-    'emoji': '\u{1F436}',
-    'name': 'Dog',
-  },
-  {
-    'emoji': '\u{1F431}',
-    'name': 'Cat',
-  },
-  {
-    'emoji': '\u{1F981}',
-    'name': 'Lion',
-  },
-  {
-    'emoji': '\u{1F40E}',
-    'name': 'Horse',
-  },
-  {
-    'emoji': '\u{1F984}',
-    'name': 'Unicorn',
-  },
-  {
-    'emoji': '\u{1F437}',
-    'name': 'Pig',
-  },
-  {
-    'emoji': '\u{1F418}',
-    'name': 'Elephant',
-  },
-  {
-    'emoji': '\u{1F430}',
-    'name': 'Rabbit',
-  },
-  {
-    'emoji': '\u{1F43C}',
-    'name': 'Panda',
-  },
-  {
-    'emoji': '\u{1F413}',
-    'name': 'Rooster',
-  },
-  {
-    'emoji': '\u{1F427}',
-    'name': 'Penguin',
-  },
-  {
-    'emoji': '\u{1F422}',
-    'name': 'Turtle',
-  },
-  {
-    'emoji': '\u{1F41F}',
-    'name': 'Fish',
-  },
-  {
-    'emoji': '\u{1F419}',
-    'name': 'Octopus',
-  },
-  {
-    'emoji': '\u{1F98B}',
-    'name': 'Butterfly',
-  },
-  {
-    'emoji': '\u{1F337}',
-    'name': 'Flower',
-  },
-  {
-    'emoji': '\u{1F333}',
-    'name': 'Tree',
-  },
-  {
-    'emoji': '\u{1F335}',
-    'name': 'Cactus',
-  },
-  {
-    'emoji': '\u{1F344}',
-    'name': 'Mushroom',
-  },
-  {
-    'emoji': '\u{1F30F}',
-    'name': 'Globe',
-  },
-  {
-    'emoji': '\u{1F319}',
-    'name': 'Moon',
-  },
-  {
-    'emoji': '\u{2601}\u{FE0F}',
-    'name': 'Cloud',
-  },
-  {
-    'emoji': '\u{1F525}',
-    'name': 'Fire',
-  },
-  {
-    'emoji': '\u{1F34C}',
-    'name': 'Banana',
-  },
-  {
-    'emoji': '\u{1F34E}',
-    'name': 'Apple',
-  },
-  {
-    'emoji': '\u{1F353}',
-    'name': 'Strawberry',
-  },
-  {
-    'emoji': '\u{1F33D}',
-    'name': 'Corn',
-  },
-  {
-    'emoji': '\u{1F355}',
-    'name': 'Pizza',
-  },
-  {
-    'emoji': '\u{1F382}',
-    'name': 'Cake',
-  },
-  {
-    'emoji': '\u{2764}\u{FE0F}',
-    'name': 'Heart',
-  },
-  {
-    'emoji': '\u{1F600}',
-    'name': 'Smiley',
-  },
-  {
-    'emoji': '\u{1F916}',
-    'name': 'Robot',
-  },
-  {
-    'emoji': '\u{1F3A9}',
-    'name': 'Hat',
-  },
-  {
-    'emoji': '\u{1F453}',
-    'name': 'Glasses',
-  },
-  {
-    'emoji': '\u{1F527}',
-    'name': 'Spanner',
-  },
-  {
-    'emoji': '\u{1F385}',
-    'name': 'Santa',
-  },
-  {
-    'emoji': '\u{1F44D}',
-    'name': 'Thumbs Up',
-  },
-  {
-    'emoji': '\u{2602}\u{FE0F}',
-    'name': 'Umbrella',
-  },
-  {
-    'emoji': '\u{231B}',
-    'name': 'Hourglass',
-  },
-  {
-    'emoji': '\u{23F0}',
-    'name': 'Clock',
-  },
-  {
-    'emoji': '\u{1F381}',
-    'name': 'Gift',
-  },
-  {
-    'emoji': '\u{1F4A1}',
-    'name': 'Light Bulb',
-  },
-  {
-    'emoji': '\u{1F4D5}',
-    'name': 'Book',
-  },
-  {
-    'emoji': '\u{270F}\u{FE0F}',
-    'name': 'Pencil',
-  },
-  {
-    'emoji': '\u{1F4CE}',
-    'name': 'Paperclip',
-  },
-  {
-    'emoji': '\u{2702}\u{FE0F}',
-    'name': 'Scissors',
-  },
-  {
-    'emoji': '\u{1F512}',
-    'name': 'Lock',
-  },
-  {
-    'emoji': '\u{1F511}',
-    'name': 'Key',
-  },
-  {
-    'emoji': '\u{1F528}',
-    'name': 'Hammer',
-  },
-  {
-    'emoji': '\u{260E}\u{FE0F}',
-    'name': 'Telephone',
-  },
-  {
-    'emoji': '\u{1F3C1}',
-    'name': 'Flag',
-  },
-  {
-    'emoji': '\u{1F682}',
-    'name': 'Train',
-  },
-  {
-    'emoji': '\u{1F6B2}',
-    'name': 'Bicycle',
-  },
-  {
-    'emoji': '\u{2708}\u{FE0F}',
-    'name': 'Aeroplane',
-  },
-  {
-    'emoji': '\u{1F680}',
-    'name': 'Rocket',
-  },
-  {
-    'emoji': '\u{1F3C6}',
-    'name': 'Trophy',
-  },
-  {
-    'emoji': '\u{26BD}',
-    'name': 'Ball',
-  },
-  {
-    'emoji': '\u{1F3B8}',
-    'name': 'Guitar',
-  },
-  {
-    'emoji': '\u{1F3BA}',
-    'name': 'Trumpet',
-  },
-  {
-    'emoji': '\u{1F514}',
-    'name': 'Bell',
-  },
-  {
-    'emoji': '\u{2693}',
-    'name': 'Anchor',
-  },
-  {
-    'emoji': '\u{1F3A7}',
-    'name': 'Headphones',
-  },
-  {
-    'emoji': '\u{1F4C1}',
-    'name': 'Folder',
-  },
-  {
-    'emoji': '\u{1F4CC}',
-    'name': 'Pin',
-  },
+  {'emoji': '\u{1F436}', 'name': 'Dog'},
+  {'emoji': '\u{1F431}', 'name': 'Cat'},
+  {'emoji': '\u{1F981}', 'name': 'Lion'},
+  {'emoji': '\u{1F40E}', 'name': 'Horse'},
+  {'emoji': '\u{1F984}', 'name': 'Unicorn'},
+  {'emoji': '\u{1F437}', 'name': 'Pig'},
+  {'emoji': '\u{1F418}', 'name': 'Elephant'},
+  {'emoji': '\u{1F430}', 'name': 'Rabbit'},
+  {'emoji': '\u{1F43C}', 'name': 'Panda'},
+  {'emoji': '\u{1F413}', 'name': 'Rooster'},
+  {'emoji': '\u{1F427}', 'name': 'Penguin'},
+  {'emoji': '\u{1F422}', 'name': 'Turtle'},
+  {'emoji': '\u{1F41F}', 'name': 'Fish'},
+  {'emoji': '\u{1F419}', 'name': 'Octopus'},
+  {'emoji': '\u{1F98B}', 'name': 'Butterfly'},
+  {'emoji': '\u{1F337}', 'name': 'Flower'},
+  {'emoji': '\u{1F333}', 'name': 'Tree'},
+  {'emoji': '\u{1F335}', 'name': 'Cactus'},
+  {'emoji': '\u{1F344}', 'name': 'Mushroom'},
+  {'emoji': '\u{1F30F}', 'name': 'Globe'},
+  {'emoji': '\u{1F319}', 'name': 'Moon'},
+  {'emoji': '\u{2601}\u{FE0F}', 'name': 'Cloud'},
+  {'emoji': '\u{1F525}', 'name': 'Fire'},
+  {'emoji': '\u{1F34C}', 'name': 'Banana'},
+  {'emoji': '\u{1F34E}', 'name': 'Apple'},
+  {'emoji': '\u{1F353}', 'name': 'Strawberry'},
+  {'emoji': '\u{1F33D}', 'name': 'Corn'},
+  {'emoji': '\u{1F355}', 'name': 'Pizza'},
+  {'emoji': '\u{1F382}', 'name': 'Cake'},
+  {'emoji': '\u{2764}\u{FE0F}', 'name': 'Heart'},
+  {'emoji': '\u{1F600}', 'name': 'Smiley'},
+  {'emoji': '\u{1F916}', 'name': 'Robot'},
+  {'emoji': '\u{1F3A9}', 'name': 'Hat'},
+  {'emoji': '\u{1F453}', 'name': 'Glasses'},
+  {'emoji': '\u{1F527}', 'name': 'Spanner'},
+  {'emoji': '\u{1F385}', 'name': 'Santa'},
+  {'emoji': '\u{1F44D}', 'name': 'Thumbs Up'},
+  {'emoji': '\u{2602}\u{FE0F}', 'name': 'Umbrella'},
+  {'emoji': '\u{231B}', 'name': 'Hourglass'},
+  {'emoji': '\u{23F0}', 'name': 'Clock'},
+  {'emoji': '\u{1F381}', 'name': 'Gift'},
+  {'emoji': '\u{1F4A1}', 'name': 'Light Bulb'},
+  {'emoji': '\u{1F4D5}', 'name': 'Book'},
+  {'emoji': '\u{270F}\u{FE0F}', 'name': 'Pencil'},
+  {'emoji': '\u{1F4CE}', 'name': 'Paperclip'},
+  {'emoji': '\u{2702}\u{FE0F}', 'name': 'Scissors'},
+  {'emoji': '\u{1F512}', 'name': 'Lock'},
+  {'emoji': '\u{1F511}', 'name': 'Key'},
+  {'emoji': '\u{1F528}', 'name': 'Hammer'},
+  {'emoji': '\u{260E}\u{FE0F}', 'name': 'Telephone'},
+  {'emoji': '\u{1F3C1}', 'name': 'Flag'},
+  {'emoji': '\u{1F682}', 'name': 'Train'},
+  {'emoji': '\u{1F6B2}', 'name': 'Bicycle'},
+  {'emoji': '\u{2708}\u{FE0F}', 'name': 'Aeroplane'},
+  {'emoji': '\u{1F680}', 'name': 'Rocket'},
+  {'emoji': '\u{1F3C6}', 'name': 'Trophy'},
+  {'emoji': '\u{26BD}', 'name': 'Ball'},
+  {'emoji': '\u{1F3B8}', 'name': 'Guitar'},
+  {'emoji': '\u{1F3BA}', 'name': 'Trumpet'},
+  {'emoji': '\u{1F514}', 'name': 'Bell'},
+  {'emoji': '\u{2693}', 'name': 'Anchor'},
+  {'emoji': '\u{1F3A7}', 'name': 'Headphones'},
+  {'emoji': '\u{1F4C1}', 'name': 'Folder'},
+  {'emoji': '\u{1F4CC}', 'name': 'Pin'},
 ];
 
 class KeyVerificationEmoji {

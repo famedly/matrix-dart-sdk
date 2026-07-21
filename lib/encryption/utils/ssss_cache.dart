@@ -1,20 +1,6 @@
-/*
- *   Famedly Matrix SDK
- *   Copyright (C) 2021 Famedly GmbH
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU Affero General Public License as
- *   published by the Free Software Foundation, either version 3 of the
- *   License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *   GNU Affero General Public License for more details.
- *
- *   You should have received a copy of the GNU Affero General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2019-Present, 2021 Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 class SSSSCache {
   final String? type;
@@ -25,16 +11,16 @@ class SSSSCache {
   const SSSSCache({this.type, this.keyId, this.ciphertext, this.content});
 
   factory SSSSCache.fromJson(Map<String, dynamic> json) => SSSSCache(
-        type: json['type'],
-        keyId: json['key_id'],
-        ciphertext: json['ciphertext'],
-        content: json['content'],
-      );
+    type: json['type'],
+    keyId: json['key_id'],
+    ciphertext: json['ciphertext'],
+    content: json['content'],
+  );
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'key_id': keyId,
-        'ciphertext': ciphertext,
-        'content': content,
-      };
+    'type': type,
+    'key_id': keyId,
+    'ciphertext': ciphertext,
+    'content': content,
+  };
 }

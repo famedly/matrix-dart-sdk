@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import 'package:matrix/matrix.dart' hide Result;
 
 extension RequestAndCache on Client {
@@ -22,11 +26,7 @@ extension RequestAndCache on Client {
       await database.cacheCustomObject(cacheKey, toJson(content));
       return content;
     } catch (error, stackTrace) {
-      Logs().w(
-        'Unable to update cache for $cacheKey',
-        error,
-        stackTrace,
-      );
+      Logs().w('Unable to update cache for $cacheKey', error, stackTrace);
 
       if (!throwOnUpdateFailure && cachedResponse != null) {
         return fromJson(cachedResponse.content);

@@ -1,4 +1,9 @@
+# SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 exclude:
   - example/**
 ignore:
   - lints
+  - sqlite3

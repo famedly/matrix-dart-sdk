@@ -1,7 +1,10 @@
-import 'package:test/test.dart';
+// SPDX-FileCopyrightText: 2019-Present Famedly GmbH
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
+import 'package:test/test.dart';
 
 // Mock implementations
 
@@ -83,10 +86,7 @@ Event createTestEvent({
   return Event(
     eventId: eventId,
     type: type,
-    content: {
-      'msgtype': msgtype,
-      'body': 'Test message $eventId',
-    },
+    content: {'msgtype': msgtype, 'body': 'Test message $eventId'},
     senderId: '@user:example.com',
     originServerTs: timestamp,
     room: room,
@@ -122,7 +122,10 @@ void main() {
       now = DateTime.now();
       client = MockClient('testclient');
       room = Room(id: '!testroom:example.com', client: client);
-      timeline = Timeline(room: room, chunk: TimelineChunk(events: []));
+      timeline = Timeline(
+        room: room,
+        chunk: TimelineChunk(events: []),
+      );
     });
 
     group('basic export functionality', () {
@@ -158,10 +161,12 @@ void main() {
         // Verify events are in chronological order
         for (var i = 1; i < complete.events.length; i++) {
           expect(
-            complete.events[i].originServerTs
-                    .isBefore(complete.events[i - 1].originServerTs) ||
-                complete.events[i].originServerTs
-                    .isAtSameMomentAs(complete.events[i - 1].originServerTs),
+            complete.events[i].originServerTs.isBefore(
+                  complete.events[i - 1].originServerTs,
+                ) ||
+                complete.events[i].originServerTs.isAtSameMomentAs(
+                  complete.events[i - 1].originServerTs,
+                ),
             isTrue,
             reason: 'Events should be in reverse chronological order',
           );
@@ -234,8 +239,11 @@ void main() {
       test('continues export when server returns error', () async {
         client = MockClient('testclient', throwError: true);
         room = Room(id: '!testroom:example.com', client: client);
-        final initialEvents =
-            createMockEvents(count: 5, startTime: now, room: room);
+        final initialEvents = createMockEvents(
+          count: 5,
+          startTime: now,
+          room: room,
+        );
         client.dbEvents = initialEvents;
         client.serverEvents = initialEvents;
         timeline = Timeline(
@@ -312,7 +320,10 @@ void main() {
 
         client = MockClient('testclient', serverEvents: mixedEvents);
         room = Room(id: '!testroom:example.com', client: client);
-        timeline = Timeline(room: room, chunk: TimelineChunk(events: []));
+        timeline = Timeline(
+          room: room,
+          chunk: TimelineChunk(events: []),
+        );
         room.prev_batch = '0';
 
         final results = <ExportResult>[];
