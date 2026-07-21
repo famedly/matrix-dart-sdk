@@ -117,7 +117,7 @@ extension CryptoSetupExtension on Client {
                 'Bootstrap state ${bootstrap.state} should not happen!',
               );
             case BootstrapState.error:
-              throw Exception('Bootstrap error!');
+              throw bootstrap.errorResult ?? Exception('Bootstrap error!');
             case BootstrapState.done:
               completer.complete();
               break;
@@ -209,7 +209,7 @@ extension CryptoSetupExtension on Client {
                 'Bootstrap state ${bootstrap.state} should not happen!',
               );
             case BootstrapState.error:
-              throw Exception('Bootstrap error!');
+              throw bootstrap.errorResult ?? Exception('Bootstrap error!');
             case BootstrapState.done:
               completer.complete();
               break;

@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:async/async.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/key_manager.dart';
@@ -62,6 +63,7 @@ class Bootstrap {
   BootstrapState _state = BootstrapState.loading;
   Map<String, OpenSSSS>? oldSsssKeys;
   OpenSSSS? newSsssKey;
+  ErrorResult? errorResult;
 
   Bootstrap({required this.encryption, this.onUpdate}) {
     if (analyzeSecrets().isNotEmpty) {
@@ -170,6 +172,7 @@ class Bootstrap {
         state = BootstrapState.openExistingSsss;
       } catch (e, s) {
         Logs().e('[Bootstrapping] Error open SSSS', e, s);
+        errorResult = ErrorResult(e, s);
         state = BootstrapState.error;
         return;
       }
@@ -201,6 +204,7 @@ class Bootstrap {
       }
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error construction ssss key', e, s);
+      errorResult = ErrorResult(e, s);
       state = BootstrapState.error;
       return;
     }
@@ -245,6 +249,7 @@ class Bootstrap {
       }
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error trying to migrate old secrets', e, s);
+      errorResult = ErrorResult(e, s);
       state = BootstrapState.error;
       return;
     }
@@ -425,6 +430,7 @@ class Bootstrap {
       await encryption.crossSigning.sign(keysToSign);
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error setting up cross signing', e, s);
+      errorResult = ErrorResult(e, s);
       state = BootstrapState.error;
       return;
     }
@@ -485,10 +491,8 @@ class Bootstrap {
       await client.encryption?.keyManager.uploadInboundGroupSessions();
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error setting up online key backup', e, s);
+      errorResult = ErrorResult(e, s);
       state = BootstrapState.error;
-      encryption.client.onEncryptionError.add(
-        SdkError(exception: e, stackTrace: s),
-      );
       return;
     }
     state = BootstrapState.done;
