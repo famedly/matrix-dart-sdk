@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:math';
 
 import 'package:matrix/encryption/utils/olm_session.dart';
@@ -745,49 +746,28 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           if (deviceKeysOutdated.isEmpty) {
             return {};
           }
-          final res = <String, DeviceKeysList>{};
+
           final userDeviceKeys = await _userDeviceKeysBox.getAllValues();
           final userCrossSigningKeys = await _userCrossSigningKeysBox
               .getAllValues();
-          for (final userId in deviceKeysOutdated.keys) {
-            final deviceKeysBoxKeys = userDeviceKeys.keys.where((tuple) {
-              final tupleKey = TupleKey.fromString(tuple);
-              return tupleKey.parts.first == userId;
-            });
-            final crossSigningKeysBoxKeys = userCrossSigningKeys.keys.where((
-              tuple,
-            ) {
-              final tupleKey = TupleKey.fromString(tuple);
-              return tupleKey.parts.first == userId;
-            });
-            final childEntries = deviceKeysBoxKeys.map((key) {
-              final userDeviceKey = userDeviceKeys[key];
-              if (userDeviceKey == null) return null;
-              return copyMap(userDeviceKey);
-            });
-            final crossSigningEntries = crossSigningKeysBoxKeys.map((key) {
-              final crossSigningKey = userCrossSigningKeys[key];
-              if (crossSigningKey == null) return null;
-              return copyMap(crossSigningKey);
-            });
-            res[userId] = DeviceKeysList.fromDbJson(
-              {
-                'client_id': client.id,
-                'user_id': userId,
-                'outdated': deviceKeysOutdated[userId],
-              },
-              childEntries
-                  .where((c) => c != null)
-                  .toList()
-                  .cast<Map<String, dynamic>>(),
-              crossSigningEntries
-                  .where((c) => c != null)
-                  .toList()
-                  .cast<Map<String, dynamic>>(),
-              client,
-            );
-          }
-          return res;
+
+          final result = await _runParseUserDeviceKeys(
+            client.id,
+            deviceKeysOutdated,
+            userDeviceKeys,
+            userCrossSigningKeys,
+          );
+          return result.map(
+            (userId, json) => MapEntry(
+              userId,
+              DeviceKeysList.fromDbJson(
+                json['meta'] as Map<String, dynamic>,
+                (json['devices'] as List).cast<Map<String, dynamic>>(),
+                (json['crossSigning'] as List).cast<Map<String, dynamic>>(),
+                client,
+              ),
+            ),
+          );
         },
       );
 
@@ -1821,4 +1801,80 @@ class TupleKey {
 
   @override
   int get hashCode => Object.hashAll(parts);
+}
+
+Future<Map<String, Map<String, dynamic>>> _runParseUserDeviceKeys(
+  dynamic clientId,
+  Map<String, dynamic> deviceKeysOutdated,
+  Map<String, dynamic> userDeviceKeys,
+  Map<String, dynamic> userCrossSigningKeys,
+) async {
+  final payload = <String, dynamic>{
+    'clientId': clientId,
+    'deviceKeysOutdated': Map<String, dynamic>.from(deviceKeysOutdated),
+    'userDeviceKeys': Map<String, dynamic>.from(userDeviceKeys),
+    'userCrossSigningKeys': Map<String, dynamic>.from(userCrossSigningKeys),
+  };
+  return Isolate.run(() => _parseUserDeviceKeys(payload));
+}
+
+Map<String, Map<String, dynamic>> _parseUserDeviceKeys(
+  Map<String, dynamic> payload,
+) {
+  final deviceKeysOutdated = Map<String, dynamic>.from(
+    payload['deviceKeysOutdated'] as Map,
+  );
+  final userDeviceKeys = Map<String, dynamic>.from(
+    payload['userDeviceKeys'] as Map,
+  );
+  final userCrossSigningKeys = Map<String, dynamic>.from(
+    payload['userCrossSigningKeys'] as Map,
+  );
+  final clientId = payload['clientId'];
+
+  final res = <String, Map<String, dynamic>>{};
+
+  for (final userId in deviceKeysOutdated.keys) {
+    final deviceKeysBoxKeys = userDeviceKeys.keys.where((tuple) {
+      final tupleKey = TupleKey.fromString(tuple);
+      return tupleKey.parts.first == userId;
+    });
+
+    final crossSigningKeysBoxKeys = userCrossSigningKeys.keys.where((tuple) {
+      final tupleKey = TupleKey.fromString(tuple);
+      return tupleKey.parts.first == userId;
+    });
+
+    final childEntries = deviceKeysBoxKeys
+        .map((key) {
+          final userDeviceKey = userDeviceKeys[key];
+          if (userDeviceKey == null) return null;
+          return copyMap(userDeviceKey as Map);
+        })
+        .where((c) => c != null)
+        .toList()
+        .cast<Map<String, dynamic>>();
+
+    final crossSigningEntries = crossSigningKeysBoxKeys
+        .map((key) {
+          final crossSigningKey = userCrossSigningKeys[key];
+          if (crossSigningKey == null) return null;
+          return copyMap(crossSigningKey as Map);
+        })
+        .where((c) => c != null)
+        .toList()
+        .cast<Map<String, dynamic>>();
+
+    res[userId] = {
+      'meta': {
+        'client_id': clientId,
+        'user_id': userId,
+        'outdated': deviceKeysOutdated[userId],
+      },
+      'devices': childEntries,
+      'crossSigning': crossSigningEntries,
+    };
+  }
+
+  return res;
 }
