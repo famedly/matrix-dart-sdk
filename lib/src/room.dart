@@ -17,6 +17,7 @@ import 'package:matrix/src/utils/file_send_request_credentials.dart';
 import 'package:matrix/src/utils/markdown.dart';
 import 'package:matrix/src/utils/marked_unread.dart';
 import 'package:matrix/src/utils/space_child.dart';
+import 'package:mime/mime.dart';
 
 /// max PDU size for server to accept the event with some buffer incase the server adds unsigned data f.ex age
 /// https://spec.matrix.org/v1.9/client-server-api/#size-limits
@@ -813,7 +814,8 @@ class Room {
   /// wait until the file has been uploaded.
   /// Optionally specify [extraContent] to tack on to the event.
   ///
-  /// In case [file] is a [MatrixImageFile], [thumbnail] is automatically
+  /// In case [file] is a [MatrixImageFile] or a [MatrixVideoFile] (with
+  /// [Client.customVideoThumbnailGenerator] set), [thumbnail] is automatically
   /// computed unless it is explicitly provided.
   /// Set [shrinkImageMaxDimension] to for example `1600` if you want to shrink
   /// your image before sending. This is ignored if the File is not a
@@ -922,6 +924,70 @@ class Room {
         }
       } catch (e, s) {
         Logs().e('Unable to shrink image before sending!', e, s);
+      }
+    }
+
+    final customVideoThumbnailGenerator = client.customVideoThumbnailGenerator;
+    if (file is MatrixVideoFile &&
+        thumbnail == null &&
+        customVideoThumbnailGenerator != null) {
+      syncUpdate
+              .rooms!
+              .join!
+              .values
+              .first
+              .timeline!
+              .events!
+              .first
+              .unsigned![fileSendingStatusKey] =
+          FileSendingStatus.generatingThumbnail.name;
+      try {
+        final videoThumbnail = await customVideoThumbnailGenerator(
+          MatrixVideoThumbnailArguments(
+            bytes: file.bytes,
+            fileName: file.name,
+            mimeType: file.mimeType,
+          ),
+        );
+        if (videoThumbnail != null) {
+          final thumbnailMimeType = videoThumbnail.mimeType;
+          thumbnail = MatrixImageFile(
+            bytes: videoThumbnail.bytes,
+            name:
+                '${file.name}.thumbnail.${extensionFromMime(thumbnailMimeType ?? '') ?? 'jpg'}',
+            mimeType: thumbnailMimeType,
+            width: videoThumbnail.width,
+            height: videoThumbnail.height,
+            blurhash: videoThumbnail.blurhash,
+          );
+          await client.database.storeFile(
+            Uri(scheme: 'cache', host: 'thumbnail', path: txid),
+            thumbnail.bytes,
+            DateTime.now().millisecondsSinceEpoch,
+          );
+          file = MatrixVideoFile(
+            bytes: file.bytes,
+            name: file.name,
+            mimeType: file.mimeType,
+            width: file.width ?? videoThumbnail.originalWidth,
+            height: file.height ?? videoThumbnail.originalHeight,
+            duration: file.duration ?? videoThumbnail.duration,
+          );
+          syncUpdate
+              .rooms!
+              .join!
+              .values
+              .first
+              .timeline!
+              .events!
+              .first
+              .content['info'] = {
+            ...file.info,
+            'thumbnail_info': thumbnail.info,
+          };
+        }
+      } catch (e, s) {
+        Logs().e('Unable to generate video thumbnail before sending!', e, s);
       }
     }
 
@@ -1077,8 +1143,8 @@ class Room {
           },
         if (thumbnail != null) 'thumbnail_info': thumbnail.info,
         if (thumbnail?.blurhash != null &&
-            file is MatrixImageFile &&
-            file.blurhash == null)
+            ((file is MatrixImageFile && file.blurhash == null) ||
+                file is MatrixVideoFile))
           'xyz.amorgan.blurhash': thumbnail!.blurhash,
       },
       ...?extraContent,

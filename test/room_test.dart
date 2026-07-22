@@ -1405,6 +1405,182 @@ void main() {
       );
     });
 
+    test('sendFileEvent video with customVideoThumbnailGenerator', () async {
+      // A dedicated room so the sent video events don't leak into tests
+      // using the shared `room`:
+      final videoRoom = Room(
+        id: '!video:server.abc',
+        client: matrix,
+        membership: Membership.join,
+      );
+      FakeMatrixApi
+              .currentApi!
+              .api['PUT']!['/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid'] =
+          (var req) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+      FakeMatrixApi
+          .currentApi!
+          .api['POST']!['/media/v3/upload?filename=file.mp4'] = (var req) => {
+        'content_uri': 'mxc://example.com/videoTestMxcUri',
+      };
+      FakeMatrixApi
+              .currentApi!
+              .api['POST']!['/media/v3/upload?filename=file.mp4.thumbnail.jpg'] =
+          (var req) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
+      MatrixVideoThumbnailArguments? receivedArguments;
+      matrix.customVideoThumbnailGenerator = (arguments) async {
+        receivedArguments = arguments;
+        return MatrixVideoThumbnailResponse(
+          // Bigger than the video itself, must still be used:
+          bytes: Uint8List(2000),
+          width: 600,
+          height: 400,
+          mimeType: 'image/jpeg',
+          blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+          originalWidth: 1920,
+          originalHeight: 1080,
+          duration: 5000,
+        );
+      };
+
+      final testFile = MatrixVideoFile(
+        bytes: Uint8List(1000),
+        name: 'file.mp4',
+      );
+      FakeMatrixApi.calledEndpoints.clear();
+      final resp = await videoRoom.sendFileEvent(testFile, txid: 'testtxid');
+      expect(resp, isNotNull);
+      expect(receivedArguments?.fileName, 'file.mp4');
+      expect(receivedArguments?.mimeType, 'video/mp4');
+      expect(receivedArguments?.bytes, testFile.bytes);
+      expect(
+        await matrix.database.getFile(
+          Uri(scheme: 'cache', host: 'thumbnail', path: 'testtxid'),
+        ),
+        null, // It is sent so shouldn't be in cache anymore
+      );
+
+      final content = json.decode(
+        FakeMatrixApi.calledEndpoints.entries
+            .firstWhere(
+              (e) => e.key.startsWith(
+                '/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid',
+              ),
+            )
+            .value
+            .first,
+      );
+      expect(content, {
+        'msgtype': 'm.video',
+        'body': 'file.mp4',
+        'filename': 'file.mp4',
+        'url': 'mxc://example.com/videoTestMxcUri',
+        'info': {
+          'mimetype': 'video/mp4',
+          'size': 1000,
+          'w': 1920,
+          'h': 1080,
+          'duration': 5000,
+          'thumbnail_url': 'mxc://example.com/videoThumbMxcUri',
+          'thumbnail_info': {
+            'mimetype': 'image/jpeg',
+            'size': 2000,
+            'w': 600,
+            'h': 400,
+            'xyz.amorgan.blurhash': 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+          },
+          'xyz.amorgan.blurhash': 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+        },
+      });
+      matrix.customVideoThumbnailGenerator = null;
+    });
+
+    test('sendFileEvent video keeps generated thumbnail cached on '
+        'failure', () async {
+      final videoRoom = Room(
+        id: '!video:server.abc',
+        client: matrix,
+        membership: Membership.join,
+      );
+      final thumbnailBytes = Uint8List.fromList([1, 2, 3]);
+      matrix.customVideoThumbnailGenerator = (arguments) async =>
+          MatrixVideoThumbnailResponse(
+            bytes: thumbnailBytes,
+            width: 600,
+            height: 400,
+            mimeType: 'image/jpeg',
+          );
+      FakeMatrixApi
+          .currentApi!
+          .api['POST']!['/media/v3/upload?filename=crash.mp4'] = {
+        'errcode': 'M_UNKNOWN',
+        'error': 'Boom!',
+      };
+
+      const txnid = 'video_crash_txnid';
+      final testFile = MatrixVideoFile(
+        bytes: Uint8List(1000),
+        name: 'crash.mp4',
+      );
+      try {
+        await videoRoom.sendFileEvent(testFile, txid: txnid);
+      } catch (_) {}
+
+      expect(
+        await matrix.database.getFile(
+          Uri(scheme: 'cache', host: 'file', path: txnid),
+        ),
+        testFile.bytes,
+      );
+      expect(
+        await matrix.database.getFile(
+          Uri(scheme: 'cache', host: 'thumbnail', path: txnid),
+        ),
+        thumbnailBytes,
+      );
+      matrix.customVideoThumbnailGenerator = null;
+    });
+
+    test('sendFileEvent video ignores failing thumbnail generator', () async {
+      final videoRoom = Room(
+        id: '!video:server.abc',
+        client: matrix,
+        membership: Membership.join,
+      );
+      FakeMatrixApi
+              .currentApi!
+              .api['PUT']!['/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid'] =
+          (var req) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+      matrix.customVideoThumbnailGenerator = (arguments) async =>
+          throw Exception('Unable to decode video');
+
+      final testFile = MatrixVideoFile(
+        bytes: Uint8List(1000),
+        name: 'file.mp4',
+      );
+      FakeMatrixApi.calledEndpoints.clear();
+      final resp = await videoRoom.sendFileEvent(testFile, txid: 'testtxid');
+      expect(resp, isNotNull);
+
+      final content = json.decode(
+        FakeMatrixApi.calledEndpoints.entries
+            .firstWhere(
+              (e) => e.key.startsWith(
+                '/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid',
+              ),
+            )
+            .value
+            .first,
+      );
+      expect(content, {
+        'msgtype': 'm.video',
+        'body': 'file.mp4',
+        'filename': 'file.mp4',
+        'url': 'mxc://example.com/videoTestMxcUri',
+        'info': {'mimetype': 'video/mp4', 'size': 1000},
+      });
+      matrix.customVideoThumbnailGenerator = null;
+    });
+
     test('pushRuleState', () async {
       expect(room.pushRuleState, PushRuleState.mentionsOnly);
       ((matrix.accountData['m.push_rules']?.content['global']

@@ -430,10 +430,11 @@ class Event extends MatrixEvent {
       if (thumbnailBytes != null) {
         return MatrixImageFile(
           bytes: thumbnailBytes,
-          name: filename,
+          name: '$filename.thumbnail.${extensionFromMime(thumbnailMimetype)}',
           mimeType: thumbnailMimetype,
           width: thumbnailInfoMap.tryGet<int>('w'),
           height: thumbnailInfoMap.tryGet<int>('h'),
+          blurhash: thumbnailInfoMap.tryGet<String>('xyz.amorgan.blurhash'),
         );
       }
 
@@ -623,7 +624,10 @@ class Event extends MatrixEvent {
   Uri? attachmentOrThumbnailMxcUrl({bool getThumbnail = false}) {
     final fileSize = infoMap.tryGet<int>('size');
     final thumbnailFileSize = thumbnailInfoMap.tryGet<int>('size');
+    // Only images can fall back to their original bytes as a preview, so the
+    // size-based discard must not apply to other types like m.video.
     if (getThumbnail &&
+        messageType == MessageTypes.Image &&
         fileSize != null &&
         thumbnailFileSize != null &&
         fileSize <= thumbnailFileSize) {
