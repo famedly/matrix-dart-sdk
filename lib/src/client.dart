@@ -111,6 +111,9 @@ class Client extends MatrixApi {
   )?
   customImageResizer;
 
+  Future<MatrixVideoThumbnailResponse?> Function(MatrixVideoThumbnailArguments)?
+  customVideoThumbnailGenerator;
+
   /// Optional matrix-content-scanner proxy configuration.
   ///
   /// When set, media URL helpers resolve `mxc://` URIs to scanner URLs, and
@@ -159,8 +162,9 @@ class Client extends MatrixApi {
   /// enable the SDK to compute some code in background.
   /// Set [timelineEventTimeout] to the preferred time the Client should retry
   /// sending events on connection problems or to `Duration.zero` to disable it.
-  /// Set [customImageResizer] to your own implementation for a more advanced
-  /// and faster image resizing experience.
+  /// Set [customImageResizer] and [customVideoThumbnailGenerator] to your own
+  /// implementations for a more advanced and faster image resizing experience
+  /// and for generating video thumbnails, which the SDK can not do itself.
   /// Set [enableDehydratedDevices] to enable experimental support for enabling MSC3814 dehydrated devices.
   Client(
     this.clientName, {
@@ -190,6 +194,7 @@ class Client extends MatrixApi {
     Duration defaultNetworkRequestTimeout = const Duration(seconds: 35),
     this.sendTimelineEventTimeout = const Duration(minutes: 1),
     this.customImageResizer,
+    this.customVideoThumbnailGenerator,
     this.shareKeysWith = ShareKeysWith.crossVerifiedIfEnabled,
     this.enableDehydratedDevices = false,
     this.receiptsPublicByDefault = true,

@@ -353,6 +353,43 @@ class MatrixVideoFile extends MatrixFile {
   });
 }
 
+class MatrixVideoThumbnailArguments {
+  final Uint8List bytes;
+  final String fileName;
+  final String? mimeType;
+  final int maxDimension;
+
+  const MatrixVideoThumbnailArguments({
+    required this.bytes,
+    required this.fileName,
+    this.mimeType,
+    this.maxDimension = Client.defaultThumbnailSize,
+  });
+}
+
+class MatrixVideoThumbnailResponse {
+  final Uint8List bytes;
+  final int width;
+  final int height;
+  final String? mimeType;
+  final String? blurhash;
+
+  final int? originalWidth;
+  final int? originalHeight;
+  final int? duration;
+
+  const MatrixVideoThumbnailResponse({
+    required this.bytes,
+    required this.width,
+    required this.height,
+    this.mimeType,
+    this.blurhash,
+    this.originalWidth,
+    this.originalHeight,
+    this.duration,
+  });
+}
+
 class MatrixAudioFile extends MatrixFile {
   final int? duration;
 
