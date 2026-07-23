@@ -428,9 +428,12 @@ class Event extends MatrixEvent {
         Uri(scheme: 'cache', host: 'thumbnail', path: transactionId),
       );
       if (thumbnailBytes != null) {
+        // Only append a file extension if the mimetype is actually known,
+        // instead of guessing one:
+        final extension = extensionFromMime(thumbnailMimetype);
         return MatrixImageFile(
           bytes: thumbnailBytes,
-          name: '$filename.thumbnail.${extensionFromMime(thumbnailMimetype)}',
+          name: '$filename.thumbnail${extension == null ? '' : '.$extension'}',
           mimeType: thumbnailMimetype,
           width: thumbnailInfoMap.tryGet<int>('w'),
           height: thumbnailInfoMap.tryGet<int>('h'),

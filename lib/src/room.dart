@@ -951,10 +951,15 @@ class Room {
         );
         if (videoThumbnail != null) {
           final thumbnailMimeType = videoThumbnail.mimeType;
+          // Only append a file extension if the mimetype is actually known,
+          // instead of guessing one:
+          final thumbnailExtension = thumbnailMimeType == null
+              ? null
+              : extensionFromMime(thumbnailMimeType);
           thumbnail = MatrixImageFile(
             bytes: videoThumbnail.bytes,
             name:
-                '${file.name}.thumbnail.${extensionFromMime(thumbnailMimeType ?? '') ?? 'jpg'}',
+                '${file.name}.thumbnail${thumbnailExtension == null ? '' : '.$thumbnailExtension'}',
             mimeType: thumbnailMimeType,
             width: videoThumbnail.width,
             height: videoThumbnail.height,

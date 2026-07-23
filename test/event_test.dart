@@ -335,6 +335,55 @@ void main() async {
       audioEvent.status = EventStatus.error;
       final resp4 = await audioEvent.sendAgain(txid: '1234');
       expect(resp4?.startsWith('\$event'), true);
+
+      // Re-sending a video with a cached thumbnail but without thumbnail_info
+      // in the content yet: the thumbnail must get an image file name
+      // without a guessed extension instead of a literal ".null" suffix.
+      const videoTxId = 'videotesttxid';
+      const videoFilename = 'file.mp4';
+
+      await matrix.database.storeFile(
+        Uri(scheme: 'cache', host: 'file', path: videoTxId),
+        Uint8List.fromList([1, 2, 3]),
+        DateTime.now().millisecondsSinceEpoch,
+      );
+      await matrix.database.storeFile(
+        Uri(scheme: 'cache', host: 'thumbnail', path: videoTxId),
+        Uint8List.fromList([4, 5, 6]),
+        DateTime.now().millisecondsSinceEpoch,
+      );
+      FakeMatrixApi
+              .currentApi!
+              .api['POST']!['/media/v3/upload?filename=$videoFilename'] =
+          (var req) => {'content_uri': 'mxc://example.com/videoMxcUri'};
+      FakeMatrixApi
+              .currentApi!
+              .api['POST']!['/media/v3/upload?filename=$videoFilename.thumbnail'] =
+          (var req) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
+
+      final videoEvent = Event.fromJson(<String, dynamic>{
+        'event_id': videoTxId,
+        'sender': '@test:fakeServer.notExisting',
+        'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        'type': 'm.room.message',
+        'room_id': '!1234:example.com',
+        'content': {
+          'msgtype': 'm.video',
+          'body': videoFilename,
+          'filename': videoFilename,
+          'info': {'mimetype': 'video/mp4'},
+        },
+        'unsigned': {'transaction_id': videoTxId},
+      }, room);
+      videoEvent.status = EventStatus.error;
+      final resp5 = await videoEvent.sendAgain(txid: '1234');
+      expect(resp5?.startsWith('\$event'), true);
+      expect(
+        FakeMatrixApi
+            .calledEndpoints['/media/v3/upload?filename=$videoFilename.thumbnail']
+            ?.length,
+        1,
+      );
       await matrix.dispose(closeDatabase: true);
     });
 
