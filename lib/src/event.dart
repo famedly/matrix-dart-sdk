@@ -419,6 +419,14 @@ class Event extends MatrixEvent {
     room.client.onCancelSendEvent.add(eventId);
   }
 
+  /// The name a thumbnail of the file [filename] is stored under. Only gets a
+  /// file extension if the mimetype of the thumbnail is actually known,
+  /// instead of guessing one.
+  String _thumbnailFileName(String filename) {
+    final extension = extensionFromMime(thumbnailMimetype);
+    return '$filename.thumbnail${extension == null ? '' : '.$extension'}';
+  }
+
   Future<MatrixFile?> _getCachedFile({bool getThumbnail = false}) async {
     if (transactionId == null) return null;
 
@@ -431,7 +439,7 @@ class Event extends MatrixEvent {
       if (thumbnailBytes != null) {
         return MatrixImageFile(
           bytes: thumbnailBytes,
-          name: '$filename.thumbnail.${extensionFromMime(thumbnailMimetype)}',
+          name: _thumbnailFileName(filename),
           mimeType: thumbnailMimetype,
           width: thumbnailInfoMap.tryGet<int>('w'),
           height: thumbnailInfoMap.tryGet<int>('h'),
@@ -926,9 +934,7 @@ class Event extends MatrixEvent {
 
     return MatrixFile(
       bytes: uint8list,
-      name: useThumbnail
-          ? '$filename.thumbnail.${extensionFromMime(thumbnailMimetype)}'
-          : filename,
+      name: useThumbnail ? _thumbnailFileName(filename) : filename,
       mimeType: useThumbnail ? thumbnailMimetype : attachmentMimetype,
     );
   }
