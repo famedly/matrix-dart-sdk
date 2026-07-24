@@ -183,6 +183,14 @@ extension FamedlyCallMemberEventsExtension on Room {
     voip.delayedEventCancellers.remove('$id|$groupCallId|$scope');
   }
 
+  /// Sets/updates the famedly call membership state event for this room.
+  ///
+  /// Exception contract: when cancelling already-scheduled delayed leave
+  /// events, a [MatrixException] with [MatrixError.M_NOT_FOUND] is tolerated
+  /// instead of propagated, since it only means the delayed event was already
+  /// sent or cancelled elsewhere (a benign race). Callers can therefore no
+  /// longer observe that specific error from this method; all other Matrix
+  /// errors still propagate.
   Future<String?> setFamedlyCallMemberEvent(
     Map<String, List> newContent,
     VoIP voip,
