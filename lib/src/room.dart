@@ -2666,7 +2666,8 @@ class Room {
       true,
       // If this is our first megolm session we want to refetch all members
       // from the server
-      client.encryption?.keyManager.getOutboundGroupSession(id) == null,
+      client.encryption != null &&
+          client.encryption!.keyManager.getOutboundGroupSession(id) == null,
     );
     users.removeWhere(
       (user) => ![Membership.invite, Membership.join].contains(user.membership),
