@@ -238,10 +238,15 @@ extension FamedlyCallMemberEventsExtension on Room {
             voip.delayedEventCancellers.remove(matchingEntry.key);
           }
 
-          await client.manageDelayedEvent(
-            toCancelEvent.delayId,
-            DelayedEventAction.cancel,
-          );
+          try {
+            await client.manageDelayedEvent(
+              toCancelEvent.delayId,
+              DelayedEventAction.cancel,
+            );
+          } on MatrixException catch (e) {
+            // already sent or cancelled elsewhere, nothing left to cancel
+            if (e.error != MatrixError.M_NOT_FOUND) rethrow;
+          }
         }
 
         Map<String, List> newContent;
@@ -282,10 +287,40 @@ extension FamedlyCallMemberEventsExtension on Room {
             Logs().v(
               '[_restartDelayedLeaveEventTimer] heartbeat delayed event',
             );
-            await client.manageDelayedEvent(
-              delayedLeaveEventId,
-              DelayedEventAction.restart,
-            );
+            try {
+              await client.manageDelayedEvent(
+                delayedLeaveEventId,
+                DelayedEventAction.restart,
+              );
+            } on MatrixException catch (e, s) {
+              if (e.error == MatrixError.M_NOT_FOUND) {
+                // The delayed event no longer exists on the server (already
+                // sent or cancelled elsewhere), restarting it is futile.
+                Logs().w(
+                  '[_restartDelayedLeaveEventTimer] delayed event $delayedLeaveEventId gone, stopping heartbeat',
+                  e,
+                );
+                timer.cancel();
+                final canceller =
+                    voip.delayedEventCancellers['$id|$groupCallId|$scope'];
+                if (canceller?.delayedEventId == delayedLeaveEventId) {
+                  voip.delayedEventCancellers.remove('$id|$groupCallId|$scope');
+                }
+              } else {
+                Logs().w(
+                  '[_restartDelayedLeaveEventTimer] failed to restart delayed event',
+                  e,
+                  s,
+                );
+              }
+            } catch (e, s) {
+              // keep the heartbeat alive on transient errors (e.g. network)
+              Logs().w(
+                '[_restartDelayedLeaveEventTimer] failed to restart delayed event',
+                e,
+                s,
+              );
+            }
           }),
         );
 
