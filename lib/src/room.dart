@@ -1901,6 +1901,7 @@ class Room {
     ],
     bool suppressWarning = false,
     bool? cache,
+    bool enforceFetchFromServer = false,
   ]) async {
     if (!participantListComplete || partial) {
       // we aren't fully loaded, maybe the users are in the database
@@ -1915,7 +1916,7 @@ class Room {
     }
 
     // Do not request users from the server if we have already have a complete list locally.
-    if (participantListComplete) {
+    if (participantListComplete && !enforceFetchFromServer) {
       return getParticipants(membershipFilter);
     }
 
@@ -2694,7 +2695,15 @@ class Room {
   Future<List<DeviceKeys>> getUserDeviceKeys() async {
     await client.userDeviceKeysLoading;
     final deviceKeys = <DeviceKeys>[];
-    final users = await requestParticipants();
+
+    final users = await requestParticipants(
+      const [Membership.join, Membership.invite, Membership.knock],
+      true,
+      true,
+      // If this is our first megolm session we want to refetch all members
+      // from the server
+      client.encryption?.keyManager.getOutboundGroupSession(id) == null,
+    );
     users.removeWhere(
       (user) => ![Membership.invite, Membership.join].contains(user.membership),
     );
