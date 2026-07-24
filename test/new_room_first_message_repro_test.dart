@@ -703,5 +703,105 @@ void main() {
         );
       },
     );
+
+    test(
+      'Scenario 5: summary under-counts invites (stale participantListComplete)',
+      () async {
+        // Reproduction of the observed production incident: during a burst of
+        // invites right after room creation the server sent a room summary that
+        // under-reported the invited member count, and the (incomplete) local
+        // member state happened to match those wrong counts. The count based
+        // `participantListComplete` heuristic therefore returned `true`, so the
+        // authoritative /members list was never fetched and the invited user
+        // was silently dropped from the megolm key share - they could never
+        // decrypt any message in the room.
+        const roomId = '!1234:fakeServer.notExisting';
+        roomCounter++;
+        // grace is a real, invited member of the room. She is present in the
+        // server's /members response but *missing* from the local state we get
+        // via sync, and - crucially - not counted in the (stale) summary.
+        final grace = FakeRemoteUser(
+          '@grace$roomCounter:remote.server',
+          'GRACEDEV',
+        );
+        registerRemoteUsers([grace]);
+
+        // The authoritative member list the server would return from /members:
+        // ourselves (join) + grace (invite).
+        FakeMatrixApi
+                .currentApi!
+                .api['GET']!['/client/v3/rooms/!1234%3AfakeServer.notExisting/members'] =
+            (req) => {
+              'chunk': [
+                {
+                  'type': 'm.room.member',
+                  'content': {'membership': 'join'},
+                  'sender': client.userID!,
+                  'state_key': client.userID!,
+                  'event_id': '\$self_$roomCounter',
+                  'origin_server_ts': 100,
+                },
+                {
+                  'type': 'm.room.member',
+                  'content': {'membership': 'invite'},
+                  'sender': client.userID!,
+                  'state_key': grace.userId,
+                  'event_id': '\$grace_$roomCounter',
+                  'origin_server_ts': 104,
+                },
+              ],
+            };
+
+        // Room creation sync WITHOUT grace's invite in the timeline, and with a
+        // summary that under-reports the invite count as 0. Locally we then know
+        // 1 joined / 0 invited, which matches the summary exactly, so
+        // `participantListComplete` is a (wrong) `true`.
+        await emulateSync(
+          SyncUpdate(
+            nextBatch: 'create_$roomCounter',
+            rooms: RoomsUpdate(
+              join: {
+                roomId: newRoomUpdate(invited: [], joined: 1),
+              },
+            ),
+          ),
+        );
+
+        final room = client.getRoomById(roomId)!;
+        expect(room.encrypted, true);
+        expect(
+          room.participantListComplete,
+          true,
+          reason:
+              'Precondition: the count heuristic wrongly believes the local '
+              'member list is complete',
+        );
+        expect(
+          room.getParticipants().any((u) => u.id == grace.userId),
+          false,
+          reason: 'Precondition: grace is not in the local member list',
+        );
+
+        // Now the app sends the first message.
+        FakeMatrixApi.calledEndpoints.clear();
+        await room.sendTextEvent('first message');
+
+        final payload = toDevicePayloadFor(grace);
+        expect(
+          payload,
+          isNotNull,
+          reason:
+              'BUG: the invited member was dropped from key sharing because '
+              'the stale summary made participantListComplete return true, so '
+              '/members was never fetched. They can never decrypt this room.',
+        );
+        // And they must get it from index 0 so the very first message is
+        // decryptable for them.
+        final decrypted = grace.decryptToDevice(payload!);
+        expect(decrypted['type'], 'm.room_key');
+        final sessionKey = decrypted['content']['session_key'] as String;
+        expect(vod.InboundGroupSession(sessionKey).firstKnownIndex, 0);
+      },
+    );
   });
 }

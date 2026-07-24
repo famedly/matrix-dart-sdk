@@ -1901,6 +1901,15 @@ class Room {
     ],
     bool suppressWarning = false,
     bool? cache,
+    // Set to `true` to always hit `/members` on the server even when the
+    // count-based [participantListComplete] heuristic thinks the local list is
+    // already complete. The heuristic can yield a false positive when the
+    // server's room summary transiently under-reports member counts (e.g.
+    // during a burst of invites right after room creation) and the incomplete
+    // local state happens to match those wrong counts. Callers that must not
+    // miss a member - most importantly the E2EE key-sharing path - use this to
+    // fetch the authoritative member list. See [getUserDeviceKeys].
+    bool forceServerRefresh = false,
   ]) async {
     if (!participantListComplete || partial) {
       // we aren't fully loaded, maybe the users are in the database
@@ -1914,8 +1923,10 @@ class Room {
       }
     }
 
-    // Do not request users from the server if we have already have a complete list locally.
-    if (participantListComplete) {
+    // Do not request users from the server if we have already have a complete
+    // list locally, unless the caller explicitly asks us to double check
+    // against the server.
+    if (participantListComplete && !forceServerRefresh) {
       return getParticipants(membershipFilter);
     }
 
@@ -2652,10 +2663,46 @@ class Room {
   }
 
   /// Returns all known device keys for all participants in this room.
-  Future<List<DeviceKeys>> getUserDeviceKeys() async {
+  Future<List<DeviceKeys>> getUserDeviceKeys({
+    bool forceServerRefresh = false,
+  }) async {
     await client.userDeviceKeysLoading;
     final deviceKeys = <DeviceKeys>[];
     final users = await requestParticipants();
+
+    if (forceServerRefresh) {
+      // The count-based completeness heuristic ([participantListComplete]) can
+      // report a false positive, in which case `requestParticipants()` above
+      // returned a stale, incomplete member list and members would be silently
+      // dropped from key sharing - they could then never decrypt any message
+      // in this room. When creating an outbound megolm session we therefore
+      // fetch the authoritative member list from the server and union it with
+      // what we already know locally (a union, so we never lose a member the
+      // server omitted from a lazy-loaded response). We tolerate a failed
+      // refresh and fall back to the local list rather than failing the send.
+      try {
+        final serverUsers = await requestParticipants(
+          const [Membership.join, Membership.invite, Membership.knock],
+          true, // suppressWarning
+          true, // cache
+          true, // forceServerRefresh
+        );
+        final knownIds = users.map((user) => user.id).toSet();
+        for (final user in serverUsers) {
+          if (knownIds.add(user.id)) {
+            users.add(user);
+          }
+        }
+      } catch (e, s) {
+        Logs().w(
+          '[E2EE] Could not refresh the full member list of $id before '
+          'encrypting, falling back to the locally known participants',
+          e,
+          s,
+        );
+      }
+    }
+
     users.removeWhere(
       (user) => ![Membership.invite, Membership.join].contains(user.membership),
     );

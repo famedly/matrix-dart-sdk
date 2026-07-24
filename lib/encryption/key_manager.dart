@@ -549,7 +549,13 @@ class KeyManager {
       );
     }
 
-    final deviceKeys = await room.getUserDeviceKeys();
+    // Force a server refresh of the member list here: this is the one place
+    // where missing a member is unrecoverable, because we bake the recipient
+    // set into a brand new megolm session. Relying on the (count-based) local
+    // completeness heuristic has been observed to silently drop invited/joined
+    // members when the server's room summary lagged during a burst of invites,
+    // leaving them permanently unable to decrypt.
+    final deviceKeys = await room.getUserDeviceKeys(forceServerRefresh: true);
     final deviceKeyIds = _getDeviceKeyIdMap(deviceKeys);
     deviceKeys.removeWhere((k) => !k.encryptToDevice);
     final outboundGroupSession = vod.GroupSession();
