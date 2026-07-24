@@ -1850,14 +1850,10 @@ class CallSession {
       };
 
       if (mustEncrypt) {
-        await client.userDeviceKeysLoading;
-        if (client.userDeviceKeys[remoteUserId]?.deviceKeys[remoteDeviceId] !=
-            null) {
-          await client.sendToDeviceEncrypted(
-            [client.userDeviceKeys[remoteUserId]!.deviceKeys[remoteDeviceId]!],
-            type,
-            data,
-          );
+        final remoteKeys = await client.fetchUserDeviceKeysList(remoteUserId!);
+        final remoteDeviceKey = remoteKeys?.deviceKeys[remoteDeviceId];
+        if (remoteDeviceKey != null) {
+          await client.sendToDeviceEncrypted([remoteDeviceKey], type, data);
         } else {
           Logs().w(
             '[VOIP] _sendCallContent missing device keys for $remoteUserId',

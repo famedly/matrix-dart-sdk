@@ -14,14 +14,14 @@ You can store that a user confirmed to this by this:
 
 ```dart
 // Assuming that this user has cross signing enabled and we know the master key:
-final masterKey = client.userDeviceKeys['@userid:domain.abc']?.masterKey;
-masterKey?.trustOnFirstUse();
+final keys = await client.fetchUserDeviceKeysList('@userid:domain.abc');
+final masterKey = keys?.masterKey?.trustOnFirstUse();
 ```
 
 You can check the datetime when you have done this like this:
 
 ```dart
-final tofuSince = masterKey?.trustOnFirstUseSince; // returns a DateTime?
+final tofuSince = keys?.masterKey?.trustOnFirstUseSince; // returns a DateTime?
 ```
 
 You can loop over all users in a room like this:
@@ -31,20 +31,24 @@ Future<List<User>> getUntrustedUsers(Room room) async {
     if (!room.encrypted) return [];
 
     final users = await room.requestParticipants();
+    final userIds = users.map((u) => u.id).toSet();
+    final allKeys = await room.client.fetchUserDeviceKeysLists(userIds);
 
-    return users.where((user) {
-        if (user.id == room.client.userID) return false;
-        final keys = room.client.userDeviceKeys[user.id];
+    final untrusted = <User>[];
+    for (final user in users) {
+        if (user.id == room.client.userID) continue;
+        final keys = allKeys[user.id];
         final masterKey = keys?.masterKey;
 
         if (keys == null ||
             masterKey == null ||
             masterKey.verified ||
             masterKey.trustOnFirstUseSince != null) {
-            return false;
+            continue;
         }
-        return true;
-    }).toList();
+        untrusted.add(user);
+    }
+    return untrusted;
 }
 ```
 

@@ -125,13 +125,20 @@ class DeviceKeysList {
     Map<String, dynamic> dbEntry,
     List<Map<String, dynamic>> childEntries,
     List<Map<String, dynamic>> crossSigningEntries,
-    this.client,
-  ) : userId = dbEntry['user_id'] ?? '' {
+    this.client, {
+    DeviceKeysList? ownKeys,
+  }) : userId = dbEntry['user_id'] ?? '' {
     outdated = dbEntry['outdated'];
     deviceKeys = {};
+    final effectiveOwnKeys = ownKeys ?? this;
     for (final childEntry in childEntries) {
       try {
-        final entry = DeviceKeys.fromDb(childEntry, client);
+        final entry = DeviceKeys.fromDb(
+          childEntry,
+          this,
+          effectiveOwnKeys,
+          client,
+        );
         if (!entry.isValid) throw Exception('Invalid device keys');
         deviceKeys[childEntry['device_id']] = entry;
       } catch (e, s) {
@@ -141,7 +148,12 @@ class DeviceKeysList {
     }
     for (final crossSigningEntry in crossSigningEntries) {
       try {
-        final entry = CrossSigningKey.fromDbJson(crossSigningEntry, client);
+        final entry = CrossSigningKey.fromDbJson(
+          crossSigningEntry,
+          this,
+          effectiveOwnKeys,
+          client,
+        );
         if (!entry.isValid) throw Exception('Invalid device keys');
         crossSigningKeys[crossSigningEntry['public_key']] = entry;
       } catch (e, s) {
@@ -168,6 +180,13 @@ abstract class SignableKey extends MatrixSignableKey {
   bool? _verified;
   bool? _blocked;
 
+  /// Device keys of [userId], used to resolve same-user signatures.
+  final DeviceKeysList userKeys;
+
+  /// Device keys of [Client.userID], used to resolve cross-user signatures
+  /// (e.g. our user-signing key signing their master key).
+  final DeviceKeysList ownKeys;
+
   String? get ed25519Key => keys['ed25519:$identifier'];
   bool get verified =>
       identifier != null && (directVerified || crossVerified) && !(blocked);
@@ -183,7 +202,7 @@ abstract class SignableKey extends MatrixSignableKey {
       case ShareKeysWith.all:
         return true;
       case ShareKeysWith.crossVerifiedIfEnabled:
-        if (client.userDeviceKeys[userId]?.masterKey == null) return true;
+        if (userKeys.masterKey == null) return true;
         return hasValidSignatureChain(verifiedByTheirMasterKey: true);
       case ShareKeysWith.crossVerified:
         return hasValidSignatureChain(verifiedByTheirMasterKey: true);
@@ -200,8 +219,12 @@ abstract class SignableKey extends MatrixSignableKey {
   bool get crossVerified => hasValidSignatureChain();
   bool get signed => hasValidSignatureChain(verifiedOnly: false);
 
-  SignableKey.fromJson(Map<String, dynamic> super.json, this.client)
-    : super.fromJson() {
+  SignableKey.fromJson(
+    Map<String, dynamic> super.json,
+    this.userKeys,
+    this.ownKeys,
+    this.client,
+  ) : super.fromJson() {
     _verified = false;
     _blocked = false;
   }
@@ -271,13 +294,11 @@ abstract class SignableKey extends MatrixSignableKey {
 
     for (final signatureEntries in signatures!.entries) {
       final otherUserId = signatureEntries.key;
-      if (!client.userDeviceKeys.containsKey(otherUserId)) {
-        continue;
-      }
       // we don't allow transitive trust unless it is for ourself
       if (otherUserId != userId && otherUserId != client.userID) {
         continue;
       }
+      final otherUserKeys = otherUserId == userId ? userKeys : ownKeys;
       for (final signatureEntry in signatureEntries.value.entries) {
         final fullKeyId = signatureEntry.key;
         final signature = signatureEntry.value;
@@ -288,8 +309,8 @@ abstract class SignableKey extends MatrixSignableKey {
         }
 
         final key =
-            client.userDeviceKeys[otherUserId]?.deviceKeys[keyId] ??
-            client.userDeviceKeys[otherUserId]?.crossSigningKeys[keyId];
+            otherUserKeys.deviceKeys[keyId] ??
+            otherUserKeys.crossSigningKeys[keyId];
         if (key == null) {
           continue;
         }
@@ -352,6 +373,11 @@ abstract class SignableKey extends MatrixSignableKey {
     return false;
   }
 
+  /// Sets whether this key is directly verified.
+  ///
+  /// Persists to the database and updates this instance. Other
+  /// [DeviceKeysList] snapshots from earlier [Client.fetchUserDeviceKeysList]
+  /// calls are not updated — fetch again if you still hold them.
   Future<void> setVerified(bool newVerified, [bool sign = true]) async {
     _verified = newVerified;
     final encryption = client.encryption;
@@ -366,6 +392,11 @@ abstract class SignableKey extends MatrixSignableKey {
     }
   }
 
+  /// Sets whether this key is blocked.
+  ///
+  /// Persists to the database and updates this instance. Other
+  /// [DeviceKeysList] snapshots from earlier [Client.fetchUserDeviceKeysList]
+  /// calls are not updated — fetch again if you still hold them.
   Future<void> setBlocked(bool newBlocked);
 
   @override
@@ -452,8 +483,10 @@ class CrossSigningKey extends SignableKey {
 
   CrossSigningKey.fromMatrixCrossSigningKey(
     MatrixCrossSigningKey key,
+    DeviceKeysList userKeys,
+    DeviceKeysList ownKeys,
     Client client,
-  ) : super.fromJson(key.toJson().copy(), client) {
+  ) : super.fromJson(key.toJson().copy(), userKeys, ownKeys, client) {
     final json = toJson();
     identifier = key.publicKey;
     usage = json['usage'].cast<String>();
@@ -462,8 +495,17 @@ class CrossSigningKey extends SignableKey {
         : DateTime.fromMillisecondsSinceEpoch(json['tofu'] as int);
   }
 
-  CrossSigningKey.fromDbJson(Map<String, dynamic> dbEntry, Client client)
-    : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
+  CrossSigningKey.fromDbJson(
+    Map<String, dynamic> dbEntry,
+    DeviceKeysList userKeys,
+    DeviceKeysList ownKeys,
+    Client client,
+  ) : super.fromJson(
+        Event.getMapFromPayload(dbEntry['content']),
+        userKeys,
+        ownKeys,
+        client,
+      ) {
     final json = toJson();
     identifier = dbEntry['public_key'];
     usage = json['usage'].cast<String>();
@@ -474,8 +516,12 @@ class CrossSigningKey extends SignableKey {
         : DateTime.fromMillisecondsSinceEpoch(dbEntry['tofu'] as int);
   }
 
-  CrossSigningKey.fromJson(Map<String, dynamic> json, Client client)
-    : super.fromJson(json.copy(), client) {
+  CrossSigningKey.fromJson(
+    Map<String, dynamic> json,
+    DeviceKeysList userKeys,
+    DeviceKeysList ownKeys,
+    Client client,
+  ) : super.fromJson(json.copy(), userKeys, ownKeys, client) {
     final json = toJson();
     usage = json['usage'].cast<String>();
     _trustOnFirstUseSince = json['tofu'] == null
@@ -554,17 +600,28 @@ class DeviceKeys extends SignableKey {
 
   DeviceKeys.fromMatrixDeviceKeys(
     MatrixDeviceKeys keys,
+    DeviceKeysList userKeys,
+    DeviceKeysList ownKeys,
     Client client, [
     DateTime? lastActiveTs,
-  ]) : super.fromJson(keys.toJson().copy(), client) {
+  ]) : super.fromJson(keys.toJson().copy(), userKeys, ownKeys, client) {
     final json = toJson();
     identifier = keys.deviceId;
     algorithms = json['algorithms'].cast<String>();
     lastActive = lastActiveTs ?? DateTime.now();
   }
 
-  DeviceKeys.fromDb(Map<String, dynamic> dbEntry, Client client)
-    : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
+  DeviceKeys.fromDb(
+    Map<String, dynamic> dbEntry,
+    DeviceKeysList userKeys,
+    DeviceKeysList ownKeys,
+    Client client,
+  ) : super.fromJson(
+        Event.getMapFromPayload(dbEntry['content']),
+        userKeys,
+        ownKeys,
+        client,
+      ) {
     final json = toJson();
     identifier = dbEntry['device_id'];
     algorithms = json['algorithms'].cast<String>();
@@ -575,8 +632,12 @@ class DeviceKeys extends SignableKey {
     );
   }
 
-  DeviceKeys.fromJson(Map<String, dynamic> json, Client client)
-    : super.fromJson(json.copy(), client) {
+  DeviceKeys.fromJson(
+    Map<String, dynamic> json,
+    DeviceKeysList userKeys,
+    DeviceKeysList ownKeys,
+    Client client,
+  ) : super.fromJson(json.copy(), userKeys, ownKeys, client) {
     final json = toJson();
     identifier = json['device_id'];
     algorithms = json['algorithms'].cast<String>();

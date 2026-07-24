@@ -398,8 +398,15 @@ class Client extends MatrixApi {
   String get fingerprintKey => encryption?.fingerprintKey ?? '';
 
   /// Whether this session is unknown to others
-  bool get isUnknownSession =>
-      userDeviceKeys[userID]?.deviceKeys[deviceID]?.signed != true;
+  Future<bool> get isUnknownSession async {
+    final userId = userID;
+    final deviceId = deviceID;
+    if (userId == null || deviceId == null) return true;
+    final keys = await fetchUserDeviceKeysList(userId);
+    final deviceKey = keys?.deviceKeys[deviceId];
+    if (deviceKey == null) return true;
+    return !deviceKey.signed;
+  }
 
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
@@ -1021,7 +1028,8 @@ class Client extends MatrixApi {
   /// server to answer this.
   Future<bool> userOwnsEncryptionKeys(String userId) async {
     if (userId == userID) return encryptionEnabled;
-    if (_userDeviceKeys[userId]?.deviceKeys.isNotEmpty ?? false) {
+    if ((await fetchUserDeviceKeysList(userId))?.deviceKeys.isNotEmpty ??
+        false) {
       return true;
     }
     final keys = await queryKeys({userId: []});
@@ -2036,8 +2044,8 @@ class Client extends MatrixApi {
   /// and rethrows if this request fails.
   ///
   /// Set [waitForFirstSync] and [waitUntilLoadCompletedLoaded] to false to speed this
-  /// up. You can then wait for `roomsLoading`, `_accountDataLoading` and
-  /// `userDeviceKeysLoading` where it is necessary.
+  /// up. You can then wait for `roomsLoading` and `_accountDataLoading` where it
+  /// is necessary.
   Future<void> init({
     String? newToken,
     DateTime? newTokenExpiresAt,
@@ -2217,9 +2225,6 @@ class Client extends MatrixApi {
           newOidcClientId,
         );
       }
-      userDeviceKeysLoading = database
-          .getUserDeviceKeys(this)
-          .then((keys) => _userDeviceKeys = keys);
       roomsLoading = database.getRoomList(this).then((rooms) {
         _rooms = rooms;
         _sortRooms();
@@ -2233,7 +2238,6 @@ class Client extends MatrixApi {
       presences.clear();
       if (waitUntilLoadCompletedLoaded) {
         onInitStateChanged?.call(InitState.loadingData);
-        await userDeviceKeysLoading;
         await roomsLoading;
         await _accountDataLoading;
       }
@@ -2303,7 +2307,7 @@ class Client extends MatrixApi {
     }
 
     _id = accessToken = _syncFilterId = homeserver = _userID = _deviceID =
-        _deviceName = _prevBatch = _trackedUserIds = null;
+        _deviceName = _prevBatch = null;
     _rooms = [];
     _eventsPendingDecryption.clear();
     await encryption?.dispose();
@@ -2468,7 +2472,6 @@ class Client extends MatrixApi {
       }
 
       final database = this.database;
-      await userDeviceKeysLoading;
       await roomsLoading;
       await _accountDataLoading;
       _currentTransaction = database.transaction(() async {
@@ -2489,7 +2492,6 @@ class Client extends MatrixApi {
       database.deleteOldFiles(
         DateTime.now().subtract(Duration(days: 30)).millisecondsSinceEpoch,
       );
-      await updateUserDeviceKeys();
       if (encryptionEnabled) {
         encryption?.onSync();
       }
@@ -2618,24 +2620,15 @@ class Client extends MatrixApi {
   Future<void> _handleDeviceListsEvents(DeviceListsUpdate deviceLists) async {
     if (deviceLists.changed is List) {
       for (final userId in deviceLists.changed ?? []) {
-        final userKeys = _userDeviceKeys[userId];
-        if (userKeys != null) {
-          userKeys.outdated = true;
-          await database.storeUserDeviceKeysInfo(userId, true);
-        } else {
-          // Per spec `changed` also includes users who *now* share an
-          // encrypted room with us. We might not know about them yet, for
-          // example when their membership event was truncated out of a
-          // limited (gappy) sync timeline. Track them so that the next
-          // `updateUserDeviceKeys()` fetches their device keys.
-          _trackedUserIds?.add(userId);
-        }
+        // Mark as outdated in DB so the next fetchUserDeviceKeysList call
+        // will re-fetch from the server.
+        await database.storeUserDeviceKeysInfo(userId, true);
       }
       for (final userId in deviceLists.left ?? []) {
-        if (_userDeviceKeys.containsKey(userId)) {
-          _userDeviceKeys.remove(userId);
-          _trackedUserIds?.remove(userId);
-        }
+        // We do not do that yet but we keep the key to later compare it to
+        // avoid MITM attacks. However, we mark it as outdated so if we
+        // want to access the key again, we need to update it.
+        await database.storeUserDeviceKeysInfo(userId, true);
       }
     }
   }
@@ -2910,11 +2903,6 @@ class Client extends MatrixApi {
             jsonEncode(event.toJson()),
           );
           continue;
-        } else {
-          // Encryption has been enabled in a room -> Reset tracked user IDs so
-          // sync they can be calculated again.
-          Logs().i('End to end encryption enabled in', room.id);
-          _trackedUserIds = null;
         }
       }
 
@@ -3150,19 +3138,6 @@ class Client extends MatrixApi {
           if (!room.partial || importantStateEvents.contains(event.type)) {
             room.setState(event);
           }
-
-          // New members must be added to the tracked user IDs for encryption
-          // even if the room is only partially loaded, as otherwise their
-          // device keys are never fetched and they never receive room keys:
-          if (room.encrypted &&
-              room.membership == Membership.join &&
-              event.type == EventTypes.RoomMember &&
-              {
-                'join',
-                'invite',
-              }.contains(event.content.tryGet<String>('membership'))) {
-            _trackedUserIds?.add(stateKey);
-          }
         }
 
         if (type != EventUpdateType.timeline) break;
@@ -3297,347 +3272,329 @@ class Client extends MatrixApi {
     _sortLock = false;
   }
 
-  Future? userDeviceKeysLoading;
   Future? roomsLoading;
   Future? _accountDataLoading;
   Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
 
-  /// A map of known device keys per user.
-  Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
-  Map<String, DeviceKeysList> _userDeviceKeys = {};
+  /// Fetches the user device keys first from the database. If those are
+  /// missing or marked as outdated will then get fetched from the server.
+  ///
+  /// Returns a **snapshot**. [SignableKey.setVerified] / [SignableKey.setBlocked]
+  /// on this list update the DB, but other previously fetched lists stay stale.
+  /// Fetch again after trust changes (or before acting on trust flags) if you
+  /// might be holding an older instance.
+  Future<DeviceKeysList?> fetchUserDeviceKeysList(
+    String userId, {
+    Duration? queryKeysTimeout,
+  }) async {
+    final keys = await fetchUserDeviceKeysLists({
+      userId,
+    }, queryKeysTimeout: queryKeysTimeout);
+    return keys[userId];
+  }
+
+  /// Fetches the user device keys first from the database. Those which are
+  /// missing or marked as outdated will then get fetched from the server.
+  ///
+  /// Returns snapshots — see [fetchUserDeviceKeysList].
+  Future<Map<String, DeviceKeysList>> fetchUserDeviceKeysLists(
+    Set<String> userIds, {
+    Duration? queryKeysTimeout,
+  }) async {
+    final userDeviceKeys = <String, DeviceKeysList>{};
+    final oldDeviceKeys = <String, DeviceKeysList>{};
+    // Get from database:
+    for (final userId in userIds) {
+      final cachedList = await database.getUserDeviceKeysList(userId, this);
+      if (cachedList != null) {
+        if (cachedList.outdated) {
+          oldDeviceKeys[userId] = cachedList;
+        } else {
+          userDeviceKeys[userId] = cachedList;
+        }
+      }
+    }
+
+    userIds.removeWhere(userDeviceKeys.containsKey);
+    if (userIds.isEmpty) return userDeviceKeys;
+
+    // Fetch the rest from the server:
+    final missingUserIds = {for (final userId in userIds) userId: <String>[]};
+    final response = await queryKeys(
+      missingUserIds,
+      timeout: queryKeysTimeout?.inMilliseconds,
+    );
+
+    if (!isLogged()) return userDeviceKeys;
+
+    // Single list instance for our own keys — always passed into SignableKey
+    // constructors for cross-user signature chains. Reused as userKeys when
+    // updating our own user.
+    final ownUserId = userID!;
+    final ownKeys =
+        oldDeviceKeys[ownUserId] ??
+        userDeviceKeys[ownUserId] ??
+        await database.getUserDeviceKeysList(ownUserId, this) ??
+        DeviceKeysList(ownUserId, this);
+
+    final dbActions = <Future<dynamic> Function()>[];
+
+    final deviceKeys = response.deviceKeys;
+    if (deviceKeys != null) {
+      for (final rawDeviceKeyListEntry in deviceKeys.entries) {
+        final userId = rawDeviceKeyListEntry.key;
+        final userKeys = userDeviceKeys[userId] ??= userId == ownUserId
+            ? ownKeys
+            : (oldDeviceKeys.remove(userId) ?? DeviceKeysList(userId, this));
+        if (userId == ownUserId) oldDeviceKeys.remove(userId);
+        final oldKeys = Map<String, DeviceKeys>.from(userKeys.deviceKeys);
+        userKeys.deviceKeys.clear();
+        for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
+          final deviceId = rawDeviceKeyEntry.key;
+
+          // Set the new device key for this device
+          final entry = DeviceKeys.fromMatrixDeviceKeys(
+            rawDeviceKeyEntry.value,
+            userKeys,
+            ownKeys,
+            this,
+            oldKeys[deviceId]?.lastActive,
+          );
+          final ed25519Key = entry.ed25519Key;
+          final curve25519Key = entry.curve25519Key;
+          if (entry.isValid &&
+              deviceId == entry.deviceId &&
+              ed25519Key != null &&
+              curve25519Key != null) {
+            // Check if deviceId or deviceKeys are known
+            if (!oldKeys.containsKey(deviceId)) {
+              final oldPublicKeys = await database.deviceIdSeen(
+                userId,
+                deviceId,
+              );
+              if (oldPublicKeys != null &&
+                  oldPublicKeys != curve25519Key + ed25519Key) {
+                Logs().w(
+                  'Already seen Device ID has been added again. This might be an attack!',
+                );
+                continue;
+              }
+              final oldDeviceId = await database.publicKeySeen(ed25519Key);
+              if (oldDeviceId != null && oldDeviceId != deviceId) {
+                Logs().w(
+                  'Already seen ED25519 has been added again. This might be an attack!',
+                );
+                continue;
+              }
+              final oldDeviceId2 = await database.publicKeySeen(curve25519Key);
+              if (oldDeviceId2 != null && oldDeviceId2 != deviceId) {
+                Logs().w(
+                  'Already seen Curve25519 has been added again. This might be an attack!',
+                );
+                continue;
+              }
+              dbActions.add(() async {
+                await database.addSeenDeviceId(
+                  userId,
+                  deviceId,
+                  curve25519Key + ed25519Key,
+                );
+                await database.addSeenPublicKey(ed25519Key, deviceId);
+                await database.addSeenPublicKey(curve25519Key, deviceId);
+              });
+            }
+
+            // is this a new key or the same one as an old one?
+            // better store an update - the signatures might have changed!
+            final oldKey = oldKeys[deviceId];
+            if (oldKey == null ||
+                (oldKey.ed25519Key == entry.ed25519Key &&
+                    oldKey.curve25519Key == entry.curve25519Key)) {
+              if (oldKey != null) {
+                // be sure to save the verified status
+                entry.setDirectVerified(oldKey.directVerified);
+                entry.blocked = oldKey.blocked;
+                entry.validSignatures = oldKey.validSignatures;
+              }
+              userKeys.deviceKeys[deviceId] = entry;
+              if (deviceId == deviceID && entry.ed25519Key == fingerprintKey) {
+                // Always trust the own device
+                entry.setDirectVerified(true);
+              }
+              dbActions.add(
+                () => database.storeUserDeviceKey(
+                  userId,
+                  deviceId,
+                  json.encode(entry.toJson()),
+                  // Own device is always trusted.
+                  deviceId == deviceID && entry.ed25519Key == fingerprintKey
+                      ? true
+                      : null,
+                  null,
+                  entry.lastActive.millisecondsSinceEpoch,
+                ),
+              );
+            } else if (oldKeys.containsKey(deviceId)) {
+              // This shouldn't ever happen. The same device ID has gotten
+              // a new public key. So we ignore the update. TODO: ask krille
+              // if we should instead use the new key with unknown verified / blocked status
+              userKeys.deviceKeys[deviceId] = oldKeys[deviceId]!;
+            }
+          } else {
+            Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
+          }
+        }
+        // delete old/unused entries
+        for (final oldDeviceKeyEntry in oldKeys.entries) {
+          final deviceId = oldDeviceKeyEntry.key;
+          if (!userKeys.deviceKeys.containsKey(deviceId)) {
+            // we need to remove an old key
+            dbActions.add(() => database.removeUserDeviceKey(userId, deviceId));
+          }
+        }
+        userKeys.outdated = false;
+        dbActions.add(() => database.storeUserDeviceKeysInfo(userId, false));
+      }
+    }
+    // next we parse and persist the cross signing keys
+    final crossSigningTypes = {
+      'master': response.masterKeys,
+      'self_signing': response.selfSigningKeys,
+      'user_signing': response.userSigningKeys,
+    };
+    for (final crossSigningKeysEntry in crossSigningTypes.entries) {
+      final keyType = crossSigningKeysEntry.key;
+      final keys = crossSigningKeysEntry.value;
+      if (keys == null) {
+        continue;
+      }
+      for (final crossSigningKeyListEntry in keys.entries) {
+        final userId = crossSigningKeyListEntry.key;
+        final userKeys = userDeviceKeys[userId] ??= userId == ownUserId
+            ? ownKeys
+            : (oldDeviceKeys.remove(userId) ?? DeviceKeysList(userId, this));
+        if (userId == ownUserId) oldDeviceKeys.remove(userId);
+        final oldKeys = Map<String, CrossSigningKey>.from(
+          userKeys.crossSigningKeys,
+        );
+        userKeys.crossSigningKeys.clear();
+        // add the types we aren't handling atm back
+        for (final oldEntry in oldKeys.entries) {
+          if (!oldEntry.value.usage.contains(keyType)) {
+            userKeys.crossSigningKeys[oldEntry.key] = oldEntry.value;
+          } else {
+            // There is a previous cross-signing key with  this usage, that we no
+            // longer need/use. Clear it from the database.
+            dbActions.add(
+              () => database.removeUserCrossSigningKey(userId, oldEntry.key),
+            );
+          }
+        }
+        final entry = CrossSigningKey.fromMatrixCrossSigningKey(
+          crossSigningKeyListEntry.value,
+          userKeys,
+          ownKeys,
+          this,
+        );
+        final publicKey = entry.publicKey;
+        if (entry.isValid && publicKey != null) {
+          final oldKey = oldKeys[publicKey];
+          if (oldKey == null || oldKey.ed25519Key == entry.ed25519Key) {
+            if (oldKey != null) {
+              // be sure to save the verification status
+              entry.setDirectVerified(oldKey.directVerified);
+              if (oldKey.trustOnFirstUseSince != null) {
+                entry.trustOnFirstUse(
+                  since: oldKey.trustOnFirstUseSince,
+                  updateInDatabase: false,
+                );
+              }
+              entry.blocked = oldKey.blocked;
+              entry.validSignatures = oldKey.validSignatures;
+            }
+            userKeys.crossSigningKeys[publicKey] = entry;
+          } else {
+            // This shouldn't ever happen. The same device ID has gotten
+            // a new public key. So we ignore the update. TODO: ask krille
+            // if we should instead use the new key with unknown verified / blocked status
+            userKeys.crossSigningKeys[publicKey] = oldKey;
+          }
+          dbActions.add(
+            () => database.storeUserCrossSigningKey(
+              userId,
+              publicKey,
+              json.encode(entry.toJson()),
+              null,
+              null,
+              trustOnFirstUseSince: entry.trustOnFirstUseSince,
+            ),
+          );
+        }
+        userDeviceKeys[userId]?.outdated = false;
+        dbActions.add(() => database.storeUserDeviceKeysInfo(userId, false));
+      }
+    }
+
+    // Keep the previously cached (still outdated) lists for any user the
+    // server failed to return, so we don't lose their trust state.
+    for (final oldEntry in oldDeviceKeys.entries) {
+      userDeviceKeys.putIfAbsent(oldEntry.key, () => oldEntry.value);
+    }
+
+    // now process all the failures
+    if (response.failures != null) {
+      for (final failureDomain in response.failures?.keys ?? <String>[]) {
+        _keyQueryFailures[failureDomain] = DateTime.now();
+      }
+    }
+
+    if (dbActions.isNotEmpty) {
+      if (!isLogged()) return userDeviceKeys;
+      await runBenchmarked(
+        'Updating user device keys in database...',
+        () => database.transaction(() async {
+          for (final f in dbActions) {
+            await f();
+          }
+        }),
+      );
+    }
+    return userDeviceKeys;
+  }
 
   /// A list of all not verified and not blocked device keys. Clients should
   /// display a warning if this list is not empty and suggest the user to
   /// verify or block those devices.
-  List<DeviceKeys> get unverifiedDevices {
+  Future<List<DeviceKeys>> fetchUnverifiedDevices() async {
     final userId = userID;
     if (userId == null) return [];
-    return userDeviceKeys[userId]?.deviceKeys.values
-            .where((deviceKey) => !deviceKey.verified && !deviceKey.blocked)
-            .toList() ??
-        [];
+    final keys = await fetchUserDeviceKeysList(userId);
+    final deviceKeys = keys?.deviceKeys.values;
+    if (deviceKeys == null) return [];
+    final unverified = <DeviceKeys>[];
+    for (final deviceKey in deviceKeys) {
+      if (!deviceKey.verified && !deviceKey.blocked) {
+        unverified.add(deviceKey);
+      }
+    }
+    return unverified;
   }
 
   /// Gets user device keys by its curve25519 key. Returns null if it isn't found
-  DeviceKeys? getUserDeviceKeysByCurve25519Key(String senderKey) {
-    for (final user in userDeviceKeys.values) {
+  Future<DeviceKeys?> getUserDeviceKeysByCurve25519Key(String senderKey) async {
+    final allKeys = await database.getUserDeviceKeys(this);
+    for (final user in allKeys.values) {
       final device = user.deviceKeys.values.firstWhereOrNull(
         (e) => e.curve25519Key == senderKey,
       );
-      if (device != null) {
-        return device;
-      }
+      if (device != null) return device;
     }
     return null;
   }
 
-  Future<Set<String>> _getUserIdsInEncryptedRooms() async {
-    final userIds = <String>{};
-    for (final room in rooms) {
-      if (room.encrypted && room.membership == Membership.join) {
-        try {
-          final userList = await room.requestParticipants([
-            Membership.join,
-            Membership.invite,
-          ], true);
-          userIds.addAll(userList.map((user) => user.id));
-        } catch (e, s) {
-          Logs().e('[E2EE] Failed to fetch participants', e, s);
-        }
-      }
-    }
-    return userIds;
-  }
-
   final Map<String, DateTime> _keyQueryFailures = {};
-
-  /// These are the user IDs we share an encrypted room with and need to track
-  /// the devices from, cached here for performance reasons.
-  /// It gets initialized after the first sync of every
-  /// instance and then updated on member changes or sync device changes.
-  Set<String>? _trackedUserIds;
-
-  Future<void> updateUserDeviceKeys({Set<String>? additionalUsers}) async {
-    try {
-      final database = this.database;
-      if (!isLogged()) return;
-      final dbActions = <Future<dynamic> Function()>[];
-      final trackedUserIds = _trackedUserIds ??=
-          await _getUserIdsInEncryptedRooms();
-      if (!isLogged()) {
-        // For the case we get logged out while `_getUserIdsInEncryptedRooms()`
-        // was already started.
-        _trackedUserIds = null;
-        return;
-      }
-      trackedUserIds.add(userID!);
-      if (additionalUsers != null) trackedUserIds.addAll(additionalUsers);
-
-      // Remove all userIds we no longer need to track the devices of.
-      _userDeviceKeys.removeWhere(
-        (String userId, v) => !trackedUserIds.contains(userId),
-      );
-
-      // Check if there are outdated device key lists. Add it to the set.
-      final outdatedLists = <String, List<String>>{};
-      for (final userId in (additionalUsers ?? <String>[])) {
-        outdatedLists[userId] = [];
-      }
-      for (final userId in trackedUserIds) {
-        final deviceKeysList = _userDeviceKeys[userId] ??= DeviceKeysList(
-          userId,
-          this,
-        );
-        final failure = _keyQueryFailures[userId.domain];
-
-        // deviceKeysList.outdated is not nullable but we have seen this error
-        // in production: `Failed assertion: boolean expression must not be null`
-        // So this could either be a null safety bug in Dart or a result of
-        // using unsound null safety. The extra equal check `!= false` should
-        // save us here.
-        if (deviceKeysList.outdated != false &&
-            (failure == null ||
-                DateTime.now()
-                    .subtract(Duration(minutes: 5))
-                    .isAfter(failure))) {
-          outdatedLists[userId] = [];
-        }
-      }
-
-      if (outdatedLists.isNotEmpty) {
-        if (!isLogged()) return;
-        // Request the missing device key lists from the server.
-        final response = await queryKeys(outdatedLists, timeout: 10000);
-        if (!isLogged()) return;
-
-        final deviceKeys = response.deviceKeys;
-        if (deviceKeys != null) {
-          for (final rawDeviceKeyListEntry in deviceKeys.entries) {
-            final userId = rawDeviceKeyListEntry.key;
-            final userKeys = _userDeviceKeys[userId] ??= DeviceKeysList(
-              userId,
-              this,
-            );
-            final oldKeys = Map<String, DeviceKeys>.from(userKeys.deviceKeys);
-            userKeys.deviceKeys = {};
-            for (final rawDeviceKeyEntry
-                in rawDeviceKeyListEntry.value.entries) {
-              final deviceId = rawDeviceKeyEntry.key;
-
-              // Set the new device key for this device
-              final entry = DeviceKeys.fromMatrixDeviceKeys(
-                rawDeviceKeyEntry.value,
-                this,
-                oldKeys[deviceId]?.lastActive,
-              );
-              final ed25519Key = entry.ed25519Key;
-              final curve25519Key = entry.curve25519Key;
-              if (entry.isValid &&
-                  deviceId == entry.deviceId &&
-                  ed25519Key != null &&
-                  curve25519Key != null) {
-                // Check if deviceId or deviceKeys are known
-                if (!oldKeys.containsKey(deviceId)) {
-                  final oldPublicKeys = await database.deviceIdSeen(
-                    userId,
-                    deviceId,
-                  );
-                  if (oldPublicKeys != null &&
-                      oldPublicKeys != curve25519Key + ed25519Key) {
-                    Logs().w(
-                      'Already seen Device ID has been added again. This might be an attack!',
-                    );
-                    continue;
-                  }
-                  final oldDeviceId = await database.publicKeySeen(ed25519Key);
-                  if (oldDeviceId != null && oldDeviceId != deviceId) {
-                    Logs().w(
-                      'Already seen ED25519 has been added again. This might be an attack!',
-                    );
-                    continue;
-                  }
-                  final oldDeviceId2 = await database.publicKeySeen(
-                    curve25519Key,
-                  );
-                  if (oldDeviceId2 != null && oldDeviceId2 != deviceId) {
-                    Logs().w(
-                      'Already seen Curve25519 has been added again. This might be an attack!',
-                    );
-                    continue;
-                  }
-                  dbActions.add(() async {
-                    await database.addSeenDeviceId(
-                      userId,
-                      deviceId,
-                      curve25519Key + ed25519Key,
-                    );
-                    await database.addSeenPublicKey(ed25519Key, deviceId);
-                    await database.addSeenPublicKey(curve25519Key, deviceId);
-                  });
-                }
-
-                // is this a new key or the same one as an old one?
-                // better store an update - the signatures might have changed!
-                final oldKey = oldKeys[deviceId];
-                if (oldKey == null ||
-                    (oldKey.ed25519Key == entry.ed25519Key &&
-                        oldKey.curve25519Key == entry.curve25519Key)) {
-                  if (oldKey != null) {
-                    // be sure to save the verified status
-                    entry.setDirectVerified(oldKey.directVerified);
-                    entry.blocked = oldKey.blocked;
-                    entry.validSignatures = oldKey.validSignatures;
-                  }
-                  userKeys.deviceKeys[deviceId] = entry;
-                  if (deviceId == deviceID &&
-                      entry.ed25519Key == fingerprintKey) {
-                    // Always trust the own device
-                    entry.setDirectVerified(true);
-                  }
-                  dbActions.add(
-                    () => database.storeUserDeviceKey(
-                      userId,
-                      deviceId,
-                      json.encode(entry.toJson()),
-                      entry.directVerified,
-                      entry.blocked,
-                      entry.lastActive.millisecondsSinceEpoch,
-                    ),
-                  );
-                } else if (oldKeys.containsKey(deviceId)) {
-                  // This shouldn't ever happen. The same device ID has gotten
-                  // a new public key. So we ignore the update. TODO: ask krille
-                  // if we should instead use the new key with unknown verified / blocked status
-                  userKeys.deviceKeys[deviceId] = oldKeys[deviceId]!;
-                }
-              } else {
-                Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
-              }
-            }
-            // delete old/unused entries
-            for (final oldDeviceKeyEntry in oldKeys.entries) {
-              final deviceId = oldDeviceKeyEntry.key;
-              if (!userKeys.deviceKeys.containsKey(deviceId)) {
-                // we need to remove an old key
-                dbActions.add(
-                  () => database.removeUserDeviceKey(userId, deviceId),
-                );
-              }
-            }
-            userKeys.outdated = false;
-            dbActions.add(
-              () => database.storeUserDeviceKeysInfo(userId, false),
-            );
-          }
-        }
-        // next we parse and persist the cross signing keys
-        final crossSigningTypes = {
-          'master': response.masterKeys,
-          'self_signing': response.selfSigningKeys,
-          'user_signing': response.userSigningKeys,
-        };
-        for (final crossSigningKeysEntry in crossSigningTypes.entries) {
-          final keyType = crossSigningKeysEntry.key;
-          final keys = crossSigningKeysEntry.value;
-          if (keys == null) {
-            continue;
-          }
-          for (final crossSigningKeyListEntry in keys.entries) {
-            final userId = crossSigningKeyListEntry.key;
-            final userKeys = _userDeviceKeys[userId] ??= DeviceKeysList(
-              userId,
-              this,
-            );
-            final oldKeys = Map<String, CrossSigningKey>.from(
-              userKeys.crossSigningKeys,
-            );
-            userKeys.crossSigningKeys = {};
-            // add the types we aren't handling atm back
-            for (final oldEntry in oldKeys.entries) {
-              if (!oldEntry.value.usage.contains(keyType)) {
-                userKeys.crossSigningKeys[oldEntry.key] = oldEntry.value;
-              } else {
-                // There is a previous cross-signing key with  this usage, that we no
-                // longer need/use. Clear it from the database.
-                dbActions.add(
-                  () =>
-                      database.removeUserCrossSigningKey(userId, oldEntry.key),
-                );
-              }
-            }
-            final entry = CrossSigningKey.fromMatrixCrossSigningKey(
-              crossSigningKeyListEntry.value,
-              this,
-            );
-            final publicKey = entry.publicKey;
-            if (entry.isValid && publicKey != null) {
-              final oldKey = oldKeys[publicKey];
-              if (oldKey == null || oldKey.ed25519Key == entry.ed25519Key) {
-                if (oldKey != null) {
-                  // be sure to save the verification status
-                  entry.setDirectVerified(oldKey.directVerified);
-                  if (oldKey.trustOnFirstUseSince != null) {
-                    entry.trustOnFirstUse(
-                      since: oldKey.trustOnFirstUseSince,
-                      updateInDatabase: false,
-                    );
-                  }
-                  entry.blocked = oldKey.blocked;
-                  entry.validSignatures = oldKey.validSignatures;
-                }
-                userKeys.crossSigningKeys[publicKey] = entry;
-              } else {
-                // This shouldn't ever happen. The same device ID has gotten
-                // a new public key. So we ignore the update. TODO: ask krille
-                // if we should instead use the new key with unknown verified / blocked status
-                userKeys.crossSigningKeys[publicKey] = oldKey;
-              }
-              dbActions.add(
-                () => database.storeUserCrossSigningKey(
-                  userId,
-                  publicKey,
-                  json.encode(entry.toJson()),
-                  entry.directVerified,
-                  entry.blocked,
-                  trustOnFirstUseSince: entry.trustOnFirstUseSince,
-                ),
-              );
-            }
-            _userDeviceKeys[userId]?.outdated = false;
-            dbActions.add(
-              () => database.storeUserDeviceKeysInfo(userId, false),
-            );
-          }
-        }
-
-        // now process all the failures
-        if (response.failures != null) {
-          for (final failureDomain in response.failures?.keys ?? <String>[]) {
-            _keyQueryFailures[failureDomain] = DateTime.now();
-          }
-        }
-      }
-
-      if (dbActions.isNotEmpty) {
-        if (!isLogged()) return;
-        Logs().i(
-          'Updating user device keys in database... (${dbActions.length} operations)',
-        );
-        await runBenchmarked(
-          'Updating user device keys in database...',
-          () => database.transaction(() async {
-            for (final f in dbActions) {
-              await f();
-            }
-          }),
-        );
-      }
-    } catch (e, s) {
-      Logs().e('[Vodozemac] Unable to update user device keys', e, s);
-    }
-  }
 
   bool _toDeviceQueueNeedsProcessing = true;
 
@@ -3746,13 +3703,15 @@ class Client extends MatrixApi {
     // Don't send this message to blocked devices, and if specified onlyVerified
     // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
-      deviceKeys.removeWhere(
-        (DeviceKeys deviceKeys) =>
-            deviceKeys.blocked ||
-            (deviceKeys.userId == userID && deviceKeys.deviceId == deviceID) ||
-            (onlyVerified && !deviceKeys.verified),
-      );
-      if (deviceKeys.isEmpty) return;
+      final keysToSend = <DeviceKeys>[];
+      for (final dk in deviceKeys) {
+        if (dk.blocked) continue;
+        if (dk.userId == userID && dk.deviceId == deviceID) continue;
+        if (onlyVerified && !(dk.verified)) continue;
+        keysToSend.add(dk);
+      }
+      if (keysToSend.isEmpty) return;
+      deviceKeys = keysToSend;
     }
 
     // So that we can guarantee order of encrypted to_device messages to be preserved we
@@ -3919,7 +3878,6 @@ class Client extends MatrixApi {
   Future<void> clearCache() async {
     await abortSync();
     _prevBatch = null;
-    _trackedUserIds = null;
     rooms.clear();
     await database.clearCache();
     encryption?.keyManager.clearOutboundGroupSessions();

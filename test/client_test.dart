@@ -238,18 +238,20 @@ void main() {
       expect(presenceCounter, 1);
       expect(accountDataCounter, 10);
 
-      expect(matrix.userDeviceKeys.keys.toSet(), {
+      final keys = await matrix.fetchUserDeviceKeysLists({
         '@alice:example.com',
         '@othertest:fakeServer.notExisting',
         '@test:fakeServer.notExisting',
       });
-      expect(matrix.userDeviceKeys['@alice:example.com']?.outdated, false);
-      expect(matrix.userDeviceKeys['@alice:example.com']?.deviceKeys.length, 2);
+      expect(keys.keys.toSet(), {
+        '@alice:example.com',
+        '@othertest:fakeServer.notExisting',
+        '@test:fakeServer.notExisting',
+      });
+      expect(keys['@alice:example.com']?.outdated, false);
+      expect(keys['@alice:example.com']!.deviceKeys.length, 2);
       expect(
-        matrix
-            .userDeviceKeys['@alice:example.com']
-            ?.deviceKeys['JLAFKJWSCS']
-            ?.verified,
+        keys['@alice:example.com']?.deviceKeys['JLAFKJWSCS']?.verified,
         false,
       );
 
@@ -263,8 +265,19 @@ void main() {
         }),
       );
       await Future.delayed(Duration(milliseconds: 50));
-      expect(matrix.userDeviceKeys.length, 3);
-      expect(matrix.userDeviceKeys['@alice:example.com']?.outdated, true);
+      final cachedAlice = await matrix.database.getUserDeviceKeysList(
+        '@alice:example.com',
+        matrix,
+      );
+      expect(cachedAlice?.outdated, true);
+      final keysAfterSync = await matrix.fetchUserDeviceKeysLists({
+        '@alice:example.com',
+        '@othertest:fakeServer.notExisting',
+        '@test:fakeServer.notExisting',
+      });
+      expect(keysAfterSync.length, 3);
+      // fetch refreshes outdated keys
+      expect(keysAfterSync['@alice:example.com']?.outdated, false);
 
       await matrix.handleSync(
         SyncUpdate.fromJson({
@@ -1100,8 +1113,11 @@ void main() {
     test('sendToDeviceEncrypted', () async {
       FakeMatrixApi.calledEndpoints.clear();
 
+      final aliceKeys = await matrix.fetchUserDeviceKeysList(
+        '@alice:example.com',
+      );
       await matrix.sendToDeviceEncrypted(
-        matrix.userDeviceKeys['@alice:example.com']!.deviceKeys.values.toList(),
+        aliceKeys!.deviceKeys.values.toList(),
         'm.message',
         {'msgtype': 'm.text', 'body': 'Hello world'},
       );
@@ -1114,8 +1130,11 @@ void main() {
     });
     test('sendToDeviceEncryptedChunked', () async {
       FakeMatrixApi.calledEndpoints.clear();
+      final aliceKeys = await matrix.fetchUserDeviceKeysList(
+        '@alice:example.com',
+      );
       await matrix.sendToDeviceEncryptedChunked(
-        matrix.userDeviceKeys['@alice:example.com']!.deviceKeys.values.toList(),
+        aliceKeys!.deviceKeys.values.toList(),
         'm.message',
         {'msgtype': 'm.text', 'body': 'Hello world'},
       );
@@ -1153,7 +1172,8 @@ void main() {
         keyObj['signatures'] = {
           userId: {'ed25519:$deviceId': signature.toBase64()},
         };
-        deviceKeys.add(DeviceKeys.fromJson(keyObj, matrix));
+        final list = DeviceKeysList(userId, matrix);
+        deviceKeys.add(DeviceKeys.fromJson(keyObj, list, list, matrix));
       }
       FakeMatrixApi.calledEndpoints.clear();
       await matrix.sendToDeviceEncryptedChunked(deviceKeys, 'm.message', {

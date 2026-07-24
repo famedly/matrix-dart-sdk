@@ -109,7 +109,6 @@ void main() {
       await client.database.transaction(() async {
         await client.handleSync(update, direction: Direction.f);
       });
-      await client.updateUserDeviceKeys();
     }
 
     /// Registers keys/query + keys/claim handlers which behave like a real
@@ -337,7 +336,10 @@ void main() {
 
         // Was dave's device list ever fetched?
         final daveKnown =
-            client.userDeviceKeys[dave.userId]?.deviceKeys.isNotEmpty ?? false;
+            (await client.fetchUserDeviceKeysList(
+              dave.userId,
+            ))?.deviceKeys.isNotEmpty ??
+            false;
 
         // Now the app sends the first message.
         FakeMatrixApi.calledEndpoints.clear();
@@ -440,7 +442,10 @@ void main() {
         );
 
         final daveKnown =
-            client.userDeviceKeys[dave.userId]?.deviceKeys.isNotEmpty ?? false;
+            (await client.fetchUserDeviceKeysList(
+              dave.userId,
+            ))?.deviceKeys.isNotEmpty ??
+            false;
 
         FakeMatrixApi.calledEndpoints.clear();
         await room.sendTextEvent('first message');
@@ -500,7 +505,10 @@ void main() {
         );
 
         final daveKnown =
-            client.userDeviceKeys[dave.userId]?.deviceKeys.isNotEmpty ?? false;
+            (await client.fetchUserDeviceKeysList(
+              dave.userId,
+            ))?.deviceKeys.isNotEmpty ??
+            false;
 
         FakeMatrixApi.calledEndpoints.clear();
         await room.sendTextEvent('first message');
@@ -684,7 +692,10 @@ void main() {
         );
 
         final erinKnown =
-            client.userDeviceKeys[erin.userId]?.deviceKeys.isNotEmpty ?? false;
+            (await client.fetchUserDeviceKeysList(
+              erin.userId,
+            ))?.deviceKeys.isNotEmpty ??
+            false;
 
         FakeMatrixApi.calledEndpoints.clear();
         await room.sendTextEvent('first message');
