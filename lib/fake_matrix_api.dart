@@ -226,6 +226,34 @@ class FakeMatrixApi extends BaseClient {
           action.contains('/client/v1/rooms/') &&
           action.contains('/relations/')) {
         res = {'chunk': [], 'next_batch': null, 'prev_batch': null};
+      } else if (method == 'GET' &&
+          action.contains('/client/v3/rooms/') &&
+          action.split('?').first.endsWith('/members')) {
+        // First megolm session always fetches /members; return known members
+        // or an empty chunk so unstubbed rooms don't fail with M_UNRECOGNIZED.
+        final roomId = Uri.decodeComponent(
+          action.split('/client/v3/rooms/').last.split('/members').first,
+        );
+        final members = _client
+            ?.getRoomById(roomId)
+            ?.states[EventTypes.RoomMember];
+        res = {
+          'chunk':
+              members?.values
+                  .map(
+                    (e) => {
+                      'type': e.type,
+                      'content': e.content,
+                      'sender': e.senderId,
+                      'state_key': e.stateKey,
+                      'event_id': '\$member_${e.stateKey}',
+                      'origin_server_ts': 1,
+                      'room_id': roomId,
+                    },
+                  )
+                  .toList() ??
+              [],
+        };
       } else if (method == 'PUT' &&
           action.contains(
             '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/',
@@ -1842,18 +1870,6 @@ class FakeMatrixApi extends BaseClient {
               },
             ],
           },
-      '/client/v3/rooms/!1234%3AfakeServer.notExisting/members': (var req) => {
-        'chunk': [
-          {
-            'type': 'm.room.member',
-            'content': {'membership': 'join'},
-            'sender': '@fakeuser:fakeServer.notExisting',
-            'state_key': '@test:fakeServer.notExisting',
-            'event_id': '\$abcd',
-            'origin_server_ts': 1783579093968,
-          },
-        ],
-      },
       '/client/v3/rooms/!696r7674:example.com/members': (var req) => {
         'chunk': [
           {
