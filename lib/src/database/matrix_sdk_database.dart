@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:isolate';
 
 import 'package:matrix/encryption/utils/olm_session.dart';
 import 'package:matrix/encryption/utils/outbound_group_session.dart';
@@ -1821,4 +1822,84 @@ class TupleKey {
 
   @override
   int get hashCode => Object.hashAll(parts);
+}
+
+Future<Map<String, Map<String, dynamic>>> _runParseUserDeviceKeys(
+  dynamic clientId,
+  Map<String, dynamic> deviceKeysOutdated,
+  Map<String, dynamic> userDeviceKeys,
+  Map<String, dynamic> userCrossSigningKeys,
+) async {
+  final payload = <String, dynamic>{
+    'clientId': clientId,
+    'deviceKeysOutdated': Map<String, dynamic>.from(deviceKeysOutdated),
+    'userDeviceKeys': Map<String, dynamic>.from(userDeviceKeys),
+    'userCrossSigningKeys': Map<String, dynamic>.from(userCrossSigningKeys),
+  };
+  return Isolate.run(() => _parseUserDeviceKeys(payload));
+}
+
+Map<String, Map<String, dynamic>> _parseUserDeviceKeys(
+  Map<String, dynamic> payload,
+) {
+  final deviceKeysOutdated =
+      payload['deviceKeysOutdated'] as Map<String, dynamic>;
+  final userDeviceKeys = payload['userDeviceKeys'] as Map<String, dynamic>;
+  final userCrossSigningKeys =
+      payload['userCrossSigningKeys'] as Map<String, dynamic>;
+  final clientId = payload['clientId'];
+
+  Map<String, dynamic> inlineCopyMap(Map<String, dynamic> map) {
+    return map.map((k, v) {
+      if (v is Map<String, dynamic>) return MapEntry(k, inlineCopyMap(v));
+      if (v is List) return MapEntry(k, List.from(v));
+      return MapEntry(k, v);
+    });
+  }
+
+  final res = <String, Map<String, dynamic>>{};
+
+  for (final userId in deviceKeysOutdated.keys) {
+    final deviceKeysBoxKeys = userDeviceKeys.keys.where((tuple) {
+      final parts = tuple.split('\u0000');
+      return parts.isNotEmpty && parts.first == userId;
+    });
+
+    final crossSigningKeysBoxKeys = userCrossSigningKeys.keys.where((tuple) {
+      final parts = tuple.split('\u0000');
+      return parts.isNotEmpty && parts.first == userId;
+    });
+
+    final childEntries = deviceKeysBoxKeys
+        .map((key) {
+          final userDeviceKey = userDeviceKeys[key];
+          if (userDeviceKey == null) return null;
+          return inlineCopyMap(userDeviceKey as Map<String, dynamic>);
+        })
+        .where((c) => c != null)
+        .toList()
+        .cast<Map<String, dynamic>>();
+
+    final crossSigningEntries = crossSigningKeysBoxKeys
+        .map((key) {
+          final crossSigningKey = userCrossSigningKeys[key];
+          if (crossSigningKey == null) return null;
+          return inlineCopyMap(crossSigningKey as Map<String, dynamic>);
+        })
+        .where((c) => c != null)
+        .toList()
+        .cast<Map<String, dynamic>>();
+
+    res[userId] = {
+      'meta': {
+        'client_id': clientId,
+        'user_id': userId,
+        'outdated': deviceKeysOutdated[userId],
+      },
+      'devices': childEntries,
+      'crossSigning': crossSigningEntries,
+    };
+  }
+
+  return res;
 }
