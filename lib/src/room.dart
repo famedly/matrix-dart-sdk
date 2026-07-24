@@ -2523,6 +2523,12 @@ class Room {
     String eventId, {
     String? reason,
     String? txid,
+
+    /// If true the client checks the `/versions` endpoint if the server
+    /// supports MSC3912 for relation based redaction. Otherwise the client
+    /// fetches all edits and redacts them in a loop by themself, while it
+    /// auto resolves rate limits, which can take some time.
+    bool redactAllEdits = false,
   }) async {
     // Create new transaction id
     String messageID;
@@ -2534,6 +2540,39 @@ class Room {
     }
     final data = <String, dynamic>{};
     if (reason != null) data['reason'] = reason;
+
+    if (!redactAllEdits) {
+      return await client.redactEvent(id, eventId, messageID, reason: reason);
+    }
+
+    final versions = await client.getVersions();
+    if (versions.unstableFeatures?['org.matrix.msc3912'] == true) {
+      return await client.redactEventWithRelTypes(
+        id,
+        eventId,
+        messageID,
+        reason: reason,
+        withRelTypes: ['m.replace'],
+      );
+    }
+
+    final edits = await client.getRelatingEventsWithRelType(
+      id,
+      eventId,
+      RelationshipTypes.edit,
+    );
+    for (final edit in edits.chunk) {
+      final txnid = client.generateUniqueTransactionId();
+      try {
+        await client.redactEvent(id, edit.eventId, txnid, reason: reason);
+      } on MatrixException catch (e) {
+        final retryAfterMs = e.retryAfterMs;
+        if (retryAfterMs == null) rethrow;
+        await Future.delayed(Duration(milliseconds: retryAfterMs));
+        await client.redactEvent(id, edit.eventId, txnid, reason: reason);
+      }
+    }
+
     return await client.redactEvent(id, eventId, messageID, reason: reason);
   }
 

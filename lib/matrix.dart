@@ -18,6 +18,7 @@ export 'msc_extensions/msc_3381_polls/models/poll_event_content.dart';
 export 'msc_extensions/msc_3381_polls/poll_event_extension.dart';
 export 'msc_extensions/msc_3381_polls/poll_room_extension.dart';
 export 'msc_extensions/msc_3814_dehydrated_devices/msc_3814_dehydrated_devices.dart';
+export 'msc_extensions/msc_3912_redact_with_rel_types/msc_3912_redact_with_rel_types.dart';
 export 'msc_extensions/msc_3935_cute_events/msc_3935_cute_events.dart';
 export 'msc_extensions/msc_4075_rtc_notification/api.dart';
 export 'msc_extensions/msc_4140_delayed_events/api.dart';
