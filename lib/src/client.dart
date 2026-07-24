@@ -579,9 +579,19 @@ class Client extends MatrixApi {
 
       final loginTypesResult = await Result.capture(getLoginFlows());
       final loginTypes = loginTypesResult.asValue?.value ?? [];
-      final loginTypesError = loginTypesResult.asError?.error;
-      if (loginTypesError != null && loginTypesError is! MatrixException) {
-        Logs().w('Unable to fetch legacy login types', loginTypesError);
+      final loginTypesError = loginTypesResult.asError;
+      if (loginTypesError != null) {
+        final error = loginTypesError.error;
+        // A missing legacy `/login` endpoint (M_UNRECOGNIZED) is expected on
+        // OIDC-only homeservers, so only warn for other failures.
+        if (error is! MatrixException ||
+            error.error != MatrixError.M_UNRECOGNIZED) {
+          Logs().w(
+            'Unable to fetch legacy login types',
+            error,
+            loginTypesError.stackTrace,
+          );
+        }
       }
 
       if (loginTypes.isNotEmpty &&
