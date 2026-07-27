@@ -747,6 +747,31 @@ class SSSS {
     }
   }
 
+  /// Drops [keyId] from the `encrypted` map of every secret that already
+  /// includes the default key, then deletes unused named keys with [name].
+  Future<void> stripKeyPreservingDefault(String keyId, String name) async {
+    final defaultKeyId = this.defaultKeyId;
+    if (defaultKeyId == null) {
+      throw Exception('No default secret storage key');
+    }
+    if (keyId.isEmpty || keyId == defaultKeyId) return;
+
+    final secretsByType = analyzeEncryptedSecrets();
+    for (final entry in secretsByType.entries) {
+      if (!entry.value.contains(defaultKeyId) || !entry.value.contains(keyId)) {
+        continue;
+      }
+      final content = client.accountData[entry.key]?.content.copy();
+      if (content == null) continue;
+      final encrypted = content.tryGetMap<String, Object?>('encrypted');
+      if (encrypted == null) continue;
+      encrypted.remove(keyId);
+      content['encrypted'] = encrypted;
+      await _setAccountDataAndWaitForSync(entry.key, content);
+    }
+    await removeUnusedNamedSecretStorageKeys(name);
+  }
+
   /// Returns secret event types mapped to valid SSSS key ids.
   ///
   /// Only account data entries with a valid `encrypted` map shape are included.
