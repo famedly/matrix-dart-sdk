@@ -145,7 +145,7 @@ class Timeline {
 
     try {
       // Look up for events in the database first. With fragmented view, we should delete the database cache
-      final eventsFromStore = isFragmentedTimeline
+      final eventsFromStore = isFragmentedTimeline || inMemoryOnly
           ? null
           : await room.client.database.getEventList(
               room,
