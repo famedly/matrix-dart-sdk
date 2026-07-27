@@ -1170,6 +1170,67 @@ void main() {
       );
 
       test(
+        'delayed leave heartbeat stops when the delayed event is gone (M_NOT_FOUND)',
+        () async {
+          const callId = 'test_delayed_not_found';
+
+          // advertise msc4140 support via the cached versions response
+          await matrix.database.cacheCustomObject('get_versions', {
+            'versions': ['v1.1', 'v1.2', 'v1.11'],
+            'unstable_features': {'org.matrix.msc4140': true},
+          });
+
+          final api = FakeMatrixApi.currentApi!;
+          // no already scheduled delayed events
+          api.api['GET']!['/client/unstable/org.matrix.msc4140/delayed_events'] =
+              (var req) => {'delayed_events': []};
+          // the delayed leave state event returns a known delay id
+          api.api['PUT']!['/client/v3/rooms/${Uri.encodeComponent(room.id)}/state/${Uri.encodeComponent(EventTypes.GroupCallMember)}/${Uri.encodeComponent(matrix.userID!)}?org.matrix.msc4140.delay=400'] =
+              (var req) => {'delay_id': 'faildelayid'};
+          // every restart heartbeat fails because the delayed event is gone
+          var restartCalls = 0;
+          api.api['POST']!['/client/unstable/org.matrix.msc4140/delayed_events/faildelayid'] =
+              (var req) {
+                restartCalls++;
+                return {
+                  'errcode': 'M_NOT_FOUND',
+                  'error': 'Delayed event not found',
+                };
+              };
+
+          final shortTimerVoip = VoIP(
+            matrix,
+            MockWebRTCDelegate(),
+            timeouts: CallTimeouts(
+              delayedEventApplyLeave: Duration(milliseconds: 400),
+              delayedEventRestart: Duration(milliseconds: 50),
+            ),
+          );
+
+          await room.setFamedlyCallMemberEvent(
+            {'memberships': []},
+            shortTimerVoip,
+            callId,
+          );
+
+          expect(
+            shortTimerVoip.delayedEventCancellers.containsKey(
+              '${room.id}|$callId|m.room',
+            ),
+            isTrue,
+          );
+
+          // let the heartbeat fire; the M_NOT_FOUND response must stop the
+          // timer and remove the canceller instead of throwing unhandled
+          // errors forever
+          await Future.delayed(Duration(milliseconds: 300));
+
+          expect(shortTimerVoip.delayedEventCancellers, isEmpty);
+          expect(restartCalls, 1);
+        },
+      );
+
+      test(
         'application change mid-call: sendMemberStateEvent still works and loop continues',
         () async {
           final shortTimerVoip = VoIP(
