@@ -4,6 +4,21 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [9.0.0] 27th July 2026
+- build: (BREAKING) update to matrix spec 1-19 (Christian Kußowski)
+- build: (BREAKING) update to sqlite3 (Christian Kußowski)
+- chore: forward error on bootstrap error (Christian Kußowski)
+- chore: reduce noisyness of update cache error (Christian Kußowski)
+- feat: add customVideoThumbnailGenerator callback to create video thumbnails on send (Cursor Agent)
+- feat: add flag to redactEvent with edits (Christian Kußowski)
+- feat: new helper stripKeyPreservingDefault to clear SSSS keyId secret entries alone (Karthikeyan S)
+- fix(voip): stop delayed leave heartbeat when delayed event is gone (Cursor Agent)
+- fix: allow redact-power users to end polls (MSC3381) (quantumheart)
+- fix: be less strict on http status codes for oidc (Christian Kußowski)
+- fix: make login types check optional (Christian Kußowski)
+- refactor: always fetch member list from server for first megolm session (Christian Kußowski)
+- test(polls): await expectLater before power-level mutation (quantumheart)
+
 ## [8.1.0] 13th July 2026
 - fix: avoid concurrent modification when updating group calls (Marco Attanasio)
 - fix: clear LiveKit key debounce timestamp on dispose (Marco Attanasio)
