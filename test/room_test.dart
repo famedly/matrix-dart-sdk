@@ -714,6 +714,18 @@ void main() {
       expect(fetchedParticipants.length, newParticipants.length);
       room.summary.mJoinedMemberCount = 3;
       expect(room.participantListComplete, true);
+
+      // Make sure we fetch participants even if sdk assumes participant list
+      // is complete:
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.getUserDeviceKeys();
+      expect(
+        FakeMatrixApi.calledEndpoints.containsKey(
+          '/client/v3/rooms/!localpart%3Aserver.abc/members',
+        ),
+        true,
+      );
+
       room.summary.mJoinedMemberCount = null;
       expect(room.participantListComplete, false);
     });
