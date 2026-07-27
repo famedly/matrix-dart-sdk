@@ -1231,6 +1231,7 @@ class Client extends MatrixApi {
         final timeline = Timeline(
           room: room,
           chunk: TimelineChunk(
+            prevBatch: entry.value.timeline?.prevBatch ?? '',
             events:
                 entry.value.timeline?.events?.reversed
                     .toList() // we display the event in the other sence
