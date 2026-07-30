@@ -7,8 +7,8 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/models/timeline_chunk.dart';
+import '../matrix.dart';
+import 'models/timeline_chunk.dart';
 
 /// Represents the timeline of a room. The callback [onUpdate] will be triggered
 /// automatically. The initial

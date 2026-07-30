@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 /// This extension adds easy-to-use filters for the sync update, meant to be used on the `client.onSync` stream, e.g.
 /// `client.onSync.stream.where((s) => s.hasRoomUpdate)`. Multiple filters can easily be

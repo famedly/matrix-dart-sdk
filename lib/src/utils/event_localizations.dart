@@ -4,8 +4,8 @@
 
 import 'package:collection/collection.dart';
 
-import 'package:matrix/encryption.dart';
-import 'package:matrix/matrix.dart';
+import '../../encryption.dart';
+import '../../matrix.dart';
 
 abstract class EventLocalizations {
   // As we need to create the localized body off of a different set of parameters, we

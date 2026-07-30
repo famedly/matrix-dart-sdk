@@ -8,8 +8,8 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-import 'package:matrix/matrix_api_lite.dart';
-import 'package:matrix/matrix_api_lite/generated/api.dart';
+import '../matrix_api_lite.dart';
+import 'generated/api.dart';
 
 // ignore: constant_identifier_names
 enum RequestType { GET, POST, PUT, DELETE }

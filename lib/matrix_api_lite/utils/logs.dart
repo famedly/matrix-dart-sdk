@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite/utils/print_logs_native.dart'
+import 'print_logs_native.dart'
     if (dart.library.js_interop) 'print_logs_web.dart';
 
 enum Level { wtf, error, warning, info, debug, verbose }

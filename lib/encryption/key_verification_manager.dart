@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/encryption/encryption.dart';
-import 'package:matrix/encryption/utils/key_verification.dart';
-import 'package:matrix/matrix.dart';
+import '../matrix.dart';
+import 'encryption.dart';
+import 'utils/key_verification.dart';
 
 class KeyVerificationManager {
   final Encryption encryption;

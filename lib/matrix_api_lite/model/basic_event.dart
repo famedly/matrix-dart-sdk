@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite/utils/map_copy_extension.dart';
+import '../utils/map_copy_extension.dart';
 
 class BasicEvent {
   String type;

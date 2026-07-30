@@ -9,7 +9,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' hide Client;
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 extension UiaLogin on Client {
   /// Implementation of MSC2835:

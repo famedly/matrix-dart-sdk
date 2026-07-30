@@ -6,7 +6,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 enum DelayedEventAction { send, cancel, restart }
 

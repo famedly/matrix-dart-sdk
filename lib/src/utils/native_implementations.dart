@@ -6,11 +6,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:matrix/encryption.dart';
-import 'package:matrix/encryption/utils/base64_unpadded.dart';
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/compute_callback.dart';
 import 'package:vodozemac/vodozemac.dart';
+
+import '../../encryption.dart';
+import '../../encryption/utils/base64_unpadded.dart';
+import '../../matrix.dart';
+import 'compute_callback.dart';
 
 /// provides native implementations for demanding arithmetic operations
 /// in order to prevent the UI from blocking

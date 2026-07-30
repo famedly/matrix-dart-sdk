@@ -9,12 +9,12 @@ library;
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:matrix/encryption.dart';
-import 'package:matrix/matrix.dart';
-import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/api.dart';
-import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/model/dehydrated_device.dart';
-import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/model/dehydrated_device_events.dart';
-import 'package:matrix/src/utils/crypto/crypto.dart' as uc;
+import '../../encryption.dart';
+import '../../matrix.dart';
+import '../../src/utils/crypto/crypto.dart' as uc;
+import 'api.dart';
+import 'model/dehydrated_device.dart';
+import 'model/dehydrated_device_events.dart';
 
 extension DehydratedDeviceHandler on Client {
   static const Set<String> _oldDehydratedDeviceAlgorithms = {

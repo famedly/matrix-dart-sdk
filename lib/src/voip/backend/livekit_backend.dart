@@ -6,8 +6,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/crypto/crypto.dart';
+import '../../../matrix.dart';
+import '../../utils/crypto/crypto.dart';
 
 class LiveKitBackend extends CallBackend {
   final String livekitServiceUrl;

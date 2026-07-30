@@ -4,7 +4,7 @@
 
 import 'dart:async';
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 void runInRoot<T>(FutureOr<T> Function() fn) {
   // ignore: discarded_futures

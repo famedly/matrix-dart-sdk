@@ -5,7 +5,7 @@
 /// MSC4075: MatrixRTC Notification Event (https://github.com/matrix-org/matrix-spec-proposals/pull/4075)
 library;
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 extension RtcNotificationRoomExtension on Room {
   /// Sends an RTC notification event to this room.

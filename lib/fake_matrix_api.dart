@@ -10,8 +10,8 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart';
 
-import 'package:matrix/matrix.dart' as sdk;
-import 'package:matrix/matrix.dart';
+import 'matrix.dart' as sdk;
+import 'matrix.dart';
 
 T? tryCast<T>(dynamic object) => object is T ? object : null;
 

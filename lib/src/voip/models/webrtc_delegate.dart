@@ -2,8 +2,9 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
+
+import '../../../matrix.dart';
 
 /// Delegate WebRTC basic functionality.
 abstract class WebRTCDelegate {

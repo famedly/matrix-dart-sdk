@@ -9,15 +9,15 @@ import 'dart:math';
 import 'package:async/async.dart';
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
-
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/models/timeline_chunk.dart';
-import 'package:matrix/src/utils/cached_stream_controller.dart';
-import 'package:matrix/src/utils/file_send_request_credentials.dart';
-import 'package:matrix/src/utils/markdown.dart';
-import 'package:matrix/src/utils/marked_unread.dart';
-import 'package:matrix/src/utils/space_child.dart';
 import 'package:mime/mime.dart';
+
+import '../matrix.dart';
+import 'models/timeline_chunk.dart';
+import 'utils/cached_stream_controller.dart';
+import 'utils/file_send_request_credentials.dart';
+import 'utils/markdown.dart';
+import 'utils/marked_unread.dart';
+import 'utils/space_child.dart';
 
 /// max PDU size for server to accept the event with some buffer incase the server adds unsigned data f.ex age
 /// https://spec.matrix.org/v1.9/client-server-api/#size-limits
