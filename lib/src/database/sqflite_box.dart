@@ -5,8 +5,9 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:matrix/src/database/zone_transaction_mixin.dart';
 import 'package:sqflite_common/sqflite.dart';
+
+import 'zone_transaction_mixin.dart';
 
 /// Key-Value store abstraction over Sqflite so that the sdk database can use
 /// a single interface for all platforms. API is inspired by Hive.

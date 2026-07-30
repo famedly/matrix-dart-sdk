@@ -5,8 +5,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:matrix/matrix.dart';
 import 'package:path/path.dart';
+
+import '../../matrix.dart';
 
 // ignore: unused-code
 mixin DatabaseFileStorage {

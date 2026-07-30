@@ -5,7 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 /// callback taking [CommandArgs] as input and a [StringBuffer] as standard output
 /// optionally returns an event ID as in the [Room.sendEvent] syntax.

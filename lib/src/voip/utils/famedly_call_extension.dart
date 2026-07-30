@@ -6,8 +6,8 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/models/delayed_event_canceller.dart';
+import '../../../matrix.dart';
+import '../models/delayed_event_canceller.dart';
 
 extension FamedlyCallMemberEventsExtension on Room {
   /// a map of every users famedly call event, holds the memberships list

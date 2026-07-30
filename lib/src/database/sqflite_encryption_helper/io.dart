@@ -4,8 +4,9 @@
 
 import 'dart:io';
 
-import 'package:matrix/matrix.dart';
 import 'package:sqflite_common/sqlite_api.dart';
+
+import '../../../matrix.dart';
 
 // ignore: unused-code
 /// A helper utility for SQfLite related encryption operations

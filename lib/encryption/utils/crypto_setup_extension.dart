@@ -4,8 +4,8 @@
 
 import 'dart:async';
 
-import 'package:matrix/encryption/utils/bootstrap.dart';
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
+import 'bootstrap.dart';
 
 extension CryptoSetupExtension on Client {
   /// Returns the current state of the crypto identity.

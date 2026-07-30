@@ -4,7 +4,7 @@
 
 import 'package:collection/collection.dart';
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 extension PollEventExtension on Event {
   PollEventContent get parsedPollEventContent {

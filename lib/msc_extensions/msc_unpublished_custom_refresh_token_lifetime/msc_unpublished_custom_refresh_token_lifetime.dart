@@ -6,7 +6,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart';
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 extension MscUnpublishedCustomRefreshTokenLifetime on MatrixApi {
   static const String customFieldKey = 'com.famedly.refresh_token_lifetime_ms';

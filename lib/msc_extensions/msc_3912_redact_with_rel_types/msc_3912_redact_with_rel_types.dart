@@ -5,7 +5,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart';
-import 'package:matrix/matrix_api_lite/generated/api.dart';
+import '../../matrix_api_lite/generated/api.dart';
 
 extension Msc3912RedactWithRelTypes on Api {
   /// Modified version of `Client.redactEvent()` with MSC3912 to also redact

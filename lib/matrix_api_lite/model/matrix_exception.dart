@@ -8,7 +8,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import 'package:matrix/matrix_api_lite.dart';
+import '../../matrix_api_lite.dart';
 
 enum MatrixError {
   M_UNKNOWN,

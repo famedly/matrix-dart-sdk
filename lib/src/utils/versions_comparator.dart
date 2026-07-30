@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite/utils/logs.dart';
+import '../../matrix_api_lite/utils/logs.dart';
 
 bool isVersionGreaterThanOrEqualTo(String version, String target) {
   try {

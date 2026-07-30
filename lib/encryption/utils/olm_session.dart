@@ -4,9 +4,10 @@
 
 import 'dart:convert';
 
-import 'package:matrix/encryption/utils/pickle_key.dart';
-import 'package:matrix/matrix.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
+
+import '../../matrix.dart';
+import 'pickle_key.dart';
 
 class OlmSession {
   String identityKey;

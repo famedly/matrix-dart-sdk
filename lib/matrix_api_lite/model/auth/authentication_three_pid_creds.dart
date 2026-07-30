@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite/model/auth/authentication_data.dart';
+import 'authentication_data.dart';
 
 /// For email based identity:
 /// https://matrix.org/docs/spec/client_server/r0.6.1#email-based-identity-homeserver

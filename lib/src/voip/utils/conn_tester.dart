@@ -4,8 +4,9 @@
 
 import 'dart:async';
 
-import 'package:matrix/matrix.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
+
+import '../../../matrix.dart';
 
 class ConnectionTester {
   Client client;

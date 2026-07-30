@@ -4,7 +4,7 @@
 
 import 'dart:convert';
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 extension Msc2966OidcDynamicClientRegistration on Client {
   /// Registers a new OIDC Client to retrieve a Client ID for OIDC login.
