@@ -2679,6 +2679,11 @@ class Client extends MatrixApi {
       final id = entry.key;
       final syncRoomUpdate = entry.value;
 
+      // A left room gets removed from `rooms` by `_updateRoomsByRoomUpdate`, so
+      // remember whether it was locally known to still forget it from the
+      // database below.
+      final roomWasKnown = getRoomById(id) != null;
+
       final room = await _updateRoomsByRoomUpdate(id, syncRoomUpdate);
 
       // Is the timeline limited? Then all previous messages should be
@@ -2782,7 +2787,9 @@ class Client extends MatrixApi {
           await _handleRoomEvents(room, state, EventUpdateType.inviteState);
         }
       }
-      if (syncRoomUpdate is LeftRoomUpdate && getRoomById(id) == null) {
+      if (syncRoomUpdate is LeftRoomUpdate &&
+          !roomWasKnown &&
+          getRoomById(id) == null) {
         Logs().d('Skip store LeftRoomUpdate for unknown room', id);
         continue;
       }
