@@ -408,7 +408,8 @@ class Box<V> {
     clearQuickAccessCache();
   }
 
-  V? _fromValue(Object? value) {
+  V? _fromValue(Object? rawValue) {
+    final value = _wholeNumbersAsInt(rawValue);
     if (value == null) return null;
     switch (V) {
       case const (List<dynamic>):
@@ -422,5 +423,27 @@ class Box<V> {
       default:
         return value as V;
     }
+  }
+
+  /// Restores the ints that [JSAny.dartify] flattens into doubles.
+  ///
+  /// It reports every JavaScript number as a double, so a `1` stored here comes
+  /// back as `1.0` — which dart2js maps onto the same Dart `int` and dart2wasm
+  /// does not. Without this, reading a room back fails in a WebAssembly build:
+  ///
+  ///     Type 'double' is not a subtype of type 'int' in type cast
+  ///         at Room.fromJson
+  ///         at MatrixSdkDatabase.getRoomList
+  ///
+  /// A genuinely fractional value keeps its type; a whole-valued double stored
+  /// as a double is read back as an int, which every model in this SDK accepts
+  /// where it accepts a number at all.
+  static Object? _wholeNumbersAsInt(Object? value) {
+    if (value is double && value == value.roundToDouble()) return value.toInt();
+    if (value is List) return value.map(_wholeNumbersAsInt).toList();
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key, _wholeNumbersAsInt(val)));
+    }
+    return value;
   }
 }
