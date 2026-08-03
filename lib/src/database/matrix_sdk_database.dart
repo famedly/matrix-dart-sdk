@@ -428,15 +428,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   @override
   Future<Map<String, dynamic>?> getClient(String name) =>
       runBenchmarked('Get Client from store', () async {
-        final map = <String, dynamic>{};
-        final keys = await _clientBox.getAllKeys();
-        for (final key in keys) {
-          if (key == 'version') continue;
-          final value = await _clientBox.get(key);
-          if (value != null) map[key] = value;
-        }
-        if (map.isEmpty) return null;
-        return map;
+        final clientMap = await _clientBox.getAllValues();
+        clientMap.remove('version');
+        if (clientMap.isEmpty) return null;
+        return clientMap;
       });
 
   @override
