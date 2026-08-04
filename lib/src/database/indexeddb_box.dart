@@ -416,6 +416,9 @@ class Box<V> {
       case const (Map<dynamic, dynamic>):
         return Map.unmodifiable(value as Map) as V;
       case const (int):
+        // Workaround that [JSAny.dartify] on wasm could turn an int into double
+        if (value is double) return value.round() as V;
+        return value as V;
       case const (double):
       case const (bool):
       case const (String):
