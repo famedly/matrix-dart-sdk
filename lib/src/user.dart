@@ -115,6 +115,10 @@ class User extends StrippedStateEvent {
     bool? mxidLocalPartFallback,
     MatrixLocalizations i18n = const MatrixDefaultLocalizations(),
   }) {
+    final override = i18n.displaynameOverride(id);
+    if (override != null) {
+      return override;
+    }
     formatLocalpart ??= room.client.formatLocalpart;
     mxidLocalPartFallback ??= room.client.mxidLocalPartFallback;
     final displayName = this.displayName;

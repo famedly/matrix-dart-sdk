@@ -20,6 +20,14 @@ import 'package:matrix/matrix.dart';
 
 abstract class MatrixLocalizations {
   const MatrixLocalizations();
+
+  /// Optionally overrides the displayname of the user with the given [userId]
+  /// wherever the SDK renders it — state event texts ("x joined the chat"),
+  /// sender name prefixes, and hero-based room names. Return null to use the
+  /// profile displayname. Used e.g. to localize the names of well-known bot
+  /// accounts (pangeachat/client#7487).
+  String? displaynameOverride(String userId) => null;
+
   String get emptyChat;
 
   String get invitedUsersOnly;

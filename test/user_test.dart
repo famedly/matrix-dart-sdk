@@ -126,6 +126,36 @@ void main() async {
         'Unknown user',
       );
     });
+    test('calcDisplayname with displaynameOverride', () async {
+      final bot = User(
+        '@bot:example.com',
+        membership: 'join',
+        displayName: 'Pangea Bot',
+        room: room,
+      );
+      room.setState(bot);
+      const i18n = _OverrideLocalizations();
+      expect(bot.calcDisplayname(i18n: i18n), 'Localized Bot');
+      expect(bot.calcDisplayname(), 'Pangea Bot');
+      expect(user1.calcDisplayname(i18n: i18n), 'Alice M');
+
+      final joinEvent = Event.fromJson(
+        {
+          'content': {'membership': 'join', 'displayname': 'Pangea Bot'},
+          'type': 'm.room.member',
+          'event_id': '\$botjoin:example.com',
+          'room_id': room.id,
+          'sender': '@bot:example.com',
+          'origin_server_ts': 1432735824653,
+          'state_key': '@bot:example.com',
+        },
+        room,
+      );
+      expect(
+        joinEvent.calcLocalizedBodyFallback(i18n),
+        'Localized Bot joined the chat',
+      );
+    });
     test('kick', () async {
       await user1.kick();
     });
@@ -195,4 +225,12 @@ void main() async {
       await client.dispose(closeDatabase: true);
     });
   });
+}
+
+class _OverrideLocalizations extends MatrixDefaultLocalizations {
+  const _OverrideLocalizations();
+
+  @override
+  String? displaynameOverride(String userId) =>
+      userId == '@bot:example.com' ? 'Localized Bot' : null;
 }
