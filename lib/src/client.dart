@@ -3326,14 +3326,40 @@ class Client extends MatrixApi {
     }
 
     userIds.removeWhere(userDeviceKeys.containsKey);
+
+    // Skip users whose homeserver failed a recent `/keys/query` and keep
+    // returning their cached (outdated) list, so we don't hammer failing
+    // federated servers before the 5 minute backoff has elapsed.
+    userIds.removeWhere((userId) {
+      final failure = _keyQueryFailures[userId.domain];
+      if (failure != null &&
+          DateTime.now().subtract(Duration(minutes: 5)).isBefore(failure)) {
+        final cached = oldDeviceKeys.remove(userId);
+        if (cached != null) userDeviceKeys[userId] = cached;
+        return true;
+      }
+      return false;
+    });
+
     if (userIds.isEmpty) return userDeviceKeys;
 
     // Fetch the rest from the server:
     final missingUserIds = {for (final userId in userIds) userId: <String>[]};
-    final response = await queryKeys(
-      missingUserIds,
-      timeout: queryKeysTimeout?.inMilliseconds,
-    );
+    final QueryKeysResponse response;
+    try {
+      response = await queryKeys(
+        missingUserIds,
+        timeout: queryKeysTimeout?.inMilliseconds,
+      );
+    } catch (e, s) {
+      Logs().e('[Vodozemac] Unable to query user device keys', e, s);
+      // On failure fall back to the cached snapshots we already loaded so a
+      // transient federation/network error doesn't discard usable keys.
+      for (final oldEntry in oldDeviceKeys.entries) {
+        userDeviceKeys.putIfAbsent(oldEntry.key, () => oldEntry.value);
+      }
+      return userDeviceKeys;
+    }
 
     if (!isLogged()) return userDeviceKeys;
 

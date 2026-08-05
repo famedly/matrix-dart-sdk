@@ -908,11 +908,22 @@ class KeyManager {
         // we need to calculate verified beforehand, as else we pass a closure to an isolate
         // with 500 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
         // so that the event loop can progress
+        // Load the device keys once and index them by curve25519 key, instead
+        // of rescanning the whole store for every inbound session.
+        final devicesByCurve25519 = <String, DeviceKeys>{};
+        for (final userKeys in (await database.getUserDeviceKeys(
+          client,
+        )).values) {
+          for (final device in userKeys.deviceKeys.values) {
+            final curve25519Key = device.curve25519Key;
+            if (curve25519Key != null) {
+              devicesByCurve25519[curve25519Key] = device;
+            }
+          }
+        }
         var i = 0;
         for (final dbSession in dbSessions) {
-          final device = await client.getUserDeviceKeysByCurve25519Key(
-            dbSession.senderKey,
-          );
+          final device = devicesByCurve25519[dbSession.senderKey];
           args.dbSessions.add(
             DbInboundGroupSessionBundle(
               dbSession: dbSession,
