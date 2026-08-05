@@ -201,7 +201,8 @@ class Box<V> {
       getAllKeysCompleter.complete();
     }.toJS;
     await getAllKeysCompleter.future;
-    final keys = (request.result?.dartify() as List?)?.cast<String>() ?? [];
+    final keys =
+        (request.result?.dartifyWithInts() as List?)?.cast<String>() ?? [];
     _quickAccessCachedKeys = keys.toSet();
     return keys;
   }
@@ -228,7 +229,7 @@ class Box<V> {
       );
     }.toJS;
     getAllValuesRequest.onsuccess = (Event event) {
-      final values = getAllValuesRequest.result.dartify() as List;
+      final values = getAllValuesRequest.result.dartifyWithInts() as List;
       for (var i = 0; i < values.length; i++) {
         map[keys[i]] = _fromValue(values[i]) as V;
       }
@@ -254,7 +255,9 @@ class Box<V> {
       getObjectCompleter.complete();
     }.toJS;
     await getObjectCompleter.future;
-    _quickAccessCache[key] = _fromValue(getObjectRequest.result?.dartify());
+    _quickAccessCache[key] = _fromValue(
+      getObjectRequest.result?.dartifyWithInts(),
+    );
     return _quickAccessCache[key];
   }
 
@@ -281,7 +284,7 @@ class Box<V> {
           getObjectCompleter.complete();
         }.toJS;
         await getObjectCompleter.future;
-        return _fromValue(getObjectRequest.result?.dartify());
+        return _fromValue(getObjectRequest.result?.dartifyWithInts());
       }),
     );
     for (var i = 0; i < keys.length; i++) {
@@ -416,14 +419,27 @@ class Box<V> {
       case const (Map<dynamic, dynamic>):
         return Map.unmodifiable(value as Map) as V;
       case const (int):
-        // Workaround that [JSAny.dartify] on wasm could turn an int into double
-        if (value is double) return value.round() as V;
-        return value as V;
       case const (double):
       case const (bool):
       case const (String):
       default:
         return value as V;
     }
+  }
+}
+
+extension on JSAny? {
+  /// dart on wasm converts everything into doubles and does not know
+  /// integers. We convert here all doubles like `2.0` into integers, as they
+  /// can safely casted into doubles anyway.
+  Object? dartifyWithInts() => _wholeNumbersAsInt(dartify());
+
+  Object? _wholeNumbersAsInt(Object? value) {
+    if (value is double && value == value.roundToDouble()) return value.toInt();
+    if (value is List) return value.map(_wholeNumbersAsInt).toList();
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key, _wholeNumbersAsInt(val)));
+    }
+    return value;
   }
 }
