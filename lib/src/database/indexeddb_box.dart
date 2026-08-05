@@ -418,8 +418,11 @@ class Box<V> {
         return List.unmodifiable(value as List) as V;
       case const (Map<dynamic, dynamic>):
         return Map.unmodifiable(value as Map) as V;
-      case const (int):
       case const (double):
+        // On WASM `dartifyWithInts` may have turned a whole-number double into
+        // an `int`, which is not a `double`. Coerce back before the cast.
+        return (value as num).toDouble() as V;
+      case const (int):
       case const (bool):
       case const (String):
       default:
