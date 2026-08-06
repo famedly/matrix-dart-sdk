@@ -1984,15 +1984,16 @@ class Room {
   /// a fallback [User] and start a request to get the user
   /// from the homeserver.
   User unsafeGetUserFromMemoryOrFallback(String mxID) {
-    final user = getState(EventTypes.RoomMember, mxID);
-    if (user != null) {
-      return user.asUser(this);
+    final user = getState(EventTypes.RoomMember, mxID)?.asUser(this);
+    if (user != null &&
+        !{Membership.leave, Membership.ban}.contains(user.membership)) {
+      return user;
     } else {
       if (mxID.isValidMatrixIdStrict()) {
         // ignore: discarded_futures
         requestUser(mxID, ignoreErrors: true);
       }
-      return User(mxID, room: this);
+      return user ?? User(mxID, room: this);
     }
   }
 
