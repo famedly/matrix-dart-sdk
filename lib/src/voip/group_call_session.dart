@@ -424,6 +424,7 @@ class GroupCallSession {
       metadata: {
         'device_id': client.deviceID,
         'call_id': groupCallId,
+        'scope': scope,
         'redacts_type': EventTypes.GroupCallMemberReaction,
       },
     );
