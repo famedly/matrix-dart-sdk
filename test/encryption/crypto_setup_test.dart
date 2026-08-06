@@ -250,37 +250,43 @@ void main() {
       timeout: Timeout(Duration(minutes: 2)),
     );
 
-    test('initCryptoIdentity selfSign controls device signing', () async {
-      final client = await getClient();
-      final userId = client.userID!;
-      final deviceId = client.deviceID!;
+    test(
+      'initCryptoIdentity selfSign controls device signing',
+      () async {
+        final client = await getClient();
+        final userId = client.userID!;
+        final deviceId = client.deviceID!;
 
-      bool uploadContainsDevice(List<dynamic> uploads) {
-        for (final upload in uploads) {
-          final body = jsonDecode(upload as String) as Map;
-          final userKeys = body[userId] as Map?;
-          if (userKeys?.containsKey(deviceId) ?? false) {
-            return true;
+        bool uploadContainsDevice(List<dynamic> uploads) {
+          for (final upload in uploads) {
+            final body = jsonDecode(upload as String) as Map;
+            final userKeys = body[userId] as Map?;
+            if (userKeys?.containsKey(deviceId) ?? false) {
+              return true;
+            }
           }
+          return false;
         }
-        return false;
-      }
 
-      FakeMatrixApi.calledEndpoints.clear();
-      await client.initCryptoIdentity(selfSign: false);
-      final noSelfSignUploads =
-          FakeMatrixApi.calledEndpoints['/client/v3/keys/signatures/upload'] ??
-          [];
-      expect(uploadContainsDevice(noSelfSignUploads), false);
+        FakeMatrixApi.calledEndpoints.clear();
+        await client.initCryptoIdentity(selfSign: false);
+        final noSelfSignUploads =
+            FakeMatrixApi
+                .calledEndpoints['/client/v3/keys/signatures/upload'] ??
+            [];
+        expect(uploadContainsDevice(noSelfSignUploads), false);
 
-      FakeMatrixApi.calledEndpoints.clear();
-      final recoveryKey = await client.initCryptoIdentity(selfSign: true);
-      final selfSignUploads =
-          FakeMatrixApi.calledEndpoints['/client/v3/keys/signatures/upload'] ??
-          [];
-      expect(uploadContainsDevice(selfSignUploads), true);
-      expect(recoveryKey.length, 59);
-    }, timeout: Timeout(Duration(minutes: 2)));
+        FakeMatrixApi.calledEndpoints.clear();
+        final recoveryKey = await client.initCryptoIdentity(selfSign: true);
+        final selfSignUploads =
+            FakeMatrixApi
+                .calledEndpoints['/client/v3/keys/signatures/upload'] ??
+            [];
+        expect(uploadContainsDevice(selfSignUploads), true);
+        expect(recoveryKey.length, 59);
+      },
+      timeout: Timeout(Duration(minutes: 2)),
+    );
 
     test('Add a second recovery key', () async {
       final client = await getClient();
@@ -312,6 +318,8 @@ void main() {
 
       await client.encryption!.ssss.clearCache();
 
+      final defaultKeyId = client.encryption!.ssss.defaultKeyId!;
+
       await client.restoreCryptoIdentity(
         recoveryKey2,
         keyIdentifier: openSsss2.keyId,
@@ -321,6 +329,7 @@ void main() {
       state = await client.getCryptoIdentityState();
       expect(state.initialized, true);
       expect(state.connected, true);
+      expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
     }, timeout: Timeout(Duration(minutes: 2)));
   });
 }

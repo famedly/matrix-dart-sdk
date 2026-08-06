@@ -66,6 +66,9 @@ class Bootstrap {
   OpenSSSS? newSsssKey;
   ErrorResult? errorResult;
 
+  /// Only a key created by [newSsss] may become the new default key.
+  bool _newSsssKeyNeedsDefaultUpdate = false;
+
   Bootstrap({required this.encryption, this.onUpdate}) {
     final defaultKeyId = encryption.ssss.defaultKeyId;
     final hasValidDefaultKey =
@@ -230,6 +233,7 @@ class Bootstrap {
     try {
       Logs().v('Create key...');
       newSsssKey = await encryption.ssss.createKey(passphrase, name);
+      _newSsssKeyNeedsDefaultUpdate = true;
       if (oldSsssKeys != null) {
         final existingOldKeys = oldSsssKeys!;
         if (existingOldKeys.isNotEmpty) {
@@ -244,13 +248,6 @@ class Bootstrap {
           );
         }
       }
-      await encryption.ssss.setDefaultKeyId(newSsssKey!.keyId);
-      while (encryption.ssss.defaultKeyId != newSsssKey!.keyId) {
-        Logs().v(
-          'Waiting accountData to have the correct m.secret_storage.default_key',
-        );
-        await client.oneShotSync();
-      }
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error trying to migrate old secrets', e, s);
       errorResult = ErrorResult(e, s);
@@ -260,6 +257,26 @@ class Bootstrap {
     // alright, we successfully migrated all secrets, if needed
 
     checkCrossSigning();
+  }
+
+  Future<bool> _setNewSsssKeyAsDefault() async {
+    if (!_newSsssKeyNeedsDefaultUpdate) return true;
+    try {
+      await encryption.ssss.setDefaultKeyId(newSsssKey!.keyId);
+      while (encryption.ssss.defaultKeyId != newSsssKey!.keyId) {
+        Logs().v(
+          'Waiting accountData to have the correct m.secret_storage.default_key',
+        );
+        await client.oneShotSync();
+      }
+      _newSsssKeyNeedsDefaultUpdate = false;
+      return true;
+    } catch (e, s) {
+      Logs().e('[Bootstrapping] Error setting new SSSS key as default', e, s);
+      errorResult = ErrorResult(e, s);
+      state = BootstrapState.error;
+      return false;
+    }
   }
 
   Future<void> openExistingSsss() async {
@@ -293,6 +310,9 @@ class Bootstrap {
     if (wipe) {
       state = BootstrapState.askSetupCrossSigning;
     } else {
+      if (!await _setNewSsssKeyAsDefault()) {
+        return;
+      }
       await client.dehydratedDeviceSetup(newSsssKey!);
       checkOnlineKeyBackup();
     }
@@ -308,6 +328,9 @@ class Bootstrap {
       throw BootstrapBadStateException();
     }
     if (!setupMasterKey && !setupSelfSigningKey && !setupUserSigningKey) {
+      if (!await _setNewSsssKeyAsDefault()) {
+        return;
+      }
       await client.dehydratedDeviceSetup(newSsssKey!);
       checkOnlineKeyBackup();
       return;
@@ -393,6 +416,9 @@ class Bootstrap {
         ),
       );
       Logs().v('Device signing keys have been uploaded.');
+      if (!await _setNewSsssKeyAsDefault()) {
+        return;
+      }
       // aaaand set the SSSS secrets
       if (masterKey != null) {
         while (!(masterKey.publicKey != null &&
