@@ -76,7 +76,10 @@ void main() async {
     });
 
     test('discard room from archives when membership change', () async {
-      await client.loadArchiveWithTimeline();
+      final archive = await client.loadArchiveWithTimeline();
+      expect(archive.any((a) => a.room.id == '!5345234235:example.com'), true);
+      expect(client.getRoomById('!5345234235:example.com'), null);
+
       await client.handleSync(
         SyncUpdate(
           nextBatch: 't_456',
@@ -85,6 +88,10 @@ void main() async {
           ),
         ),
       );
+
+      final invitedRoom = client.getRoomById('!5345234235:example.com');
+      expect(invitedRoom != null, true);
+      expect(invitedRoom!.membership, Membership.invite);
     });
 
     test('logout', () async {
