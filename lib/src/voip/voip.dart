@@ -816,8 +816,8 @@ class VoIP {
     final membership = memberships.firstWhereOrNull(
       (m) =>
           m.callId == callId &&
-          m.application == 'm.call' &&
-          m.scope == 'm.room',
+          m.scope == groupCall.scope &&
+          m.roomId == groupCall.room.id,
     );
 
     if (membership == null || membership.isExpired) {
@@ -887,14 +887,15 @@ class VoIP {
       '[VOIP] _handleRedactionEvent: Device ID from redacted event: $deviceId',
     );
 
+    final scope = event.content.tryGet<String>('scope');
+
     // Route to all active group calls in the room
     final groupCall = groupCalls.values.firstWhereOrNull(
       (m) =>
           m.room.id == room.id &&
           m.state == GroupCallState.entered &&
           m.groupCallId == event.content.tryGet('call_id') &&
-          m.application == 'm.call' &&
-          m.scope == 'm.room',
+          (scope == null || m.scope == scope),
     );
 
     if (groupCall == null) {
