@@ -24,7 +24,6 @@ import 'utils/cached_stream_controller.dart';
 import 'utils/client_init_exception.dart';
 import 'utils/multilock.dart';
 import 'utils/request_and_cache.dart';
-import 'utils/run_benchmarked.dart';
 import 'utils/run_in_root.dart';
 import 'utils/sync_update_item_count.dart';
 import 'utils/try_get_push_rule.dart';

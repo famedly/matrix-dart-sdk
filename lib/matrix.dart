@@ -53,6 +53,7 @@ export 'src/utils/push_notification.dart';
 export 'src/utils/pushrule_evaluator.dart';
 export 'src/utils/room_enums.dart';
 export 'src/utils/room_member_change_type.dart';
+export 'src/utils/run_benchmarked.dart';
 export 'src/utils/sync_update_extension.dart';
 export 'src/utils/to_device_event.dart';
 export 'src/utils/uia_request.dart';
