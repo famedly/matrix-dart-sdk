@@ -220,6 +220,27 @@ void main() {
       timeout: Timeout(Duration(minutes: 2)),
     );
 
+    test(
+      'valid default key without secrets starts at askWipeSsss',
+      () async {
+        final testClient = await getClient();
+        await testClient.initCryptoIdentity();
+        for (final type in [
+          EventTypes.CrossSigningMasterKey,
+          EventTypes.CrossSigningSelfSigning,
+          EventTypes.CrossSigningUserSigning,
+          EventTypes.MegolmBackup,
+        ]) {
+          await testClient.setAccountData(testClient.userID!, type, {});
+        }
+
+        final bootstrap = testClient.encryption!.bootstrap();
+
+        expect(bootstrap.state, BootstrapState.askWipeSsss);
+      },
+      timeout: Timeout(Duration(minutes: 2)),
+    );
+
     test('bad ssss', () async {
       client.accountData.clear();
       await client.setAccountData(client.userID!, 'foxes', oldSecret);

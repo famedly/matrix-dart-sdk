@@ -67,7 +67,10 @@ class Bootstrap {
   ErrorResult? errorResult;
 
   Bootstrap({required this.encryption, this.onUpdate}) {
-    if (analyzeSecrets().isNotEmpty) {
+    final defaultKeyId = encryption.ssss.defaultKeyId;
+    final hasValidDefaultKey =
+        defaultKeyId != null && encryption.ssss.isKeyValid(defaultKeyId);
+    if (analyzeSecrets().isNotEmpty || hasValidDefaultKey) {
       state = BootstrapState.askWipeSsss;
     } else {
       state = BootstrapState.askNewSsss;
@@ -299,6 +302,7 @@ class Bootstrap {
     bool setupMasterKey = false,
     bool setupSelfSigningKey = false,
     bool setupUserSigningKey = false,
+    bool selfSign = true,
   }) async {
     if (state != BootstrapState.askSetupCrossSigning) {
       throw BootstrapBadStateException();
@@ -422,7 +426,7 @@ class Bootstrap {
         );
         keysToSign.add(client.userDeviceKeys[client.userID]!.masterKey!);
       }
-      if (selfSigningKey != null) {
+      if (selfSigningKey != null && selfSign) {
         keysToSign.add(
           client.userDeviceKeys[client.userID]!.deviceKeys[client.deviceID]!,
         );
