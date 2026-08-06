@@ -11,7 +11,6 @@ import 'package:vodozemac/vodozemac.dart' as vod;
 
 import '../matrix.dart';
 import '../msc_extensions/msc_3814_dehydrated_devices/api.dart';
-import '../src/utils/run_benchmarked.dart';
 import '../src/utils/run_in_root.dart';
 import 'encryption.dart';
 import 'utils/json_signature_check_extension.dart';

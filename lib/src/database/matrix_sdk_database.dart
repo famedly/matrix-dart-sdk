@@ -15,7 +15,6 @@ import '../../encryption/utils/stored_inbound_group_session.dart';
 import '../../matrix.dart';
 import '../utils/copy_map.dart';
 import '../utils/queued_to_device_event.dart';
-import '../utils/run_benchmarked.dart';
 import 'database_file_storage_stub.dart'
     if (dart.library.io) 'database_file_storage_io.dart';
 import 'sqflite_box.dart' if (dart.library.js_interop) 'indexeddb_box.dart';
