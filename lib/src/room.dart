@@ -2118,8 +2118,11 @@ class Room {
 
     // Set user in the local state if the state changed.
     // If we set the state unconditionally, we might end up with a client calling this over and over thinking the user changed.
+    // Skip the update if the membership changed while we were fetching (e.g. a
+    // concurrent rejoin), otherwise a stale leave/ban user could overwrite live state.
     if (userFromCurrentState == null ||
-        userFromCurrentState.displayName != foundUser.displayName) {
+        (userFromCurrentState.membership == foundUser.membership &&
+            userFromCurrentState.displayName != foundUser.displayName)) {
       setState(foundUser);
       // ignore: deprecated_member_use_from_same_package
       onUpdate.add(id);
