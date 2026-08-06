@@ -45,5 +45,5 @@ dev_dependencies:
       url: https://github.com/famedly/frontend-ci-templates.git
       path: lints/dart
   lints: any
-  sqflite_common_ffi: ^2.3.4+4 # sqflite_common_ffi aggressively requires newer dart versions
+  sqflite_common_ffi: ^2.4.2 # sqflite_common_ffi aggressively requires newer dart versions
   test: ^1.27.0
