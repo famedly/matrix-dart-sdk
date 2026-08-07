@@ -192,6 +192,10 @@ extension DehydratedDeviceHandler on Client {
       encryption.ourDeviceId = device;
       encryption.olmManager.ourDeviceId = device;
 
+      // Mark our own keys as outdated so the fetch below hits the server and
+      // includes the device we just uploaded, instead of a stale DB snapshot.
+      await database.storeUserDeviceKeysInfo(userID!, true);
+
       // cross sign the device from our currently signed in device
       final ownKeys = await fetchUserDeviceKeysList(userID!);
       final keysToSign = <SignableKey>[ownKeys!.deviceKeys[device]!];
