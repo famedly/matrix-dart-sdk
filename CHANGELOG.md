@@ -4,6 +4,17 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [10.0.0] 7th August 2026
+- build: update dart vodozemac to 0.7.0 and vodozemac rust to 0.10.0 with it (Christian Kußowski)
+- chore: (BREAKING CHANGE) use dart 3.12 (td)
+- chore: export run benchmarked (Christian Kußowski)
+- chore: simplify database.getClient() (Christian Kußowski)
+- feat: (BREAKING) add ability to finish partial crypto identity initialization to initCryptoIdentity (Karthikeyan S)
+- fix: defer SSSS default key change until after UIA (Karthikeyan S)
+- fix: reactions for 1:1 livekit based calls (td)
+- fix: when parsing a 'react' command, try to convert custom emote name to MXC URL so the URL is saved as the key for the reaction event (ggurdin)
+- fix: workaround that [JSAny.dartify] on wasm could turn an int into double (Christian Kußowski)
+
 ## [9.0.0] 27th July 2026
 - build: (BREAKING) update to matrix spec 1-19 (Christian Kußowski)
 - build: (BREAKING) update to sqlite3 (Christian Kußowski)
