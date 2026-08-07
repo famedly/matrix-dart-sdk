@@ -743,7 +743,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           final userDeviceKeys = await _userDeviceKeysBox.getAllValues();
           final userCrossSigningKeys = await _userCrossSigningKeysBox
               .getAllValues();
-          for (final userId in deviceKeysOutdated.keys) {
+          final ownUserId = client.userID;
+
+          DeviceKeysList buildList(String userId, {DeviceKeysList? ownKeys}) {
             final deviceKeysBoxKeys = userDeviceKeys.keys.where((tuple) {
               final tupleKey = TupleKey.fromString(tuple);
               return tupleKey.parts.first == userId;
@@ -764,7 +766,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
               if (crossSigningKey == null) return null;
               return copyMap(crossSigningKey);
             });
-            res[userId] = DeviceKeysList.fromDbJson(
+            return DeviceKeysList.fromDbJson(
               {
                 'client_id': client.id,
                 'user_id': userId,
@@ -779,7 +781,19 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
                   .toList()
                   .cast<Map<String, dynamic>>(),
               client,
+              ownKeys: ownKeys,
             );
+          }
+
+          if (ownUserId != null && deviceKeysOutdated.containsKey(ownUserId)) {
+            res[ownUserId] = buildList(ownUserId);
+          }
+          final ownKeys =
+              res[ownUserId] ??
+              (ownUserId != null ? DeviceKeysList(ownUserId, client) : null);
+          for (final userId in deviceKeysOutdated.keys) {
+            if (userId == ownUserId) continue;
+            res[userId] = buildList(userId, ownKeys: ownKeys);
           }
           return res;
         },
@@ -1355,18 +1369,23 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String publicKey,
     String content,
-    bool verified,
-    bool blocked, {
+    bool? verified,
+    bool? blocked, {
     DateTime? trustOnFirstUseSince,
   }) async {
-    await _userCrossSigningKeysBox.put(TupleKey(userId, publicKey).toString(), {
+    final boxKey = TupleKey(userId, publicKey).toString();
+    final existing = await _userCrossSigningKeysBox.get(boxKey);
+    final existingMap = existing != null ? copyMap(existing) : null;
+    await _userCrossSigningKeysBox.put(boxKey, {
       'user_id': userId,
       'public_key': publicKey,
       'content': content,
-      'verified': verified,
-      'blocked': blocked,
+      'verified': verified ?? existingMap?['verified'] ?? false,
+      'blocked': blocked ?? existingMap?['blocked'] ?? false,
       if (trustOnFirstUseSince != null)
-        'tofu': trustOnFirstUseSince.millisecondsSinceEpoch,
+        'tofu': trustOnFirstUseSince.millisecondsSinceEpoch
+      else if (existingMap?['tofu'] != null)
+        'tofu': existingMap!['tofu'],
     });
   }
 
@@ -1375,16 +1394,19 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String deviceId,
     String content,
-    bool verified,
-    bool blocked,
+    bool? verified,
+    bool? blocked,
     int lastActive,
   ) async {
-    await _userDeviceKeysBox.put(TupleKey(userId, deviceId).toString(), {
+    final boxKey = TupleKey(userId, deviceId).toString();
+    final existing = await _userDeviceKeysBox.get(boxKey);
+    final existingMap = existing != null ? copyMap(existing) : null;
+    await _userDeviceKeysBox.put(boxKey, {
       'user_id': userId,
       'device_id': deviceId,
       'content': content,
-      'verified': verified,
-      'blocked': blocked,
+      'verified': verified ?? existingMap?['verified'] ?? false,
+      'blocked': blocked ?? existingMap?['blocked'] ?? false,
       'last_active': lastActive,
       'last_sent_message': '',
     });
@@ -1794,6 +1816,87 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String roomId,
     LatestReceiptState receiptState,
   ) => _readReceiptsBox.put(roomId, receiptState.toJson());
+
+  @override
+  Future<DeviceKeysList?> getUserDeviceKeysList(
+    String userId,
+    Client client,
+  ) async {
+    final outdated = await _userDeviceKeysOutdatedBox.get(userId);
+    if (outdated == null) return null;
+
+    final userDeviceKeysKeys = await _userDeviceKeysBox.getAllKeys();
+    final userCrossSigningKeysKeys = await _userCrossSigningKeysBox
+        .getAllKeys();
+
+    final deviceKeysBoxKeys = userDeviceKeysKeys.where((tuple) {
+      final tupleKey = TupleKey.fromString(tuple);
+      return tupleKey.parts.first == userId;
+    });
+    final crossSigningKeysBoxKeys = userCrossSigningKeysKeys.where((tuple) {
+      final tupleKey = TupleKey.fromString(tuple);
+      return tupleKey.parts.first == userId;
+    });
+    final childEntries = await Future.wait(
+      deviceKeysBoxKeys.map((key) async {
+        final userDeviceKey = await _userDeviceKeysBox.get(key);
+        if (userDeviceKey == null) return null;
+        return copyMap(userDeviceKey);
+      }),
+    );
+    final crossSigningEntries = await Future.wait(
+      crossSigningKeysBoxKeys.map((key) async {
+        final crossSigningKey = await _userCrossSigningKeysBox.get(key);
+        if (crossSigningKey == null) return null;
+        return copyMap(crossSigningKey);
+      }),
+    );
+
+    DeviceKeysList? ownKeys;
+    final ownUserId = client.userID;
+    if (ownUserId != null && userId != ownUserId) {
+      ownKeys = await getUserDeviceKeysList(ownUserId, client);
+      ownKeys ??= DeviceKeysList(ownUserId, client);
+    }
+
+    return DeviceKeysList.fromDbJson(
+      {'client_id': client.id, 'user_id': userId, 'outdated': outdated},
+      childEntries
+          .where((c) => c != null)
+          .toList()
+          .cast<Map<String, dynamic>>(),
+      crossSigningEntries
+          .where((c) => c != null)
+          .toList()
+          .cast<Map<String, dynamic>>(),
+      client,
+      ownKeys: ownKeys,
+    );
+  }
+
+  @override
+  Future<DeviceKeys?> getUserDeviceKeysByCurve25519Key(
+    String senderKey,
+    Client client,
+  ) async {
+    final deviceId = await _seenDeviceKeysBox.get(senderKey);
+    if (deviceId == null) return null;
+
+    final seenDevicesKeys = await _seenDeviceIdsBox.getAllKeys();
+
+    for (final key in seenDevicesKeys) {
+      final tuple = TupleKey.fromString(key);
+      if (tuple.parts.last != deviceId) continue;
+      final publicKeys = await _seenDeviceIdsBox.get(key);
+      if (publicKeys == null || !publicKeys.startsWith(senderKey)) continue;
+      final deviceKeysList = await getUserDeviceKeysList(
+        tuple.parts.first,
+        client,
+      );
+      return deviceKeysList?.deviceKeys[deviceId];
+    }
+    return null;
+  }
 }
 
 class TupleKey {
