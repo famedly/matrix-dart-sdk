@@ -3328,6 +3328,23 @@ class Client extends MatrixApi {
     userIds.removeWhere(userDeviceKeys.containsKey);
     if (userIds.isEmpty) return userDeviceKeys;
 
+    // Cross-user signature chains are validated against our own cross-signing
+    // keys (see [SignableKey.ownKeys]). If ours are missing or outdated, add
+    // our user to the same /keys/query batch so freshly fetched keys are
+    // verified against a usable master / user-signing key instead of a stale
+    // (possibly empty) stub.
+    final ownUserId = userID!;
+    if (!userIds.contains(ownUserId) &&
+        !userDeviceKeys.containsKey(ownUserId)) {
+      final cachedOwnKeys =
+          oldDeviceKeys[ownUserId] ??
+          await database.getUserDeviceKeysList(ownUserId, this);
+      if (cachedOwnKeys == null || cachedOwnKeys.outdated) {
+        if (cachedOwnKeys != null) oldDeviceKeys[ownUserId] = cachedOwnKeys;
+        userIds.add(ownUserId);
+      }
+    }
+
     // Fetch the rest from the server:
     final missingUserIds = {for (final userId in userIds) userId: <String>[]};
     final response = await queryKeys(
@@ -3340,7 +3357,6 @@ class Client extends MatrixApi {
     // Single list instance for our own keys — always passed into SignableKey
     // constructors for cross-user signature chains. Reused as userKeys when
     // updating our own user.
-    final ownUserId = userID!;
     final ownKeys =
         oldDeviceKeys[ownUserId] ??
         userDeviceKeys[ownUserId] ??
