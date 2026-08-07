@@ -3316,11 +3316,13 @@ class Client extends MatrixApi {
     Duration? queryKeysTimeout,
     bool alwaysFetchFromServer = false,
   }) async {
-    userIds.add(userID!); // Ensure own keys are always up2date
+    // Work on a local copy so we never mutate the caller's set.
+    final pending = Set<String>.of(userIds)
+      ..add(userID!); // Ensure own keys are always up2date
     final userDeviceKeys = <String, DeviceKeysList>{};
     final oldDeviceKeys = <String, DeviceKeysList>{};
     // Get from database:
-    for (final userId in userIds) {
+    for (final userId in pending) {
       final cachedList = await database.getUserDeviceKeysList(userId, this);
       if (cachedList != null) {
         if (cachedList.outdated || alwaysFetchFromServer) {
@@ -3331,11 +3333,11 @@ class Client extends MatrixApi {
       }
     }
 
-    userIds.removeWhere(userDeviceKeys.containsKey);
-    if (userIds.isEmpty) return userDeviceKeys;
+    pending.removeWhere(userDeviceKeys.containsKey);
+    if (pending.isEmpty) return userDeviceKeys;
 
     // Fetch the rest from the server:
-    final missingUserIds = {for (final userId in userIds) userId: <String>[]};
+    final missingUserIds = {for (final userId in pending) userId: <String>[]};
     final response = await queryKeys(
       missingUserIds,
       timeout: queryKeysTimeout?.inMilliseconds,
@@ -3540,8 +3542,8 @@ class Client extends MatrixApi {
               userId,
               publicKey,
               json.encode(entry.toJson()),
-              null,
-              null,
+              entry.directVerified,
+              entry.blocked,
               trustOnFirstUseSince: entry.trustOnFirstUseSince,
             ),
           );
