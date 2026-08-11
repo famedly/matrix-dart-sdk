@@ -2058,13 +2058,10 @@ class Room {
     required bool requestProfile,
   }) async {
     // Is user already in cache?
-
-    // If not in cache, try the database
     var foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
-    // If the room is not postloaded, check the database
-    if (partial && foundUser == null) {
-      foundUser = await client.database.getUser(mxID, this);
+    if (partial) {
+      foundUser = await client.database.getUser(mxID, this) ?? foundUser;
     }
 
     // If not in the database, try fetching the member from the server
@@ -2123,7 +2120,8 @@ class Room {
     // Set user in the local state if the state changed.
     // If we set the state unconditionally, we might end up with a client calling this over and over thinking the user changed.
     if (userFromCurrentState == null ||
-        userFromCurrentState.displayName != foundUser.displayName) {
+        userFromCurrentState.displayName != foundUser.displayName ||
+        userFromCurrentState.avatarUrl != foundUser.avatarUrl) {
       setState(foundUser);
       // ignore: deprecated_member_use_from_same_package
       onUpdate.add(id);

@@ -973,6 +973,218 @@ void main() {
       expect(nonDmRoom.directChatMatrixID, isNull);
     });
 
+    test('partial DM keeps hero avatar in sync', () async {
+      final dmRoom = matrix.getRoomById('!726s6s6q:example.com')!;
+      expect(dmRoom.partial, true);
+      const bobId = '@bob:example.com';
+
+      // Restore m.direct after earlier tests may have cleared it.
+      await matrix.handleSync(
+        SyncUpdate.fromJson(
+          jsonDecode('''
+          {
+            "next_batch": "sync_restore_dm",
+            "account_data": {
+              "events": [{
+                "type": "m.direct",
+                "content": {"@bob:example.com": ["!726s6s6q:example.com"]}
+              }]
+            }
+          }
+        '''),
+        ),
+      );
+      expect(dmRoom.directChatMatrixID, bobId);
+
+      // Hero already loaded in memory (room list) with an old avatar.
+      dmRoom.setState(
+        Event(
+          senderId: bobId,
+          type: EventTypes.RoomMember,
+          room: dmRoom,
+          eventId: '\$bob_old_avatar',
+          originServerTs: DateTime.fromMillisecondsSinceEpoch(1000),
+          content: {
+            'membership': 'join',
+            'displayname': 'Bob',
+            'avatar_url': 'mxc://example.com/old',
+          },
+          stateKey: bobId,
+        ),
+      );
+      expect(dmRoom.avatar.toString(), 'mxc://example.com/old');
+
+      // Avatar change arrives via sync while the room stays partial.
+      await matrix.handleSync(
+        SyncUpdate(
+          nextBatch: 'sync_bob_avatar',
+          rooms: RoomsUpdate(
+            join: {
+              dmRoom.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      type: EventTypes.RoomMember,
+                      senderId: bobId,
+                      eventId: '\$bob_new_avatar',
+                      originServerTs: DateTime.fromMillisecondsSinceEpoch(2000),
+                      stateKey: bobId,
+                      content: {
+                        'membership': 'join',
+                        'displayname': 'Bob',
+                        'avatar_url': 'mxc://example.com/new',
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+      expect(dmRoom.partial, true);
+      expect(
+        dmRoom.getState(EventTypes.RoomMember, bobId)?.content['avatar_url'],
+        'mxc://example.com/new',
+      );
+      expect(dmRoom.avatar.toString(), 'mxc://example.com/new');
+
+      // Members not already in memory must still be skipped while partial.
+      const unknownId = '@unknown:example.com';
+      await matrix.handleSync(
+        SyncUpdate(
+          nextBatch: 'sync_unknown_member',
+          rooms: RoomsUpdate(
+            join: {
+              dmRoom.id: JoinedRoomUpdate(
+                state: [
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    senderId: unknownId,
+                    eventId: '\$unknown_join',
+                    originServerTs: DateTime.fromMillisecondsSinceEpoch(3000),
+                    stateKey: unknownId,
+                    content: {
+                      'membership': 'join',
+                      'displayname': 'Unknown',
+                      'avatar_url': 'mxc://example.com/unknown',
+                    },
+                  ),
+                ],
+              ),
+            },
+          ),
+        ),
+      );
+      expect(dmRoom.getState(EventTypes.RoomMember, unknownId), isNull);
+
+      // Stale in-memory hero + newer DB row: requestUser must prefer DB.
+      dmRoom.setState(
+        Event(
+          senderId: bobId,
+          type: EventTypes.RoomMember,
+          room: dmRoom,
+          eventId: '\$bob_stale_memory',
+          originServerTs: DateTime.fromMillisecondsSinceEpoch(4000),
+          content: {
+            'membership': 'join',
+            'displayname': 'Bob',
+            'avatar_url': 'mxc://example.com/stale',
+          },
+          stateKey: bobId,
+        ),
+      );
+      await matrix.database.storeEventUpdate(
+        dmRoom.id,
+        Event(
+          senderId: bobId,
+          type: EventTypes.RoomMember,
+          room: dmRoom,
+          eventId: '\$bob_db_fresh',
+          originServerTs: DateTime.fromMillisecondsSinceEpoch(5000),
+          content: {
+            'membership': 'join',
+            'displayname': 'Bob',
+            'avatar_url': 'mxc://example.com/from_db',
+          },
+          stateKey: bobId,
+        ),
+        EventUpdateType.state,
+        matrix,
+      );
+
+      final refreshed = await dmRoom.requestUser(
+        bobId,
+        requestState: false,
+        requestProfile: false,
+      );
+      expect(refreshed?.avatarUrl.toString(), 'mxc://example.com/from_db');
+      expect(dmRoom.avatar.toString(), 'mxc://example.com/from_db');
+    });
+
+    test('partial requestUser does not loop on leave prev_content', () async {
+      final dmRoom = matrix.getRoomById('!726s6s6q:example.com')!;
+      expect(dmRoom.partial, true);
+      const leftId = '@left:example.com';
+
+      final leftMember = Event(
+        senderId: leftId,
+        type: EventTypes.RoomMember,
+        room: dmRoom,
+        eventId: '\$left_member',
+        originServerTs: DateTime.fromMillisecondsSinceEpoch(6000),
+        content: {'membership': 'leave'},
+        prevContent: {
+          'membership': 'join',
+          'displayname': 'Left User',
+          'avatar_url': 'mxc://example.com/left',
+        },
+        stateKey: leftId,
+      );
+
+      // Memory and DB both have the leave member with profile only in prev_content.
+      dmRoom.setState(leftMember);
+      await matrix.database.storeEventUpdate(
+        dmRoom.id,
+        leftMember,
+        EventUpdateType.state,
+        matrix,
+      );
+
+      final called = <String>[];
+      // ignore: deprecated_member_use_from_same_package
+      final subscription = dmRoom.onUpdate.stream.listen(called.add);
+
+      final first = await dmRoom.requestUser(
+        leftId,
+        requestState: false,
+        requestProfile: false,
+      );
+      expect(first?.displayName, 'Left User');
+      expect(first?.avatarUrl.toString(), 'mxc://example.com/left');
+
+      await Future.delayed(Duration(milliseconds: 1));
+      final updatesAfterFirst = called.length;
+
+      final second = await dmRoom.requestUser(
+        leftId,
+        requestState: false,
+        requestProfile: false,
+      );
+      expect(second?.displayName, 'Left User');
+      expect(second?.avatarUrl.toString(), 'mxc://example.com/left');
+
+      await Future.delayed(Duration(milliseconds: 1));
+      expect(
+        called.length,
+        updatesAfterFirst,
+        reason:
+            'requestUser must not re-emit onUpdate when leave profile lives in prev_content',
+      );
+
+      await subscription.cancel();
+    });
+
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
       expect(timeline.events.length, 19);
