@@ -30,6 +30,100 @@ Future<void> updateLastEvent(Event event) {
   );
 }
 
+Map<String, dynamic> memberContent({
+  String membership = 'join',
+  String? displayname,
+  String? avatarUrl,
+}) => {
+  'membership': membership,
+  if (displayname != null) 'displayname': displayname,
+  if (avatarUrl != null) 'avatar_url': avatarUrl,
+};
+
+Event makeMemberEvent(
+  Room room,
+  String userId, {
+  required String eventId,
+  required int originServerTs,
+  required Map<String, dynamic> content,
+  Map<String, dynamic>? prevContent,
+}) => Event(
+  senderId: userId,
+  type: EventTypes.RoomMember,
+  room: room,
+  eventId: eventId,
+  originServerTs: DateTime.fromMillisecondsSinceEpoch(originServerTs),
+  content: content,
+  prevContent: prevContent,
+  stateKey: userId,
+);
+
+MatrixEvent makeMemberMatrixEvent(
+  String userId, {
+  required String eventId,
+  required int originServerTs,
+  required Map<String, dynamic> content,
+}) => MatrixEvent(
+  type: EventTypes.RoomMember,
+  senderId: userId,
+  eventId: eventId,
+  originServerTs: DateTime.fromMillisecondsSinceEpoch(originServerTs),
+  stateKey: userId,
+  content: content,
+);
+
+SyncUpdate makeMemberTimelineSync(
+  String roomId,
+  MatrixEvent event, {
+  required String nextBatch,
+}) => SyncUpdate(
+  nextBatch: nextBatch,
+  rooms: RoomsUpdate(
+    join: {
+      roomId: JoinedRoomUpdate(timeline: TimelineUpdate(events: [event])),
+    },
+  ),
+);
+
+SyncUpdate makeMemberStateSync(
+  String roomId,
+  MatrixEvent event, {
+  required String nextBatch,
+}) => SyncUpdate(
+  nextBatch: nextBatch,
+  rooms: RoomsUpdate(
+    join: {
+      roomId: JoinedRoomUpdate(state: [event]),
+    },
+  ),
+);
+
+SyncUpdate makeDirectChatAccountDataSync(
+  String userId,
+  String roomId, {
+  required String nextBatch,
+}) => SyncUpdate(
+  nextBatch: nextBatch,
+  accountData: [
+    BasicEvent(
+      type: 'm.direct',
+      content: {
+        userId: [roomId],
+      },
+    ),
+  ],
+);
+
+Future<void> storeMemberInMemoryAndDb(Room room, Event member) async {
+  room.setState(member);
+  await room.client.database.storeEventUpdate(
+    room.id,
+    member,
+    EventUpdateType.state,
+    room.client,
+  );
+}
+
 void main() {
   late Client matrix;
   late Room room;
@@ -978,68 +1072,42 @@ void main() {
       expect(dmRoom.partial, true);
       const bobId = '@bob:example.com';
 
-      // Restore m.direct after earlier tests may have cleared it.
       await matrix.handleSync(
-        SyncUpdate.fromJson(
-          jsonDecode('''
-          {
-            "next_batch": "sync_restore_dm",
-            "account_data": {
-              "events": [{
-                "type": "m.direct",
-                "content": {"@bob:example.com": ["!726s6s6q:example.com"]}
-              }]
-            }
-          }
-        '''),
+        makeDirectChatAccountDataSync(
+          bobId,
+          dmRoom.id,
+          nextBatch: 'sync_restore_dm',
         ),
       );
       expect(dmRoom.directChatMatrixID, bobId);
 
-      // Hero already loaded in memory (room list) with an old avatar.
-      dmRoom.setState(
-        Event(
-          senderId: bobId,
-          type: EventTypes.RoomMember,
-          room: dmRoom,
-          eventId: '\$bob_old_avatar',
-          originServerTs: DateTime.fromMillisecondsSinceEpoch(1000),
-          content: {
-            'membership': 'join',
-            'displayname': 'Bob',
-            'avatar_url': 'mxc://example.com/old',
-          },
-          stateKey: bobId,
+      final heroWithOldAvatar = makeMemberEvent(
+        dmRoom,
+        bobId,
+        eventId: '\$bob_old_avatar',
+        originServerTs: 1000,
+        content: memberContent(
+          displayname: 'Bob',
+          avatarUrl: 'mxc://example.com/old',
         ),
       );
+      dmRoom.setState(heroWithOldAvatar);
       expect(dmRoom.avatar.toString(), 'mxc://example.com/old');
 
-      // Avatar change arrives via sync while the room stays partial.
+      final heroAvatarChange = makeMemberMatrixEvent(
+        bobId,
+        eventId: '\$bob_new_avatar',
+        originServerTs: 2000,
+        content: memberContent(
+          displayname: 'Bob',
+          avatarUrl: 'mxc://example.com/new',
+        ),
+      );
       await matrix.handleSync(
-        SyncUpdate(
+        makeMemberTimelineSync(
+          dmRoom.id,
+          heroAvatarChange,
           nextBatch: 'sync_bob_avatar',
-          rooms: RoomsUpdate(
-            join: {
-              dmRoom.id: JoinedRoomUpdate(
-                timeline: TimelineUpdate(
-                  events: [
-                    MatrixEvent(
-                      type: EventTypes.RoomMember,
-                      senderId: bobId,
-                      eventId: '\$bob_new_avatar',
-                      originServerTs: DateTime.fromMillisecondsSinceEpoch(2000),
-                      stateKey: bobId,
-                      content: {
-                        'membership': 'join',
-                        'displayname': 'Bob',
-                        'avatar_url': 'mxc://example.com/new',
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            },
-          ),
         ),
       );
       expect(dmRoom.partial, true);
@@ -1049,66 +1117,49 @@ void main() {
       );
       expect(dmRoom.avatar.toString(), 'mxc://example.com/new');
 
-      // Members not already in memory must still be skipped while partial.
       const unknownId = '@unknown:example.com';
+      final unknownMemberJoin = makeMemberMatrixEvent(
+        unknownId,
+        eventId: '\$unknown_join',
+        originServerTs: 3000,
+        content: memberContent(
+          displayname: 'Unknown',
+          avatarUrl: 'mxc://example.com/unknown',
+        ),
+      );
       await matrix.handleSync(
-        SyncUpdate(
+        makeMemberStateSync(
+          dmRoom.id,
+          unknownMemberJoin,
           nextBatch: 'sync_unknown_member',
-          rooms: RoomsUpdate(
-            join: {
-              dmRoom.id: JoinedRoomUpdate(
-                state: [
-                  MatrixEvent(
-                    type: EventTypes.RoomMember,
-                    senderId: unknownId,
-                    eventId: '\$unknown_join',
-                    originServerTs: DateTime.fromMillisecondsSinceEpoch(3000),
-                    stateKey: unknownId,
-                    content: {
-                      'membership': 'join',
-                      'displayname': 'Unknown',
-                      'avatar_url': 'mxc://example.com/unknown',
-                    },
-                  ),
-                ],
-              ),
-            },
-          ),
         ),
       );
       expect(dmRoom.getState(EventTypes.RoomMember, unknownId), isNull);
 
-      // Stale in-memory hero + newer DB row: requestUser must prefer DB.
-      dmRoom.setState(
-        Event(
-          senderId: bobId,
-          type: EventTypes.RoomMember,
-          room: dmRoom,
-          eventId: '\$bob_stale_memory',
-          originServerTs: DateTime.fromMillisecondsSinceEpoch(4000),
-          content: {
-            'membership': 'join',
-            'displayname': 'Bob',
-            'avatar_url': 'mxc://example.com/stale',
-          },
-          stateKey: bobId,
+      final staleMemoryHero = makeMemberEvent(
+        dmRoom,
+        bobId,
+        eventId: '\$bob_stale_memory',
+        originServerTs: 4000,
+        content: memberContent(
+          displayname: 'Bob',
+          avatarUrl: 'mxc://example.com/stale',
         ),
       );
+      final fresherDbHero = makeMemberEvent(
+        dmRoom,
+        bobId,
+        eventId: '\$bob_db_fresh',
+        originServerTs: 5000,
+        content: memberContent(
+          displayname: 'Bob',
+          avatarUrl: 'mxc://example.com/from_db',
+        ),
+      );
+      dmRoom.setState(staleMemoryHero);
       await matrix.database.storeEventUpdate(
         dmRoom.id,
-        Event(
-          senderId: bobId,
-          type: EventTypes.RoomMember,
-          room: dmRoom,
-          eventId: '\$bob_db_fresh',
-          originServerTs: DateTime.fromMillisecondsSinceEpoch(5000),
-          content: {
-            'membership': 'join',
-            'displayname': 'Bob',
-            'avatar_url': 'mxc://example.com/from_db',
-          },
-          stateKey: bobId,
-        ),
+        fresherDbHero,
         EventUpdateType.state,
         matrix,
       );
@@ -1127,29 +1178,18 @@ void main() {
       expect(dmRoom.partial, true);
       const leftId = '@left:example.com';
 
-      final leftMember = Event(
-        senderId: leftId,
-        type: EventTypes.RoomMember,
-        room: dmRoom,
+      final leaveWithProfileInPrevContent = makeMemberEvent(
+        dmRoom,
+        leftId,
         eventId: '\$left_member',
-        originServerTs: DateTime.fromMillisecondsSinceEpoch(6000),
-        content: {'membership': 'leave'},
-        prevContent: {
-          'membership': 'join',
-          'displayname': 'Left User',
-          'avatar_url': 'mxc://example.com/left',
-        },
-        stateKey: leftId,
+        originServerTs: 6000,
+        content: memberContent(membership: 'leave'),
+        prevContent: memberContent(
+          displayname: 'Left User',
+          avatarUrl: 'mxc://example.com/left',
+        ),
       );
-
-      // Memory and DB both have the leave member with profile only in prev_content.
-      dmRoom.setState(leftMember);
-      await matrix.database.storeEventUpdate(
-        dmRoom.id,
-        leftMember,
-        EventUpdateType.state,
-        matrix,
-      );
+      await storeMemberInMemoryAndDb(dmRoom, leaveWithProfileInPrevContent);
 
       final called = <String>[];
       // ignore: deprecated_member_use_from_same_package
