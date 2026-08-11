@@ -3008,6 +3008,13 @@ class Client extends MatrixApi {
                   summary: chatUpdate.summary,
                   client: this,
                 )
+              : chatUpdate is LeftRoomUpdate
+              ? Room(
+                  id: roomId,
+                  membership: membership,
+                  prev_batch: chatUpdate.timeline?.prevBatch,
+                  client: this,
+                )
               : Room(id: roomId, membership: membership, client: this));
 
     // Does the chat already exist in the list rooms?

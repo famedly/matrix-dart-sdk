@@ -1297,6 +1297,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
                 client: client,
                 id: roomId,
                 membership: membership,
+                prev_batch: roomUpdate is LeftRoomUpdate
+                    ? roomUpdate.timeline?.prevBatch
+                    : null,
                 lastEvent: lastEvent,
               ).toJson(),
       );
