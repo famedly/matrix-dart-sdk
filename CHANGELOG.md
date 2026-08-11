@@ -3,6 +3,8 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [9.0.1] 11th August 2026
+- fix: refresh DM hero avatars in partial rooms (Qays Dwekat)
 
 ## [9.0.0] 27th July 2026
 - build: (BREAKING) update to matrix spec 1-19 (Christian Kußowski)
