@@ -3,6 +3,9 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [10.0.1] 11th August 2026
+- fix: do not guess a file extension for video thumbnails with unknown mimetype (Cursor Agent)
+- fix: refresh DM hero avatars in partial rooms (Qays Dwekat)
 
 ## [10.0.0] 7th August 2026
 - build: update dart vodozemac to 0.7.0 and vodozemac rust to 0.10.0 with it (Christian Kußowski)
