@@ -246,13 +246,21 @@ String _hash(String s) =>
     (s.codeUnits.fold<int>(0, (a, b) => a + b) % _maximumHashLength).toString();
 
 extension FromStrippedStateEventExtension on StrippedStateEvent {
-  User asUser(Room room) => User.fromState(
-    // state key should always be set for member events
-    stateKey: stateKey!,
-    content: content,
-    typeKey: type,
-    senderId: senderId,
-    room: room,
-    originServerTs: null,
-  );
+  User asUser(Room room) {
+    if (this is User) {
+      return this as User;
+    }
+    if (this is Event) {
+      return (this as Event).asUser;
+    }
+    return User.fromState(
+      // state key should always be set for member events
+      stateKey: stateKey!,
+      content: content,
+      typeKey: type,
+      senderId: senderId,
+      room: room,
+      originServerTs: null,
+    );
+  }
 }

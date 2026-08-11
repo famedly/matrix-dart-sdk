@@ -3155,7 +3155,12 @@ class Client extends MatrixApi {
         // Update the room state:
         final stateKey = event.stateKey;
         if (stateKey != null) {
-          if (!room.partial || importantStateEvents.contains(event.type)) {
+          final memberAlreadyInMemory =
+              event.type == EventTypes.RoomMember &&
+              room.getState(EventTypes.RoomMember, stateKey) != null;
+          if (!room.partial ||
+              importantStateEvents.contains(event.type) ||
+              memberAlreadyInMemory) {
             room.setState(event);
           }
 
