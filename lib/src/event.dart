@@ -985,8 +985,7 @@ class Event extends MatrixEvent {
   bool get isEventTypeKnown =>
       EventLocalizations.localizationsMap.containsKey(type);
 
-  /// Returns a localized String representation of this event. For a
-  /// room list you may find [withSenderNamePrefix] useful. Set [hideReply] to
+  /// Returns a localized String representation of this event. Set [hideReply] to
   /// crop all lines starting with '>'. With [plaintextBody] it'll use the
   /// plaintextBody instead of the normal body which in practice will convert
   /// the html body to a plain text body before falling back to the body. In
@@ -994,60 +993,10 @@ class Event extends MatrixEvent {
   /// it to plain text.
   /// [removeMarkdown] allow to remove the markdown formating from the event body.
   /// Usefull form message preview or notifications text.
-  Future<String> calcLocalizedBody(
+  /// For redacted messages you may want to `redactedBecause?.fetchSenderUser();`
+  /// first!
+  String calcLocalizedBody(
     MatrixLocalizations i18n, {
-    bool withSenderNamePrefix = false,
-    bool hideReply = false,
-    bool hideEdit = false,
-    bool plaintextBody = false,
-    bool removeMarkdown = false,
-  }) async {
-    if (redacted) {
-      await redactedBecause?.fetchSenderUser();
-    }
-
-    if (withSenderNamePrefix &&
-        (type == EventTypes.Message || type.contains(EventTypes.Encrypted))) {
-      // To be sure that if the event need to be localized, the user is in memory.
-      // used by EventLocalizations._localizedBodyNormalMessage
-      await fetchSenderUser();
-    }
-
-    return calcLocalizedBodyFallback(
-      i18n,
-      withSenderNamePrefix: withSenderNamePrefix,
-      hideReply: hideReply,
-      hideEdit: hideEdit,
-      plaintextBody: plaintextBody,
-      removeMarkdown: removeMarkdown,
-    );
-  }
-
-  @Deprecated('Use calcLocalizedBody or calcLocalizedBodyFallback')
-  String getLocalizedBody(
-    MatrixLocalizations i18n, {
-    bool withSenderNamePrefix = false,
-    bool hideReply = false,
-    bool hideEdit = false,
-    bool plaintextBody = false,
-    bool removeMarkdown = false,
-  }) => calcLocalizedBodyFallback(
-    i18n,
-    withSenderNamePrefix: withSenderNamePrefix,
-    hideReply: hideReply,
-    hideEdit: hideEdit,
-    plaintextBody: plaintextBody,
-    removeMarkdown: removeMarkdown,
-  );
-
-  /// Works similar to `calcLocalizedBody()` but does not wait for the sender
-  /// user to be fetched. If it is not in the cache it will just use the
-  /// fallback and display the localpart of the MXID according to the
-  /// values of `formatLocalpart` and `mxidLocalPartFallback` in the `Client`
-  /// class.
-  String calcLocalizedBodyFallback(
-    MatrixLocalizations i18n, {
-    bool withSenderNamePrefix = false,
     bool hideReply = false,
     bool hideEdit = false,
     bool plaintextBody = false,
@@ -1072,16 +1021,6 @@ class Event extends MatrixEvent {
     var localizedBody = i18n.unknownEvent(type);
     if (callback != null) {
       localizedBody = callback(this, i18n, body);
-    }
-
-    // Add the sender name prefix
-    if (withSenderNamePrefix &&
-        type == EventTypes.Message &&
-        textOnlyMessageTypes.contains(messageType)) {
-      final senderNameOrYou = senderId == room.client.userID
-          ? i18n.you
-          : senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
-      localizedBody = '$senderNameOrYou: $localizedBody';
     }
 
     return localizedBody;
