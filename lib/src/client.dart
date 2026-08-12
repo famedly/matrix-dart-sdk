@@ -4161,44 +4161,7 @@ class Client extends MatrixApi {
     Logs().d('Migrate Device Keys...');
     final userDeviceKeys = await legacyDatabase.getUserDeviceKeys(this);
     for (final userId in userDeviceKeys.keys) {
-      Logs().d('Migrate Device Keys of user $userId...');
-      final deviceKeysList = userDeviceKeys[userId];
-      for (final crossSigningKey
-          in deviceKeysList?.crossSigningKeys.values ?? <CrossSigningKey>[]) {
-        final pubKey = crossSigningKey.publicKey;
-        if (pubKey != null) {
-          Logs().d(
-            'Migrate cross signing key with usage ${crossSigningKey.usage} and verified ${crossSigningKey.directVerified}...',
-          );
-          await database.storeUserCrossSigningKey(
-            userId,
-            pubKey,
-            jsonEncode(crossSigningKey.toJson()),
-            crossSigningKey.directVerified,
-            crossSigningKey.blocked,
-            trustOnFirstUseSince: crossSigningKey.trustOnFirstUseSince,
-          );
-        }
-      }
-
-      if (deviceKeysList != null) {
-        for (final deviceKeys in deviceKeysList.deviceKeys.values) {
-          final deviceId = deviceKeys.deviceId;
-          if (deviceId != null) {
-            Logs().d('Migrate device keys for ${deviceKeys.deviceId}...');
-            await database.storeUserDeviceKey(
-              userId,
-              deviceId,
-              jsonEncode(deviceKeys.toJson()),
-              deviceKeys.directVerified,
-              deviceKeys.blocked,
-              deviceKeys.lastActive.millisecondsSinceEpoch,
-            );
-          }
-        }
-        Logs().d('Migrate user device keys info...');
-        await database.storeUserDeviceKeysInfo(userId, deviceKeysList.outdated);
-      }
+      await database.storeDeviceKeysList(userId, userDeviceKeys[userId]!);
     }
     Logs().d('Migrate inbound group sessions...');
     try {
