@@ -149,6 +149,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   Database? database;
 
+  /// Throwaway [Client] used only to satisfy the [DeviceKeysList] and related
+  /// deserialization APIs that require a [Client] reference. Created lazily and
+  /// reused so we do not leak a new `http.Client` on every device-key access.
+  late final Client _stubClient = Client('db', database: this);
+
   /// Custom [IDBFactory] used to create the indexedDB. On IO platforms it would
   /// lead to an error to import "package:web/web.dart" so this is dynamically
   /// typed.
@@ -273,9 +278,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     Logs().i('Migrate store database from version $currentVersion to $version');
 
     if (currentVersion <= 11) {
-      final deviceKeysLists = await _legacyGetUserDeviceKeys(
-        Client('migrationclient', database: this),
-      );
+      final deviceKeysLists = await _legacyGetUserDeviceKeys(_stubClient);
       for (final entry in deviceKeysLists.entries) {
         Logs().d('Migrate user keys', entry.key);
         await storeDeviceKeysList(entry.key, entry.value);
@@ -514,10 +517,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String deviceId,
   ) async {
-    final rawKeys = await getDeviceKeysList(
-      userId,
-      Client('db', database: this),
-    );
+    final rawKeys = await getDeviceKeysList(userId, _stubClient);
     return [?rawKeys?.deviceKeys[deviceId]?.lastSentMessage];
   }
 
@@ -933,7 +933,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String publicKey,
   ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
+    final keys = await getDeviceKeysList(userId, _stubClient);
     if (keys == null || !keys.crossSigningKeys.containsKey(publicKey)) return;
     keys.crossSigningKeys.remove(publicKey);
     await storeDeviceKeysList(userId, keys);
@@ -941,7 +941,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> removeUserDeviceKey(String userId, String deviceId) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
+    final keys = await getDeviceKeysList(userId, _stubClient);
     if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
     keys.deviceKeys.remove(deviceId);
     await storeDeviceKeysList(userId, keys);
@@ -953,7 +953,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String publicKey,
   ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
+    final keys = await getDeviceKeysList(userId, _stubClient);
     if (keys == null || !keys.crossSigningKeys.containsKey(publicKey)) return;
     keys.crossSigningKeys[publicKey]?.blocked = blocked;
     await storeDeviceKeysList(userId, keys);
@@ -965,7 +965,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String deviceId,
   ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
+    final keys = await getDeviceKeysList(userId, _stubClient);
     if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
     keys.deviceKeys[deviceId]?.blocked = blocked;
     await storeDeviceKeysList(userId, keys);
@@ -977,7 +977,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String deviceId,
   ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
+    final keys = await getDeviceKeysList(userId, _stubClient);
     if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
     keys.deviceKeys[deviceId]?.lastActive = DateTime.fromMillisecondsSinceEpoch(
       lastActive,
@@ -991,7 +991,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String deviceId,
   ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
+    final keys = await getDeviceKeysList(userId, _stubClient);
     if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
     keys.deviceKeys[deviceId]?.lastSentMessage = lastSentMessage;
     await storeDeviceKeysList(userId, keys);
@@ -1018,7 +1018,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String publicKey, {
     DateTime? trustOnFirstUseSince,
   }) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
+    final keys = await getDeviceKeysList(userId, _stubClient);
     if (keys == null || !keys.crossSigningKeys.containsKey(publicKey)) return;
     keys.crossSigningKeys[publicKey]?.setDirectVerified(verified);
     if (trustOnFirstUseSince != null) {
@@ -1036,7 +1036,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String deviceId,
   ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
+    final keys = await getDeviceKeysList(userId, _stubClient);
     if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
     keys.deviceKeys[deviceId]?.setDirectVerified(verified);
     await storeDeviceKeysList(userId, keys);
@@ -1348,10 +1348,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     bool blocked, {
     DateTime? trustOnFirstUseSince,
   }) async {
-    final tmpClient = Client('db', database: this);
     final keys =
-        await getDeviceKeysList(userId, tmpClient) ??
-        DeviceKeysList(userId, tmpClient);
+        await getDeviceKeysList(userId, _stubClient) ??
+        DeviceKeysList(userId, _stubClient);
     keys.crossSigningKeys[publicKey] = CrossSigningKey.fromDbJson({
       'user_id': userId,
       'public_key': publicKey,
@@ -1360,7 +1359,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       'blocked': blocked,
       if (trustOnFirstUseSince != null)
         'tofu': trustOnFirstUseSince.millisecondsSinceEpoch,
-    }, tmpClient);
+    }, _stubClient);
     await storeDeviceKeysList(userId, keys);
   }
 
@@ -1373,10 +1372,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     bool blocked,
     int lastActive,
   ) async {
-    final tmpClient = Client('db', database: this);
     final keys =
-        await getDeviceKeysList(userId, tmpClient) ??
-        DeviceKeysList(userId, tmpClient);
+        await getDeviceKeysList(userId, _stubClient) ??
+        DeviceKeysList(userId, _stubClient);
 
     keys.deviceKeys[deviceId] = DeviceKeys.fromDb({
       'user_id': userId,
@@ -1386,16 +1384,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       'blocked': blocked,
       'last_active': lastActive,
       'last_sent_message': keys.deviceKeys[deviceId]?.lastSentMessage ?? '',
-    }, tmpClient);
+    }, _stubClient);
     await storeDeviceKeysList(userId, keys);
   }
 
   @override
   Future<void> storeUserDeviceKeysInfo(String userId, bool outdated) async {
-    final tmpClient = Client('db', database: this);
     final keys =
-        await getDeviceKeysList(userId, tmpClient) ??
-        DeviceKeysList(userId, tmpClient);
+        await getDeviceKeysList(userId, _stubClient) ??
+        DeviceKeysList(userId, _stubClient);
     keys.outdated = outdated;
     await storeDeviceKeysList(userId, keys);
   }
