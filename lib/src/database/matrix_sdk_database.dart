@@ -932,70 +932,74 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<void> removeUserCrossSigningKey(
     String userId,
     String publicKey,
-  ) async {
+  ) => transaction(() async {
     final keys = await getDeviceKeysList(userId, Client('db', database: this));
     if (keys == null || !keys.crossSigningKeys.containsKey(publicKey)) return;
     keys.crossSigningKeys.remove(publicKey);
     await storeDeviceKeysList(userId, keys);
-  }
+  });
 
   @override
-  Future<void> removeUserDeviceKey(String userId, String deviceId) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
-    if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
-    keys.deviceKeys.remove(deviceId);
-    await storeDeviceKeysList(userId, keys);
-  }
+  Future<void> removeUserDeviceKey(String userId, String deviceId) =>
+      transaction(() async {
+        final keys = await getDeviceKeysList(
+          userId,
+          Client('db', database: this),
+        );
+        if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
+        keys.deviceKeys.remove(deviceId);
+        await storeDeviceKeysList(userId, keys);
+      });
 
   @override
   Future<void> setBlockedUserCrossSigningKey(
     bool blocked,
     String userId,
     String publicKey,
-  ) async {
+  ) => transaction(() async {
     final keys = await getDeviceKeysList(userId, Client('db', database: this));
     if (keys == null || !keys.crossSigningKeys.containsKey(publicKey)) return;
     keys.crossSigningKeys[publicKey]?.blocked = blocked;
     await storeDeviceKeysList(userId, keys);
-  }
+  });
 
   @override
   Future<void> setBlockedUserDeviceKey(
     bool blocked,
     String userId,
     String deviceId,
-  ) async {
+  ) => transaction(() async {
     final keys = await getDeviceKeysList(userId, Client('db', database: this));
     if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
     keys.deviceKeys[deviceId]?.blocked = blocked;
     await storeDeviceKeysList(userId, keys);
-  }
+  });
 
   @override
   Future<void> setLastActiveUserDeviceKey(
     int lastActive,
     String userId,
     String deviceId,
-  ) async {
+  ) => transaction(() async {
     final keys = await getDeviceKeysList(userId, Client('db', database: this));
     if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
     keys.deviceKeys[deviceId]?.lastActive = DateTime.fromMillisecondsSinceEpoch(
       lastActive,
     );
     await storeDeviceKeysList(userId, keys);
-  }
+  });
 
   @override
   Future<void> setLastSentMessageUserDeviceKey(
     String lastSentMessage,
     String userId,
     String deviceId,
-  ) async {
+  ) => transaction(() async {
     final keys = await getDeviceKeysList(userId, Client('db', database: this));
     if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
     keys.deviceKeys[deviceId]?.lastSentMessage = lastSentMessage;
     await storeDeviceKeysList(userId, keys);
-  }
+  });
 
   @override
   Future<void> setRoomPrevBatch(
@@ -1017,7 +1021,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String publicKey, {
     DateTime? trustOnFirstUseSince,
-  }) async {
+  }) => transaction(() async {
     final keys = await getDeviceKeysList(userId, Client('db', database: this));
     if (keys == null || !keys.crossSigningKeys.containsKey(publicKey)) return;
     keys.crossSigningKeys[publicKey]?.setDirectVerified(verified);
@@ -1028,19 +1032,19 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       );
     }
     await storeDeviceKeysList(userId, keys);
-  }
+  });
 
   @override
   Future<void> setVerifiedUserDeviceKey(
     bool verified,
     String userId,
     String deviceId,
-  ) async {
+  ) => transaction(() async {
     final keys = await getDeviceKeysList(userId, Client('db', database: this));
     if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
     keys.deviceKeys[deviceId]?.setDirectVerified(verified);
     await storeDeviceKeysList(userId, keys);
-  }
+  });
 
   @override
   Future<void> storeAccountData(
@@ -1347,7 +1351,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     bool verified,
     bool blocked, {
     DateTime? trustOnFirstUseSince,
-  }) async {
+  }) => transaction(() async {
     final tmpClient = Client('db', database: this);
     final keys =
         await getDeviceKeysList(userId, tmpClient) ??
@@ -1362,7 +1366,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         'tofu': trustOnFirstUseSince.millisecondsSinceEpoch,
     }, tmpClient);
     await storeDeviceKeysList(userId, keys);
-  }
+  });
 
   @override
   Future<void> storeUserDeviceKey(
@@ -1372,7 +1376,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     bool verified,
     bool blocked,
     int lastActive,
-  ) async {
+  ) => transaction(() async {
     final tmpClient = Client('db', database: this);
     final keys =
         await getDeviceKeysList(userId, tmpClient) ??
@@ -1388,17 +1392,18 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       'last_sent_message': keys.deviceKeys[deviceId]?.lastSentMessage ?? '',
     }, tmpClient);
     await storeDeviceKeysList(userId, keys);
-  }
+  });
 
   @override
-  Future<void> storeUserDeviceKeysInfo(String userId, bool outdated) async {
-    final tmpClient = Client('db', database: this);
-    final keys =
-        await getDeviceKeysList(userId, tmpClient) ??
-        DeviceKeysList(userId, tmpClient);
-    keys.outdated = outdated;
-    await storeDeviceKeysList(userId, keys);
-  }
+  Future<void> storeUserDeviceKeysInfo(String userId, bool outdated) =>
+      transaction(() async {
+        final tmpClient = Client('db', database: this);
+        final keys =
+            await getDeviceKeysList(userId, tmpClient) ??
+            DeviceKeysList(userId, tmpClient);
+        keys.outdated = outdated;
+        await storeDeviceKeysList(userId, keys);
+      });
 
   @override
   Future<void> transaction(Future<void> Function() action) =>
@@ -1630,8 +1635,39 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       for (final key in json[_olmSessionsBoxName]!.keys) {
         await _olmSessionsBox.put(key, json[_olmSessionsBoxName]![key]);
       }
-      for (final key in json[_deviceKeysListBoxName]!.keys) {
-        await _deviceKeysListBox.put(key, json[_deviceKeysListBoxName]![key]);
+      final deviceKeysListDump = json[_deviceKeysListBoxName];
+      if (deviceKeysListDump != null) {
+        for (final key in deviceKeysListDump.keys) {
+          await _deviceKeysListBox.put(key, deviceKeysListDump[key]);
+        }
+      } else {
+        // Legacy dumps (database version < 12) stored device keys in three
+        // separate boxes. Restore them and convert to the new single-box
+        // format so old exports can still be imported.
+        final legacyBoxes = {
+          _legacyUserDeviceKeysBoxName: _collection.openBox(
+            _legacyUserDeviceKeysBoxName,
+          ),
+          _legacyUserDeviceKeysOutdatedBoxName: _collection.openBox(
+            _legacyUserDeviceKeysOutdatedBoxName,
+          ),
+          _legacyUserCrossSigningKeysBoxName: _collection.openBox(
+            _legacyUserCrossSigningKeysBoxName,
+          ),
+        };
+        for (final legacyBox in legacyBoxes.entries) {
+          final dump = json[legacyBox.key];
+          if (dump == null) continue;
+          for (final key in dump.keys) {
+            await legacyBox.value.put(key, dump[key]);
+          }
+        }
+        final deviceKeysLists = await _legacyGetUserDeviceKeys(
+          Client('migrationclient', database: this),
+        );
+        for (final entry in deviceKeysLists.entries) {
+          await storeDeviceKeysList(entry.key, entry.value);
+        }
       }
       for (final key in json[_ssssCacheBoxName]!.keys) {
         await _ssssCacheBox.put(key, json[_ssssCacheBoxName]![key]);

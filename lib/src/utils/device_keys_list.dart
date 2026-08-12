@@ -131,27 +131,49 @@ class DeviceKeysList {
     ),
   };
 
-  factory DeviceKeysList.fromJson(Map<String, Object?> json, Client client) =>
-      DeviceKeysList(
-        json['user_id'] as String,
-        client,
-        outdated: json['outdated'] as bool,
-        deviceKeys: (json['device_keys'] as Map).map(
-          (k, v) => MapEntry(
-            k as String,
-            DeviceKeys.fromDb(Map<String, dynamic>.from(v as Map), client),
-          ),
-        ),
-        crossSigningKeys: (json['cross_signing_keys'] as Map).map(
-          (k, v) => MapEntry(
-            k as String,
-            CrossSigningKey.fromDbJson(
-              Map<String, dynamic>.from(v as Map),
-              client,
-            ),
-          ),
-        ),
-      );
+  factory DeviceKeysList.fromJson(Map<String, Object?> json, Client client) {
+    final deviceKeysList = DeviceKeysList(
+      json['user_id'] as String,
+      client,
+      outdated: json['outdated'] as bool,
+    );
+    // Tolerate partially corrupt entries: skip the broken ones and mark the
+    // list as outdated so it gets refreshed later instead of failing the whole
+    // load (e.g. during client init / login).
+    final deviceKeys = json['device_keys'];
+    if (deviceKeys is Map) {
+      for (final entry in deviceKeys.entries) {
+        try {
+          final key = DeviceKeys.fromDb(
+            Map<String, dynamic>.from(entry.value as Map),
+            client,
+          );
+          if (!key.isValid) throw Exception('Invalid device keys');
+          deviceKeysList.deviceKeys[entry.key as String] = key;
+        } catch (e, s) {
+          Logs().w('Skipping invalid user device key', e, s);
+          deviceKeysList.outdated = true;
+        }
+      }
+    }
+    final crossSigningKeys = json['cross_signing_keys'];
+    if (crossSigningKeys is Map) {
+      for (final entry in crossSigningKeys.entries) {
+        try {
+          final key = CrossSigningKey.fromDbJson(
+            Map<String, dynamic>.from(entry.value as Map),
+            client,
+          );
+          if (!key.isValid) throw Exception('Invalid cross signing key');
+          deviceKeysList.crossSigningKeys[entry.key as String] = key;
+        } catch (e, s) {
+          Logs().w('Skipping invalid cross signing key', e, s);
+          deviceKeysList.outdated = true;
+        }
+      }
+    }
+    return deviceKeysList;
+  }
 
   DeviceKeysList.fromDbJson(
     Map<String, dynamic> dbEntry,
