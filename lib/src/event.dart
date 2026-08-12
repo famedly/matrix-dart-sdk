@@ -1083,13 +1083,6 @@ class Event extends MatrixEvent {
     return body;
   }
 
-  static const Set<String> textOnlyMessageTypes = {
-    MessageTypes.Text,
-    MessageTypes.Notice,
-    MessageTypes.Emote,
-    MessageTypes.None,
-  };
-
   /// returns if this event matches the passed event or transaction id
   bool matchesEventOrTransactionId(String? search) {
     if (search == null) {
