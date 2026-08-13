@@ -34,7 +34,9 @@ abstract class DatabaseApi {
 
   Future<Map<String, dynamic>?> getClient(String name);
 
-  Future updateClientFields(Map<ClientField, String> fields);
+  /// Updates the given client fields. A `null` value clears (deletes) that
+  /// field, while omitting a key leaves the existing value untouched.
+  Future updateClientFields(Map<ClientField, String?> fields);
 
   Future updateClient(
     String homeserverUrl,

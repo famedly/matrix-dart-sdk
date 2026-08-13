@@ -1796,9 +1796,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   ) => _readReceiptsBox.put(roomId, receiptState.toJson());
 
   @override
-  Future<dynamic> updateClientFields(Map<ClientField, String> fields) async {
+  Future<dynamic> updateClientFields(Map<ClientField, String?> fields) async {
     for (final entry in fields.entries) {
-      await _clientBox.put(entry.key.name, entry.value);
+      final value = entry.value;
+      if (value == null) {
+        await _clientBox.delete(entry.key.name);
+      } else {
+        await _clientBox.put(entry.key.name, value);
+      }
     }
   }
 }

@@ -325,7 +325,7 @@ class Client extends MatrixApi {
     _accessTokenExpiresAt = tokenExpiresAt;
     await database.updateClientFields({
       ClientField.accessToken: tokenResponse.accessToken,
-      ClientField.tokenExpiresIn: ?tokenExpiresAt?.millisecondsSinceEpoch
+      ClientField.tokenExpiresIn: tokenExpiresAt?.millisecondsSinceEpoch
           .toString(),
       ClientField.refreshToken: ?tokenResponse.refreshToken,
     });
@@ -633,11 +633,12 @@ class Client extends MatrixApi {
         jsonDecode(utf8.decode(wellKnownResponse.bodyBytes))
             as Map<String, Object?>,
       );
-      if (info.mHomeserver.baseUrl != homeserver) {
+      final baseUrl = info.mHomeserver.baseUrl.stripTrailingSlash();
+      if (baseUrl != homeserver) {
         Logs().i('Homeserver base_url has been changed! Updating now...');
-        homeserver = info.mHomeserver.baseUrl;
+        homeserver = baseUrl;
         await database.updateClientFields({
-          ClientField.homeserverUrl: info.mHomeserver.baseUrl.toString(),
+          ClientField.homeserverUrl: baseUrl.toString(),
         });
       }
       return info;
