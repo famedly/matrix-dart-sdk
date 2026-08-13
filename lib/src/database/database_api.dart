@@ -212,56 +212,11 @@ abstract class DatabaseApi {
 
   Future deleteOldFiles(int savedAt);
 
-  Future storeUserDeviceKeysInfo(String userId, bool outdated);
-
-  Future storeUserDeviceKey(
-    String userId,
-    String deviceId,
-    String content,
-    bool verified,
-    bool blocked,
-    int lastActive,
-  );
-
-  Future removeUserDeviceKey(String userId, String deviceId);
-
-  Future removeUserCrossSigningKey(String userId, String publicKey);
-
-  Future storeUserCrossSigningKey(
-    String userId,
-    String publicKey,
-    String content,
-    bool verified,
-    bool blocked, {
-    DateTime? trustOnFirstUseSince,
-  });
-
   Future deleteFromToDeviceQueue(int id);
 
   Future removeEvent(String eventId, String roomId);
 
   Future setRoomPrevBatch(String? prevBatch, String roomId, Client client);
-
-  Future setVerifiedUserCrossSigningKey(
-    bool verified,
-    String userId,
-    String publicKey, {
-    DateTime? trustOnFirstUseSince,
-  });
-
-  Future setBlockedUserCrossSigningKey(
-    bool blocked,
-    String userId,
-    String publicKey,
-  );
-
-  Future setVerifiedUserDeviceKey(
-    bool verified,
-    String userId,
-    String deviceId,
-  );
-
-  Future setBlockedUserDeviceKey(bool blocked, String userId, String deviceId);
 
   Future<List<Event>> getUnimportantRoomEventStatesForRoom(
     List<String> events,

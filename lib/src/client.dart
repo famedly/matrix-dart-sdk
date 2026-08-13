@@ -2629,7 +2629,7 @@ class Client extends MatrixApi {
         final userKeys = _userDeviceKeys[userId];
         if (userKeys != null) {
           userKeys.outdated = true;
-          await database.storeUserDeviceKeysInfo(userId, true);
+          await database.storeDeviceKeysList(userId, userKeys);
         } else {
           // Per spec `changed` also includes users who *now* share an
           // encrypted room with us. We might not know about them yet, for
@@ -3425,6 +3425,8 @@ class Client extends MatrixApi {
         final response = await queryKeys(outdatedLists, timeout: 10000);
         if (!isLogged()) return;
 
+        final usersToPersist = <String>{};
+
         final deviceKeys = response.deviceKeys;
         if (deviceKeys != null) {
           for (final rawDeviceKeyListEntry in deviceKeys.entries) {
@@ -3509,16 +3511,6 @@ class Client extends MatrixApi {
                     // Always trust the own device
                     entry.setDirectVerified(true);
                   }
-                  dbActions.add(
-                    () => database.storeUserDeviceKey(
-                      userId,
-                      deviceId,
-                      json.encode(entry.toJson()),
-                      entry.directVerified,
-                      entry.blocked,
-                      entry.lastActive.millisecondsSinceEpoch,
-                    ),
-                  );
                 } else if (oldKeys.containsKey(deviceId)) {
                   // This shouldn't ever happen. The same device ID has gotten
                   // a new public key. So we ignore the update. TODO: ask krille
@@ -3529,20 +3521,9 @@ class Client extends MatrixApi {
                 Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
               }
             }
-            // delete old/unused entries
-            for (final oldDeviceKeyEntry in oldKeys.entries) {
-              final deviceId = oldDeviceKeyEntry.key;
-              if (!userKeys.deviceKeys.containsKey(deviceId)) {
-                // we need to remove an old key
-                dbActions.add(
-                  () => database.removeUserDeviceKey(userId, deviceId),
-                );
-              }
-            }
+            // Drop old/unused entries by not adding them back to deviceKeys.
             userKeys.outdated = false;
-            dbActions.add(
-              () => database.storeUserDeviceKeysInfo(userId, false),
-            );
+            usersToPersist.add(userId);
           }
         }
         // next we parse and persist the cross signing keys
@@ -3571,14 +3552,9 @@ class Client extends MatrixApi {
             for (final oldEntry in oldKeys.entries) {
               if (!oldEntry.value.usage.contains(keyType)) {
                 userKeys.crossSigningKeys[oldEntry.key] = oldEntry.value;
-              } else {
-                // There is a previous cross-signing key with  this usage, that we no
-                // longer need/use. Clear it from the database.
-                dbActions.add(
-                  () =>
-                      database.removeUserCrossSigningKey(userId, oldEntry.key),
-                );
               }
+              // Previous cross-signing keys with this usage are dropped by not
+              // adding them back; storeDeviceKeysList persists that.
             }
             final entry = CrossSigningKey.fromMatrixCrossSigningKey(
               crossSigningKeyListEntry.value,
@@ -3607,22 +3583,16 @@ class Client extends MatrixApi {
                 // if we should instead use the new key with unknown verified / blocked status
                 userKeys.crossSigningKeys[publicKey] = oldKey;
               }
-              dbActions.add(
-                () => database.storeUserCrossSigningKey(
-                  userId,
-                  publicKey,
-                  json.encode(entry.toJson()),
-                  entry.directVerified,
-                  entry.blocked,
-                  trustOnFirstUseSince: entry.trustOnFirstUseSince,
-                ),
-              );
             }
             _userDeviceKeys[userId]?.outdated = false;
-            dbActions.add(
-              () => database.storeUserDeviceKeysInfo(userId, false),
-            );
+            usersToPersist.add(userId);
           }
+        }
+
+        for (final userId in usersToPersist) {
+          final list = _userDeviceKeys[userId];
+          if (list == null) continue;
+          dbActions.add(() => database.storeDeviceKeysList(userId, list));
         }
 
         // now process all the failures

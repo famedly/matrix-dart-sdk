@@ -207,6 +207,11 @@ abstract class SignableKey extends MatrixSignableKey {
   bool? _verified;
   bool? _blocked;
 
+  Future<void> _updateInDatabase() => client.database.storeDeviceKeysList(
+    userId,
+    client.userDeviceKeys[userId]!,
+  );
+
   String? get ed25519Key => keys['ed25519:$identifier'];
   bool get verified =>
       identifier != null && (directVerified || crossVerified) && !(blocked);
@@ -451,15 +456,10 @@ class CrossSigningKey extends SignableKey {
     bool updateInDatabase = true,
   }) async {
     since ??= DateTime.now();
-    if (updateInDatabase) {
-      await client.database.setVerifiedUserCrossSigningKey(
-        verified,
-        userId,
-        publicKey!,
-        trustOnFirstUseSince: since,
-      );
-    }
     _trustOnFirstUseSince = since;
+    if (updateInDatabase) {
+      await _updateInDatabase();
+    }
   }
 
   @override
@@ -468,12 +468,7 @@ class CrossSigningKey extends SignableKey {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database.setVerifiedUserCrossSigningKey(
-      newVerified,
-      userId,
-      publicKey!,
-      trustOnFirstUseSince: trustOnFirstUseSince,
-    );
+    await _updateInDatabase();
   }
 
   @override
@@ -482,11 +477,7 @@ class CrossSigningKey extends SignableKey {
       throw Exception('setBlocked called on invalid key');
     }
     _blocked = newBlocked;
-    await client.database.setBlockedUserCrossSigningKey(
-      newBlocked,
-      userId,
-      publicKey!,
-    );
+    await _updateInDatabase();
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(
@@ -542,7 +533,6 @@ class DeviceKeys extends SignableKey {
   String? get deviceId => identifier;
   late List<String> algorithms;
   late DateTime lastActive;
-  String lastSentMessage = '';
 
   String? get curve25519Key => keys['curve25519:$deviceId'];
   String? get deviceDisplayName =>
@@ -581,11 +571,7 @@ class DeviceKeys extends SignableKey {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database.setVerifiedUserDeviceKey(
-      newVerified,
-      userId,
-      deviceId!,
-    );
+    await _updateInDatabase();
   }
 
   @override
@@ -594,11 +580,7 @@ class DeviceKeys extends SignableKey {
       throw Exception('setBlocked called on invalid key');
     }
     _blocked = newBlocked;
-    await client.database.setBlockedUserDeviceKey(
-      newBlocked,
-      userId,
-      deviceId!,
-    );
+    await _updateInDatabase();
   }
 
   DeviceKeys.fromMatrixDeviceKeys(
@@ -622,7 +604,6 @@ class DeviceKeys extends SignableKey {
     lastActive = DateTime.fromMillisecondsSinceEpoch(
       dbEntry['last_active'] ?? 0,
     );
-    lastSentMessage = dbEntry['last_sent_message'] as String? ?? '';
   }
 
   DeviceKeys.fromJson(Map<String, dynamic> json, Client client)
@@ -660,6 +641,5 @@ class DeviceKeys extends SignableKey {
     'verified': _verified ?? false,
     'blocked': _blocked ?? false,
     'last_active': lastActive.millisecondsSinceEpoch,
-    'last_sent_message': lastSentMessage,
   };
 }
