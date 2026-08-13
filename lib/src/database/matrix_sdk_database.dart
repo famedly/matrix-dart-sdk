@@ -741,13 +741,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<Map<String, DeviceKeysList>> _legacyGetUserDeviceKeys(
     Client client,
   ) async {
-    final legacyUserDeviceKeysBox = _collection.openBox(
+    final legacyUserDeviceKeysBox = _collection.openBox<Map>(
       _legacyUserDeviceKeysBoxName,
     );
-    final legacyUserDeviceKeysOutdatedBox = _collection.openBox(
+    final legacyUserDeviceKeysOutdatedBox = _collection.openBox<bool>(
       _legacyUserDeviceKeysOutdatedBoxName,
     );
-    final legacyUserCrossSigningKeysBox = _collection.openBox(
+    final legacyUserCrossSigningKeysBox = _collection.openBox<Map>(
       _legacyUserCrossSigningKeysBoxName,
     );
 
@@ -804,9 +804,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         client,
       );
     }
-    legacyUserDeviceKeysBox.clear();
-    legacyUserCrossSigningKeysBox.clear();
-    legacyUserDeviceKeysOutdatedBox.clear();
+    await legacyUserDeviceKeysBox.clear();
+    await legacyUserCrossSigningKeysBox.clear();
+    await legacyUserDeviceKeysOutdatedBox.clear();
     return res;
   }
 

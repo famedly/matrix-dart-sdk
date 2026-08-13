@@ -615,6 +615,21 @@ void main() {
         final storedPresence = await database.getPresence(userId);
         expect(presence.toJson(), storedPresence?.toJson());
       });
+      test('storeDeviceKeysLists', () async {
+        final tmpClient = Client('test', database: database);
+        await database.storeDeviceKeysList(
+          '@alice:example.com',
+          DeviceKeysList('@alice:example.com', tmpClient),
+        );
+        final keys = await database.getDeviceKeysList(
+          '@alice:example.com',
+          tmpClient,
+        );
+        expect(keys?.userId, '@alice:example.com');
+        expect(keys?.outdated, true);
+        expect(keys?.crossSigningKeys, {});
+        expect(keys?.deviceKeys, {});
+      });
       test('storeUserProfile', () async {
         final profile1 = await database.getUserProfile('@alice:example.com');
         expect(profile1, null);
