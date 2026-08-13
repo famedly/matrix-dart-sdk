@@ -288,6 +288,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         Logs().d('Migrate user keys', entry.key);
         await storeDeviceKeysList(entry.key, entry.value);
       }
+      // Only clear the legacy boxes once every key list has been persisted, so
+      // an interrupted migration can be safely retried without losing keys.
+      await _collection.openBox(_legacyUserDeviceKeysBoxName).clear();
+      await _collection.openBox(_legacyUserCrossSigningKeysBoxName).clear();
+      await _collection.openBox(_legacyUserDeviceKeysOutdatedBoxName).clear();
     }
 
     if (version == 8) {
@@ -736,8 +741,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     return Event.fromJson(copyMap(state), room).asUser;
   }
 
-  /// Only for migration. Can be removed after a certain amount of time. Also
-  /// clears everything from the old boxes!
+  /// Only for migration. Can be removed after a certain amount of time. The
+  /// legacy boxes are cleared by the caller once the keys have been persisted.
   Future<Map<String, DeviceKeysList>> _legacyGetUserDeviceKeys(
     Client client,
   ) async {
@@ -804,9 +809,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         client,
       );
     }
-    legacyUserDeviceKeysBox.clear();
-    legacyUserCrossSigningKeysBox.clear();
-    legacyUserDeviceKeysOutdatedBox.clear();
     return res;
   }
 
