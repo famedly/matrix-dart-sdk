@@ -591,44 +591,6 @@ void main() {
           Client('testclient', database: await getMatrixSdkDatabase()),
         );
       });
-      test('storeUserCrossSigningKey', () async {
-        await database.storeUserCrossSigningKey(
-          '@alice:example.com',
-          'publicKey',
-          jsonEncode({
-            'user_id': '@alice:example.com',
-            'usage': ['master'],
-            'keys': {'ed25519:publicKey': 'publicKey'},
-            'signatures': <String, Object?>{},
-          }),
-          false,
-          false,
-        );
-      });
-      test('setVerifiedUserCrossSigningKey', () async {
-        await database.setVerifiedUserCrossSigningKey(
-          true,
-          '@alice:example.com',
-          'publicKey',
-          trustOnFirstUseSince: DateTime(2000),
-        );
-      });
-      test('setBlockedUserCrossSigningKey', () async {
-        await database.setBlockedUserCrossSigningKey(
-          true,
-          '@alice:example.com',
-          'publicKey',
-        );
-      });
-      test('removeUserCrossSigningKey', () async {
-        await database.removeUserCrossSigningKey(
-          '@alice:example.com',
-          'publicKey',
-        );
-      });
-      test('storeUserDeviceKeysInfo', () async {
-        await database.storeUserDeviceKeysInfo('@alice:example.com', true);
-      });
       test('storeUserDeviceKeysInfo', () async {
         var cache = await database.getCustomCacheObject('test');
         expect(cache, null);
@@ -639,48 +601,6 @@ void main() {
         await database.clearCache();
         cache = await database.getCustomCacheObject('test');
         expect(cache, null);
-      });
-      test('storeUserDeviceKey', () async {
-        await database.storeUserDeviceKey(
-          '@alice:example.com',
-          'deviceId',
-          jsonEncode({
-            'user_id': '@alice:example.com',
-            'device_id': 'deviceId',
-            'algorithms': [
-              AlgorithmTypes.olmV1Curve25519AesSha2,
-              AlgorithmTypes.megolmV1AesSha2,
-            ],
-            'keys': {
-              'curve25519:deviceId':
-                  '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
-              'ed25519:deviceId': 'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI',
-            },
-            'signatures': {
-              '@alice:example.com': {
-                'ed25519:deviceId':
-                    'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA',
-              },
-            },
-          }),
-          false,
-          false,
-          0,
-        );
-      });
-      test('setVerifiedUserDeviceKey', () async {
-        await database.setVerifiedUserDeviceKey(
-          true,
-          '@alice:example.com',
-          'deviceId',
-        );
-      });
-      test('setBlockedUserDeviceKey', () async {
-        await database.setBlockedUserDeviceKey(
-          true,
-          '@alice:example.com',
-          'deviceId',
-        );
       });
       test('getStorePresences', () async {
         const userId = '@alice:example.com';

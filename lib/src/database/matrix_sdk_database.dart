@@ -83,6 +83,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   late Box<Map> _deviceKeysListBox;
 
+  /// Is a Tuple(userId, deviceId) to the last sent message as a json map:
+  late Box<String> _lastSentOlmMessagesBox;
+
   @override
   final int maxFileSize;
 
@@ -146,6 +149,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   static const String _readReceiptsBoxName = 'box_read_receipts';
 
   static const String _deviceKeysListBoxName = 'box_device_keys_list';
+
+  static const String _lastSentOlmMessagesBoxName =
+      'box_last_sent_olm_messages';
 
   Database? database;
 
@@ -224,6 +230,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         _userProfilesBoxName,
         _readReceiptsBoxName,
         _deviceKeysListBoxName,
+        _lastSentOlmMessagesBoxName,
       },
       sqfliteDatabase: database,
       sqfliteFactory: sqfliteFactory,
@@ -257,6 +264,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _userProfilesBox = _collection.openBox(_userProfilesBoxName);
     _readReceiptsBox = _collection.openBox(_readReceiptsBoxName);
     _deviceKeysListBox = _collection.openBox(_deviceKeysListBoxName);
+    _lastSentOlmMessagesBox = _collection.openBox(_lastSentOlmMessagesBoxName);
 
     // Check version and check if we need a migration
     final currentVersion = int.tryParse(await _clientBox.get('version') ?? '');
@@ -334,6 +342,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _userProfilesBox.clearQuickAccessCache();
     _readReceiptsBox.clearQuickAccessCache();
     _deviceKeysListBox.clearQuickAccessCache();
+    _lastSentOlmMessagesBox.clearQuickAccessCache();
 
     await _collection.clear();
   }
@@ -514,11 +523,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String deviceId,
   ) async {
-    final rawKeys = await getDeviceKeysList(
-      userId,
-      Client('db', database: this),
+    final messageStr = await _lastSentOlmMessagesBox.get(
+      TupleKey(userId, deviceId).toString(),
     );
-    return [?rawKeys?.deviceKeys[deviceId]?.lastSentMessage];
+    return [?messageStr];
   }
 
   @override
@@ -728,7 +736,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     return Event.fromJson(copyMap(state), room).asUser;
   }
 
-  /// Only for migration. Can be removed after a certain amount of time.
+  /// Only for migration. Can be removed after a certain amount of time. Also
+  /// clears everything from the old boxes!
   Future<Map<String, DeviceKeysList>> _legacyGetUserDeviceKeys(
     Client client,
   ) async {
@@ -751,6 +760,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     final userDeviceKeys = await legacyUserDeviceKeysBox.getAllValues();
     final userCrossSigningKeys = await legacyUserCrossSigningKeysBox
         .getAllValues();
+
+    // Migrate lastSentMessages
+    for (final entry in userDeviceKeys.entries) {
+      final lastSentMessage = entry.value['last_sent_message'];
+      if (lastSentMessage is! String || lastSentMessage.isEmpty) continue;
+      await _lastSentOlmMessagesBox.put(entry.key, lastSentMessage);
+    }
+
     for (final userId in deviceKeysOutdated.keys) {
       final deviceKeysBoxKeys = userDeviceKeys.keys.where((tuple) {
         final tupleKey = TupleKey.fromString(tuple);
@@ -787,6 +804,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         client,
       );
     }
+    legacyUserDeviceKeysBox.clear();
+    legacyUserCrossSigningKeysBox.clear();
+    legacyUserDeviceKeysOutdatedBox.clear();
     return res;
   }
 
@@ -929,49 +949,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> removeUserCrossSigningKey(
-    String userId,
-    String publicKey,
-  ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
-    if (keys == null || !keys.crossSigningKeys.containsKey(publicKey)) return;
-    keys.crossSigningKeys.remove(publicKey);
-    await storeDeviceKeysList(userId, keys);
-  }
-
-  @override
-  Future<void> removeUserDeviceKey(String userId, String deviceId) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
-    if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
-    keys.deviceKeys.remove(deviceId);
-    await storeDeviceKeysList(userId, keys);
-  }
-
-  @override
-  Future<void> setBlockedUserCrossSigningKey(
-    bool blocked,
-    String userId,
-    String publicKey,
-  ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
-    if (keys == null || !keys.crossSigningKeys.containsKey(publicKey)) return;
-    keys.crossSigningKeys[publicKey]?.blocked = blocked;
-    await storeDeviceKeysList(userId, keys);
-  }
-
-  @override
-  Future<void> setBlockedUserDeviceKey(
-    bool blocked,
-    String userId,
-    String deviceId,
-  ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
-    if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
-    keys.deviceKeys[deviceId]?.blocked = blocked;
-    await storeDeviceKeysList(userId, keys);
-  }
-
-  @override
   Future<void> setLastActiveUserDeviceKey(
     int lastActive,
     String userId,
@@ -990,12 +967,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String lastSentMessage,
     String userId,
     String deviceId,
-  ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
-    if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
-    keys.deviceKeys[deviceId]?.lastSentMessage = lastSentMessage;
-    await storeDeviceKeysList(userId, keys);
-  }
+  ) => _lastSentOlmMessagesBox.put(
+    TupleKey(userId, deviceId).toString(),
+    lastSentMessage,
+  );
 
   @override
   Future<void> setRoomPrevBatch(
@@ -1009,37 +984,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     room.prev_batch = prevBatch;
     await _roomsBox.put(roomId, room.toJson());
     return;
-  }
-
-  @override
-  Future<void> setVerifiedUserCrossSigningKey(
-    bool verified,
-    String userId,
-    String publicKey, {
-    DateTime? trustOnFirstUseSince,
-  }) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
-    if (keys == null || !keys.crossSigningKeys.containsKey(publicKey)) return;
-    keys.crossSigningKeys[publicKey]?.setDirectVerified(verified);
-    if (trustOnFirstUseSince != null) {
-      keys.crossSigningKeys[publicKey]?.trustOnFirstUse(
-        since: trustOnFirstUseSince,
-        updateInDatabase: false,
-      );
-    }
-    await storeDeviceKeysList(userId, keys);
-  }
-
-  @override
-  Future<void> setVerifiedUserDeviceKey(
-    bool verified,
-    String userId,
-    String deviceId,
-  ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
-    if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
-    keys.deviceKeys[deviceId]?.setDirectVerified(verified);
-    await storeDeviceKeysList(userId, keys);
   }
 
   @override
@@ -1344,67 +1288,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeUserCrossSigningKey(
-    String userId,
-    String publicKey,
-    String content,
-    bool verified,
-    bool blocked, {
-    DateTime? trustOnFirstUseSince,
-  }) async {
-    final tmpClient = Client('db', database: this);
-    final keys =
-        await getDeviceKeysList(userId, tmpClient) ??
-        DeviceKeysList(userId, tmpClient);
-    keys.crossSigningKeys[publicKey] = CrossSigningKey.fromDbJson({
-      'user_id': userId,
-      'public_key': publicKey,
-      'content': content,
-      'verified': verified,
-      'blocked': blocked,
-      if (trustOnFirstUseSince != null)
-        'tofu': trustOnFirstUseSince.millisecondsSinceEpoch,
-    }, tmpClient);
-    await storeDeviceKeysList(userId, keys);
-  }
-
-  @override
-  Future<void> storeUserDeviceKey(
-    String userId,
-    String deviceId,
-    String content,
-    bool verified,
-    bool blocked,
-    int lastActive,
-  ) async {
-    final tmpClient = Client('db', database: this);
-    final keys =
-        await getDeviceKeysList(userId, tmpClient) ??
-        DeviceKeysList(userId, tmpClient);
-
-    keys.deviceKeys[deviceId] = DeviceKeys.fromDb({
-      'user_id': userId,
-      'device_id': deviceId,
-      'content': content,
-      'verified': verified,
-      'blocked': blocked,
-      'last_active': lastActive,
-      'last_sent_message': keys.deviceKeys[deviceId]?.lastSentMessage ?? '',
-    }, tmpClient);
-    await storeDeviceKeysList(userId, keys);
-  }
-
-  @override
-  Future<void> storeUserDeviceKeysInfo(String userId, bool outdated) async {
-    final tmpClient = Client('db', database: this);
-    final keys =
-        await getDeviceKeysList(userId, tmpClient) ??
-        DeviceKeysList(userId, tmpClient);
-    keys.outdated = outdated;
-    await storeDeviceKeysList(userId, keys);
-  }
-
-  @override
   Future<void> transaction(Future<void> Function() action) =>
       _collection.transaction(action);
 
@@ -1565,6 +1448,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           .getAllValues(),
       _olmSessionsBoxName: await _olmSessionsBox.getAllValues(),
       _deviceKeysListBoxName: await _deviceKeysListBox.getAllValues(),
+      _lastSentOlmMessagesBoxName: await _lastSentOlmMessagesBox.getAllValues(),
       _ssssCacheBoxName: await _ssssCacheBox.getAllValues(),
       _presencesBoxName: await _presencesBox.getAllValues(),
       _timelineFragmentsBoxName: await _timelineFragmentsBox.getAllValues(),
@@ -1636,6 +1520,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       }
       for (final key in json[_deviceKeysListBoxName]!.keys) {
         await _deviceKeysListBox.put(key, json[_deviceKeysListBoxName]![key]);
+      }
+      for (final key in json[_lastSentOlmMessagesBoxName]!.keys) {
+        await _lastSentOlmMessagesBox.put(
+          key,
+          json[_lastSentOlmMessagesBoxName]![key],
+        );
       }
       for (final key in json[_ssssCacheBoxName]!.keys) {
         await _ssssCacheBox.put(key, json[_ssssCacheBoxName]![key]);
