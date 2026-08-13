@@ -1794,6 +1794,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String roomId,
     LatestReceiptState receiptState,
   ) => _readReceiptsBox.put(roomId, receiptState.toJson());
+
+  @override
+  Future<dynamic> updateClientFields(Map<ClientField, String> fields) async {
+    for (final entry in fields.entries) {
+      await _clientBox.put(entry.key.name, entry.value);
+    }
+  }
 }
 
 class TupleKey {
