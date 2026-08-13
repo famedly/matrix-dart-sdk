@@ -3521,7 +3521,6 @@ class Client extends MatrixApi {
                 Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
               }
             }
-            // Drop old/unused entries by not adding them back to deviceKeys.
             userKeys.outdated = false;
             usersToPersist.add(userId);
           }
@@ -3553,8 +3552,6 @@ class Client extends MatrixApi {
               if (!oldEntry.value.usage.contains(keyType)) {
                 userKeys.crossSigningKeys[oldEntry.key] = oldEntry.value;
               }
-              // Previous cross-signing keys with this usage are dropped by not
-              // adding them back; storeDeviceKeysList persists that.
             }
             final entry = CrossSigningKey.fromMatrixCrossSigningKey(
               crossSigningKeyListEntry.value,

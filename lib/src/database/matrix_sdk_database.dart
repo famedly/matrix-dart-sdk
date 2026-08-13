@@ -761,7 +761,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     final userCrossSigningKeys = await legacyUserCrossSigningKeysBox
         .getAllValues();
 
-    // Migrate lastSentMessages
     for (final entry in userDeviceKeys.entries) {
       final lastSentMessage = entry.value['last_sent_message'];
       if (lastSentMessage is! String || lastSentMessage.isEmpty) continue;
