@@ -280,17 +280,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<void> _migrateFromVersion(int currentVersion) async {
     Logs().i('Migrate store database from version $currentVersion to $version');
 
-    if (currentVersion <= 11) {
-      final deviceKeysLists = await _legacyGetUserDeviceKeys(
-        Client('migrationclient', database: this),
-      );
-      for (final entry in deviceKeysLists.entries) {
-        Logs().d('Migrate user keys', entry.key);
-        await storeDeviceKeysList(entry.key, entry.value);
-      }
-    }
-
-    if (version == 8) {
+    if (currentVersion == 8) {
       // Migrate to inbound group sessions upload queue:
       final allInboundGroupSessions = await getAllInboundGroupSessions();
       final sessionsToUpload = allInboundGroupSessions
@@ -312,6 +302,18 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await _clientBox.put('version', version.toString());
         return;
       }
+    }
+
+    if (currentVersion < 12) {
+      final deviceKeysLists = await _legacyGetUserDeviceKeys(
+        Client('migrationclient', database: this),
+      );
+      for (final entry in deviceKeysLists.entries) {
+        Logs().d('Migrate user keys', entry.key);
+        await storeDeviceKeysList(entry.key, entry.value);
+      }
+      await _clientBox.put('version', version.toString());
+      if (currentVersion == 11) return;
     }
 
     // The default version upgrade:
@@ -741,13 +743,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<Map<String, DeviceKeysList>> _legacyGetUserDeviceKeys(
     Client client,
   ) async {
-    final legacyUserDeviceKeysBox = _collection.openBox(
+    final legacyUserDeviceKeysBox = _collection.openBox<Map>(
       _legacyUserDeviceKeysBoxName,
     );
-    final legacyUserDeviceKeysOutdatedBox = _collection.openBox(
+    final legacyUserDeviceKeysOutdatedBox = _collection.openBox<bool>(
       _legacyUserDeviceKeysOutdatedBoxName,
     );
-    final legacyUserCrossSigningKeysBox = _collection.openBox(
+    final legacyUserCrossSigningKeysBox = _collection.openBox<Map>(
       _legacyUserCrossSigningKeysBoxName,
     );
 
@@ -804,9 +806,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         client,
       );
     }
-    legacyUserDeviceKeysBox.clear();
-    legacyUserCrossSigningKeysBox.clear();
-    legacyUserDeviceKeysOutdatedBox.clear();
+    await legacyUserDeviceKeysBox.clear();
+    await legacyUserCrossSigningKeysBox.clear();
+    await legacyUserDeviceKeysOutdatedBox.clear();
     return res;
   }
 

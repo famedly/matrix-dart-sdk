@@ -207,10 +207,13 @@ abstract class SignableKey extends MatrixSignableKey {
   bool? _verified;
   bool? _blocked;
 
-  Future<void> _updateInDatabase() => client.database.storeDeviceKeysList(
-    userId,
-    client.userDeviceKeys[userId]!,
-  );
+  Future<void> _updateInDatabase() {
+    final deviceKeysList = client.userDeviceKeys[userId];
+    if (deviceKeysList == null) {
+      throw 'Unable to update device keys list of $userId in database because client.userDeviceKeys["$userId"] is null!';
+    }
+    return client.database.storeDeviceKeysList(userId, deviceKeysList);
+  }
 
   String? get ed25519Key => keys['ed25519:$identifier'];
   bool get verified =>
