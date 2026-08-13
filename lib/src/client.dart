@@ -323,18 +323,12 @@ class Client extends MatrixApi {
         ? null
         : DateTime.now().add(expiresIn);
     _accessTokenExpiresAt = tokenExpiresAt;
-    await database.updateClient(
-      homeserverUrl,
-      tokenResponse.accessToken,
-      tokenExpiresAt,
-      tokenResponse.refreshToken,
-      userId,
-      deviceId,
-      deviceName,
-      prevBatch,
-      encryption?.pickledOlmAccount,
-      oidcClientId,
-    );
+    await database.updateClientFields({
+      ClientField.accessToken: tokenResponse.accessToken,
+      ClientField.tokenExpiresIn: ?tokenExpiresAt?.millisecondsSinceEpoch
+          .toString(),
+      ClientField.refreshToken: ?tokenResponse.refreshToken,
+    });
   }
 
   /// The required name for this client.
@@ -635,10 +629,18 @@ class Client extends MatrixApi {
           '/.well-known/matrix/client',
         ),
       );
-      return DiscoveryInformation.fromJson(
+      final info = DiscoveryInformation.fromJson(
         jsonDecode(utf8.decode(wellKnownResponse.bodyBytes))
             as Map<String, Object?>,
       );
+      if (info.mHomeserver.baseUrl != homeserver) {
+        Logs().i('Homeserver base_url has been changed! Updating now...');
+        homeserver = info.mHomeserver.baseUrl;
+        await database.updateClientFields({
+          ClientField.homeserverUrl: info.mHomeserver.baseUrl.toString(),
+        });
+      }
+      return info;
     },
     fromJson: DiscoveryInformation.fromJson,
     toJson: (wellKnown) => wellKnown.toJson(),
