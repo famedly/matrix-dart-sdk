@@ -86,6 +86,7 @@ void main() {
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234',
         );
+        await client.abortSync();
         await client.refreshAccessToken();
         expect(client.accessToken, 'access_token_3');
         loginStates.clear();
