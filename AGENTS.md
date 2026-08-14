@@ -29,22 +29,40 @@ root fails (the example needs the Flutter SDK). Use `dart pub get --no-example` 
 `flutter pub get`, which the shared `dart` CI template uses). All plain-dart CI jobs
 in `.github/workflows/integrate.yml` pass `--no-example`.
 
-Toolchain already provided by the VM snapshot (do not reinstall): Dart SDK 3.11.1 (on
-`PATH` as `dart`, pinned to `.github/workflows/versions.env`; the repo requires SDK
-`>=3.11.0`), the Rust toolchain (`cargo`), Docker, mikefarah `yq` (at
-`/usr/local/bin/yq` — required by `scripts/prepare_vodozemac.sh`; note the distro's
-`/usr/bin/yq` is the incompatible python `yq`), and `libsqlite3-dev`/`lcov`. The update
-script fetches dependencies with `dart pub get --no-example` (plain `dart pub get`
-fails on the Flutter example, see above).
+The Dart SDK version is pinned by `dart_version` in `.github/workflows/versions.env`
+(currently 3.12.2), which is what CI feeds to `dart-lang/setup-dart`. Environment setup
+installs exactly that version into `/usr/local/lib/dart-sdk` (symlinked as
+`/usr/local/bin/dart`), so the VM follows the pin whenever it moves. An SDK older than
+the pin cannot resolve dependencies: the `sqflite_common_ffi` dev dependency tracks new
+SDKs aggressively, so `dart pub get` then dies with `version solving failed`. To switch
+by hand, unpack
+`https://storage.googleapis.com/dart-archive/channels/stable/release/<dart_version>/sdk/dartsdk-linux-x64-release.zip`
+over `/usr/local/lib/dart-sdk`.
+
+Other toolchain provided by the VM snapshot (do not reinstall): the Rust toolchain via
+`rustup` (`CARGO_HOME=/usr/local/cargo`, `RUSTUP_HOME=/usr/local/rustup`, default
+toolchain `stable`), Docker, mikefarah `yq` (at `/usr/local/bin/yq` — required by
+`scripts/prepare_vodozemac.sh`; note the distro's `/usr/bin/yq` is the incompatible
+python `yq`), and `libsqlite3-dev`/`lcov`. Environment setup fetches dependencies with
+`dart pub get --no-example` (plain `dart pub get` fails on the Flutter example, see
+above) and refreshes the toolchain with `rustup update stable`, because the
+`dart-vodozemac` crates need a recent Rust (edition 2024, so >= 1.85).
+
+If `dart pub get` ever fails with `fatal: hardlink different from source`, the
+snapshot's `~/.pub-cache/git` mirror of the `famedly_dart_lints` git dependency is
+stale: pub clones the mirror with hardlinks, which the VM's overlay filesystem cannot
+satisfy for files from a lower layer. Run `rm -rf ~/.pub-cache/git` and retry; pub
+re-fetches the mirror (~1 MB).
 
 ### Lint / analyze
-- `dart analyze` (clean except pre-existing info-level deprecation hints). `dart format --output=none --set-exit-if-changed lib` enforces formatting in CI.
+- `dart analyze` (clean on the pinned SDK: "No issues found!"). `dart format --output=none --set-exit-if-changed lib` enforces formatting in CI.
+- License headers: `~/.local/bin/reuse lint`, the local equivalent of the `reuse-compliance-check` CI job. Every new file needs the SPDX header the other files carry, or an entry in `REUSE.toml`.
 
 ### Tests
 - Non-E2EE only: `NO_OLM=1 ./scripts/test.sh` (skips `olm`-tagged tests, no vodozemac needed).
 - Full suite incl. E2EE: `./scripts/test.sh` (runs all 52 files sequentially, ~10 min). Requires the native vodozemac library at `./rust/target/debug/libvodozemac_bindings_dart.so`.
 - Single file: `dart test test/<name>_test.dart` (add `-x olm` to skip encryption tests).
-- vodozemac native lib: built once via `./scripts/prepare_vodozemac.sh` (git-clones `dart-vodozemac` into `./rust/` and runs `cargo build`). The `./rust/` dir is gitignored and persists in the snapshot, so it normally does NOT need rebuilding. Only re-run the script if the `vodozemac` version in `pubspec.yaml` changes or `./rust/target/debug/*.so` is missing.
+- vodozemac native lib: built by `./scripts/prepare_vodozemac.sh` (git-clones `dart-vodozemac` into `./rust/` and runs `cargo build`, ~15 s). Environment setup runs it, so the `.so` is normally present. Each environment build re-clones `/workspace`, which wipes the gitignored `./rust/` dir, so re-run the script whenever `./rust/target/debug/libvodozemac_bindings_dart.so` is missing or the `vodozemac` version in `pubspec.yaml` changes.
 
 ### Integration / E2EE tests against a real homeserver
 - Needs a running homeserver. `dockerd` is installed but is NOT auto-started — start it first (e.g. `sudo dockerd &`) and confirm with `sudo docker info`. The daemon is configured for `fuse-overlayfs` with the containerd-snapshotter disabled (required for Docker on this VM).
