@@ -3,6 +3,12 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [10.1.0] 14th August 2026
+
+- build: fix workflow flutter version (Christian Kußowski)
+- fix: read fresh keys in IndexedDB Box.getAllValues (td)
+- fix: Remove port from registration redirect if its a loopback (N00byKing)
+
 ## [10.0.1] 11th August 2026
 - fix: do not guess a file extension for video thumbnails with unknown mimetype (Cursor Agent)
 - fix: refresh DM hero avatars in partial rooms (Qays Dwekat)
