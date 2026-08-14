@@ -188,6 +188,18 @@ class Box<V> {
   Future<List<String>> getAllKeys([IDBTransaction? txn]) async {
     if (_quickAccessCachedKeys != null) return _quickAccessCachedKeys!.toList();
     txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
+    final keys = await _getAllKeysFromStore(txn);
+    _quickAccessCachedKeys = keys.toSet();
+    return keys;
+  }
+
+  /// Reads the keys from the object store, bypassing [_quickAccessCachedKeys].
+  ///
+  /// [put] and [delete] keep the cached key set complete, but in their own
+  /// mutation order rather than in the store's key order, while
+  /// [IDBObjectStore.getAll] always returns the values in key order. So only
+  /// freshly read keys may be zipped against those values.
+  Future<List<String>> _getAllKeysFromStore(IDBTransaction txn) async {
     final store = txn.objectStore(name);
     final getAllKeysCompleter = Completer();
     final request = store.getAllKeys();
@@ -201,9 +213,7 @@ class Box<V> {
       getAllKeysCompleter.complete();
     }.toJS;
     await getAllKeysCompleter.future;
-    final keys = (request.result?.dartify() as List?)?.cast<String>() ?? [];
-    _quickAccessCachedKeys = keys.toSet();
-    return keys;
+    return (request.result?.dartify() as List?)?.cast<String>() ?? [];
   }
 
   Future<Map<String, V>> getAllValues([IDBTransaction? txn]) async {
@@ -214,7 +224,8 @@ class Box<V> {
     /// NOTE: This is a workaround to get the keys as [IDBObjectStore.getAll()]
     /// only returns the values as a list.
     /// And using the [IDBObjectStore.openCursor()] method is not working as expected.
-    final keys = await getAllKeys(txn);
+    final keys = await _getAllKeysFromStore(txn);
+    _quickAccessCachedKeys = keys.toSet();
 
     final getAllValuesCompleter = Completer();
     final getAllValuesRequest = store.getAll();
