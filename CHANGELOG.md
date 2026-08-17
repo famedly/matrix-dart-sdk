@@ -3,6 +3,10 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [10.2.0] 17th August 2026
+
+- feat: add clearCryptoIdentity to CryptoSetupExtension (Karthikeyan S)
+
 ## [10.1.0] 14th August 2026
 
 - build: fix workflow flutter version (Christian Kußowski)
