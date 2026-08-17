@@ -331,5 +331,36 @@ void main() {
       expect(state.connected, true);
       expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
     }, timeout: Timeout(Duration(minutes: 2)));
+
+    test('clearCryptoIdentity reports greenfield identity state', () async {
+      final client = await getClient();
+      addTearDown(() async {
+        await client.dispose(closeDatabase: true);
+      });
+      await client.clearCryptoIdentity();
+      final state = await client.getCryptoIdentityState();
+      expect(state.initialized, false);
+      expect(state.connected, false);
+      expect(state.keyBackupEnabled, false);
+      expect(state.crossSigningEnabled, false);
+    });
+
+    test(
+      'initCryptoIdentity can create a new key after clear',
+      () async {
+        final client = await getClient();
+        addTearDown(() async {
+          await client.dispose(closeDatabase: true);
+        });
+        await client.clearCryptoIdentity();
+        final recoveryKey = await client.initCryptoIdentity();
+        expect(recoveryKey.substring(0, 2), 'Es');
+        final state = await client.getCryptoIdentityState();
+        expect(state.initialized, true);
+        expect(state.connected, true);
+        expect(client.encryption!.ssss.defaultKeyId, isNotNull);
+      },
+      timeout: Timeout(Duration(minutes: 2)),
+    );
   });
 }
