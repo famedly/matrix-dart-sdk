@@ -323,4 +323,30 @@ extension CryptoSetupExtension on Client {
 
     return recoveryKey!;
   }
+
+  /// Empties encrypted SSSS account data so crypto identity reads as
+  /// greenfield. Does not create a replacement key.
+  Future<void> clearCryptoIdentity() async {
+    final encryption = this.encryption;
+    if (encryption == null) {
+      throw Exception('End to end encryption not available!');
+    }
+    final ssss = encryption.ssss;
+    Future<void> empty(String type) async {
+      await setAccountData(userID!, type, {});
+      while (accountData[type]?.content.isNotEmpty ?? true) {
+        await oneShotSync();
+      }
+    }
+
+    for (final type in ssss.analyzeEncryptedSecrets().keys.toList(
+      growable: false,
+    )) {
+      await empty(type);
+    }
+    if (accountData.containsKey(EventTypes.SecretStorageDefaultKey)) {
+      await empty(EventTypes.SecretStorageDefaultKey);
+    }
+    await ssss.clearCache();
+  }
 }
