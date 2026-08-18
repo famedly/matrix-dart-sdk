@@ -3,6 +3,10 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [10.2.1] 18th August 2026
+
+- fix: ignore missing files during local file cache cleanup (Karthikeyan S)
+
 ## [10.2.0] 17th August 2026
 
 - feat: add clearCryptoIdentity to CryptoSetupExtension (Karthikeyan S)
