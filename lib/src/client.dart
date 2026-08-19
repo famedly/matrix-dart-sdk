@@ -3759,13 +3759,28 @@ class Client extends MatrixApi {
     // Don't send this message to blocked devices, and if specified onlyVerified
     // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
+      final skipped = deviceKeys
+          .where(
+            (deviceKey) =>
+                deviceKey.blocked || (onlyVerified && !deviceKey.verified),
+          )
+          .map((deviceKey) => '${deviceKey.userId}:${deviceKey.deviceId}')
+          .toList();
+      if (skipped.isNotEmpty) {
+        Logs().w(
+          'Not sending $eventType to $skipped, they are blocked or unverified',
+        );
+      }
       deviceKeys.removeWhere(
         (DeviceKeys deviceKeys) =>
             deviceKeys.blocked ||
             (deviceKeys.userId == userID && deviceKeys.deviceId == deviceID) ||
             (onlyVerified && !deviceKeys.verified),
       );
-      if (deviceKeys.isEmpty) return;
+      if (deviceKeys.isEmpty) {
+        Logs().w('Not sending $eventType, no devices are left to send it to');
+        return;
+      }
     }
 
     // So that we can guarantee order of encrypted to_device messages to be preserved we
