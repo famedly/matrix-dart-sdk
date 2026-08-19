@@ -1,0 +1,58 @@
+## SPDX-FileCopyrightText: 2026 Famedly GmbH
+##
+## SPDX-License-Identifier: Apache-2.0
+
+# managed-by: engineering-standards — do not edit manually.
+#
+# Regenerate with `nix run .#filegen-activate`. Put repository-specific
+# overrides in `analysis_options.yaml`, which includes this file.
+#
+# Requires these dev dependencies:
+#
+#   lints: ^6.1.0
+#   dart_code_linter: ^4.1.2
+analyzer:
+  errors:
+    todo: ignore
+    use_build_context_synchronously: ignore
+  exclude:
+  - lib/l10n/*.dart
+  - example/**
+  - lib/matrix_api_lite/generated/**
+  plugins:
+  - dart_code_linter
+dart_code_linter:
+  rules:
+  - avoid-unnecessary-type-assertions
+  - no-equal-then-else
+  - prefer-last
+  - avoid-unnecessary-conditionals
+include: package:lints/recommended.yaml
+linter:
+  rules:
+  - avoid_print
+  - constant_identifier_names
+  - prefer_final_locals
+  - prefer_final_in_for_each
+  - sort_pub_dependencies
+  - require_trailing_commas
+  - omit_local_variable_types
+  - cancel_subscriptions
+  - always_declare_return_types
+  - avoid_void_async
+  - no_adjacent_strings_in_list
+  - test_types_in_equals
+  - throw_in_finally
+  - unnecessary_statements
+  - avoid_bool_literals_in_conditional_expressions
+  - prefer_single_quotes
+  - prefer_const_declarations
+  - unnecessary_lambdas
+  - combinators_ordering
+  - noop_primitive_operations
+  - unnecessary_null_checks
+  - unnecessary_null_in_if_null_operators
+  - unnecessary_to_list_in_spreads
+  - use_is_even_rather_than_modulo
+  - use_super_parameters
+  - directives_ordering

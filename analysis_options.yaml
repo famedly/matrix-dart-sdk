@@ -2,31 +2,14 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-include: package:famedly_dart_lints/analysis_options.yaml
+include: analysis_options.standards.yaml
 
-linter:
-  rules:
-    # TODO: Enable these lints one after another and fix them
-    non_constant_identifier_names: false
-
-dart_code_linter:
-  rules:
-    # TODO: Enable these lints one after another and fix them
-    avoid-late-keyword: false
-    avoid-redundant-async: false
-    member-ordering: false
-    prefer-match-file-name: false
-    avoid-dynamic: false
-    avoid-global-state: false
-    avoid-unrelated-type-assertions: false
-    avoid-unnecessary-type-casts: false
-    prefer-first: false
-    prefer-enums-by-name: false
-    prefer-immediate-return: false
+# managed-by: engineering-standards's `dart-lints-included` pre-commit hook
+# requires this file to include `analysis_options.standards.yaml` (generated
+# by `nix run .#filegen-activate`, see flake.nix). Repository-specific
+# overrides belong here.
 
 analyzer:
-  exclude:
-    # The example is a standalone Flutter app with its own analysis_options.yaml
-    # and is linted separately in CI (see .github/workflows/example.yml).
-    - example/**
-    - lib/matrix_api_lite/generated/**
+  errors:
+    # TODO: Enable this lint and fix it
+    non_constant_identifier_names: ignore
