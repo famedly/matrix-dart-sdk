@@ -177,6 +177,8 @@ abstract class MatrixLocalizations {
   String startedAPoll(String senderName);
 
   String get pollHasBeenEnded;
+
+  String incomingCallFrom(String senderName);
 }
 
 extension HistoryVisibilityDisplayString on HistoryVisibility {
