@@ -65,7 +65,9 @@ class OlmManager {
             ? pickleKey
             : null,
       )) {
-        throw ('Upload key failed');
+        // Reached from `Client.init` for a session that has no stored olm
+        // account, where failing to publish the keys costs the session.
+        throw ('Upload of the device keys for the new olm account failed');
       }
     } else {
       try {
@@ -127,6 +129,7 @@ class OlmManager {
     }
 
     if (_uploadKeysLock) {
+      Logs().w('Not uploading keys: another upload is already in flight');
       return false;
     }
     _uploadKeysLock = true;
@@ -248,6 +251,7 @@ class OlmManager {
       );
       final response = await currentUpload.valueOrCancellation();
       if (response == null) {
+        Logs().w('Not uploading keys: the upload was cancelled');
         _uploadKeysLock = false;
         return false;
       }
@@ -257,9 +261,15 @@ class OlmManager {
       if (updateDatabase) {
         await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
       }
-      return (uploadedOneTimeKeysCount != null &&
-              response['signed_curve25519'] == uploadedOneTimeKeysCount) ||
-          uploadedOneTimeKeysCount == null;
+      final uploaded = response['signed_curve25519'];
+      if (uploadedOneTimeKeysCount != null &&
+          uploaded != uploadedOneTimeKeysCount) {
+        Logs().w(
+          'Key upload accepted $uploaded of $uploadedOneTimeKeysCount one time keys',
+        );
+        return false;
+      }
+      return true;
     } on MatrixException catch (exception) {
       _uploadKeysLock = false;
 
@@ -285,6 +295,8 @@ class OlmManager {
           unusedFallbackKey: unusedFallbackKey,
           retry: retry - 1,
         );
+      } else {
+        Logs().w('Key upload was rejected by the homeserver', exception);
       }
     } finally {
       _uploadKeysLock = false;
