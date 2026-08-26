@@ -311,4 +311,8 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String get pollHasBeenEnded => 'Poll has been ended';
+
+  @override
+  String incomingCallFrom(String senderName) =>
+      'Incoming call from $senderName';
 }

@@ -78,6 +78,10 @@ abstract class EventLocalizations {
         return i18n.startedKeyVerification(
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
         );
+      case RtcNotificationContent.eventType:
+        return i18n.incomingCallFrom(
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
       case MessageTypes.BadEncrypted:
         String errorText;
         switch (event.body) {
