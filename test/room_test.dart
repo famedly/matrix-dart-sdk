@@ -1640,16 +1640,16 @@ void main() {
       FakeMatrixApi
               .currentApi!
               .api['PUT']!['/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid'] =
-          (var req) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+          (req) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
       FakeMatrixApi
           .currentApi!
-          .api['POST']!['/media/v3/upload?filename=file.mp4'] = (var req) => {
+          .api['POST']!['/media/v3/upload?filename=file.mp4'] = (req) => {
         'content_uri': 'mxc://example.com/videoTestMxcUri',
       };
       FakeMatrixApi
               .currentApi!
               .api['POST']!['/media/v3/upload?filename=file.mp4.thumbnail.jpg'] =
-          (var req) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
+          (req) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
       MatrixVideoThumbnailArguments? receivedArguments;
       matrix.customVideoThumbnailGenerator = (arguments) async {
         receivedArguments = arguments;
@@ -1773,7 +1773,7 @@ void main() {
       FakeMatrixApi
               .currentApi!
               .api['PUT']!['/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid'] =
-          (var req) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+          (req) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
       matrix.customVideoThumbnailGenerator = (arguments) async =>
           throw Exception('Unable to decode video');
 

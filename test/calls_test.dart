@@ -1183,14 +1183,14 @@ void main() {
           final api = FakeMatrixApi.currentApi!;
           // no already scheduled delayed events
           api.api['GET']!['/client/unstable/org.matrix.msc4140/delayed_events'] =
-              (var req) => {'delayed_events': []};
+              (req) => {'delayed_events': []};
           // the delayed leave state event returns a known delay id
           api.api['PUT']!['/client/v3/rooms/${Uri.encodeComponent(room.id)}/state/${Uri.encodeComponent(EventTypes.GroupCallMember)}/${Uri.encodeComponent(matrix.userID!)}?org.matrix.msc4140.delay=400'] =
-              (var req) => {'delay_id': 'faildelayid'};
+              (req) => {'delay_id': 'faildelayid'};
           // every restart heartbeat fails because the delayed event is gone
           var restartCalls = 0;
           api.api['POST']!['/client/unstable/org.matrix.msc4140/delayed_events/faildelayid'] =
-              (var req) {
+              (req) {
                 restartCalls++;
                 return {
                   'errcode': 'M_NOT_FOUND',

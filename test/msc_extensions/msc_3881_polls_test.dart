@@ -397,7 +397,7 @@ void main() {
         void stubEnd(String txid) =>
             (FakeMatrixApi.currentApi!.api['PUT'] ??=
                     {})['/client/v3/rooms/!696r7674%3Aexample.com/send/org.matrix.msc3381.poll.end/$txid'] =
-                (var req) => {'event_id': txid};
+                (req) => {'event_id': txid};
 
         const other = '@someone:example.com';
 
