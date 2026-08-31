@@ -583,7 +583,7 @@ class OlmManager {
         return event;
       }
       // retry to decrypt!
-      return _decryptToDeviceEvent(event);
+      return await _decryptToDeviceEvent(event);
     } catch (_) {
       // okay, the thing errored while decrypting. It is safe to assume that the olm session is corrupt and we should generate a new one
       runInRoot(() => restoreOlmSession(event.senderId, senderKey));

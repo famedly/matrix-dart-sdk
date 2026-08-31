@@ -353,13 +353,14 @@ void main() async {
         DateTime.now().millisecondsSinceEpoch,
       );
       FakeMatrixApi
-              .currentApi!
-              .api['POST']!['/media/v3/upload?filename=$videoFilename'] =
-          (var req) => {'content_uri': 'mxc://example.com/videoMxcUri'};
+          .currentApi!
+          .api['POST']!['/media/v3/upload?filename=$videoFilename'] = (req) => {
+        'content_uri': 'mxc://example.com/videoMxcUri',
+      };
       FakeMatrixApi
               .currentApi!
               .api['POST']!['/media/v3/upload?filename=$videoFilename.thumbnail'] =
-          (var req) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
+          (req) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
 
       final videoEvent = Event.fromJson(<String, dynamic>{
         'event_id': videoTxId,
