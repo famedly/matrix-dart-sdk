@@ -6,6 +6,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 ## [11.0.0] 31st August 2026
 - build: update to vodozemac 0.8.0 (Christian Kußowski)
 - chore: add localization for incoming call (Christian Kußowski)
+
+## [10.2.2] 24th Auguest 2026
 - chore: log to-device recipients that get silently skipped (td)
 - fix: add reason why db was cleared (td)
 
