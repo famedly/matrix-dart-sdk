@@ -81,8 +81,8 @@ class ConnectionTester {
 
   Future<int> waitUntilAsync(
     Future<bool> Function() test, {
-    final int maxIterations = 1000,
-    final Duration step = const Duration(milliseconds: 10),
+    int maxIterations = 1000,
+    Duration step = const Duration(milliseconds: 10),
   }) async {
     var iterations = 0;
     for (; iterations < maxIterations; iterations++) {
