@@ -3,6 +3,12 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [11.0.0] 31st August 2026
+- build: update to vodozemac 0.8.0 (Christian Kußowski)
+- chore: add localization for incoming call (Christian Kußowski)
+- chore: log to-device recipients that get silently skipped (td)
+- fix: add reason why db was cleared (td)
+
 ## [10.2.1] 18th August 2026
 
 - fix: ignore missing files during local file cache cleanup (Karthikeyan S)
