@@ -57,7 +57,8 @@ class User extends StrippedStateEvent {
   /// The displayname of the user if the user has set one.
   String? get displayName =>
       content.tryGet<String>('displayname') ??
-      (membership == Membership.join
+      (membership == Membership.join ||
+              !room.client.getDisplayNameAndAvatarFromPrevContent
           ? null
           : prevContent?.tryGet<String>('displayname'));
 
@@ -80,7 +81,8 @@ class User extends StrippedStateEvent {
   Uri? get avatarUrl {
     final uri =
         content.tryGet<String>('avatar_url') ??
-        (membership == Membership.join
+        (membership == Membership.join ||
+                !room.client.getDisplayNameAndAvatarFromPrevContent
             ? null
             : prevContent?.tryGet<String>('avatar_url'));
     return uri == null ? null : Uri.tryParse(uri);
