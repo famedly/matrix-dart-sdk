@@ -3,6 +3,10 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+
+## [12.0.1] 2nd September 2026
+- fix: wrong if condition where rooms get removed from list even when includeLeave == true (Christian Kußowski)
+
 ## [12.0.0] 2nd September 2026
 This version changes how left rooms are stored in the client and the archive is loaded.
 When calling `loadArchive()` it no longer caches the archived rooms internally and

@@ -3070,11 +3070,17 @@ class Client extends MatrixApi {
       final position = membership == Membership.invite ? 0 : rooms.length;
       // Add the new chat to the list
       rooms.insert(position, room);
+    } else if (membership == .invite && found) {
+      rooms[roomIndex].membership = membership;
     }
     // If the membership is "leave" then remove the item and stop here
     else if (membership == Membership.leave) {
-      if (syncFilter.room?.includeLeave == true && !found) {
-        rooms.add(room);
+      if (syncFilter.room?.includeLeave == true) {
+        if (!found) {
+          rooms.add(room);
+        } else {
+          rooms[roomIndex].membership = membership;
+        }
       } else if (found) {
         rooms.removeAt(roomIndex);
       }
