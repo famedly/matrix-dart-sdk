@@ -3,6 +3,26 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [12.0.0] 2nd September 2026
+This version changes how left rooms are stored in the client and the archive is loaded.
+When calling `loadArchive()` it no longer caches the archived rooms internally and
+`client.getRoomById()` would no longer return such a cached room. It is up to the
+app consumer to cache them if needed at all. On the other hand the sdk now allows
+to always sync and store left rooms by default easily by just adding them in the
+sync filter to the constructor:
+
+```dart
+Client(
+  'Client Name',
+  syncFilter: Filter(room: RoomFilter(includeLeave: true)),
+  // ...
+);
+```
+
+- chore: make autoRequestProfileForMissingUsers and getDisplayNameAndAvatarFromPrevContent configurable (Christian Kußowski)
+- feat: (BREAKING) Store left rooms if syncfilter includes leave (Christian Kußowski)
+- refactor: Remove archive cache from Client (Christian Kußowski)
+
 ## [11.0.0] 31st August 2026
 - build: update to vodozemac 0.8.0 (Christian Kußowski)
 - chore: add localization for incoming call (Christian Kußowski)
