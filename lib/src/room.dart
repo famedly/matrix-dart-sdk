@@ -2145,7 +2145,7 @@ class Room {
     String mxID, {
     bool ignoreErrors = false,
     bool requestState = true,
-    bool requestProfile = true,
+    bool? requestProfile,
   }) async {
     assert(mxID.isValidMatrixIdStrict());
 
@@ -2153,7 +2153,8 @@ class Room {
       mxID: mxID,
       ignoreErrors: ignoreErrors,
       requestState: requestState,
-      requestProfile: requestProfile,
+      requestProfile:
+          requestProfile ?? client.autoRequestProfileForMissingUsers,
     );
 
     final cache = _inflightUserRequests[parameters] ??= AsyncCache.ephemeral();
@@ -2164,7 +2165,8 @@ class Room {
           mxID,
           ignoreErrors: ignoreErrors,
           requestState: requestState,
-          requestProfile: requestProfile,
+          requestProfile:
+              requestProfile ?? client.autoRequestProfileForMissingUsers,
         ),
       );
       _inflightUserRequests.remove(parameters);

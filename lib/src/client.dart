@@ -128,6 +128,9 @@ class Client extends MatrixApi {
 
   final Duration sendTimelineEventTimeout;
 
+  final bool autoRequestProfileForMissingUsers;
+  final bool getDisplayNameAndAvatarFromPrevContent;
+
   /// The timeout until a typing indicator gets removed automatically.
   final Duration typingIndicatorTimeout;
 
@@ -243,6 +246,15 @@ class Client extends MatrixApi {
     this.dehydratedDeviceDisplayName = 'Dehydrated Device',
     RoomSorter? customRoomSorter,
     this.contentScannerConfig,
+
+    /// Whether the app automatically requests the profile for users which have
+    /// no filled out member state in a room. This is e.g. the case for left
+    /// or banned users.
+    this.autoRequestProfileForMissingUsers = true,
+
+    /// Whether the app should get DisplayName and Avatar also from the
+    /// previous content of a member state event.
+    this.getDisplayNameAndAvatarFromPrevContent = true,
   }) : _database = database,
        syncFilter =
            syncFilter ??
