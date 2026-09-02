@@ -1495,12 +1495,7 @@ class Room {
   Future<void> forget() async {
     await client.database.forgetRoom(id);
     await client.forgetRoom(id);
-    // Update archived rooms, otherwise an archived room may still be in the
-    // list after a forget room call
-    final roomIndex = client.archivedRooms.indexWhere((r) => r.room.id == id);
-    if (roomIndex != -1) {
-      client.archivedRooms.removeAt(roomIndex);
-    }
+    client.rooms.remove(this);
     return;
   }
 
@@ -1776,20 +1771,13 @@ class Room {
       await client.database.transaction(() async {
         events = await client.database.getEventList(this, limit: limit);
       });
-    } else {
-      final archive = client.getArchiveRoomFromCache(id);
-      events = archive?.timeline.events.toList() ?? [];
-      for (var i = 0; i < events.length; i++) {
-        // Try to decrypt encrypted events but don't update the database.
-        if (encrypted && client.encryptionEnabled) {
-          if (events[i].type == EventTypes.Encrypted) {
-            events[i] = await client.encryption!.decryptRoomEvent(events[i]);
-          }
-        }
-      }
     }
 
-    var chunk = TimelineChunk(events: events);
+    var chunk = TimelineChunk(
+      events: events,
+      // Leave rooms paginate via getRoomEvents which uses chunk.prevBatch.
+      prevBatch: isArchived ? (prev_batch ?? '') : '',
+    );
     // Load the timeline arround eventContextId if set
     if (eventContextId != null) {
       if (!events.any((Event event) => event.eventId == eventContextId)) {
