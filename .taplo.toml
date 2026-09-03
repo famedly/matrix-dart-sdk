@@ -1,0 +1,18 @@
+## SPDX-FileCopyrightText: 2026 Famedly GmbH
+##
+## SPDX-License-Identifier: Apache-2.0
+
+exclude = ["target-analyzer/**", "target/**"]
+
+[formatting]
+# Aligning entries causes conflicts regularly. While it does increase readability, it harms the devex, so we don't align
+# them for now.
+align_entries = false
+allowed_blank_lines = 1
+array_auto_collapse = true
+array_auto_expand = true
+column_width = 120
+# We can't reorder arrays, since `module-item-order-groupings` in .clippy.toml
+# is sensitive to the ordering of its elements
+reorder_arrays = false
+reorder_keys = true

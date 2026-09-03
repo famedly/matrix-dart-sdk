@@ -1,0 +1,112 @@
+## SPDX-FileCopyrightText: 2026 Famedly GmbH
+##
+## SPDX-License-Identifier: Apache-2.0
+
+repos:
+- hooks:
+  - id: check-added-large-files
+    stages: []
+  - id: check-case-conflict
+    stages: []
+  - id: check-illegal-windows-names
+    stages: []
+  - id: end-of-file-fixer
+    stages: []
+  - id: fix-byte-order-marker
+    stages: []
+  - id: check-json
+    stages: []
+  - id: check-json5
+    stages: []
+  - id: check-toml
+    stages: []
+  - id: check-vcs-permalinks
+    stages: []
+  - id: check-xml
+    stages: []
+  - args:
+    - --fix=lf
+    id: mixed-line-ending
+    stages: []
+  - id: check-symlinks
+    stages: []
+  - id: destroyed-symlinks
+    stages: []
+  - id: check-merge-conflict
+    stages: []
+  - id: detect-private-key
+    stages: []
+  - exclude_types:
+    - rust
+    id: check-shebang-scripts-are-executable
+    stages: []
+  - id: check-executables-have-shebangs
+    stages: []
+  repo: builtin
+- hooks:
+  - args:
+    - --write-changes
+    - --force-exclude
+    description: Check the repository for spelling mistakes
+    entry: typos
+    id: typos
+    language: system
+    name: typos
+    stages: []
+    types:
+    - text
+  - description: Ensure that files set up with the filegen module are up-to-date
+    entry: filegen-apply-script
+    id: filegen
+    language: system
+    name: filegen
+    pass_filenames: false
+    stages: []
+  - description: Format *all* files
+    entry: treefmt
+    id: treefmt
+    language: system
+    name: treefmt
+    require_serial: true
+    stages: []
+  repo: local
+- hooks:
+  - args:
+    - follow
+    description: Ensure that flake inputs are recursively de-duplicated
+    entry: flake-edit
+    files:
+      glob: '{flake.nix,flake.lock}'
+    id: flake-follows
+    language: system
+    name: flake-follows
+    pass_filenames: false
+    stages: []
+  repo: local
+- hooks:
+  - description: Ensure the managed Dart lints are actually included
+    entry: dart-lints-included
+    id: dart-lints-included
+    language: system
+    name: dart-lints-included
+    pass_filenames: false
+    stages: []
+  - description: Reject commented-out Dart code
+    entry: dart-no-commented-out-code
+    files: \.dart$
+    id: dart-no-commented-out-code
+    language: system
+    name: dart-no-commented-out-code
+    pass_filenames: true
+    stages: []
+  repo: local
+- hooks:
+  - args:
+    - lint-file
+    description: Ensure compliance with REUSE recommendations
+    entry: reuse
+    id: reuse
+    language: system
+    name: reuse
+    stages: []
+  repo: local

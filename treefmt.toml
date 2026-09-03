@@ -1,0 +1,59 @@
+## SPDX-FileCopyrightText: 2026 Famedly GmbH
+##
+## SPDX-License-Identifier: Apache-2.0
+
+allowMissingFormatter = false
+excludes = [
+    "*.lock",
+    "*.patch",
+    "package-lock.json",
+    "go.mod",
+    "go.sum",
+    ".gitattributes",
+    ".gitignore",
+    ".gitmodules",
+    ".hgignore",
+    ".svnignore",
+    "LICENSE",
+    ".pre-commit-config.yaml",
+    ".github/workflows/check-pre-commit-hooks.yml",
+    ".github/workflows/dart-checks.yml",
+    ".gitattributes",
+    ".editorconfig",
+    "treefmt.toml",
+    ".taplo.toml",
+    ".github/workflows/check-pre-commit-hooks.yml.license",
+    ".github/workflows/dart-checks.yml.license",
+    "analysis_options.standards.yaml",
+]
+walk = "git"
+
+[formatter.dart-format]
+command = "dart"
+excludes = []
+includes = ["*.dart"]
+options = ["format"]
+
+[formatter.nixfmt]
+command = "nixfmt"
+excludes = []
+includes = ["*.nix"]
+options = ["--strict"]
+
+[formatter.rustfmt]
+command = "rustfmt"
+excludes = []
+includes = ["*.rs"]
+options = ["--config", "skip_children=true", "--edition", "2024"]
+
+[formatter.shfmt]
+command = "shfmt"
+excludes = []
+includes = ["*.sh", "*.bash", "*.envrc", "*.envrc.*"]
+options = ["-w", "-i", "0", "-s"]
+
+[formatter.taplo]
+command = "taplo"
+excludes = []
+includes = ["*.toml"]
+options = ["format"]
