@@ -4,6 +4,11 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [10.2.3] 3rd September 2026
+
+- fix: discard persisted outbound Megolm v2 sessions before sending
+- build: update vodozemac to 0.8.2
+
 ## [10.2.2] 24th August 2026
 
 - chore: log to-device recipients that get silently skipped (td)

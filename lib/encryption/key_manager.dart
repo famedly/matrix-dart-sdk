@@ -28,6 +28,7 @@ class KeyManager {
   final _inboundGroupSessions = <String, Map<String, SessionKey>>{};
   final _outboundGroupSessions = <String, OutboundGroupSession>{};
   final Set<String> _loadedOutboundGroupSessions = <String>{};
+  final Map<String, Future<void>> _pendingOutboundGroupSessionLoads = {};
   final Map<String, Completer<void>> _requestedSessionIdCompleters =
       <String, Completer<void>>{};
 
@@ -68,7 +69,7 @@ class KeyManager {
 
   bool get enabled => encryption.ssss.isSecret(megolmKey);
 
-  /// clear all cached inbound group sessions. useful for testing
+  /// Clear all cached inbound group sessions. Useful for testing.
   void clearInboundGroupSessions() {
     _inboundGroupSessions.clear();
   }
@@ -306,9 +307,10 @@ class KeyManager {
     return deviceKeyIds;
   }
 
-  /// clear all cached inbound group sessions. useful for testing
+  /// Clear all cached outbound group sessions. Useful for testing.
   void clearOutboundGroupSessions() {
     _outboundGroupSessions.clear();
+    _loadedOutboundGroupSessions.clear();
   }
 
   /// Clears the existing outboundGroupSession but first checks if the participating
@@ -323,6 +325,15 @@ class KeyManager {
     final sess = getOutboundGroupSession(roomId);
     if (room == null || sess == null || sess.outboundGroupSession == null) {
       return true;
+    }
+
+    final configVersion = sess.outboundGroupSession!.sessionConfigVersion;
+    if (configVersion != 1) {
+      Logs().w(
+        '[Vodozemac] Rotating outbound Megolm session with unsupported '
+        'config v$configVersion.',
+      );
+      wipe = true;
     }
 
     if (!wipe) {
@@ -489,6 +500,11 @@ class KeyManager {
   ) async {
     final userID = client.userID;
     if (userID == null) return;
+    if (!sess.isValid) {
+      throw StateError(
+        'Refusing to store an unsupported outbound Megolm session',
+      );
+    }
     await client.database.storeOutboundGroupSession(
       roomId,
       sess.outboundGroupSession!.toPickleEncrypted(userID.toPickleKey()),
@@ -610,6 +626,23 @@ class KeyManager {
 
   /// Load an outbound group session from database
   Future<void> loadOutboundGroupSession(String roomId) async {
+    final pendingLoad = _pendingOutboundGroupSessionLoads[roomId];
+    if (pendingLoad != null) {
+      return pendingLoad;
+    }
+
+    final load = _loadOutboundGroupSession(roomId);
+    _pendingOutboundGroupSessionLoads[roomId] = load;
+    try {
+      await load;
+    } finally {
+      if (identical(_pendingOutboundGroupSessionLoads[roomId], load)) {
+        _pendingOutboundGroupSessionLoads.remove(roomId);
+      }
+    }
+  }
+
+  Future<void> _loadOutboundGroupSession(String roomId) async {
     final database = client.database;
     final userID = client.userID;
     if (_loadedOutboundGroupSessions.contains(roomId) ||
@@ -618,8 +651,18 @@ class KeyManager {
       return; // nothing to do
     }
     _loadedOutboundGroupSessions.add(roomId);
-    final sess = await database.getOutboundGroupSession(roomId, userID);
-    if (sess == null || !sess.isValid) {
+    late final OutboundGroupSession? sess;
+    try {
+      sess = await database.getOutboundGroupSession(roomId, userID);
+    } catch (_) {
+      _loadedOutboundGroupSessions.remove(roomId);
+      rethrow;
+    }
+    if (sess == null) {
+      return;
+    }
+    if (!sess.isValid) {
+      await database.removeOutboundGroupSession(roomId);
       return;
     }
     _outboundGroupSessions[roomId] = sess;
