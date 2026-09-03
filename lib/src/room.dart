@@ -910,13 +910,17 @@ class Room {
           customImageResizer: client.customImageResizer,
         );
         if (shrinkImageMaxDimension != null) {
-          file = await MatrixImageFile.shrink(
+          final shrunkFile = await MatrixImageFile.shrink(
             bytes: file.bytes,
             name: file.name,
             maxDimension: shrinkImageMaxDimension,
             customImageResizer: client.customImageResizer,
             nativeImplementations: client.nativeImplementations,
           );
+
+          if (shrunkFile.size < file.size) {
+            file = shrunkFile;
+          }
         }
 
         if (thumbnail != null && file.size < thumbnail.size) {
