@@ -4,8 +4,11 @@
 
 import 'dart:convert';
 
+import 'package:matrix/encryption/utils/outbound_group_session.dart';
+import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
+import 'package:vodozemac/src/generated/bindings.dart' as vod_internal;
 import 'package:vodozemac/vodozemac.dart' as vod;
 
 import '../fake_client.dart';
@@ -74,6 +77,59 @@ void main() {
       );
     });
 
+    test(
+      'replace persisted outbound Megolm v2 session before sending',
+      () async {
+        const roomId = '!726s6s6q:example.com';
+        final userId = client.userID!;
+        final pickleKey = userId.toPickleKey();
+        final v2Session = vod_internal.VodozemacGroupSession(
+          config: vod_internal.VodozemacMegolmSessionConfig.version2(),
+        );
+        final v2SessionId = v2Session.sessionId();
+        final pickle = v2Session.pickleEncrypted(
+          pickleKey: vod_internal.U8Array32(pickleKey),
+        );
+
+        client.encryption!.keyManager.clearOutboundGroupSessions();
+        await client.database.removeOutboundGroupSession(roomId);
+        await client.database.storeOutboundGroupSession(
+          roomId,
+          pickle,
+          '{}',
+          DateTime.now().millisecondsSinceEpoch,
+        );
+
+        await Future.wait([
+          client.encryption!.keyManager.prepareOutboundGroupSession(roomId),
+          client.encryption!.keyManager.prepareOutboundGroupSession(roomId),
+        ]);
+
+        final replacement = client.encryption!.keyManager
+            .getOutboundGroupSession(roomId)!
+            .outboundGroupSession!;
+        expect(replacement.sessionConfigVersion, 1);
+        expect(replacement.sessionId, isNot(v2SessionId));
+        final ciphertext = replacement.encrypt('Test');
+        expect(base64.decode(base64.normalize(ciphertext)).first, 3);
+
+        final storedReplacement = await client.database.getOutboundGroupSession(
+          roomId,
+          userId,
+        );
+        expect(
+          storedReplacement!.outboundGroupSession!.sessionConfigVersion,
+          1,
+        );
+
+        await client.encryption!.keyManager.clearOrUseOutboundGroupSession(
+          roomId,
+          wipe: true,
+        );
+        client.encryption!.keyManager.clearOutboundGroupSessions();
+      },
+    );
+
     test('outbound group session', () async {
       const roomId = '!726s6s6q:example.com';
       expect(
@@ -83,6 +139,7 @@ void main() {
       var sess = await client.encryption!.keyManager.createOutboundGroupSession(
         roomId,
       );
+      expect(sess.outboundGroupSession!.sessionConfigVersion, 1);
       expect(
         client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
         true,
@@ -301,6 +358,55 @@ void main() {
       expect(
         client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
         true,
+      );
+    });
+
+    test('discard persisted outbound Megolm v2 session', () async {
+      const roomId = '!unsupported-megolm-v2:example.com';
+      final userId = client.userID!;
+      final pickleKey = userId.toPickleKey();
+      final v2Session = vod_internal.VodozemacGroupSession(
+        config: vod_internal.VodozemacMegolmSessionConfig.version2(),
+      );
+      final pickle = v2Session.pickleEncrypted(
+        pickleKey: vod_internal.U8Array32(pickleKey),
+      );
+      final restoredV2Session = vod.GroupSession.fromPickleEncrypted(
+        pickle: pickle,
+        pickleKey: pickleKey,
+      );
+      expect(restoredV2Session.sessionConfigVersion, 2);
+
+      final unsupportedSession = OutboundGroupSession(
+        devices: const {},
+        creationTime: DateTime.now(),
+        outboundGroupSession: restoredV2Session,
+        key: userId,
+      );
+      expect(
+        () => client.encryption!.keyManager.storeOutboundGroupSession(
+          roomId,
+          unsupportedSession,
+        ),
+        throwsA(isA<StateError>()),
+      );
+
+      await client.database.storeOutboundGroupSession(
+        roomId,
+        pickle,
+        '{}',
+        DateTime.now().millisecondsSinceEpoch,
+      );
+
+      await client.encryption!.keyManager.loadOutboundGroupSession(roomId);
+
+      expect(
+        client.encryption!.keyManager.getOutboundGroupSession(roomId),
+        isNull,
+      );
+      expect(
+        await client.database.getOutboundGroupSession(roomId, userId),
+        isNull,
       );
     });
 

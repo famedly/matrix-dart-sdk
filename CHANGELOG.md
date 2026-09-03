@@ -4,6 +4,10 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [12.0.2] 3rd September 2026
+- fix: discard persisted outbound Megolm v2 sessions before sending
+- build: update vodozemac to 0.8.2
+
 ## [12.0.1] 2nd September 2026
 - fix: wrong if condition where rooms get removed from list even when includeLeave == true (Christian Kußowski)
 
