@@ -493,7 +493,7 @@ void main() async {
         },
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Removed by Example',
       );
       expect(event.isEventTypeKnown, true);
@@ -562,7 +562,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example sent a sticker',
       );
       expect(event.isEventTypeKnown, true);
@@ -578,7 +578,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example redacted an event',
       );
       expect(event.isEventTypeKnown, true);
@@ -596,7 +596,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example changed the room aliases',
       );
       expect(event.isEventTypeKnown, true);
@@ -614,7 +614,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example changed the room aliases',
       );
       expect(event.isEventTypeKnown, true);
@@ -630,7 +630,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example changed the room invitation link',
       );
       expect(event.isEventTypeKnown, true);
@@ -654,7 +654,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example created the chat',
       );
       expect(event.isEventTypeKnown, true);
@@ -673,7 +673,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Room has been upgraded',
       );
       expect(event.isEventTypeKnown, true);
@@ -689,7 +689,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example changed the join rules to Anyone can join',
       );
       expect(event.isEventTypeKnown, true);
@@ -710,7 +710,7 @@ void main() async {
       }, room);
       expect(event.roomMemberChangeType, RoomMemberChangeType.join);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Alice joined the chat',
       );
       expect(event.isEventTypeKnown, true);
@@ -726,7 +726,7 @@ void main() async {
       }, room);
       expect(event.roomMemberChangeType, RoomMemberChangeType.invite);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example has invited Alice',
       );
       expect(event.isEventTypeKnown, true);
@@ -745,7 +745,7 @@ void main() async {
       }, room);
       expect(event.roomMemberChangeType, RoomMemberChangeType.kick);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example kicked Alice',
       );
       expect(event.isEventTypeKnown, true);
@@ -764,7 +764,7 @@ void main() async {
       }, room);
       expect(event.roomMemberChangeType, RoomMemberChangeType.ban);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example banned Alice',
       );
       expect(event.isEventTypeKnown, true);
@@ -783,7 +783,7 @@ void main() async {
       }, room);
       expect(event.roomMemberChangeType, RoomMemberChangeType.acceptInvite);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Alice accepted the invitation',
       );
       expect(event.isEventTypeKnown, true);
@@ -802,7 +802,7 @@ void main() async {
       }, room);
       expect(event.roomMemberChangeType, RoomMemberChangeType.invite);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example has invited Alice',
       );
       expect(event.isEventTypeKnown, true);
@@ -824,7 +824,7 @@ void main() async {
         RoomMemberChangeType.withdrawInvitation,
       );
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example has withdrawn the invitation for Alice',
       );
       expect(event.isEventTypeKnown, true);
@@ -843,7 +843,7 @@ void main() async {
       }, room);
       expect(event.roomMemberChangeType, RoomMemberChangeType.rejectInvite);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Alice rejected the invitation',
       );
       expect(event.isEventTypeKnown, true);
@@ -870,7 +870,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example changed the chat permissions',
       );
       expect(event.isEventTypeKnown, true);
@@ -886,7 +886,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example changed the chat name to The room name',
       );
       expect(event.isEventTypeKnown, true);
@@ -902,7 +902,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example changed the chat description to A room topic',
       );
       expect(event.isEventTypeKnown, true);
@@ -921,7 +921,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example changed the chat avatar',
       );
       expect(event.isEventTypeKnown, true);
@@ -937,7 +937,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example changed the history visibility to Visible for all participants',
       );
       expect(event.isEventTypeKnown, true);
@@ -957,7 +957,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example activated end to end encryption. Need pantalaimon',
       );
       expect(event.isEventTypeKnown, true);
@@ -977,7 +977,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'This is an example text message',
       );
       expect(event.isEventTypeKnown, true);
@@ -997,7 +997,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         '* thinks this is an example emote',
       );
       expect(event.isEventTypeKnown, true);
@@ -1017,7 +1017,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'This is an example notice',
       );
       expect(event.isEventTypeKnown, true);
@@ -1037,7 +1037,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example sent a picture',
       );
       expect(event.isEventTypeKnown, true);
@@ -1058,7 +1058,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example sent a file',
       );
       expect(event.isEventTypeKnown, true);
@@ -1082,7 +1082,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example sent an audio',
       );
       expect(event.isEventTypeKnown, true);
@@ -1110,7 +1110,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example shared the location',
       );
       expect(event.isEventTypeKnown, true);
@@ -1143,7 +1143,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example sent a video',
       );
       expect(event.isEventTypeKnown, true);
@@ -1158,11 +1158,13 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Unknown event unknown.event.type',
       );
       expect(event.isEventTypeKnown, false);
 
+      // Give test some time to perform everything before disposing.
+      await Future.delayed(const Duration(seconds: 3));
       await matrix.dispose(closeDatabase: true);
     });
 
@@ -1188,7 +1190,7 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(
+        event.calcLocalizedBody(
           MatrixDefaultLocalizations(),
           plaintextBody: true,
         ),
@@ -1220,14 +1222,11 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(
-          MatrixDefaultLocalizations(),
-          hideEdit: true,
-        ),
+        event.calcLocalizedBody(MatrixDefaultLocalizations(), hideEdit: true),
         'This is an example text message',
       );
       expect(
-        await event.calcLocalizedBody(
+        event.calcLocalizedBody(
           MatrixDefaultLocalizations(),
           hideEdit: true,
           plaintextBody: true,
@@ -1250,14 +1249,11 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(
-          MatrixDefaultLocalizations(),
-          hideReply: true,
-        ),
+        event.calcLocalizedBody(MatrixDefaultLocalizations(), hideReply: true),
         'hmm, fox',
       );
       expect(
-        await event.calcLocalizedBody(
+        event.calcLocalizedBody(
           MatrixDefaultLocalizations(),
           hideReply: true,
           plaintextBody: true,
@@ -1282,36 +1278,19 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(
+        event.calcLocalizedBody(
           MatrixDefaultLocalizations(),
           removeMarkdown: true,
         ),
         'Quote\n\nTitle\nsome text and link\nokay and this is important',
       );
       expect(
-        await event.calcLocalizedBody(
+        event.calcLocalizedBody(
           MatrixDefaultLocalizations(),
           removeMarkdown: true,
           plaintextBody: true,
         ),
         'Quote\n\nTitle\nsome text and 🔗link\nokay and this is important',
-      );
-      expect(
-        await event.calcLocalizedBody(
-          MatrixDefaultLocalizations(),
-          removeMarkdown: true,
-          withSenderNamePrefix: true,
-        ),
-        'Example: Quote\n\nTitle\nsome text and link\nokay and this is important',
-      );
-      expect(
-        await event.calcLocalizedBody(
-          MatrixDefaultLocalizations(),
-          removeMarkdown: true,
-          plaintextBody: true,
-          withSenderNamePrefix: true,
-        ),
-        'Example: Quote\n\nTitle\nsome text and 🔗link\nokay and this is important',
       );
 
       event = Event.fromJson({
@@ -1331,37 +1310,37 @@ void main() async {
         'unsigned': {'age': 1234},
       }, room);
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example requested key verification',
       );
 
       event.content['msgtype'] = 'm.key.verification.ready';
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example is ready for key verification',
       );
 
       event.content['msgtype'] = 'm.key.verification.start';
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example started key verification',
       );
 
       event.content['msgtype'] = 'm.key.verification.cancel';
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example canceled key verification',
       );
 
       event.content['msgtype'] = 'm.key.verification.done';
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example completed key verification',
       );
 
       event.content['msgtype'] = 'm.key.verification.accept';
       expect(
-        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Example accepted key verification request',
       );
 
