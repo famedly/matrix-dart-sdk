@@ -3,6 +3,10 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [11.0.1] 3rd September 2026
+- fix: discard persisted outbound Megolm v2 sessions before sending
+- build: update vodozemac to 0.8.2
+
 ## [11.0.0] 31st August 2026
 - build: update to vodozemac 0.8.0 (Christian Kußowski)
 - chore: add localization for incoming call (Christian Kußowski)

@@ -19,7 +19,9 @@ class OutboundGroupSession {
   DateTime creationTime = DateTime.fromMillisecondsSinceEpoch(0);
   vod.GroupSession? outboundGroupSession;
   int? get sentMessages => outboundGroupSession?.messageIndex;
-  bool get isValid => outboundGroupSession != null;
+  bool get isValid =>
+      outboundGroupSession != null &&
+      outboundGroupSession!.sessionConfigVersion == 1;
   final String key;
 
   OutboundGroupSession({
@@ -47,19 +49,33 @@ class OutboundGroupSession {
     );
 
     try {
-      outboundGroupSession = vod.GroupSession.fromPickleEncrypted(
+      final restoredSession = vod.GroupSession.fromPickleEncrypted(
         pickleKey: key.toPickleKey(),
         pickle: dbEntry['pickle'],
       );
+      _useRestoredSession(restoredSession);
     } catch (e, s) {
       try {
-        outboundGroupSession = vod.GroupSession.fromOlmPickleEncrypted(
+        final restoredSession = vod.GroupSession.fromOlmPickleEncrypted(
           pickleKey: utf8.encode(key),
           pickle: dbEntry['pickle'],
         );
+        _useRestoredSession(restoredSession);
       } catch (_) {
         Logs().e('[Vodozemac] Unable to unpickle outboundGroupSession', e, s);
       }
     }
+  }
+
+  void _useRestoredSession(vod.GroupSession restoredSession) {
+    final configVersion = restoredSession.sessionConfigVersion;
+    if (configVersion != 1) {
+      Logs().w(
+        '[Vodozemac] Discarding outbound Megolm session with unsupported '
+        'config v$configVersion.',
+      );
+      return;
+    }
+    outboundGroupSession = restoredSession;
   }
 }
