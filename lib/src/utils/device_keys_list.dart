@@ -122,6 +122,37 @@ class DeviceKeysList {
     }
   }
 
+  Map<String, Object?> toJson() => {
+    'user_id': userId,
+    'outdated': outdated,
+    'device_keys': deviceKeys.map((k, v) => MapEntry(k, v.toDbJson())),
+    'cross_signing_keys': crossSigningKeys.map(
+      (k, v) => MapEntry(k, v.toDbJson()),
+    ),
+  };
+
+  factory DeviceKeysList.fromJson(Map<String, Object?> json, Client client) =>
+      DeviceKeysList(
+        json['user_id'] as String,
+        client,
+        outdated: json['outdated'] as bool,
+        deviceKeys: (json['device_keys'] as Map).map(
+          (k, v) => MapEntry(
+            k as String,
+            DeviceKeys.fromDb(Map<String, dynamic>.from(v as Map), client),
+          ),
+        ),
+        crossSigningKeys: (json['cross_signing_keys'] as Map).map(
+          (k, v) => MapEntry(
+            k as String,
+            CrossSigningKey.fromDbJson(
+              Map<String, dynamic>.from(v as Map),
+              client,
+            ),
+          ),
+        ),
+      );
+
   DeviceKeysList.fromDbJson(
     Map<String, dynamic> dbEntry,
     List<Map<String, dynamic>> childEntries,
@@ -152,7 +183,14 @@ class DeviceKeysList {
     }
   }
 
-  DeviceKeysList(this.userId, this.client);
+  DeviceKeysList(
+    this.userId,
+    this.client, {
+    this.outdated = true,
+    Map<String, CrossSigningKey>? crossSigningKeys,
+    Map<String, DeviceKeys>? deviceKeys,
+  }) : crossSigningKeys = crossSigningKeys ?? {},
+       deviceKeys = deviceKeys ?? {};
 }
 
 class SimpleSignableKey extends MatrixSignableKey {
@@ -168,6 +206,14 @@ abstract class SignableKey extends MatrixSignableKey {
   Map<String, dynamic>? validSignatures;
   bool? _verified;
   bool? _blocked;
+
+  Future<void> _updateInDatabase() {
+    final deviceKeysList = client.userDeviceKeys[userId];
+    if (deviceKeysList == null) {
+      throw 'Unable to update device keys list of $userId in database because client.userDeviceKeys["$userId"] is null!';
+    }
+    return client.database.storeDeviceKeysList(userId, deviceKeysList);
+  }
 
   String? get ed25519Key => keys['ed25519:$identifier'];
   bool get verified =>
@@ -413,15 +459,10 @@ class CrossSigningKey extends SignableKey {
     bool updateInDatabase = true,
   }) async {
     since ??= DateTime.now();
-    if (updateInDatabase) {
-      await client.database.setVerifiedUserCrossSigningKey(
-        verified,
-        userId,
-        publicKey!,
-        trustOnFirstUseSince: since,
-      );
-    }
     _trustOnFirstUseSince = since;
+    if (updateInDatabase) {
+      await _updateInDatabase();
+    }
   }
 
   @override
@@ -430,12 +471,7 @@ class CrossSigningKey extends SignableKey {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database.setVerifiedUserCrossSigningKey(
-      newVerified,
-      userId,
-      publicKey!,
-      trustOnFirstUseSince: trustOnFirstUseSince,
-    );
+    await _updateInDatabase();
   }
 
   @override
@@ -444,11 +480,7 @@ class CrossSigningKey extends SignableKey {
       throw Exception('setBlocked called on invalid key');
     }
     _blocked = newBlocked;
-    await client.database.setBlockedUserCrossSigningKey(
-      newBlocked,
-      userId,
-      publicKey!,
-    );
+    await _updateInDatabase();
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(
@@ -486,6 +518,15 @@ class CrossSigningKey extends SignableKey {
       identifier = keys.values.first;
     }
   }
+
+  Map<String, Object?> toDbJson() => {
+    'user_id': userId,
+    'public_key': identifier,
+    'content': json.encode(toJson()),
+    'verified': _verified ?? false,
+    'blocked': _blocked ?? false,
+    'tofu': ?_trustOnFirstUseSince?.millisecondsSinceEpoch,
+  };
 }
 
 class DeviceKeys extends SignableKey {
@@ -533,11 +574,7 @@ class DeviceKeys extends SignableKey {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database.setVerifiedUserDeviceKey(
-      newVerified,
-      userId,
-      deviceId!,
-    );
+    await _updateInDatabase();
   }
 
   @override
@@ -546,11 +583,7 @@ class DeviceKeys extends SignableKey {
       throw Exception('setBlocked called on invalid key');
     }
     _blocked = newBlocked;
-    await client.database.setBlockedUserDeviceKey(
-      newBlocked,
-      userId,
-      deviceId!,
-    );
+    await _updateInDatabase();
   }
 
   DeviceKeys.fromMatrixDeviceKeys(
@@ -603,4 +636,13 @@ class DeviceKeys extends SignableKey {
     encryption.keyVerificationManager.addRequest(request);
     return request;
   }
+
+  Map<String, Object?> toDbJson() => {
+    'user_id': userId,
+    'device_id': identifier,
+    'content': json.encode(toJson()),
+    'verified': _verified ?? false,
+    'blocked': _blocked ?? false,
+    'last_active': lastActive.millisecondsSinceEpoch,
+  };
 }

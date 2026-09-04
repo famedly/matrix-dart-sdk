@@ -591,39 +591,6 @@ void main() {
           Client('testclient', database: await getMatrixSdkDatabase()),
         );
       });
-      test('storeUserCrossSigningKey', () async {
-        await database.storeUserCrossSigningKey(
-          '@alice:example.com',
-          'publicKey',
-          '{}',
-          false,
-          false,
-        );
-      });
-      test('setVerifiedUserCrossSigningKey', () async {
-        await database.setVerifiedUserCrossSigningKey(
-          true,
-          '@alice:example.com',
-          'publicKey',
-          trustOnFirstUseSince: DateTime(2000),
-        );
-      });
-      test('setBlockedUserCrossSigningKey', () async {
-        await database.setBlockedUserCrossSigningKey(
-          true,
-          '@alice:example.com',
-          'publicKey',
-        );
-      });
-      test('removeUserCrossSigningKey', () async {
-        await database.removeUserCrossSigningKey(
-          '@alice:example.com',
-          'publicKey',
-        );
-      });
-      test('storeUserDeviceKeysInfo', () async {
-        await database.storeUserDeviceKeysInfo('@alice:example.com', true);
-      });
       test('storeUserDeviceKeysInfo', () async {
         var cache = await database.getCustomCacheObject('test');
         expect(cache, null);
@@ -634,30 +601,6 @@ void main() {
         await database.clearCache();
         cache = await database.getCustomCacheObject('test');
         expect(cache, null);
-      });
-      test('storeUserDeviceKey', () async {
-        await database.storeUserDeviceKey(
-          '@alice:example.com',
-          'deviceId',
-          '{}',
-          false,
-          false,
-          0,
-        );
-      });
-      test('setVerifiedUserDeviceKey', () async {
-        await database.setVerifiedUserDeviceKey(
-          true,
-          '@alice:example.com',
-          'deviceId',
-        );
-      });
-      test('setBlockedUserDeviceKey', () async {
-        await database.setBlockedUserDeviceKey(
-          true,
-          '@alice:example.com',
-          'deviceId',
-        );
       });
       test('getStorePresences', () async {
         const userId = '@alice:example.com';
@@ -671,6 +614,21 @@ void main() {
         await database.storePresence(userId, presence);
         final storedPresence = await database.getPresence(userId);
         expect(presence.toJson(), storedPresence?.toJson());
+      });
+      test('storeDeviceKeysLists', () async {
+        final tmpClient = Client('test', database: database);
+        await database.storeDeviceKeysList(
+          '@alice:example.com',
+          DeviceKeysList('@alice:example.com', tmpClient),
+        );
+        final keys = await database.getDeviceKeysList(
+          '@alice:example.com',
+          tmpClient,
+        );
+        expect(keys?.userId, '@alice:example.com');
+        expect(keys?.outdated, true);
+        expect(keys?.crossSigningKeys, {});
+        expect(keys?.deviceKeys, {});
       });
       test('storeUserProfile', () async {
         final profile1 = await database.getUserProfile('@alice:example.com');
