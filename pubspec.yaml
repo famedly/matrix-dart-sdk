@@ -48,3 +48,8 @@ dev_dependencies:
   lints: ^6.1.0
   sqflite_common_ffi: ^2.4.2 # sqflite_common_ffi aggressively requires newer dart versions
   test: ^1.27.0
+
+hooks: # For unit tests only
+  user_defines:
+    sqlite3:
+      source: sqlcipher
