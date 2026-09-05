@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:sqflite_common/sqlite_api.dart';
+import 'package:sqflite_common/utils/utils.dart';
 
 import '../../../matrix.dart';
 
@@ -81,6 +82,25 @@ class SQfLiteEncryptionHelper {
     await encryptedFile.delete();
 
     Logs().d('Migration done.');
+  }
+
+  /// Optional: Call this method to clean up free database pages e.g. on every
+  /// client start or after a `clearCache()`.
+  Future<void> ensureIncrementalAutoVacuum(Database database) async {
+    const incrementalAutoVacuum = 2;
+
+    final currentMode = firstIntValue(
+      await database.rawQuery('PRAGMA auto_vacuum'),
+    );
+
+    if (currentMode != incrementalAutoVacuum) {
+      Logs().i('Switching database to incremental auto_vacuum...');
+      await database.execute('PRAGMA auto_vacuum = $incrementalAutoVacuum');
+      await database.execute('VACUUM');
+      return;
+    }
+
+    await database.execute('PRAGMA incremental_vacuum');
   }
 
   /// safely applies the PRAGMA key to a [Database]
