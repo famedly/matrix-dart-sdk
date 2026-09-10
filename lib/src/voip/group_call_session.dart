@@ -254,6 +254,25 @@ class GroupCallSession {
     );
   }
 
+  bool _removeCachedLocalParticipant(CallParticipant? participant) {
+    if (participant == null) {
+      return false;
+    }
+
+    return _participants.remove(participant);
+  }
+
+  void _dropDelayedLeaveState() {
+    final delayedEventKey = '${room.id}|$groupCallId|$scope';
+    final canceller = voip.delayedEventCancellers[delayedEventKey];
+    if (canceller == null) {
+      return;
+    }
+
+    canceller.restartTimer.cancel();
+    voip.delayedEventCancellers.remove(delayedEventKey);
+  }
+
   Future<void> _forceRejoin() async {
     if (_forceRejoinInProgress != null) {
       Logs().v(
@@ -263,15 +282,9 @@ class GroupCallSession {
     }
 
     final cachedLocalParticipant = localParticipant;
-    var shouldRestoreLocalParticipant = false;
-
-    // Optimistically clear the stale local participant so repeated updates do
-    // not keep seeing a local leave while we wait for room state to catch up.
-    if (cachedLocalParticipant != null) {
-      shouldRestoreLocalParticipant = _participants.remove(
-        cachedLocalParticipant,
-      );
-    }
+    final shouldRestoreLocalParticipant = _removeCachedLocalParticipant(
+      cachedLocalParticipant,
+    );
 
     late final Future<void> rejoinInProgress;
     rejoinInProgress = Future<void>(() async {
@@ -280,17 +293,7 @@ class GroupCallSession {
           '[onMemberStateChanged] server says that we left the call but looks like we are still in it, will force join again',
         );
 
-        // also clear delayed event state so that they can be started again
-        final canceller =
-            voip.delayedEventCancellers['${room.id}|$groupCallId|$scope'];
-        if (canceller != null) {
-          canceller.restartTimer.cancel();
-
-          // because the server said you left, you don't actually have to cancel
-          // the delayed event, the server already thinks it's cancelled
-
-          voip.delayedEventCancellers.remove('${room.id}|$groupCallId|$scope');
-        }
+        _dropDelayedLeaveState();
 
         await sendMemberStateEvent();
         await backend.preShareKey(this);
