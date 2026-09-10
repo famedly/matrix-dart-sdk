@@ -114,6 +114,50 @@ void main() {
   late CountingPreShareKeyBackend backend;
   late GroupCallSession groupCall;
 
+  CallMembership buildMembership({
+    required CallBackend backend,
+    required GroupCallSession groupCall,
+    String? userId,
+    String? deviceId,
+    String? membershipId,
+  }) {
+    return CallMembership(
+      userId: userId ?? matrix.userID!,
+      roomId: room.id,
+      callId: groupCall.groupCallId,
+      application: groupCall.application,
+      scope: groupCall.scope,
+      backend: backend,
+      deviceId: deviceId ?? matrix.deviceID!,
+      expiresTs: DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+      membershipId: membershipId ?? voip.currentSessionId,
+      feeds: [],
+      voip: voip,
+    );
+  }
+
+  void setGroupCallMemberState({
+    required GroupCallSession groupCall,
+    required String eventId,
+    required String senderId,
+    required String stateKey,
+    List<CallMembership> memberships = const [],
+  }) {
+    room.setState(
+      Event(
+        room: room,
+        eventId: eventId,
+        originServerTs: DateTime.now(),
+        type: EventTypes.GroupCallMember,
+        content: {
+          'memberships': memberships.map((membership) => membership.toJson()).toList(),
+        },
+        senderId: senderId,
+        stateKey: stateKey,
+      ),
+    );
+  }
+
   group('GroupCallSession tests', () {
     Logs().level = Level.info;
 
@@ -143,49 +187,24 @@ void main() {
     test(
       'force rejoin clears stale local participant until room state catches up',
       () async {
-        room.setState(
-          Event(
-            room: room,
-            eventId: 'local_mem_before_repair',
-            originServerTs: DateTime.now(),
-            type: EventTypes.GroupCallMember,
-            content: {
-              'memberships': [
-                CallMembership(
-                  userId: matrix.userID!,
-                  roomId: room.id,
-                  callId: groupCall.groupCallId,
-                  application: groupCall.application,
-                  scope: groupCall.scope,
-                  backend: backend,
-                  deviceId: matrix.deviceID!,
-                  expiresTs: DateTime.now()
-                      .add(Duration(hours: 1))
-                      .millisecondsSinceEpoch,
-                  membershipId: voip.currentSessionId,
-                  feeds: [],
-                  voip: voip,
-                ).toJson(),
-              ],
-            },
-            senderId: matrix.userID!,
-            stateKey: matrix.userID,
-          ),
+        setGroupCallMemberState(
+          groupCall: groupCall,
+          eventId: 'local_mem_before_repair',
+          senderId: matrix.userID!,
+          stateKey: matrix.userID!,
+          memberships: [
+            buildMembership(backend: backend, groupCall: groupCall),
+          ],
         );
 
         await groupCall.onMemberStateChanged();
         expect(groupCall.hasLocalParticipant(), isTrue);
 
-        room.setState(
-          Event(
-            room: room,
-            eventId: 'local_mem_removed_during_repair',
-            originServerTs: DateTime.now(),
-            type: EventTypes.GroupCallMember,
-            content: {'memberships': []},
-            senderId: matrix.userID!,
-            stateKey: matrix.userID,
-          ),
+        setGroupCallMemberState(
+          groupCall: groupCall,
+          eventId: 'local_mem_removed_during_repair',
+          senderId: matrix.userID!,
+          stateKey: matrix.userID!,
         );
 
         await groupCall.onMemberStateChanged();
@@ -219,34 +238,14 @@ void main() {
         restartTimer: restartTimer,
       );
 
-      room.setState(
-        Event(
-          room: room,
-          eventId: 'local_mem_before_rejoin_with_canceller',
-          originServerTs: DateTime.now(),
-          type: EventTypes.GroupCallMember,
-          content: {
-            'memberships': [
-              CallMembership(
-                userId: matrix.userID!,
-                roomId: room.id,
-                callId: groupCall.groupCallId,
-                application: groupCall.application,
-                scope: groupCall.scope,
-                backend: backend,
-                deviceId: matrix.deviceID!,
-                expiresTs: DateTime.now()
-                    .add(Duration(hours: 1))
-                    .millisecondsSinceEpoch,
-                membershipId: voip.currentSessionId,
-                feeds: [],
-                voip: voip,
-              ).toJson(),
-            ],
-          },
-          senderId: matrix.userID!,
-          stateKey: matrix.userID,
-        ),
+      setGroupCallMemberState(
+        groupCall: groupCall,
+        eventId: 'local_mem_before_rejoin_with_canceller',
+        senderId: matrix.userID!,
+        stateKey: matrix.userID!,
+        memberships: [
+          buildMembership(backend: backend, groupCall: groupCall),
+        ],
       );
 
       await groupCall.onMemberStateChanged();
@@ -254,16 +253,11 @@ void main() {
       expect(voip.delayedEventCancellers.containsKey(cancellerKey), isTrue);
       expect(restartTimer.isActive, isTrue);
 
-      room.setState(
-        Event(
-          room: room,
-          eventId: 'local_mem_removed_with_canceller',
-          originServerTs: DateTime.now(),
-          type: EventTypes.GroupCallMember,
-          content: {'memberships': []},
-          senderId: matrix.userID!,
-          stateKey: matrix.userID,
-        ),
+      setGroupCallMemberState(
+        groupCall: groupCall,
+        eventId: 'local_mem_removed_with_canceller',
+        senderId: matrix.userID!,
+        stateKey: matrix.userID!,
       );
 
       await groupCall.onMemberStateChanged();
@@ -287,49 +281,24 @@ void main() {
 
       groupCall.setState(GroupCallState.entered);
 
-      room.setState(
-        Event(
-          room: room,
-          eventId: 'local_mem_before_failed_repair',
-          originServerTs: DateTime.now(),
-          type: EventTypes.GroupCallMember,
-          content: {
-            'memberships': [
-              CallMembership(
-                userId: matrix.userID!,
-                roomId: room.id,
-                callId: groupCall.groupCallId,
-                application: groupCall.application,
-                scope: groupCall.scope,
-                backend: backend,
-                deviceId: matrix.deviceID!,
-                expiresTs: DateTime.now()
-                    .add(Duration(hours: 1))
-                    .millisecondsSinceEpoch,
-                membershipId: voip.currentSessionId,
-                feeds: [],
-                voip: voip,
-              ).toJson(),
-            ],
-          },
-          senderId: matrix.userID!,
-          stateKey: matrix.userID,
-        ),
+      setGroupCallMemberState(
+        groupCall: groupCall,
+        eventId: 'local_mem_before_failed_repair',
+        senderId: matrix.userID!,
+        stateKey: matrix.userID!,
+        memberships: [
+          buildMembership(backend: backend, groupCall: groupCall),
+        ],
       );
 
       await groupCall.onMemberStateChanged();
       expect(groupCall.hasLocalParticipant(), isTrue);
 
-      room.setState(
-        Event(
-          room: room,
-          eventId: 'local_mem_removed_before_failed_repair',
-          originServerTs: DateTime.now(),
-          type: EventTypes.GroupCallMember,
-          content: {'memberships': []},
-          senderId: matrix.userID!,
-          stateKey: matrix.userID,
-        ),
+      setGroupCallMemberState(
+        groupCall: groupCall,
+        eventId: 'local_mem_removed_before_failed_repair',
+        senderId: matrix.userID!,
+        stateKey: matrix.userID!,
       );
 
       await expectLater(groupCall.onMemberStateChanged(), throwsException);
@@ -361,79 +330,40 @@ void main() {
 
       groupCall.setState(GroupCallState.entered);
 
-      room.setState(
-        Event(
-          room: room,
-          eventId: 'local_mem_before_repair',
-          originServerTs: DateTime.now(),
-          type: EventTypes.GroupCallMember,
-          content: {
-            'memberships': [
-              CallMembership(
-                userId: matrix.userID!,
-                roomId: room.id,
-                callId: groupCall.groupCallId,
-                application: groupCall.application,
-                scope: groupCall.scope,
-                backend: backend,
-                deviceId: matrix.deviceID!,
-                expiresTs: DateTime.now()
-                    .add(Duration(hours: 1))
-                    .millisecondsSinceEpoch,
-                membershipId: voip.currentSessionId,
-                feeds: [],
-                voip: voip,
-              ).toJson(),
-            ],
-          },
-          senderId: matrix.userID!,
-          stateKey: matrix.userID,
-        ),
+      setGroupCallMemberState(
+        groupCall: groupCall,
+        eventId: 'local_mem_before_repair',
+        senderId: matrix.userID!,
+        stateKey: matrix.userID!,
+        memberships: [
+          buildMembership(backend: backend, groupCall: groupCall),
+        ],
       );
 
       await groupCall.onMemberStateChanged();
       expect(groupCall.hasLocalParticipant(), isTrue);
 
-      room.setState(
-        Event(
-          room: room,
-          eventId: 'local_mem_removed_during_remote_join',
-          originServerTs: DateTime.now(),
-          type: EventTypes.GroupCallMember,
-          content: {'memberships': []},
-          senderId: matrix.userID!,
-          stateKey: matrix.userID,
-        ),
+      setGroupCallMemberState(
+        groupCall: groupCall,
+        eventId: 'local_mem_removed_during_remote_join',
+        senderId: matrix.userID!,
+        stateKey: matrix.userID!,
       );
 
-      room.setState(
-        Event(
-          room: room,
-          eventId: 'remote_mem_after_local_disappeared',
-          originServerTs: DateTime.now(),
-          type: EventTypes.GroupCallMember,
-          content: {
-            'memberships': [
-              CallMembership(
-                userId: '@alice:testing.com',
-                roomId: room.id,
-                callId: groupCall.groupCallId,
-                application: groupCall.application,
-                scope: groupCall.scope,
-                backend: backend,
-                deviceId: 'ALICEDEVICE',
-                expiresTs: DateTime.now()
-                    .add(Duration(hours: 1))
-                    .millisecondsSinceEpoch,
-                membershipId: 'alice-membership',
-                feeds: [],
-                voip: voip,
-              ).toJson(),
-            ],
-          },
-          senderId: '@alice:testing.com',
-          stateKey: '@alice:testing.com',
-        ),
+      setGroupCallMemberState(
+        groupCall: groupCall,
+        eventId: 'remote_mem_after_local_disappeared',
+        senderId: '@alice:testing.com',
+        stateKey: '@alice:testing.com',
+        memberships: [
+          buildMembership(
+            backend: backend,
+            groupCall: groupCall,
+            userId: '@alice:testing.com',
+            deviceId: 'ALICEDEVICE',
+            membershipId: 'alice-membership',
+          ),
+        ],
       );
 
       final firstUpdate = groupCall.onMemberStateChanged();
@@ -481,79 +411,40 @@ void main() {
 
       groupCall.setState(GroupCallState.entered);
 
-      room.setState(
-        Event(
-          room: room,
-          eventId: 'local_mem_before_failed_rejoin',
-          originServerTs: DateTime.now(),
-          type: EventTypes.GroupCallMember,
-          content: {
-            'memberships': [
-              CallMembership(
-                userId: matrix.userID!,
-                roomId: room.id,
-                callId: groupCall.groupCallId,
-                application: groupCall.application,
-                scope: groupCall.scope,
-                backend: backend,
-                deviceId: matrix.deviceID!,
-                expiresTs: DateTime.now()
-                    .add(Duration(hours: 1))
-                    .millisecondsSinceEpoch,
-                membershipId: voip.currentSessionId,
-                feeds: [],
-                voip: voip,
-              ).toJson(),
-            ],
-          },
-          senderId: matrix.userID!,
-          stateKey: matrix.userID,
-        ),
+      setGroupCallMemberState(
+        groupCall: groupCall,
+        eventId: 'local_mem_before_failed_rejoin',
+        senderId: matrix.userID!,
+        stateKey: matrix.userID!,
+        memberships: [
+          buildMembership(backend: backend, groupCall: groupCall),
+        ],
       );
 
       await groupCall.onMemberStateChanged();
       expect(groupCall.hasLocalParticipant(), isTrue);
 
-      room.setState(
-        Event(
-          room: room,
-          eventId: 'local_mem_removed_during_failed_remote_join',
-          originServerTs: DateTime.now(),
-          type: EventTypes.GroupCallMember,
-          content: {'memberships': []},
-          senderId: matrix.userID!,
-          stateKey: matrix.userID,
-        ),
+      setGroupCallMemberState(
+        groupCall: groupCall,
+        eventId: 'local_mem_removed_during_failed_remote_join',
+        senderId: matrix.userID!,
+        stateKey: matrix.userID!,
       );
 
-      room.setState(
-        Event(
-          room: room,
-          eventId: 'remote_mem_after_failed_local_disappeared',
-          originServerTs: DateTime.now(),
-          type: EventTypes.GroupCallMember,
-          content: {
-            'memberships': [
-              CallMembership(
-                userId: '@alice:testing.com',
-                roomId: room.id,
-                callId: groupCall.groupCallId,
-                application: groupCall.application,
-                scope: groupCall.scope,
-                backend: backend,
-                deviceId: 'ALICEDEVICE',
-                expiresTs: DateTime.now()
-                    .add(Duration(hours: 1))
-                    .millisecondsSinceEpoch,
-                membershipId: 'alice-membership',
-                feeds: [],
-                voip: voip,
-              ).toJson(),
-            ],
-          },
-          senderId: '@alice:testing.com',
-          stateKey: '@alice:testing.com',
-        ),
+      setGroupCallMemberState(
+        groupCall: groupCall,
+        eventId: 'remote_mem_after_failed_local_disappeared',
+        senderId: '@alice:testing.com',
+        stateKey: '@alice:testing.com',
+        memberships: [
+          buildMembership(
+            backend: backend,
+            groupCall: groupCall,
+            userId: '@alice:testing.com',
+            deviceId: 'ALICEDEVICE',
+            membershipId: 'alice-membership',
+          ),
+        ],
       );
 
       final firstUpdate = groupCall.onMemberStateChanged();
