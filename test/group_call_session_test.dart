@@ -48,7 +48,8 @@ class MockConcurrentForceRejoinBackend extends MeshBackend {
     List<CallParticipant> participants,
   ) async {
     onNewParticipantCalls++;
-    if (onNewParticipantCalls == 1 && !firstOnNewParticipantStarted.isCompleted) {
+    if (onNewParticipantCalls == 1 &&
+        !firstOnNewParticipantStarted.isCompleted) {
       firstOnNewParticipantStarted.complete();
     }
     if (onNewParticipantCalls == 2 &&
@@ -71,6 +72,35 @@ class MockConcurrentForceRejoinBackend extends MeshBackend {
   }
 }
 
+class StaggeredConcurrentForceRejoinBackend extends MeshBackend {
+  final firstOnNewParticipantStarted = Completer<void>();
+  final secondOnNewParticipantStarted = Completer<void>();
+  final releaseFirstOnNewParticipant = Completer<void>();
+  final releaseSecondOnNewParticipant = Completer<void>();
+  int onNewParticipantCalls = 0;
+  int preShareKeyCalls = 0;
+
+  @override
+  Future<void> onNewParticipant(
+    GroupCallSession groupCall,
+    List<CallParticipant> participants,
+  ) async {
+    onNewParticipantCalls++;
+    if (onNewParticipantCalls == 1) {
+      firstOnNewParticipantStarted.complete();
+      await releaseFirstOnNewParticipant.future;
+    } else if (onNewParticipantCalls == 2) {
+      secondOnNewParticipantStarted.complete();
+      await releaseSecondOnNewParticipant.future;
+    }
+  }
+
+  @override
+  Future<void> preShareKey(GroupCallSession groupCall) async {
+    preShareKeyCalls++;
+  }
+}
+
 class ThrowingConcurrentForceRejoinBackend extends MeshBackend {
   final firstOnNewParticipantStarted = Completer<void>();
   final secondOnNewParticipantStarted = Completer<void>();
@@ -86,7 +116,8 @@ class ThrowingConcurrentForceRejoinBackend extends MeshBackend {
     List<CallParticipant> participants,
   ) async {
     onNewParticipantCalls++;
-    if (onNewParticipantCalls == 1 && !firstOnNewParticipantStarted.isCompleted) {
+    if (onNewParticipantCalls == 1 &&
+        !firstOnNewParticipantStarted.isCompleted) {
       firstOnNewParticipantStarted.complete();
     }
     if (onNewParticipantCalls == 2 &&
@@ -150,7 +181,9 @@ void main() {
         originServerTs: DateTime.now(),
         type: EventTypes.GroupCallMember,
         content: {
-          'memberships': memberships.map((membership) => membership.toJson()).toList(),
+          'memberships': memberships
+              .map((membership) => membership.toJson())
+              .toList(),
         },
         senderId: senderId,
         stateKey: stateKey,
@@ -230,7 +263,8 @@ void main() {
     );
 
     test('force rejoin clears an existing delayed event canceller', () async {
-      final cancellerKey = '${room.id}|${groupCall.groupCallId}|${groupCall.scope}';
+      final cancellerKey =
+          '${room.id}|${groupCall.groupCallId}|${groupCall.scope}';
       final restartTimer = Timer.periodic(Duration(hours: 1), (_) {});
 
       voip.delayedEventCancellers[cancellerKey] = DelayedEventCanceller(
@@ -243,9 +277,7 @@ void main() {
         eventId: 'local_mem_before_rejoin_with_canceller',
         senderId: matrix.userID!,
         stateKey: matrix.userID!,
-        memberships: [
-          buildMembership(backend: backend, groupCall: groupCall),
-        ],
+        memberships: [buildMembership(backend: backend, groupCall: groupCall)],
       );
 
       await groupCall.onMemberStateChanged();
@@ -268,54 +300,57 @@ void main() {
       expect(restartTimer.isActive, isFalse);
     });
 
-    test('force rejoin failure keeps local participant eligible for retry', () async {
-      final backend = ThrowOncePreShareKeyBackend();
-      final groupCall = GroupCallSession.withAutoGenId(
-        room,
-        voip,
-        backend,
-        'm.call',
-        'm.room',
-        'test_force_rejoin_retry_after_failure',
-      );
+    test(
+      'force rejoin failure keeps local participant eligible for retry',
+      () async {
+        final backend = ThrowOncePreShareKeyBackend();
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          backend,
+          'm.call',
+          'm.room',
+          'test_force_rejoin_retry_after_failure',
+        );
 
-      groupCall.setState(GroupCallState.entered);
+        groupCall.setState(GroupCallState.entered);
 
-      setGroupCallMemberState(
-        groupCall: groupCall,
-        eventId: 'local_mem_before_failed_repair',
-        senderId: matrix.userID!,
-        stateKey: matrix.userID!,
-        memberships: [
-          buildMembership(backend: backend, groupCall: groupCall),
-        ],
-      );
+        setGroupCallMemberState(
+          groupCall: groupCall,
+          eventId: 'local_mem_before_failed_repair',
+          senderId: matrix.userID!,
+          stateKey: matrix.userID!,
+          memberships: [
+            buildMembership(backend: backend, groupCall: groupCall),
+          ],
+        );
 
-      await groupCall.onMemberStateChanged();
-      expect(groupCall.hasLocalParticipant(), isTrue);
+        await groupCall.onMemberStateChanged();
+        expect(groupCall.hasLocalParticipant(), isTrue);
 
-      setGroupCallMemberState(
-        groupCall: groupCall,
-        eventId: 'local_mem_removed_before_failed_repair',
-        senderId: matrix.userID!,
-        stateKey: matrix.userID!,
-      );
+        setGroupCallMemberState(
+          groupCall: groupCall,
+          eventId: 'local_mem_removed_before_failed_repair',
+          senderId: matrix.userID!,
+          stateKey: matrix.userID!,
+        );
 
-      await expectLater(groupCall.onMemberStateChanged(), throwsException);
+        await expectLater(groupCall.onMemberStateChanged(), throwsException);
 
-      expect(
-        groupCall.hasLocalParticipant(),
-        isTrue,
-        reason:
-            'A failed force rejoin must restore the local participant cache so later diffs still detect that we need to retry.',
-      );
-      expect(backend.preShareKeyCalls, 1);
+        expect(
+          groupCall.hasLocalParticipant(),
+          isTrue,
+          reason:
+              'A failed force rejoin must restore the local participant cache so later diffs still detect that we need to retry.',
+        );
+        expect(backend.preShareKeyCalls, 1);
 
-      await groupCall.onMemberStateChanged();
+        await groupCall.onMemberStateChanged();
 
-      expect(backend.preShareKeyCalls, 2);
-      expect(groupCall.hasLocalParticipant(), isFalse);
-    });
+        expect(backend.preShareKeyCalls, 2);
+        expect(groupCall.hasLocalParticipant(), isFalse);
+      },
+    );
 
     test('does not attempt multiple concurrent force rejoins', () async {
       final backend = MockConcurrentForceRejoinBackend();
@@ -335,9 +370,7 @@ void main() {
         eventId: 'local_mem_before_repair',
         senderId: matrix.userID!,
         stateKey: matrix.userID!,
-        memberships: [
-          buildMembership(backend: backend, groupCall: groupCall),
-        ],
+        memberships: [buildMembership(backend: backend, groupCall: groupCall)],
       );
 
       await groupCall.onMemberStateChanged();
@@ -379,7 +412,9 @@ void main() {
       if (!backend.releaseOnNewParticipant.isCompleted) {
         backend.releaseOnNewParticipant.complete();
       }
-      await backend.firstPreShareKeyStarted.future.timeout(Duration(seconds: 1));
+      await backend.firstPreShareKeyStarted.future.timeout(
+        Duration(seconds: 1),
+      );
 
       try {
         await expectLater(
@@ -397,6 +432,91 @@ void main() {
 
       expect(backend.preShareKeyCalls, 1);
     });
+
+    test(
+      'it does not rejoin from a stale snapshot after another rejoin completes',
+      () async {
+        final backend = StaggeredConcurrentForceRejoinBackend();
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          backend,
+          'm.call',
+          'm.room',
+          'test_stale_snapshot_rejoin',
+        );
+
+        groupCall.setState(GroupCallState.entered);
+
+        setGroupCallMemberState(
+          groupCall: groupCall,
+          eventId: 'local_mem_before_stale_snapshot',
+          senderId: matrix.userID!,
+          stateKey: matrix.userID!,
+          memberships: [
+            buildMembership(backend: backend, groupCall: groupCall),
+          ],
+        );
+
+        await groupCall.onMemberStateChanged();
+        expect(groupCall.hasLocalParticipant(), isTrue);
+
+        setGroupCallMemberState(
+          groupCall: groupCall,
+          eventId: 'local_mem_removed_before_stale_snapshot',
+          senderId: matrix.userID!,
+          stateKey: matrix.userID!,
+        );
+
+        setGroupCallMemberState(
+          groupCall: groupCall,
+          eventId: 'remote_mem_for_stale_snapshot',
+          senderId: '@alice:testing.com',
+          stateKey: '@alice:testing.com',
+          memberships: [
+            buildMembership(
+              backend: backend,
+              groupCall: groupCall,
+              userId: '@alice:testing.com',
+              deviceId: 'ALICEDEVICE',
+              membershipId: 'alice-membership',
+            ),
+          ],
+        );
+        FakeMatrixApi.calledEndpoints.clear();
+
+        final firstUpdate = groupCall.onMemberStateChanged();
+        await backend.firstOnNewParticipantStarted.future.timeout(
+          Duration(seconds: 1),
+        );
+
+        final secondUpdate = groupCall.onMemberStateChanged();
+        await backend.secondOnNewParticipantStarted.future.timeout(
+          Duration(seconds: 1),
+        );
+
+        backend.releaseFirstOnNewParticipant.complete();
+        await firstUpdate.timeout(Duration(seconds: 1));
+        expect(backend.preShareKeyCalls, 1);
+
+        backend.releaseSecondOnNewParticipant.complete();
+        await secondUpdate.timeout(Duration(seconds: 1));
+
+        final memberStateEventCalls = FakeMatrixApi.calledEndpoints.entries
+            .where(
+              (entry) => entry.key.contains('/state/com.famedly.call.member/'),
+            )
+            .fold<int>(0, (sum, entry) => sum + entry.value.length);
+
+        expect(memberStateEventCalls, 1);
+        expect(
+          backend.preShareKeyCalls,
+          1,
+          reason:
+              'A caller with a stale anyLeft snapshot must not rejoin after the first caller has cleared the local participant cache.',
+        );
+      },
+    );
 
     test('concurrent force rejoin waiters observe the same failure', () async {
       final backend = ThrowingConcurrentForceRejoinBackend();
@@ -416,9 +536,7 @@ void main() {
         eventId: 'local_mem_before_failed_rejoin',
         senderId: matrix.userID!,
         stateKey: matrix.userID!,
-        memberships: [
-          buildMembership(backend: backend, groupCall: groupCall),
-        ],
+        memberships: [buildMembership(backend: backend, groupCall: groupCall)],
       );
 
       await groupCall.onMemberStateChanged();

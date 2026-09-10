@@ -285,6 +285,9 @@ class GroupCallSession {
     final shouldRestoreLocalParticipant = _removeCachedLocalParticipant(
       cachedLocalParticipant,
     );
+    if (!shouldRestoreLocalParticipant) {
+      return;
+    }
 
     late final Future<void> rejoinInProgress;
     rejoinInProgress = Future<void>(() async {
