@@ -34,7 +34,9 @@ class BoxCollection with ZoneTransactionMixin {
       batch.execute(
         'CREATE TABLE IF NOT EXISTS $name (k TEXT PRIMARY KEY NOT NULL, v TEXT)',
       );
-      batch.execute('CREATE INDEX IF NOT EXISTS k_index ON $name (k)');
+      batch.execute(
+        'DROP INDEX IF EXISTS k_index',
+      ); // Previously we have created a redundant index. We can safely remove it.
     }
     await batch.commit(noResult: true);
     return BoxCollection(sqfliteDatabase, boxNames, name);
