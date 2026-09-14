@@ -273,7 +273,6 @@ class Encryption {
       originServerTs: event.originServerTs,
       unsigned: event.unsigned,
       stateKey: event.stateKey,
-      prevContent: event.prevContent,
       status: event.status,
       originalSource: event,
     );
