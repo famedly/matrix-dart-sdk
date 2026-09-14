@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:sqflite_common/sqlite_api.dart';
+import 'package:sqflite_common/utils/utils.dart';
 
 import '../../../matrix.dart';
 
@@ -90,7 +91,13 @@ class SQfLiteEncryptionHelper {
   /// * ensures PRAGMA is supported by the given [database]
   /// * applies [cipher] as PRAGMA key
   /// * checks whether this operation was successful
-  Future<void> applyPragmaKey(Database database) async {
+  Future<void> applyPragmaKey(
+    Database database, {
+
+    /// (Optional) ensures incremental auto vacuum to clean up free database
+    /// pages e.g. after a `Database.clearCache()`.
+    bool ensureIncrementalAutoVacuum = false,
+  }) async {
     final cipherVersion = await database.rawQuery('PRAGMA cipher_version;');
     if (cipherVersion.isEmpty) {
       // Make sure that we're actually using SQLCipher, since the pragma
@@ -110,6 +117,23 @@ class SQfLiteEncryptionHelper {
 
     final result = await database.rawQuery("PRAGMA KEY='$cipher';");
     assert(result.single['ok'] == 'ok');
+
+    if (ensureIncrementalAutoVacuum) {
+      const incrementalAutoVacuum = 2;
+
+      final currentMode = firstIntValue(
+        await database.rawQuery('PRAGMA auto_vacuum'),
+      );
+
+      if (currentMode != incrementalAutoVacuum) {
+        Logs().i('Switching database to incremental auto_vacuum...');
+        await database.rawQuery('PRAGMA auto_vacuum = $incrementalAutoVacuum');
+        await database.rawQuery('VACUUM');
+        return;
+      }
+
+      await database.rawQuery('PRAGMA incremental_vacuum');
+    }
   }
 
   /// checks whether a File has a plain text SQLite header

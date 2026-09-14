@@ -33,6 +33,11 @@ class SQfLiteEncryptionHelper {
   Future<void> ensureDatabaseFileEncrypted() async =>
       throw UnimplementedError();
 
+  /// Optional: Call this method to clean up free database pages e.g. on every
+  /// client start or after a `clearCache()`.
+  Future<void> ensureIncrementalAutoVacuum(Database database) async =>
+      throw UnimplementedError();
+
   /// safely applies the PRAGMA key to a [Database]
   ///
   /// To be directly used as [OpenDatabaseOptions.onConfigure].
@@ -40,6 +45,11 @@ class SQfLiteEncryptionHelper {
   /// * ensures PRAGMA is supported by the given [database]
   /// * applies [cipher] as PRAGMA key
   /// * checks whether this operation was successful
-  Future<void> applyPragmaKey(Database database) async =>
-      throw UnimplementedError();
+  Future<void> applyPragmaKey(
+    Database database, {
+
+    /// (Optional) ensures incremental auto vacuum to clean up free database
+    /// pages e.g. after a `Database.clearCache()`.
+    bool ensureIncrementalAutoVacuum = false,
+  }) async => throw UnimplementedError();
 }
