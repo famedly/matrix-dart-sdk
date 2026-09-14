@@ -2773,7 +2773,7 @@ void main() async {
         'room_id': room.id,
         'sender': '@example:example.org',
         'type': 'm.room.message',
-        'unsigned': {'age': 1234},
+        'unsigned': <String, Object?>{'age': 1234},
         'redacts': 'abcd',
         'prev_content': <String, Object?>{'foo': 'bar'},
       }, room);

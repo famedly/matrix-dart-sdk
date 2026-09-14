@@ -67,6 +67,9 @@ class Event extends MatrixEvent {
 
   String? get transactionId => unsigned?.tryGet<String>('transaction_id');
 
+  Map<String, Object?>? get prevContent =>
+      unsigned?.tryGetMap<String, Object?>('prev_content');
+
   Event({
     this.status = defaultStatus,
     required Map<String, dynamic> super.content,
@@ -75,7 +78,6 @@ class Event extends MatrixEvent {
     required super.senderId,
     required DateTime originServerTs,
     Map<String, dynamic>? unsigned,
-    Map<String, dynamic>? prevContent,
     String? stateKey,
     super.redacts,
     required this.room,
@@ -88,21 +90,6 @@ class Event extends MatrixEvent {
        ) {
     this.eventId = eventId;
     this.unsigned = unsigned;
-    // synapse unfortunately isn't following the spec and tosses the prev_content
-    // into the unsigned block.
-    // Currently we are facing a very strange bug in web which is impossible to debug.
-    // It may be because of this line so we put this in try-catch until we can fix it.
-    try {
-      this.prevContent = (prevContent != null && prevContent.isNotEmpty)
-          ? prevContent
-          : (unsigned != null &&
-                unsigned.containsKey('prev_content') &&
-                unsigned['prev_content'] is Map)
-          ? unsigned['prev_content']
-          : null;
-    } catch (_) {
-      // A strange bug in dart web makes this crash
-    }
     this.stateKey = stateKey;
 
     // Mark event as failed to send if status is `sending` and event is older
@@ -180,7 +167,6 @@ class Event extends MatrixEvent {
           senderId: matrixEvent.senderId,
           originServerTs: matrixEvent.originServerTs,
           unsigned: matrixEvent.unsigned,
-          prevContent: matrixEvent.prevContent,
           stateKey: matrixEvent.stateKey,
           redacts: matrixEvent.redacts,
           room: room,
@@ -190,10 +176,18 @@ class Event extends MatrixEvent {
   factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room) {
     final content = Event.getMapFromPayload(jsonPayload['content']);
     final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
-    final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
     final originalSource = Event.getMapFromPayload(
       jsonPayload['original_source'],
     );
+
+    // Previous implementations have defined prev_content on the top level:
+    final topLevelPrevContent = Event.getMapFromPayload(
+      jsonPayload['prev_content'],
+    );
+    if (topLevelPrevContent.isNotEmpty) {
+      unsigned['prev_content'] ??= topLevelPrevContent;
+    }
+
     return Event(
       status: eventStatusFromInt(
         jsonPayload['status'] ??
@@ -201,7 +195,6 @@ class Event extends MatrixEvent {
             defaultStatus.intValue,
       ),
       stateKey: jsonPayload['state_key'],
-      prevContent: prevContent,
       content: content,
       type: jsonPayload['type'],
       eventId: jsonPayload['event_id'] ?? '',
@@ -261,7 +254,6 @@ class Event extends MatrixEvent {
 
   void setRedactionEvent(Event redactedBecause) {
     unsigned = {'redacted_because': redactedBecause.toJson()};
-    prevContent = null;
     _originalSource = null;
     final contentKeyWhiteList = <String>[];
     switch (type) {

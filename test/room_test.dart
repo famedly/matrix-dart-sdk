@@ -1134,10 +1134,12 @@ void main() {
         eventId: '\$left_member',
         originServerTs: DateTime.fromMillisecondsSinceEpoch(6000),
         content: {'membership': 'leave'},
-        prevContent: {
-          'membership': 'join',
-          'displayname': 'Left User',
-          'avatar_url': 'mxc://example.com/left',
+        unsigned: {
+          'prev_content': {
+            'membership': 'join',
+            'displayname': 'Left User',
+            'avatar_url': 'mxc://example.com/left',
+          },
         },
         stateKey: leftId,
       );
