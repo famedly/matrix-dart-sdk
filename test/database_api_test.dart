@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:test/test.dart';
 
 import 'fake_database.dart';
@@ -591,39 +592,6 @@ void main() {
           Client('testclient', database: await getMatrixSdkDatabase()),
         );
       });
-      test('storeUserCrossSigningKey', () async {
-        await database.storeUserCrossSigningKey(
-          '@alice:example.com',
-          'publicKey',
-          '{}',
-          false,
-          false,
-        );
-      });
-      test('setVerifiedUserCrossSigningKey', () async {
-        await database.setVerifiedUserCrossSigningKey(
-          true,
-          '@alice:example.com',
-          'publicKey',
-          trustOnFirstUseSince: DateTime(2000),
-        );
-      });
-      test('setBlockedUserCrossSigningKey', () async {
-        await database.setBlockedUserCrossSigningKey(
-          true,
-          '@alice:example.com',
-          'publicKey',
-        );
-      });
-      test('removeUserCrossSigningKey', () async {
-        await database.removeUserCrossSigningKey(
-          '@alice:example.com',
-          'publicKey',
-        );
-      });
-      test('storeUserDeviceKeysInfo', () async {
-        await database.storeUserDeviceKeysInfo('@alice:example.com', true);
-      });
       test('storeUserDeviceKeysInfo', () async {
         var cache = await database.getCustomCacheObject('test');
         expect(cache, null);
@@ -634,30 +602,6 @@ void main() {
         await database.clearCache();
         cache = await database.getCustomCacheObject('test');
         expect(cache, null);
-      });
-      test('storeUserDeviceKey', () async {
-        await database.storeUserDeviceKey(
-          '@alice:example.com',
-          'deviceId',
-          '{}',
-          false,
-          false,
-          0,
-        );
-      });
-      test('setVerifiedUserDeviceKey', () async {
-        await database.setVerifiedUserDeviceKey(
-          true,
-          '@alice:example.com',
-          'deviceId',
-        );
-      });
-      test('setBlockedUserDeviceKey', () async {
-        await database.setBlockedUserDeviceKey(
-          true,
-          '@alice:example.com',
-          'deviceId',
-        );
       });
       test('getStorePresences', () async {
         const userId = '@alice:example.com';
@@ -671,6 +615,21 @@ void main() {
         await database.storePresence(userId, presence);
         final storedPresence = await database.getPresence(userId);
         expect(presence.toJson(), storedPresence?.toJson());
+      });
+      test('storeDeviceKeysLists', () async {
+        final tmpClient = Client('test', database: database);
+        await database.storeDeviceKeysList(
+          '@alice:example.com',
+          DeviceKeysList('@alice:example.com', tmpClient),
+        );
+        final keys = await database.getDeviceKeysList(
+          '@alice:example.com',
+          tmpClient,
+        );
+        expect(keys?.userId, '@alice:example.com');
+        expect(keys?.outdated, true);
+        expect(keys?.crossSigningKeys, {});
+        expect(keys?.deviceKeys, {});
       });
       test('storeUserProfile', () async {
         final profile1 = await database.getUserProfile('@alice:example.com');
@@ -719,6 +678,107 @@ void main() {
         final reopenedDatabase = await getMatrixSdkDatabase();
         final dump = await reopenedDatabase.getAccountData();
         expect(dump.isEmpty, true);
+      });
+    });
+    group('Database migrations', () {
+      test('Migrate from version 11', () async {
+        final sqliteDb = await databaseFactoryFfi.openDatabase(
+          ':memory:',
+          options: OpenDatabaseOptions(singleInstance: false),
+        );
+        for (final name in {
+          'box_client',
+          'box_user_device_keys',
+          'box_cross_signing_keys',
+          'box_user_device_keys_outdated',
+        }) {
+          sqliteDb.execute(
+            'CREATE TABLE IF NOT EXISTS $name (k TEXT PRIMARY KEY NOT NULL, v TEXT)',
+          );
+        }
+
+        await sqliteDb.insert('box_client', {
+          'k': 'version',
+          'v': '11',
+        }, conflictAlgorithm: .replace);
+
+        const userId = '@alice:example.com';
+        const deviceId = 'deviceId';
+        const publicKey = 'publicKey';
+
+        final deviceKeysContent = jsonEncode({
+          'user_id': userId,
+          'device_id': deviceId,
+          'algorithms': [
+            AlgorithmTypes.olmV1Curve25519AesSha2,
+            AlgorithmTypes.megolmV1AesSha2,
+          ],
+          'keys': {
+            'curve25519:$deviceId':
+                '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
+            'ed25519:$deviceId': 'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI',
+          },
+          'signatures': {
+            userId: {
+              'ed25519:$deviceId':
+                  'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA',
+            },
+          },
+        });
+        await sqliteDb.insert('box_user_device_keys', {
+          'k': TupleKey(userId, deviceId).toString(),
+          'v': jsonEncode({
+            'user_id': userId,
+            'device_id': deviceId,
+            'content': deviceKeysContent,
+            'verified': false,
+            'blocked': false,
+            'last_active': 0,
+          }),
+        });
+
+        final crossSigningKeyContent = jsonEncode({
+          'user_id': userId,
+          'usage': ['master'],
+          'keys': {'ed25519:$publicKey': publicKey},
+          'signatures': <String, Object?>{},
+        });
+        await sqliteDb.insert('box_cross_signing_keys', {
+          'k': TupleKey(userId, publicKey).toString(),
+          'v': jsonEncode({
+            'user_id': userId,
+            'public_key': publicKey,
+            'content': crossSigningKeyContent,
+            'verified': false,
+            'blocked': false,
+          }),
+        });
+
+        await sqliteDb.insert('box_user_device_keys_outdated', {
+          'k': userId,
+          'v': 'true',
+        });
+
+        final database = await MatrixSdkDatabase.init(
+          'unit_test.${DateTime.now().millisecondsSinceEpoch}',
+          database: sqliteDb,
+          sqfliteFactory: databaseFactoryFfi,
+        );
+
+        final deviceKeys = await database.getDeviceKeysList(
+          userId,
+          Client('testclient', database: database),
+        );
+
+        expect(deviceKeys?.userId, userId);
+        expect(deviceKeys?.outdated, true);
+        expect(deviceKeys?.deviceKeys, {});
+
+        expect(deviceKeys?.crossSigningKeys.keys, {publicKey});
+        final crossSigningKey = deviceKeys?.crossSigningKeys[publicKey];
+        expect(crossSigningKey?.usage, ['master']);
+        expect(crossSigningKey?.ed25519Key, publicKey);
+        await database.close();
       });
     });
   }

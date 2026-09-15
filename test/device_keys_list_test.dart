@@ -76,6 +76,17 @@ void main() async {
       final crossKey = CrossSigningKey.fromJson(rawJson, client);
       expect(json.encode(crossKey.toJson()), json.encode(rawJson));
       expect(crossKey.usage.first, 'master');
+      final deviceKeysList = DeviceKeysList(
+        '@alice:example.com',
+        client,
+        outdated: false,
+        crossSigningKeys: {'master': crossKey},
+        deviceKeys: {'JLAFKJWSCS': key},
+      );
+      expect(
+        deviceKeysList.toJson(),
+        DeviceKeysList.fromJson(deviceKeysList.toJson(), client).toJson(),
+      );
     });
 
     test('reject devices without self-signature', () async {
