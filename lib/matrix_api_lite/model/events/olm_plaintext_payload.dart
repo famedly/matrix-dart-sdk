@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite/utils/try_get_map_extension.dart';
+import '../../utils/try_get_map_extension.dart';
 
 class OlmPlaintextPayload {
   String? type;

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 abstract class MatrixLocalizations {
   const MatrixLocalizations();
@@ -177,6 +177,8 @@ abstract class MatrixLocalizations {
   String startedAPoll(String senderName);
 
   String get pollHasBeenEnded;
+
+  String incomingCallFrom(String senderName);
 }
 
 extension HistoryVisibilityDisplayString on HistoryVisibility {

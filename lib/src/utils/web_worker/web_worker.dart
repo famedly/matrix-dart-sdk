@@ -9,9 +9,10 @@ import 'dart:collection';
 import 'dart:js_interop';
 import 'dart:typed_data';
 
-import 'package:matrix/matrix.dart' hide Event;
-import 'package:matrix/src/utils/web_worker/native_implementations_web_worker.dart';
 import 'package:web/web.dart';
+
+import '../../../matrix.dart' hide Event;
+import 'native_implementations_web_worker.dart';
 
 ///
 ///

@@ -4,21 +4,38 @@
 
 import 'dart:async';
 
-import 'package:matrix/encryption/utils/bootstrap.dart';
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
+import '../ssss.dart';
+import 'bootstrap.dart';
 
 extension CryptoSetupExtension on Client {
   /// Returns the current state of the crypto identity.
-  /// The crypto identity is `initialized` if key backup and cross signing
-  /// are correctly set up. You can initialize a new account by using
-  /// `Client.initCryptoIdentity()`.
+  ///
+  /// [keyBackupEnabled] and [crossSigningEnabled] report each half
+  /// independently. The crypto identity is `initialized` if both are set up.
+  /// You can initialize a new account by using `Client.initCryptoIdentity()`.
+  ///
+  /// When [initialized] is false but the account already holds part of an
+  /// identity (missing key backup or cross-signing, or incomplete cross-signing
+  /// keys), heal it in place with `Client.initCryptoIdentity(
+  /// reuseExistingStorageRecoveryKeyOrPassphrase: …)` and selective `setup*` /
+  /// `wipe*` flags instead of wiping via a fresh `initCryptoIdentity()`.
+  ///
   /// The crypto identity is `connected` if this device has all the secrets
   /// cached locally. This usually includes that this device has signed itself.
   /// You can use `Client.restoreCryptoIdentity()` to connect or
   /// `Client.initCryptoIdentity()` to wipe the current identity in case of
   /// that you lost your recovery key / passphrase and have no other way
   /// to restore.
-  Future<({bool initialized, bool connected})> getCryptoIdentityState() async {
+  Future<
+    ({
+      bool keyBackupEnabled,
+      bool crossSigningEnabled,
+      bool initialized,
+      bool connected,
+    })
+  >
+  getCryptoIdentityState() async {
     await accountDataLoading;
     await firstSyncReceived;
 
@@ -40,10 +57,12 @@ extension CryptoSetupExtension on Client {
       }
     }
 
+    final keyBackupEnabled = encryption?.keyManager.enabled ?? false;
+    final crossSigningEnabled = encryption?.crossSigning.enabled ?? false;
     return (
-      initialized:
-          (encryption?.keyManager.enabled ?? false) &&
-          (encryption?.crossSigning.enabled ?? false),
+      keyBackupEnabled: keyBackupEnabled,
+      crossSigningEnabled: crossSigningEnabled,
+      initialized: keyBackupEnabled && crossSigningEnabled,
       connected:
           ((await encryption?.keyManager.isCached()) ?? false) &&
           ((await encryption?.crossSigning.isCached()) ?? false),
@@ -138,18 +157,37 @@ extension CryptoSetupExtension on Client {
     }
   }
 
-  /// Bootsraps a new crypto identity for the client. Creates secret storage
-  /// and cross-signing keys and optionally online key backup. Returns the
-  /// generated recovery key when secret storage is newly created.
+  /// Bootstraps a crypto identity for the client. Creates secret storage and
+  /// cross-signing keys and optionally online key backup. Returns the recovery
+  /// key for the secret storage key in use — newly generated, or the existing
+  /// key when [reuseExistingStorageRecoveryKeyOrPassphrase] is set.
   ///
-  /// [passphrase] lets users remember a human-readable phrase from which the
-  /// recovery key is derived using PBKDF2.
+  /// [passphrase] lets users remember a human-readable phrase from which a
+  /// **new** recovery key is derived using PBKDF2. It must not be combined with
+  /// [reuseExistingStorageRecoveryKeyOrPassphrase].
+  ///
+  /// When [reuseExistingStorageRecoveryKeyOrPassphrase] is set, the existing
+  /// secret storage key is kept and unlocked with that credential (secure
+  /// storage is never wiped). Use this to heal a partially provisioned identity
+  /// without invalidating the user's recovery key. [keyIdentifier] selects a
+  /// specific key when several exist. [selfSign] then signs this device with
+  /// the unlocked secrets when cross-signing is available.
+  ///
   /// When [wipeSecureStorage] or [wipeKeyBackup] or [wipeCrossSigning] are true,
-  /// existing data is wiped during setup.
-  /// The `setup*` flags control which cross-signing keys and key backup are
-  /// provisioned. [keyName] can label the generated secret storage key.
+  /// existing data is wiped during setup. [wipeSecureStorage] is ignored when
+  /// reusing an existing storage key. The `setup*` flags control which
+  /// cross-signing keys and key backup are provisioned. [keyName] can label a
+  /// newly generated secret storage key.
+  ///
+  /// Throws [BootstrapBadStateException] when reuse is requested but there is
+  /// no usable existing secret storage key, or bootstrap would otherwise create
+  /// a new key. Callers should fall back to a destructive
+  /// `initCryptoIdentity()` without the reuse parameter.
   Future<String> initCryptoIdentity({
     String? passphrase,
+    String? reuseExistingStorageRecoveryKeyOrPassphrase,
+    String? keyIdentifier,
+    bool selfSign = true,
     bool wipeSecureStorage = true,
     bool wipeKeyBackup = true,
     bool wipeCrossSigning = true,
@@ -164,12 +202,35 @@ extension CryptoSetupExtension on Client {
       throw Exception('End to end encryption not available!');
     }
 
-    String? newSsssKey;
+    final reuseCredential = reuseExistingStorageRecoveryKeyOrPassphrase;
+    final reuseExisting = reuseCredential != null;
+    if (reuseExisting && passphrase != null) {
+      throw ArgumentError(
+        'Cannot set both passphrase and reuseExistingStorageRecoveryKeyOrPassphrase.',
+      );
+    }
+
+    if (reuseExisting) {
+      final ssss = encryption.ssss;
+      final keyToValidate = keyIdentifier ?? ssss.defaultKeyId;
+      if (keyToValidate == null || !ssss.isKeyValid(keyToValidate)) {
+        throw BootstrapBadStateException(
+          'No usable existing secret storage key. Use `Client.initCryptoIdentity()` without reuse.',
+        );
+      }
+      // Reuse mode never replaces the secret storage key or wipes existing components.
+      wipeSecureStorage = false;
+      wipeCrossSigning = false;
+      wipeKeyBackup = false;
+    }
+
+    String? recoveryKey;
+    OpenSSSS? openedSsss;
     final completer = Completer();
     encryption.bootstrap(
       onUpdate: (bootstrap) async {
         try {
-          newSsssKey ??= bootstrap.newSsssKey?.recoveryKey;
+          recoveryKey ??= bootstrap.newSsssKey?.recoveryKey;
           switch (bootstrap.state) {
             case BootstrapState.loading:
               break;
@@ -177,12 +238,25 @@ extension CryptoSetupExtension on Client {
               bootstrap.wipeSsss(wipeSecureStorage);
               break;
             case BootstrapState.askUseExistingSsss:
-              bootstrap.useExistingSsss(false);
+              bootstrap.useExistingSsss(
+                reuseExisting,
+                keyIdentifier: keyIdentifier,
+              );
               break;
             case BootstrapState.askUnlockSsss:
+              if (reuseExisting) {
+                throw BootstrapBadStateException(
+                  'Cannot reuse existing storage from ${bootstrap.state}; use `Client.initCryptoIdentity()` without reuse.',
+                );
+              }
               bootstrap.unlockedSsss();
               break;
             case BootstrapState.askBadSsss:
+              if (reuseExisting) {
+                throw BootstrapBadStateException(
+                  'Cannot reuse existing storage from ${bootstrap.state}; use `Client.initCryptoIdentity()` without reuse.',
+                );
+              }
               bootstrap.ignoreBadSecrets(true);
               break;
             case BootstrapState.askWipeCrossSigning:
@@ -199,15 +273,30 @@ extension CryptoSetupExtension on Client {
                 setupMasterKey: setupMasterKey,
                 setupSelfSigningKey: setupSelfSigningKey,
                 setupUserSigningKey: setupUserSigningKey,
+                selfSign: selfSign,
               );
               break;
             case BootstrapState.askNewSsss:
+              if (reuseExisting) {
+                throw BootstrapBadStateException(
+                  'Cannot reuse existing storage from ${bootstrap.state}; use `Client.initCryptoIdentity()` without reuse.',
+                );
+              }
               await bootstrap.newSsss(passphrase, keyName);
               break;
             case BootstrapState.openExistingSsss:
-              throw Exception(
-                'Bootstrap state ${bootstrap.state} should not happen!',
+              if (!reuseExisting) {
+                throw Exception(
+                  'Bootstrap state ${bootstrap.state} should not happen!',
+                );
+              }
+              await bootstrap.newSsssKey!.unlock(
+                keyOrPassphrase: reuseCredential,
               );
+              recoveryKey ??= bootstrap.newSsssKey?.recoveryKey;
+              openedSsss = bootstrap.newSsssKey;
+              await bootstrap.openExistingSsss();
+              break;
             case BootstrapState.error:
               throw bootstrap.errorResult ?? Exception('Bootstrap error!');
             case BootstrapState.done:
@@ -224,6 +313,40 @@ extension CryptoSetupExtension on Client {
     );
 
     await completer.future;
-    return newSsssKey!;
+
+    if (reuseExisting && selfSign && (encryption.crossSigning.enabled)) {
+      await encryption.crossSigning.selfSign(
+        keyOrPassphrase: reuseCredential,
+        openSsss: openedSsss,
+      );
+    }
+
+    return recoveryKey!;
+  }
+
+  /// Empties encrypted SSSS account data so crypto identity reads as
+  /// greenfield. Does not create a replacement key.
+  Future<void> clearCryptoIdentity() async {
+    final encryption = this.encryption;
+    if (encryption == null) {
+      throw Exception('End to end encryption not available!');
+    }
+    final ssss = encryption.ssss;
+    Future<void> empty(String type) async {
+      await setAccountData(userID!, type, {});
+      while (accountData[type]?.content.isNotEmpty ?? true) {
+        await oneShotSync();
+      }
+    }
+
+    for (final type in ssss.analyzeEncryptedSecrets().keys.toList(
+      growable: false,
+    )) {
+      await empty(type);
+    }
+    if (accountData.containsKey(EventTypes.SecretStorageDefaultKey)) {
+      await empty(EventTypes.SecretStorageDefaultKey);
+    }
+    await ssss.clearCache();
   }
 }

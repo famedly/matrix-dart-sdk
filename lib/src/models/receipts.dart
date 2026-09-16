@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 // Receipts are pretty complicated nowadays. We basicaly have 3 different aspects, that we need to multiplex together:
 // 1. A receipt can be public or private. Currently clients can send either a public one, a private one or both. This means you have 2 receipts for your own user and no way to know, which one is ahead!

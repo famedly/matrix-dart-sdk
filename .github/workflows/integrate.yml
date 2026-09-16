@@ -21,11 +21,9 @@ jobs:
   dart:
     permissions:
       contents: read
-    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@main
+    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@v1.1.0
     with:
       env_file: ".github/workflows/versions.env"
-    secrets:
-      ssh_key: "${{ secrets.CI_SSH_PRIVATE_KEY }}"
 
   general:
     permissions:

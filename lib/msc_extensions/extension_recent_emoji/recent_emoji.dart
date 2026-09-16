@@ -5,7 +5,7 @@
 /// Extension to synchronize the recently used widgets with Element clients
 library;
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 /// Syncs recent emojis in account data
 ///

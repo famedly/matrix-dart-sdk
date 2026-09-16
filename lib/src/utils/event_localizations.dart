@@ -4,8 +4,8 @@
 
 import 'package:collection/collection.dart';
 
-import 'package:matrix/encryption.dart';
-import 'package:matrix/matrix.dart';
+import '../../encryption.dart';
+import '../../matrix.dart';
 
 abstract class EventLocalizations {
   // As we need to create the localized body off of a different set of parameters, we
@@ -76,6 +76,10 @@ abstract class EventLocalizations {
         );
       case EventTypes.KeyVerificationStart:
         return i18n.startedKeyVerification(
+          event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
+        );
+      case RtcNotificationContent.eventType:
+        return i18n.incomingCallFrom(
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
         );
       case MessageTypes.BadEncrypted:

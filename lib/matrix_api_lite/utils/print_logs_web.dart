@@ -4,8 +4,9 @@
 
 import 'dart:js_interop';
 
-import 'package:matrix/matrix_api_lite.dart';
 import 'package:web/web.dart';
+
+import '../../matrix_api_lite.dart';
 
 // ignore_for_file: unused-code
 extension PrintLogs on LogEvent {

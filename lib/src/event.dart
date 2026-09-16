@@ -9,12 +9,13 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/file_send_request_credentials.dart';
-import 'package:matrix/src/utils/html_to_text.dart';
-import 'package:matrix/src/utils/markdown.dart';
-import 'package:matrix/src/utils/multipart_request_progress.dart';
 import 'package:mime/mime.dart';
+
+import '../matrix.dart';
+import 'utils/file_send_request_credentials.dart';
+import 'utils/html_to_text.dart';
+import 'utils/markdown.dart';
+import 'utils/multipart_request_progress.dart';
 
 abstract class RelationshipTypes {
   static const String edit = 'm.replace';
@@ -418,6 +419,14 @@ class Event extends MatrixEvent {
     room.client.onCancelSendEvent.add(eventId);
   }
 
+  /// The name a thumbnail of the file [filename] is stored under. Only gets a
+  /// file extension if the mimetype of the thumbnail is actually known,
+  /// instead of guessing one.
+  String _thumbnailFileName(String filename) {
+    final extension = extensionFromMime(thumbnailMimetype);
+    return '$filename.thumbnail${extension == null ? '' : '.$extension'}';
+  }
+
   Future<MatrixFile?> _getCachedFile({bool getThumbnail = false}) async {
     if (transactionId == null) return null;
 
@@ -430,10 +439,11 @@ class Event extends MatrixEvent {
       if (thumbnailBytes != null) {
         return MatrixImageFile(
           bytes: thumbnailBytes,
-          name: filename,
+          name: _thumbnailFileName(filename),
           mimeType: thumbnailMimetype,
           width: thumbnailInfoMap.tryGet<int>('w'),
           height: thumbnailInfoMap.tryGet<int>('h'),
+          blurhash: thumbnailInfoMap.tryGet<String>('xyz.amorgan.blurhash'),
         );
       }
 
@@ -525,8 +535,16 @@ class Event extends MatrixEvent {
   bool get canRedact => senderId == room.client.userID || room.canRedact;
 
   /// Redacts this event. Throws `ErrorResponse` on error.
-  Future<String?> redactEvent({String? reason, String? txid}) async =>
-      await room.redactEvent(eventId, reason: reason, txid: txid);
+  Future<String?> redactEvent({
+    String? reason,
+    String? txid,
+    bool redactAllEdits = false,
+  }) => room.redactEvent(
+    eventId,
+    reason: reason,
+    txid: txid,
+    redactAllEdits: redactAllEdits,
+  );
 
   /// Searches for the reply event in the given timeline. Also returns the
   /// event fallback if the relationship type is `m.thread`.
@@ -623,7 +641,10 @@ class Event extends MatrixEvent {
   Uri? attachmentOrThumbnailMxcUrl({bool getThumbnail = false}) {
     final fileSize = infoMap.tryGet<int>('size');
     final thumbnailFileSize = thumbnailInfoMap.tryGet<int>('size');
+    // Only images can fall back to their original bytes as a preview, so the
+    // size-based discard must not apply to other types like m.video.
     if (getThumbnail &&
+        messageType == MessageTypes.Image &&
         fileSize != null &&
         thumbnailFileSize != null &&
         fileSize <= thumbnailFileSize) {
@@ -913,9 +934,7 @@ class Event extends MatrixEvent {
 
     return MatrixFile(
       bytes: uint8list,
-      name: useThumbnail
-          ? '$filename.thumbnail.${extensionFromMime(thumbnailMimetype)}'
-          : filename,
+      name: useThumbnail ? _thumbnailFileName(filename) : filename,
       mimeType: useThumbnail ? thumbnailMimetype : attachmentMimetype,
     );
   }

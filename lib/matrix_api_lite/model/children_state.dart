@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite/model/stripped_state_event.dart';
+import 'stripped_state_event.dart';
 
 class ChildrenState extends StrippedStateEvent {
   DateTime originServerTs;

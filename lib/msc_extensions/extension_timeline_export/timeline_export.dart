@@ -4,9 +4,9 @@
 
 import 'dart:convert';
 
-import 'package:matrix/matrix_api_lite.dart';
-import 'package:matrix/src/event.dart';
-import 'package:matrix/src/timeline.dart';
+import '../../matrix_api_lite.dart';
+import '../../src/event.dart';
+import '../../src/timeline.dart';
 
 extension TimelineExportExtension on Timeline {
   /// Exports timeline events from a Matrix room within a specified date range.

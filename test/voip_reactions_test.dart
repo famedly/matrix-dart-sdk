@@ -272,6 +272,138 @@ void main() {
       await subscription.cancel();
     });
 
+    test('Test reactions from a 1:1 call reach the session', () async {
+      // A 1:1 call joins with an empty call id and the media as its
+      // application, so a reaction from one has to be routed by the session it
+      // belongs to rather than by 'm.call'.
+      final membership = CallMembership(
+        userId: '@alice:testing.com',
+        callId: '',
+        application: 'm.call.video',
+        backend: MeshBackend(),
+        deviceId: 'device123',
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
+        roomId: room.id,
+        membershipId: voip.currentSessionId,
+        voip: voip,
+        eventId: 'membership_event_direct',
+      );
+
+      room.setState(
+        Event(
+          content: {
+            'memberships': [membership.toJson()],
+          },
+          type: EventTypes.GroupCallMember,
+          eventId: 'membership_event_direct',
+          senderId: '@alice:testing.com',
+          originServerTs: DateTime.now(),
+          room: room,
+          stateKey: '@alice:testing.com',
+        ),
+      );
+
+      await voip.createGroupCallFromRoomStateEvent(membership);
+
+      final groupCall = voip.getGroupCallById(room.id, '');
+      expect(groupCall, isNotNull);
+      expect(groupCall!.application, 'm.call.video');
+
+      await groupCall.enter();
+
+      final reactionEvents = <CallReactionEvent>[];
+      final subscription = groupCall.matrixRTCEventStream.stream.listen((
+        event,
+      ) {
+        if (event is CallReactionEvent) {
+          reactionEvents.add(event);
+        }
+      });
+
+      await matrix.handleSync(
+        SyncUpdate(
+          nextBatch: 'something1',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      type: EventTypes.GroupCallMemberReaction,
+                      content: {
+                        'key': '👍',
+                        'name': 'thumbs up',
+                        'is_ephemeral': false,
+                        'call_id': '',
+                        'device_id': 'device123',
+                        'm.relates_to': {
+                          'rel_type': RelationshipTypes.reference,
+                          'event_id': 'membership_event_direct',
+                        },
+                      },
+                      senderId: '@alice:testing.com',
+                      eventId: 'direct_call_reaction',
+                      originServerTs: DateTime.now(),
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      await Future.delayed(Duration(milliseconds: 50));
+
+      // And its redaction, which is routed the same way.
+      await matrix.handleSync(
+        SyncUpdate(
+          nextBatch: 'something2',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      type: EventTypes.Redaction,
+                      content: {
+                        'redacts': 'direct_call_reaction',
+                        'device_id': 'device123',
+                        'redacts_type': 'com.famedly.call.member.reaction',
+                        'call_id': '',
+                        'scope': 'm.room',
+                      },
+                      senderId: '@alice:testing.com',
+                      eventId: 'direct_call_redaction',
+                      originServerTs: DateTime.now(),
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      await Future.delayed(Duration(milliseconds: 100));
+
+      expect(reactionEvents.length, 2);
+      expect(reactionEvents[0], isA<CallReactionAddedEvent>());
+      expect(reactionEvents[1], isA<CallReactionRemovedEvent>());
+
+      final addedEvent = reactionEvents[0] as CallReactionAddedEvent;
+      expect(addedEvent.reactionKey, '👍');
+      expect(addedEvent.participant.userId, '@alice:testing.com');
+      expect(
+        (reactionEvents[1] as CallReactionRemovedEvent).redactedEventId,
+        'direct_call_reaction',
+      );
+
+      await subscription.cancel();
+    });
+
     test('Test multiple participants hand raise reactions', () async {
       // Set up multiple group call memberships
       final membership1 = CallMembership(
@@ -878,6 +1010,20 @@ void main() {
                       content: {},
                       senderId: '@alice:testing.com',
                       eventId: 'invalid_redaction_2',
+                      originServerTs: DateTime.now(),
+                    ),
+                    // Belongs to another scope than the call it names
+                    MatrixEvent(
+                      type: EventTypes.Redaction,
+                      content: {
+                        'redacts': 'some_reaction',
+                        'device_id': 'device123',
+                        'redacts_type': 'com.famedly.call.member.reaction',
+                        'call_id': 'test_call_invalid_redactions',
+                        'scope': 'm.user',
+                      },
+                      senderId: '@alice:testing.com',
+                      eventId: 'invalid_redaction_3',
                       originServerTs: DateTime.now(),
                     ),
                   ],

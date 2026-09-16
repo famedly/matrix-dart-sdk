@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite/model/basic_event.dart';
-import 'package:matrix/matrix_api_lite/model/events/room_key_content.dart';
-import 'package:matrix/matrix_api_lite/utils/try_get_map_extension.dart';
+import '../../utils/try_get_map_extension.dart';
+import '../basic_event.dart';
+import 'room_key_content.dart';
 
 extension ForwardedRoomKeyContentBasicEventExtension on BasicEvent {
   ForwardedRoomKeyContent get parsedForwardedRoomKeyContent =>

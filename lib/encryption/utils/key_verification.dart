@@ -7,12 +7,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
-import 'package:matrix/encryption/encryption.dart';
-import 'package:matrix/encryption/utils/base64_unpadded.dart';
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/crypto/crypto.dart' as uc;
 import 'package:typed_data/typed_data.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
+
+import '../../matrix.dart';
+import '../../src/utils/crypto/crypto.dart' as uc;
+import '../encryption.dart';
+import 'base64_unpadded.dart';
 
 /*
     +-------------+                    +-----------+

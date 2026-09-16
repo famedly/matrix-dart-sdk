@@ -7,16 +7,17 @@ import 'dart:convert';
 import 'dart:core';
 
 import 'package:collection/collection.dart';
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/cached_stream_controller.dart';
-import 'package:matrix/src/utils/crypto/crypto.dart';
-import 'package:matrix/src/voip/models/call_options.dart';
-import 'package:matrix/src/voip/models/delayed_event_canceller.dart';
-import 'package:matrix/src/voip/models/voip_id.dart';
-import 'package:matrix/src/voip/utils/stream_helper.dart';
 import 'package:meta/meta.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
+
+import '../../matrix.dart';
+import '../utils/cached_stream_controller.dart';
+import '../utils/crypto/crypto.dart';
+import 'models/call_options.dart';
+import 'models/delayed_event_canceller.dart';
+import 'models/voip_id.dart';
+import 'utils/stream_helper.dart';
 
 /// The parent highlevel voip class, this trnslates matrix events to webrtc methods via
 /// `CallSession` or `GroupCallSession` methods
@@ -815,8 +816,8 @@ class VoIP {
     final membership = memberships.firstWhereOrNull(
       (m) =>
           m.callId == callId &&
-          m.application == 'm.call' &&
-          m.scope == 'm.room',
+          m.scope == groupCall.scope &&
+          m.roomId == groupCall.room.id,
     );
 
     if (membership == null || membership.isExpired) {
@@ -886,14 +887,15 @@ class VoIP {
       '[VOIP] _handleRedactionEvent: Device ID from redacted event: $deviceId',
     );
 
+    final scope = event.content.tryGet<String>('scope');
+
     // Route to all active group calls in the room
     final groupCall = groupCalls.values.firstWhereOrNull(
       (m) =>
           m.room.id == room.id &&
           m.state == GroupCallState.entered &&
           m.groupCallId == event.content.tryGet('call_id') &&
-          m.application == 'm.call' &&
-          m.scope == 'm.room',
+          (scope == null || m.scope == scope),
     );
 
     if (groupCall == null) {

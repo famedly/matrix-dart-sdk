@@ -2,9 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite.dart';
-import 'package:matrix/src/room.dart';
 import 'package:slugify/slugify.dart';
+
+import '../../matrix_api_lite.dart';
+import '../room.dart';
 
 extension ImagePackRoomExtension on Room {
   /// Get all the active image packs for the specified [usage], mapped by their slug

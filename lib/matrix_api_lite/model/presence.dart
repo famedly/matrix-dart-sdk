@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite/model/basic_event_with_sender.dart';
-import 'package:matrix/matrix_api_lite/model/presence_content.dart';
+import 'basic_event_with_sender.dart';
+import 'presence_content.dart';
 
 class Presence extends BasicEventWithSender {
   PresenceContent presence;

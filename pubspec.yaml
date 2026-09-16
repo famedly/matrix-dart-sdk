@@ -4,7 +4,7 @@
 
 name: matrix
 description: Matrix Dart SDK
-version: 8.1.0
+version: 12.0.1
 homepage: https://famedly.com
 repository: https://github.com/famedly/matrix-dart-sdk.git
 issue_tracker: https://github.com/famedly/matrix-dart-sdk/issues
@@ -32,7 +32,7 @@ dependencies:
   sqflite_common: ^2.4.5
   sqlite3: ^3.0.0
   typed_data: ^1.3.2
-  vodozemac: ^0.5.0
+  vodozemac: ^0.8.0
   web: ^1.1.1
   webrtc_interface: ^1.2.0
 
@@ -45,5 +45,5 @@ dev_dependencies:
       url: https://github.com/famedly/frontend-ci-templates.git
       path: lints/dart
   lints: any
-  sqflite_common_ffi: ^2.3.4+4 # sqflite_common_ffi aggressively requires newer dart versions
+  sqflite_common_ffi: ^2.4.2 # sqflite_common_ffi aggressively requires newer dart versions
   test: ^1.27.0

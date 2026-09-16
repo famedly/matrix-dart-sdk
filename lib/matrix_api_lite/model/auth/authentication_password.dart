@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite/model/auth/authentication_data.dart';
-import 'package:matrix/matrix_api_lite/model/auth/authentication_identifier.dart';
-import 'package:matrix/matrix_api_lite/model/auth/authentication_types.dart';
-import 'package:matrix/matrix_api_lite/model/auth/authentication_user_identifier.dart';
+import 'authentication_data.dart';
+import 'authentication_identifier.dart';
+import 'authentication_types.dart';
+import 'authentication_user_identifier.dart';
 
 class AuthenticationPassword extends AuthenticationData {
   String password;

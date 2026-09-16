@@ -4,7 +4,7 @@
 
 import 'dart:core';
 
-import 'package:matrix/src/client.dart';
+import '../client.dart';
 
 extension MxcUriExtension on Uri {
   /// Transforms this `mxc://` Uri into a `http` resource, which can be used

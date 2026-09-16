@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite.dart';
+import '../../matrix_api_lite.dart';
 
 mixin EventType {
   static const String markedUnread = 'm.marked_unread';

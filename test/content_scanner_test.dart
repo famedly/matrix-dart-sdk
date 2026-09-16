@@ -38,18 +38,12 @@ MatrixContentScannerConfig _config({
 
 class _ScannerTestClient extends Client {
   _ScannerTestClient({
-    required DatabaseApi database,
-    required http.Client httpClient,
+    required super.database,
+    required http.Client super.httpClient,
     MatrixContentScannerConfig? scanner,
-    NativeImplementations nativeImplementations = NativeImplementations.dummy,
+    super.nativeImplementations,
     this.encryptionEnabledForTest = false,
-  }) : super(
-         'scanner-test',
-         database: database,
-         httpClient: httpClient,
-         contentScannerConfig: scanner,
-         nativeImplementations: nativeImplementations,
-       );
+  }) : super('scanner-test', contentScannerConfig: scanner);
 
   final bool encryptionEnabledForTest;
 

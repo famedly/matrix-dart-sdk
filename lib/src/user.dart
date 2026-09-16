@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix.dart';
+import '../matrix.dart';
 
 /// Represents a user in the context of a Matrix room, not a global user profile.
 ///
@@ -57,7 +57,8 @@ class User extends StrippedStateEvent {
   /// The displayname of the user if the user has set one.
   String? get displayName =>
       content.tryGet<String>('displayname') ??
-      (membership == Membership.join
+      (membership == Membership.join ||
+              !room.client.getDisplayNameAndAvatarFromPrevContent
           ? null
           : prevContent?.tryGet<String>('displayname'));
 
@@ -80,7 +81,8 @@ class User extends StrippedStateEvent {
   Uri? get avatarUrl {
     final uri =
         content.tryGet<String>('avatar_url') ??
-        (membership == Membership.join
+        (membership == Membership.join ||
+                !room.client.getDisplayNameAndAvatarFromPrevContent
             ? null
             : prevContent?.tryGet<String>('avatar_url'));
     return uri == null ? null : Uri.tryParse(uri);
@@ -246,13 +248,21 @@ String _hash(String s) =>
     (s.codeUnits.fold<int>(0, (a, b) => a + b) % _maximumHashLength).toString();
 
 extension FromStrippedStateEventExtension on StrippedStateEvent {
-  User asUser(Room room) => User.fromState(
-    // state key should always be set for member events
-    stateKey: stateKey!,
-    content: content,
-    typeKey: type,
-    senderId: senderId,
-    room: room,
-    originServerTs: null,
-  );
+  User asUser(Room room) {
+    if (this is User) {
+      return this as User;
+    }
+    if (this is Event) {
+      return (this as Event).asUser;
+    }
+    return User.fromState(
+      // state key should always be set for member events
+      stateKey: stateKey!,
+      content: content,
+      typeKey: type,
+      senderId: senderId,
+      room: room,
+      originServerTs: null,
+    );
+  }
 }

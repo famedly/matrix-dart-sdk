@@ -6,7 +6,7 @@
 
 import 'package:collection/collection.dart';
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 enum PushRuleConditions {
   eventMatch('event_match'),

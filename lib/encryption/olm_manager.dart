@@ -7,15 +7,15 @@ import 'dart:convert';
 import 'package:async/async.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
-import 'package:matrix/encryption/encryption.dart';
-import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
-import 'package:matrix/encryption/utils/olm_session.dart';
-import 'package:matrix/encryption/utils/pickle_key.dart';
-import 'package:matrix/matrix.dart';
-import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/api.dart';
-import 'package:matrix/src/utils/run_benchmarked.dart';
-import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
+
+import '../matrix.dart';
+import '../msc_extensions/msc_3814_dehydrated_devices/api.dart';
+import '../src/utils/run_in_root.dart';
+import 'encryption.dart';
+import 'utils/json_signature_check_extension.dart';
+import 'utils/olm_session.dart';
+import 'utils/pickle_key.dart';
 
 class OlmManager {
   final Encryption encryption;
@@ -65,7 +65,9 @@ class OlmManager {
             ? pickleKey
             : null,
       )) {
-        throw ('Upload key failed');
+        // Reached from `Client.init` for a session that has no stored olm
+        // account, where failing to publish the keys costs the session.
+        throw ('Upload of the device keys for the new olm account failed');
       }
     } else {
       try {
@@ -127,6 +129,7 @@ class OlmManager {
     }
 
     if (_uploadKeysLock) {
+      Logs().w('Not uploading keys: another upload is already in flight');
       return false;
     }
     _uploadKeysLock = true;
@@ -248,6 +251,7 @@ class OlmManager {
       );
       final response = await currentUpload.valueOrCancellation();
       if (response == null) {
+        Logs().w('Not uploading keys: the upload was cancelled');
         _uploadKeysLock = false;
         return false;
       }
@@ -257,9 +261,15 @@ class OlmManager {
       if (updateDatabase) {
         await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
       }
-      return (uploadedOneTimeKeysCount != null &&
-              response['signed_curve25519'] == uploadedOneTimeKeysCount) ||
-          uploadedOneTimeKeysCount == null;
+      final uploaded = response['signed_curve25519'];
+      if (uploadedOneTimeKeysCount != null &&
+          uploaded != uploadedOneTimeKeysCount) {
+        Logs().w(
+          'Key upload accepted $uploaded of $uploadedOneTimeKeysCount one time keys',
+        );
+        return false;
+      }
+      return true;
     } on MatrixException catch (exception) {
       _uploadKeysLock = false;
 
@@ -285,6 +295,8 @@ class OlmManager {
           unusedFallbackKey: unusedFallbackKey,
           retry: retry - 1,
         );
+      } else {
+        Logs().w('Key upload was rejected by the homeserver', exception);
       }
     } finally {
       _uploadKeysLock = false;
@@ -571,7 +583,7 @@ class OlmManager {
         return event;
       }
       // retry to decrypt!
-      return _decryptToDeviceEvent(event);
+      return await _decryptToDeviceEvent(event);
     } catch (_) {
       // okay, the thing errored while decrypting. It is safe to assume that the olm session is corrupt and we should generate a new one
       runInRoot(() => restoreOlmSession(event.senderId, senderKey));

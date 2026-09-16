@@ -58,6 +58,24 @@ void main() {
       await box.clear();
     });
 
+    test(
+      'Box.getAllValues with a key added after the keys were cached',
+      () async {
+        final box = collection.openBox<Map>('cats');
+        await box.put('fluffy', data);
+
+        // Populate the key cache, like any earlier read from the box does.
+        expect(await box.getAllKeys(), ['fluffy']);
+
+        // 'alpha' sorts before 'fluffy', so the order the keys were written in
+        // differs from the order the box stores them in.
+        await box.put('alpha', data2);
+
+        expect(await box.getAllValues(), {'fluffy': data, 'alpha': data2});
+        await box.clear();
+      },
+    );
+
     test('Box.delete', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('fluffy', data);

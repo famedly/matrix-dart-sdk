@@ -71,8 +71,43 @@ final recoveryKey = await client.initCryptoIdentity();
 You can also set a custom passphrase:
 
 ```dart
-final passphrase = await client.initCryptoIdentity('SuperSecurePassphrase154%');
+final recoveryKey = await client.initCryptoIdentity(
+  passphrase: 'SuperSecurePassphrase154%',
+);
 ```
+
+`getCryptoIdentityState()` also reports `keyBackupEnabled` and
+`crossSigningEnabled` independently. If `initialized` is `false` but the
+account already holds part of an identity (missing key backup or
+cross-signing, incomplete cross-signing keys, or a cancelled setup after
+UIA), heal it in place by reusing the existing secret storage key — the
+recovery key stays valid:
+
+```dart
+final ssss = client.encryption!.ssss;
+final recoveryKey = await client.initCryptoIdentity(
+  reuseExistingStorageRecoveryKeyOrPassphrase: passphraseOrRecoveryKey,
+  wipeSecureStorage: false, // forced when reusing; shown for clarity
+  wipeKeyBackup: false,
+  wipeCrossSigning: false,
+  setupMasterKey: !ssss.isSecret(EventTypes.CrossSigningMasterKey),
+  setupSelfSigningKey: !ssss.isSecret(EventTypes.CrossSigningSelfSigning),
+  setupUserSigningKey: !ssss.isSecret(EventTypes.CrossSigningUserSigning),
+  setupOnlineKeyBackup: !ssss.isSecret(EventTypes.MegolmBackup),
+);
+```
+
+Normal `initCryptoIdentity()` creates or rotates secret storage and returns
+a new recovery key. With
+`reuseExistingStorageRecoveryKeyOrPassphrase`, the existing key is opened
+instead and the returned string is that key's recovery key. Optionally pass
+`keyIdentifier` when several secret storage keys exist, and `selfSign`
+(default `true`) to sign this device afterward.
+
+If reuse throws `BootstrapBadStateException`, there is no usable secret
+storage key or bootstrap would have to create a new one — fall back to
+`initCryptoIdentity()` without the reuse parameter, which regenerates
+everything and returns a new recovery key (a destructive operation).
 
 To then reconnect on a new device you can restore your crypto identity:
 

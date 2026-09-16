@@ -518,6 +518,35 @@ void main() {
       },
     );
 
+    test(
+      'stripKeyPreservingDefault removes passphrase key and keeps default',
+      () async {
+        final ssss = client.encryption!.ssss;
+        final defaultKeyId = ssss.defaultKeyId!;
+        final defaultKey = ssss.open(defaultKeyId);
+        await defaultKey.unlock(recoveryKey: ssssKey);
+
+        final passphraseKey = await ssss.createKey(
+          'test-passphrase',
+          'passphrase',
+        );
+        await ssss.migrateSecretsToKey(
+          primaryUnlockedKey: defaultKey,
+          destinationKey: passphraseKey,
+          stripKeys: true,
+          stripAsDefaultKey: false,
+        );
+
+        await ssss.stripKeyPreservingDefault(passphraseKey.keyId, 'passphrase');
+
+        expect(ssss.keyIdForNamedSecretStorageKey('passphrase'), isNull);
+        for (final keyIds in ssss.analyzeEncryptedSecrets().values) {
+          expect(keyIds, contains(defaultKeyId));
+          expect(keyIds, isNot(contains(passphraseKey.keyId)));
+        }
+      },
+    );
+
     test('migrateSecretsToKey without migrated types does not strip', () async {
       final ssss = client.encryption!.ssss;
       final defaultKeyId = ssss.defaultKeyId!;

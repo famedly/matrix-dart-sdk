@@ -714,6 +714,18 @@ void main() {
       expect(fetchedParticipants.length, newParticipants.length);
       room.summary.mJoinedMemberCount = 3;
       expect(room.participantListComplete, true);
+
+      // Make sure we fetch participants even if sdk assumes participant list
+      // is complete:
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.getUserDeviceKeys();
+      expect(
+        FakeMatrixApi.calledEndpoints.containsKey(
+          '/client/v3/rooms/!localpart%3Aserver.abc/members',
+        ),
+        true,
+      );
+
       room.summary.mJoinedMemberCount = null;
       expect(room.participantListComplete, false);
     });
@@ -959,6 +971,218 @@ void main() {
       );
       expect(nonDmRoom.isDirectChat, false);
       expect(nonDmRoom.directChatMatrixID, isNull);
+    });
+
+    test('partial DM keeps hero avatar in sync', () async {
+      final dmRoom = matrix.getRoomById('!726s6s6q:example.com')!;
+      expect(dmRoom.partial, true);
+      const bobId = '@bob:example.com';
+
+      // Restore m.direct after earlier tests may have cleared it.
+      await matrix.handleSync(
+        SyncUpdate.fromJson(
+          jsonDecode('''
+          {
+            "next_batch": "sync_restore_dm",
+            "account_data": {
+              "events": [{
+                "type": "m.direct",
+                "content": {"@bob:example.com": ["!726s6s6q:example.com"]}
+              }]
+            }
+          }
+        '''),
+        ),
+      );
+      expect(dmRoom.directChatMatrixID, bobId);
+
+      // Hero already loaded in memory (room list) with an old avatar.
+      dmRoom.setState(
+        Event(
+          senderId: bobId,
+          type: EventTypes.RoomMember,
+          room: dmRoom,
+          eventId: '\$bob_old_avatar',
+          originServerTs: DateTime.fromMillisecondsSinceEpoch(1000),
+          content: {
+            'membership': 'join',
+            'displayname': 'Bob',
+            'avatar_url': 'mxc://example.com/old',
+          },
+          stateKey: bobId,
+        ),
+      );
+      expect(dmRoom.avatar.toString(), 'mxc://example.com/old');
+
+      // Avatar change arrives via sync while the room stays partial.
+      await matrix.handleSync(
+        SyncUpdate(
+          nextBatch: 'sync_bob_avatar',
+          rooms: RoomsUpdate(
+            join: {
+              dmRoom.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      type: EventTypes.RoomMember,
+                      senderId: bobId,
+                      eventId: '\$bob_new_avatar',
+                      originServerTs: DateTime.fromMillisecondsSinceEpoch(2000),
+                      stateKey: bobId,
+                      content: {
+                        'membership': 'join',
+                        'displayname': 'Bob',
+                        'avatar_url': 'mxc://example.com/new',
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+      expect(dmRoom.partial, true);
+      expect(
+        dmRoom.getState(EventTypes.RoomMember, bobId)?.content['avatar_url'],
+        'mxc://example.com/new',
+      );
+      expect(dmRoom.avatar.toString(), 'mxc://example.com/new');
+
+      // Members not already in memory must still be skipped while partial.
+      const unknownId = '@unknown:example.com';
+      await matrix.handleSync(
+        SyncUpdate(
+          nextBatch: 'sync_unknown_member',
+          rooms: RoomsUpdate(
+            join: {
+              dmRoom.id: JoinedRoomUpdate(
+                state: [
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    senderId: unknownId,
+                    eventId: '\$unknown_join',
+                    originServerTs: DateTime.fromMillisecondsSinceEpoch(3000),
+                    stateKey: unknownId,
+                    content: {
+                      'membership': 'join',
+                      'displayname': 'Unknown',
+                      'avatar_url': 'mxc://example.com/unknown',
+                    },
+                  ),
+                ],
+              ),
+            },
+          ),
+        ),
+      );
+      expect(dmRoom.getState(EventTypes.RoomMember, unknownId), isNull);
+
+      // Stale in-memory hero + newer DB row: requestUser must prefer DB.
+      dmRoom.setState(
+        Event(
+          senderId: bobId,
+          type: EventTypes.RoomMember,
+          room: dmRoom,
+          eventId: '\$bob_stale_memory',
+          originServerTs: DateTime.fromMillisecondsSinceEpoch(4000),
+          content: {
+            'membership': 'join',
+            'displayname': 'Bob',
+            'avatar_url': 'mxc://example.com/stale',
+          },
+          stateKey: bobId,
+        ),
+      );
+      await matrix.database.storeEventUpdate(
+        dmRoom.id,
+        Event(
+          senderId: bobId,
+          type: EventTypes.RoomMember,
+          room: dmRoom,
+          eventId: '\$bob_db_fresh',
+          originServerTs: DateTime.fromMillisecondsSinceEpoch(5000),
+          content: {
+            'membership': 'join',
+            'displayname': 'Bob',
+            'avatar_url': 'mxc://example.com/from_db',
+          },
+          stateKey: bobId,
+        ),
+        EventUpdateType.state,
+        matrix,
+      );
+
+      final refreshed = await dmRoom.requestUser(
+        bobId,
+        requestState: false,
+        requestProfile: false,
+      );
+      expect(refreshed?.avatarUrl.toString(), 'mxc://example.com/from_db');
+      expect(dmRoom.avatar.toString(), 'mxc://example.com/from_db');
+    });
+
+    test('partial requestUser does not loop on leave prev_content', () async {
+      final dmRoom = matrix.getRoomById('!726s6s6q:example.com')!;
+      expect(dmRoom.partial, true);
+      const leftId = '@left:example.com';
+
+      final leftMember = Event(
+        senderId: leftId,
+        type: EventTypes.RoomMember,
+        room: dmRoom,
+        eventId: '\$left_member',
+        originServerTs: DateTime.fromMillisecondsSinceEpoch(6000),
+        content: {'membership': 'leave'},
+        prevContent: {
+          'membership': 'join',
+          'displayname': 'Left User',
+          'avatar_url': 'mxc://example.com/left',
+        },
+        stateKey: leftId,
+      );
+
+      // Memory and DB both have the leave member with profile only in prev_content.
+      dmRoom.setState(leftMember);
+      await matrix.database.storeEventUpdate(
+        dmRoom.id,
+        leftMember,
+        EventUpdateType.state,
+        matrix,
+      );
+
+      final called = <String>[];
+      // ignore: deprecated_member_use_from_same_package
+      final subscription = dmRoom.onUpdate.stream.listen(called.add);
+
+      final first = await dmRoom.requestUser(
+        leftId,
+        requestState: false,
+        requestProfile: false,
+      );
+      expect(first?.displayName, 'Left User');
+      expect(first?.avatarUrl.toString(), 'mxc://example.com/left');
+
+      await Future.delayed(Duration(milliseconds: 1));
+      final updatesAfterFirst = called.length;
+
+      final second = await dmRoom.requestUser(
+        leftId,
+        requestState: false,
+        requestProfile: false,
+      );
+      expect(second?.displayName, 'Left User');
+      expect(second?.avatarUrl.toString(), 'mxc://example.com/left');
+
+      await Future.delayed(Duration(milliseconds: 1));
+      expect(
+        called.length,
+        updatesAfterFirst,
+        reason:
+            'requestUser must not re-emit onUpdate when leave profile lives in prev_content',
+      );
+
+      await subscription.cancel();
     });
 
     test('getTimeline', () async {
@@ -1403,6 +1627,182 @@ void main() {
         ),
         testFile.bytes,
       );
+    });
+
+    test('sendFileEvent video with customVideoThumbnailGenerator', () async {
+      // A dedicated room so the sent video events don't leak into tests
+      // using the shared `room`:
+      final videoRoom = Room(
+        id: '!video:server.abc',
+        client: matrix,
+        membership: Membership.join,
+      );
+      FakeMatrixApi
+              .currentApi!
+              .api['PUT']!['/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid'] =
+          (req) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+      FakeMatrixApi
+          .currentApi!
+          .api['POST']!['/media/v3/upload?filename=file.mp4'] = (req) => {
+        'content_uri': 'mxc://example.com/videoTestMxcUri',
+      };
+      FakeMatrixApi
+              .currentApi!
+              .api['POST']!['/media/v3/upload?filename=file.mp4.thumbnail.jpg'] =
+          (req) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
+      MatrixVideoThumbnailArguments? receivedArguments;
+      matrix.customVideoThumbnailGenerator = (arguments) async {
+        receivedArguments = arguments;
+        return MatrixVideoThumbnailResponse(
+          // Bigger than the video itself, must still be used:
+          bytes: Uint8List(2000),
+          width: 600,
+          height: 400,
+          mimeType: 'image/jpeg',
+          blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+          originalWidth: 1920,
+          originalHeight: 1080,
+          duration: 5000,
+        );
+      };
+
+      final testFile = MatrixVideoFile(
+        bytes: Uint8List(1000),
+        name: 'file.mp4',
+      );
+      FakeMatrixApi.calledEndpoints.clear();
+      final resp = await videoRoom.sendFileEvent(testFile, txid: 'testtxid');
+      expect(resp, isNotNull);
+      expect(receivedArguments?.fileName, 'file.mp4');
+      expect(receivedArguments?.mimeType, 'video/mp4');
+      expect(receivedArguments?.bytes, testFile.bytes);
+      expect(
+        await matrix.database.getFile(
+          Uri(scheme: 'cache', host: 'thumbnail', path: 'testtxid'),
+        ),
+        null, // It is sent so shouldn't be in cache anymore
+      );
+
+      final content = json.decode(
+        FakeMatrixApi.calledEndpoints.entries
+            .firstWhere(
+              (e) => e.key.startsWith(
+                '/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid',
+              ),
+            )
+            .value
+            .first,
+      );
+      expect(content, {
+        'msgtype': 'm.video',
+        'body': 'file.mp4',
+        'filename': 'file.mp4',
+        'url': 'mxc://example.com/videoTestMxcUri',
+        'info': {
+          'mimetype': 'video/mp4',
+          'size': 1000,
+          'w': 1920,
+          'h': 1080,
+          'duration': 5000,
+          'thumbnail_url': 'mxc://example.com/videoThumbMxcUri',
+          'thumbnail_info': {
+            'mimetype': 'image/jpeg',
+            'size': 2000,
+            'w': 600,
+            'h': 400,
+            'xyz.amorgan.blurhash': 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+          },
+          'xyz.amorgan.blurhash': 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+        },
+      });
+      matrix.customVideoThumbnailGenerator = null;
+    });
+
+    test('sendFileEvent video keeps generated thumbnail cached on '
+        'failure', () async {
+      final videoRoom = Room(
+        id: '!video:server.abc',
+        client: matrix,
+        membership: Membership.join,
+      );
+      final thumbnailBytes = Uint8List.fromList([1, 2, 3]);
+      matrix.customVideoThumbnailGenerator = (arguments) async =>
+          MatrixVideoThumbnailResponse(
+            bytes: thumbnailBytes,
+            width: 600,
+            height: 400,
+            mimeType: 'image/jpeg',
+          );
+      FakeMatrixApi
+          .currentApi!
+          .api['POST']!['/media/v3/upload?filename=crash.mp4'] = {
+        'errcode': 'M_UNKNOWN',
+        'error': 'Boom!',
+      };
+
+      const txnid = 'video_crash_txnid';
+      final testFile = MatrixVideoFile(
+        bytes: Uint8List(1000),
+        name: 'crash.mp4',
+      );
+      try {
+        await videoRoom.sendFileEvent(testFile, txid: txnid);
+      } catch (_) {}
+
+      expect(
+        await matrix.database.getFile(
+          Uri(scheme: 'cache', host: 'file', path: txnid),
+        ),
+        testFile.bytes,
+      );
+      expect(
+        await matrix.database.getFile(
+          Uri(scheme: 'cache', host: 'thumbnail', path: txnid),
+        ),
+        thumbnailBytes,
+      );
+      matrix.customVideoThumbnailGenerator = null;
+    });
+
+    test('sendFileEvent video ignores failing thumbnail generator', () async {
+      final videoRoom = Room(
+        id: '!video:server.abc',
+        client: matrix,
+        membership: Membership.join,
+      );
+      FakeMatrixApi
+              .currentApi!
+              .api['PUT']!['/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid'] =
+          (req) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+      matrix.customVideoThumbnailGenerator = (arguments) async =>
+          throw Exception('Unable to decode video');
+
+      final testFile = MatrixVideoFile(
+        bytes: Uint8List(1000),
+        name: 'file.mp4',
+      );
+      FakeMatrixApi.calledEndpoints.clear();
+      final resp = await videoRoom.sendFileEvent(testFile, txid: 'testtxid');
+      expect(resp, isNotNull);
+
+      final content = json.decode(
+        FakeMatrixApi.calledEndpoints.entries
+            .firstWhere(
+              (e) => e.key.startsWith(
+                '/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid',
+              ),
+            )
+            .value
+            .first,
+      );
+      expect(content, {
+        'msgtype': 'm.video',
+        'body': 'file.mp4',
+        'filename': 'file.mp4',
+        'url': 'mxc://example.com/videoTestMxcUri',
+        'info': {'mimetype': 'video/mp4', 'size': 1000},
+      });
+      matrix.customVideoThumbnailGenerator = null;
     });
 
     test('pushRuleState', () async {

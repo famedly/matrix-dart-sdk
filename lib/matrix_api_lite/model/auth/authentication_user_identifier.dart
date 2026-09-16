@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite/model/auth/authentication_identifier.dart';
-import 'package:matrix/matrix_api_lite/model/auth/authentication_types.dart';
+import 'authentication_identifier.dart';
+import 'authentication_types.dart';
 
 class AuthenticationUserIdentifier extends AuthenticationIdentifier {
   String user;

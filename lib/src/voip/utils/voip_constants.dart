@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix.dart';
+import '../../../matrix.dart';
 
 /// https://github.com/matrix-org/matrix-doc/pull/2746
 /// version 1

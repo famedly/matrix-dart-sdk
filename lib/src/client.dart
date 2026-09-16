@@ -8,29 +8,54 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
-import 'package:matrix/encryption.dart';
-import 'package:matrix/matrix.dart';
-import 'package:matrix/matrix_api_lite/generated/fixed_model.dart';
-import 'package:matrix/msc_extensions/msc_unpublished_custom_refresh_token_lifetime/msc_unpublished_custom_refresh_token_lifetime.dart';
-import 'package:matrix/src/models/timeline_chunk.dart';
-import 'package:matrix/src/utils/cached_stream_controller.dart';
-import 'package:matrix/src/utils/client_init_exception.dart';
-import 'package:matrix/src/utils/multilock.dart';
-import 'package:matrix/src/utils/request_and_cache.dart';
-import 'package:matrix/src/utils/run_benchmarked.dart';
-import 'package:matrix/src/utils/run_in_root.dart';
-import 'package:matrix/src/utils/sync_update_item_count.dart';
-import 'package:matrix/src/utils/try_get_push_rule.dart';
-import 'package:matrix/src/utils/versions_comparator.dart';
 import 'package:mime/mime.dart';
 import 'package:random_string/random_string.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
+import '../encryption.dart';
+import '../matrix.dart' hide Result;
+import '../matrix_api_lite/generated/fixed_model.dart';
+import '../msc_extensions/msc_unpublished_custom_refresh_token_lifetime/msc_unpublished_custom_refresh_token_lifetime.dart';
+import 'models/timeline_chunk.dart';
+import 'utils/cached_stream_controller.dart';
+import 'utils/client_init_exception.dart';
+import 'utils/multilock.dart';
+import 'utils/request_and_cache.dart';
+import 'utils/run_in_root.dart';
+import 'utils/sync_update_item_count.dart';
+import 'utils/try_get_push_rule.dart';
+import 'utils/versions_comparator.dart';
+
 typedef RoomSorter = int Function(Room a, Room b);
 
 enum LoginState { loggedIn, loggedOut, softLoggedOut }
+
+/// Why [Client.clear] dropped the local session.
+///
+/// `loggedOut` on its own cannot tell a deliberate sign out from one the SDK
+/// decided on, which makes unexpected sign outs hard to trace in the wild.
+enum SessionClearReason {
+  /// The user signed out through [Client.logout].
+  logout,
+
+  /// The session was moved to another device by [Client.exportDump].
+  exportDump,
+
+  /// [Client.init] failed and could not keep the session.
+  initFailed,
+
+  /// The homeserver refused to refresh an expired access token.
+  softLogoutRefreshFailed,
+
+  /// The homeserver rejected the access token and offered no way back.
+  unknownToken,
+
+  /// [Client.clear] was called directly, so only the caller knows why.
+  unspecified,
+}
 
 extension TrailingSlash on Uri {
   Uri stripTrailingSlash() => path.endsWith('/')
@@ -103,6 +128,9 @@ class Client extends MatrixApi {
 
   final Duration sendTimelineEventTimeout;
 
+  final bool autoRequestProfileForMissingUsers;
+  final bool getDisplayNameAndAvatarFromPrevContent;
+
   /// The timeout until a typing indicator gets removed automatically.
   final Duration typingIndicatorTimeout;
 
@@ -110,6 +138,9 @@ class Client extends MatrixApi {
     MatrixImageFileResizeArguments,
   )?
   customImageResizer;
+
+  Future<MatrixVideoThumbnailResponse?> Function(MatrixVideoThumbnailArguments)?
+  customVideoThumbnailGenerator;
 
   /// Optional matrix-content-scanner proxy configuration.
   ///
@@ -159,8 +190,9 @@ class Client extends MatrixApi {
   /// enable the SDK to compute some code in background.
   /// Set [timelineEventTimeout] to the preferred time the Client should retry
   /// sending events on connection problems or to `Duration.zero` to disable it.
-  /// Set [customImageResizer] to your own implementation for a more advanced
-  /// and faster image resizing experience.
+  /// Set [customImageResizer] and [customVideoThumbnailGenerator] to your own
+  /// implementations for a more advanced and faster image resizing experience
+  /// and for generating video thumbnails, which the SDK can not do itself.
   /// Set [enableDehydratedDevices] to enable experimental support for enabling MSC3814 dehydrated devices.
   Client(
     this.clientName, {
@@ -190,6 +222,7 @@ class Client extends MatrixApi {
     Duration defaultNetworkRequestTimeout = const Duration(seconds: 35),
     this.sendTimelineEventTimeout = const Duration(minutes: 1),
     this.customImageResizer,
+    this.customVideoThumbnailGenerator,
     this.shareKeysWith = ShareKeysWith.crossVerifiedIfEnabled,
     this.enableDehydratedDevices = false,
     this.receiptsPublicByDefault = true,
@@ -213,6 +246,15 @@ class Client extends MatrixApi {
     this.dehydratedDeviceDisplayName = 'Dehydrated Device',
     RoomSorter? customRoomSorter,
     this.contentScannerConfig,
+
+    /// Whether the app automatically requests the profile for users which have
+    /// no filled out member state in a room. This is e.g. the case for left
+    /// or banned users.
+    this.autoRequestProfileForMissingUsers = true,
+
+    /// Whether the app should get DisplayName and Avatar also from the
+    /// previous content of a member state event.
+    this.getDisplayNameAndAvatarFromPrevContent = true,
   }) : _database = database,
        syncFilter =
            syncFilter ??
@@ -369,12 +411,6 @@ class Client extends MatrixApi {
   List<Room> get rooms => _rooms;
   List<Room> _rooms = [];
 
-  /// Get a list of the archived rooms
-  ///
-  /// Attention! Archived rooms are only returned if [loadArchive()] was called
-  /// beforehand! The state refers to the last retrieval via [loadArchive()]!
-  List<ArchivedRoom> get archivedRooms => _archivedRooms;
-
   bool enableDehydratedDevices = false;
 
   final String dehydratedDeviceDisplayName;
@@ -441,10 +477,9 @@ class Client extends MatrixApi {
   }
 
   /// Searches in the local cache for the given room and returns null if not
-  /// found. If you have loaded the [loadArchive()] before, it can also return
-  /// archived rooms.
+  /// found. This does not include archived rooms.
   Room? getRoomById(String id) {
-    for (final room in <Room>[...rooms, ..._archivedRooms.map((e) => e.room)]) {
+    for (final room in rooms) {
       if (room.id == id) return room;
     }
 
@@ -571,8 +606,15 @@ class Client extends MatrixApi {
         assert(false);
       }
 
-      final loginTypes = await getLoginFlows() ?? [];
-      if (!loginTypes.any((f) => supportedLoginTypes.contains(f.type))) {
+      final loginTypesResult = await Result.capture(getLoginFlows());
+      final loginTypes = loginTypesResult.asValue?.value ?? [];
+      final loginTypesError = loginTypesResult.asError?.error;
+      if (loginTypesError != null && loginTypesError is! MatrixException) {
+        throw loginTypesError;
+      }
+
+      if (loginTypes.isNotEmpty &&
+          !loginTypes.any((f) => supportedLoginTypes.contains(f.type))) {
         throw BadServerLoginTypesException(
           loginTypes.map((f) => f.type).toSet(),
           supportedLoginTypes,
@@ -797,7 +839,7 @@ class Client extends MatrixApi {
       Logs().e('Logout failed', e, s);
       rethrow;
     } finally {
-      await clear();
+      await clear(reason: SessionClearReason.logout);
     }
   }
 
@@ -812,7 +854,7 @@ class Client extends MatrixApi {
 
     final futures = <Future>[];
     futures.add(super.logoutAll());
-    futures.add(clear());
+    futures.add(clear(reason: SessionClearReason.logout));
     await Future.wait(futures).catchError((e, s) {
       Logs().e('Logout all failed', e, s);
       throw e;
@@ -1177,25 +1219,6 @@ class Client extends MatrixApi {
     );
   }
 
-  final List<ArchivedRoom> _archivedRooms = [];
-
-  /// Return an archive room containing the room and the timeline for a specific archived room.
-  ArchivedRoom? getArchiveRoomFromCache(String roomId) {
-    for (var i = 0; i < _archivedRooms.length; i++) {
-      final archive = _archivedRooms[i];
-      if (archive.room.id == roomId) return archive;
-    }
-    return null;
-  }
-
-  /// Remove all the archives stored in cache.
-  void clearArchivesFromCache() {
-    _archivedRooms.clear();
-  }
-
-  @Deprecated('Use [loadArchive()] instead.')
-  Future<List<Room>> get archive => loadArchive();
-
   /// Fetch all the archived rooms from the server and return the list of the
   /// room. If you want to have the Timelines bundled with it, use
   /// loadArchiveWithTimeline instead.
@@ -1215,8 +1238,6 @@ class Client extends MatrixApi {
   /// Fetch the archived rooms from the server and return them as a list of
   /// [ArchivedRoom] objects containing the [Room] and the associated [Timeline].
   Future<List<ArchivedRoom>> loadArchiveWithTimeline() async {
-    _archivedRooms.clear();
-
     final filter = jsonEncode(
       Filter(
         room: RoomFilter(
@@ -1236,9 +1257,48 @@ class Client extends MatrixApi {
     _archiveCacheBusterTimeout = (_archiveCacheBusterTimeout + 1) % 30;
 
     final leave = syncResp.rooms?.leave;
+    final archivedRooms = <ArchivedRoom>[];
     if (leave != null) {
       for (final entry in leave.entries) {
-        await _storeArchivedRoom(entry.key, entry.value);
+        final room = Room(
+          id: entry.key,
+          prev_batch: entry.value.timeline?.prevBatch,
+          membership: Membership.leave,
+          client: this,
+          roomAccountData:
+              entry.value.accountData?.asMap().map(
+                (k, v) => MapEntry(v.type, v),
+              ) ??
+              <String, BasicEvent>{},
+        );
+        entry.value.state?.forEach(room.setState);
+        final timeline = Timeline(
+          room: room,
+          chunk: TimelineChunk(
+            events:
+                entry.value.timeline?.events?.reversed
+                    .toList() // we display the event in the other sence
+                    .map((e) => Event.fromMatrixEvent(e, room))
+                    .toList() ??
+                [],
+            prevBatch: entry.value.timeline?.prevBatch ?? '',
+          ),
+        );
+        for (var i = 0; i < timeline.events.length; i++) {
+          // Try to decrypt encrypted events but don't update the database.
+          if (room.encrypted && room.client.encryptionEnabled) {
+            if (timeline.events[i].type == EventTypes.Encrypted) {
+              await room.client.encryption!
+                  .decryptRoomEvent(timeline.events[i])
+                  .then((decrypted) => timeline.events[i] = decrypted);
+            }
+          }
+        }
+        room.lastEvent = timeline.events.firstWhereOrNull(
+          (event) => roomPreviewLastEvents.contains(event.type),
+        );
+
+        archivedRooms.add(ArchivedRoom(room: room, timeline: timeline));
       }
     }
 
@@ -1246,84 +1306,13 @@ class Client extends MatrixApi {
     // best indicator we have to sort them. For archived rooms where we don't
     // have any, we move them to the bottom.
     final beginningOfTime = DateTime.fromMillisecondsSinceEpoch(0);
-    _archivedRooms.sort(
+    archivedRooms.sort(
       (b, a) => (a.room.lastEvent?.originServerTs ?? beginningOfTime).compareTo(
         b.room.lastEvent?.originServerTs ?? beginningOfTime,
       ),
     );
 
-    return _archivedRooms;
-  }
-
-  /// [_storeArchivedRoom]
-  /// @leftRoom we can pass a room which was left so that we don't loose states
-  Future<void> _storeArchivedRoom(
-    String id,
-    LeftRoomUpdate update, {
-    Room? leftRoom,
-  }) async {
-    final roomUpdate = update;
-    final archivedRoom =
-        leftRoom ??
-        Room(
-          id: id,
-          membership: Membership.leave,
-          client: this,
-          roomAccountData:
-              roomUpdate.accountData?.asMap().map(
-                (k, v) => MapEntry(v.type, v),
-              ) ??
-              <String, BasicEvent>{},
-        );
-    // Set membership of room to leave, in the case we got a left room passed, otherwise
-    // the left room would have still membership join, which would be wrong for the setState later
-    archivedRoom.membership = Membership.leave;
-    final timeline = Timeline(
-      room: archivedRoom,
-      chunk: TimelineChunk(
-        events:
-            roomUpdate.timeline?.events?.reversed
-                .toList() // we display the event in the other seence
-                .map((e) => Event.fromMatrixEvent(e, archivedRoom))
-                .toList() ??
-            [],
-      ),
-    );
-
-    archivedRoom.prev_batch = update.timeline?.prevBatch;
-
-    final stateEvents = roomUpdate.state;
-    if (stateEvents != null) {
-      await _handleRoomEvents(
-        archivedRoom,
-        stateEvents,
-        EventUpdateType.state,
-        store: false,
-      );
-    }
-
-    final timelineEvents = roomUpdate.timeline?.events;
-    if (timelineEvents != null) {
-      await _handleRoomEvents(
-        archivedRoom,
-        timelineEvents.toList(),
-        EventUpdateType.timeline,
-        store: false,
-      );
-    }
-
-    for (var i = 0; i < timeline.events.length; i++) {
-      // Try to decrypt encrypted events but don't update the database.
-      if (archivedRoom.encrypted && archivedRoom.client.encryptionEnabled) {
-        if (timeline.events[i].type == EventTypes.Encrypted) {
-          await archivedRoom.client.encryption!
-              .decryptRoomEvent(timeline.events[i])
-              .then((decrypted) => timeline.events[i] = decrypted);
-        }
-      }
-    }
-
-    _archivedRooms.add(ArchivedRoom(room: archivedRoom, timeline: timeline));
+    return archivedRooms;
   }
 
   @override
@@ -1647,7 +1636,7 @@ class Client extends MatrixApi {
 
     final export = await database.exportDump();
 
-    await clear();
+    await clear(reason: SessionClearReason.exportDump);
     return export;
   }
 
@@ -1776,6 +1765,11 @@ class Client extends MatrixApi {
 
   /// Called when the login state e.g. user gets logged out.
   final CachedStreamController<LoginState> onLoginStateChanged =
+      CachedStreamController();
+
+  /// Called just before [onLoginStateChanged] reports [LoginState.loggedOut]
+  /// because the local session was dropped, so listeners can tell why.
+  final CachedStreamController<SessionClearReason> onSessionCleared =
       CachedStreamController();
 
   /// Called when the local cache is reset
@@ -2263,7 +2257,7 @@ class Client extends MatrixApi {
         deviceName: deviceName,
         olmAccount: olmAccount,
       );
-      await clear();
+      await clear(reason: SessionClearReason.initFailed);
       throw clientInitException;
     } finally {
       _initLock = false;
@@ -2276,7 +2270,10 @@ class Client extends MatrixApi {
   }
 
   /// Resets all settings and stops the synchronisation.
-  Future<void> clear() async {
+  Future<void> clear({
+    SessionClearReason reason = SessionClearReason.unspecified,
+  }) async {
+    Logs().i('Clearing the session because of $reason');
     Logs().outputEvents.clear();
     DatabaseApi? legacyDatabase;
     if (legacyDatabaseBuilder != null) {
@@ -2303,6 +2300,7 @@ class Client extends MatrixApi {
     _eventsPendingDecryption.clear();
     await encryption?.dispose();
     _encryption = null;
+    onSessionCleared.add(reason);
     onLoginStateChanged.add(LoginState.loggedOut);
   }
 
@@ -2373,7 +2371,7 @@ class Client extends MatrixApi {
           'Unable to refresh session after soft logout. Clearing session...',
           e,
         );
-        await clear();
+        await clear(reason: SessionClearReason.softLogoutRefreshFailed);
         rethrow;
       } catch (e, s) {
         Logs().e(
@@ -2513,8 +2511,12 @@ class Client extends MatrixApi {
           Logs().w('The user has been logged out! Try to refresh token...', e);
           await _handleSoftLogout();
         } else {
-          Logs().w('The user has been logged out!', e);
-          await clear();
+          Logs().w(
+            'The user has been logged out! No refresh token and the server did '
+            'not offer a soft logout, so the session cannot be recovered.',
+            e,
+          );
+          await clear(reason: SessionClearReason.unknownToken);
         }
       }
     } on SyncConnectionException catch (e, s) {
@@ -2799,12 +2801,15 @@ class Client extends MatrixApi {
             room,
             timelineEvents,
             timelineUpdateType,
-            store: false,
+            store: syncFilter.room?.includeLeave == true,
           );
         }
         final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
           for (final event in accountData) {
+            if (syncFilter.room?.includeLeave == true) {
+              await database.storeRoomAccountData(room.id, event);
+            }
             room.roomAccountData[event.type] = event;
           }
         }
@@ -2814,7 +2819,7 @@ class Client extends MatrixApi {
             room,
             state,
             EventUpdateType.state,
-            store: false,
+            store: syncFilter.room?.includeLeave == true,
           );
         }
       }
@@ -3051,25 +3056,33 @@ class Client extends MatrixApi {
                   summary: chatUpdate.summary,
                   client: this,
                 )
-              : Room(id: roomId, membership: membership, client: this));
+              : Room(
+                  id: roomId,
+                  membership: membership,
+                  prev_batch: chatUpdate is LeftRoomUpdate
+                      ? chatUpdate.timeline?.prevBatch
+                      : null,
+                  client: this,
+                ));
 
     // Does the chat already exist in the list rooms?
     if (!found && membership != Membership.leave) {
-      // Check if the room is not in the rooms in the invited list
-      if (_archivedRooms.isNotEmpty) {
-        _archivedRooms.removeWhere((archive) => archive.room.id == roomId);
-      }
       final position = membership == Membership.invite ? 0 : rooms.length;
       // Add the new chat to the list
       rooms.insert(position, room);
+    } else if (membership == .invite && found) {
+      rooms[roomIndex].membership = membership;
     }
     // If the membership is "leave" then remove the item and stop here
-    else if (found && membership == Membership.leave) {
-      rooms.removeAt(roomIndex);
-
-      // in order to keep the archive in sync, add left room to archive
-      if (chatUpdate is LeftRoomUpdate) {
-        await _storeArchivedRoom(room.id, chatUpdate, leftRoom: room);
+    else if (membership == Membership.leave) {
+      if (syncFilter.room?.includeLeave == true) {
+        if (!found) {
+          rooms.add(room);
+        } else {
+          rooms[roomIndex].membership = membership;
+        }
+      } else if (found) {
+        rooms.removeAt(roomIndex);
       }
     }
     // Update notification, highlight count and/or additional information
@@ -3142,7 +3155,12 @@ class Client extends MatrixApi {
         // Update the room state:
         final stateKey = event.stateKey;
         if (stateKey != null) {
-          if (!room.partial || importantStateEvents.contains(event.type)) {
+          final memberAlreadyInMemory =
+              event.type == EventTypes.RoomMember &&
+              room.getState(EventTypes.RoomMember, stateKey) != null;
+          if (!room.partial ||
+              importantStateEvents.contains(event.type) ||
+              memberAlreadyInMemory) {
             room.setState(event);
           }
 
@@ -3741,13 +3759,28 @@ class Client extends MatrixApi {
     // Don't send this message to blocked devices, and if specified onlyVerified
     // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
+      final skipped = deviceKeys
+          .where(
+            (deviceKey) =>
+                deviceKey.blocked || (onlyVerified && !deviceKey.verified),
+          )
+          .map((deviceKey) => '${deviceKey.userId}:${deviceKey.deviceId}')
+          .toList();
+      if (skipped.isNotEmpty) {
+        Logs().w(
+          'Not sending $eventType to $skipped, they are blocked or unverified',
+        );
+      }
       deviceKeys.removeWhere(
         (DeviceKeys deviceKeys) =>
             deviceKeys.blocked ||
             (deviceKeys.userId == userID && deviceKeys.deviceId == deviceID) ||
             (onlyVerified && !deviceKeys.verified),
       );
-      if (deviceKeys.isEmpty) return;
+      if (deviceKeys.isEmpty) {
+        Logs().w('Not sending $eventType, no devices are left to send it to');
+        return;
+      }
     }
 
     // So that we can guarantee order of encrypted to_device messages to be preserved we

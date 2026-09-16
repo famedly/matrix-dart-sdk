@@ -5,9 +5,10 @@
 import 'dart:async';
 import 'dart:js_interop';
 
-import 'package:matrix/matrix_api_lite/utils/logs.dart';
-import 'package:matrix/src/database/zone_transaction_mixin.dart';
 import 'package:web/web.dart';
+
+import '../../matrix_api_lite/utils/logs.dart';
+import 'zone_transaction_mixin.dart';
 
 /// Key-Value store abstraction over IndexedDB so that the sdk database can use
 /// a single interface for all platforms. API is inspired by Hive.
@@ -187,6 +188,18 @@ class Box<V> {
   Future<List<String>> getAllKeys([IDBTransaction? txn]) async {
     if (_quickAccessCachedKeys != null) return _quickAccessCachedKeys!.toList();
     txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
+    final keys = await _getAllKeysFromStore(txn);
+    _quickAccessCachedKeys = keys.toSet();
+    return keys;
+  }
+
+  /// Reads the keys from the object store, bypassing [_quickAccessCachedKeys].
+  ///
+  /// [put] and [delete] keep the cached key set complete, but in their own
+  /// mutation order rather than in the store's key order, while
+  /// [IDBObjectStore.getAll] always returns the values in key order. So only
+  /// freshly read keys may be zipped against those values.
+  Future<List<String>> _getAllKeysFromStore(IDBTransaction txn) async {
     final store = txn.objectStore(name);
     final getAllKeysCompleter = Completer();
     final request = store.getAllKeys();
@@ -200,9 +213,7 @@ class Box<V> {
       getAllKeysCompleter.complete();
     }.toJS;
     await getAllKeysCompleter.future;
-    final keys = (request.result?.dartify() as List?)?.cast<String>() ?? [];
-    _quickAccessCachedKeys = keys.toSet();
-    return keys;
+    return (request.result?.dartify() as List?)?.cast<String>() ?? [];
   }
 
   Future<Map<String, V>> getAllValues([IDBTransaction? txn]) async {
@@ -213,7 +224,8 @@ class Box<V> {
     /// NOTE: This is a workaround to get the keys as [IDBObjectStore.getAll()]
     /// only returns the values as a list.
     /// And using the [IDBObjectStore.openCursor()] method is not working as expected.
-    final keys = await getAllKeys(txn);
+    final keys = await _getAllKeysFromStore(txn);
+    _quickAccessCachedKeys = keys.toSet();
 
     final getAllValuesCompleter = Completer();
     final getAllValuesRequest = store.getAll();
@@ -415,6 +427,9 @@ class Box<V> {
       case const (Map<dynamic, dynamic>):
         return Map.unmodifiable(value as Map) as V;
       case const (int):
+        // Workaround that [JSAny.dartify] on wasm could turn an int into double
+        if (value is double) return value.round() as V;
+        return value as V;
       case const (double):
       case const (bool):
       case const (String):

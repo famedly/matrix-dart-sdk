@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix.dart';
+import '../../matrix.dart';
 
 class MatrixDefaultLocalizations extends MatrixLocalizations {
   const MatrixDefaultLocalizations();
@@ -311,4 +311,8 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String get pollHasBeenEnded => 'Poll has been ended';
+
+  @override
+  String incomingCallFrom(String senderName) =>
+      'Incoming call from $senderName';
 }

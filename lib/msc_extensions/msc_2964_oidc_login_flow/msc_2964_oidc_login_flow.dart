@@ -5,9 +5,10 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
+
+import '../../matrix.dart';
+import '../../src/utils/crypto/crypto.dart';
 
 extension Msc2964OidcLoginFlow on Client {
   /// Initializes a new OIDC Login session by creating a state, a code verifier
@@ -96,8 +97,13 @@ extension Msc2964OidcLoginFlow on Client {
       body: body,
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
-    if (response.statusCode != 200) {
+    if (response.statusCode >= 400) {
       unexpectedResponse(response, response.bodyBytes);
+    }
+    if (response.statusCode != 200) {
+      Logs().w(
+        'Expected a status code of 200 but got ${response.statusCode} for OIDC login.',
+      );
     }
     final responseString = utf8.decode(response.bodyBytes);
     final oidcAuthResponse = OidcAuthResponse.fromJson(
@@ -129,8 +135,13 @@ extension Msc2964OidcLoginFlow on Client {
       },
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
-    if (response.statusCode != 200) {
+    if (response.statusCode >= 400) {
       unexpectedResponse(response, response.bodyBytes);
+    }
+    if (response.statusCode != 200) {
+      Logs().w(
+        'Expected a status code of 200 but got ${response.statusCode} for OIDC refresh.',
+      );
     }
     final responseString = utf8.decode(response.bodyBytes);
     return OidcAuthResponse.fromJson(jsonDecode(responseString));
@@ -151,8 +162,13 @@ extension Msc2964OidcLoginFlow on Client {
       },
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
-    if (response.statusCode != 200) {
+    if (response.statusCode >= 400) {
       unexpectedResponse(response, response.bodyBytes);
+    }
+    if (response.statusCode != 200) {
+      Logs().w(
+        'Expected a status code of 200 but got ${response.statusCode} for revoke OIDC token.',
+      );
     }
   }
 }

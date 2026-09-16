@@ -5,8 +5,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:matrix/matrix.dart';
 import 'package:path/path.dart';
+
+import '../../matrix.dart';
 
 // ignore: unused-code
 mixin DatabaseFileStorage {
@@ -55,7 +56,11 @@ mixin DatabaseFileStorage {
 
     if (await file.exists() == false) return false;
 
-    await file.delete();
+    try {
+      await file.delete();
+    } on PathNotFoundException {
+      return false;
+    }
     return true;
   }
 
@@ -72,9 +77,14 @@ mixin DatabaseFileStorage {
     for (final file in entities) {
       if (file is! File) continue;
       final stat = await file.stat();
+      if (stat.type != FileSystemEntityType.file) continue;
       if (DateTime.now().difference(stat.modified) > deleteFilesAfterDuration) {
         Logs().v('Delete old file', file.path);
-        await file.delete();
+        try {
+          await file.delete();
+        } on PathNotFoundException {
+          // File may have been removed after listing, e.g. by sendFileEvent cleanup.
+        }
       }
     }
   }

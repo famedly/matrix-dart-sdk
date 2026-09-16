@@ -5,15 +5,15 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:matrix/encryption/cross_signing.dart';
-import 'package:matrix/encryption/key_manager.dart';
-import 'package:matrix/encryption/key_verification_manager.dart';
-import 'package:matrix/encryption/olm_manager.dart';
-import 'package:matrix/encryption/ssss.dart';
-import 'package:matrix/encryption/utils/bootstrap.dart';
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/copy_map.dart';
-import 'package:matrix/src/utils/run_in_root.dart';
+import '../matrix.dart';
+import '../src/utils/copy_map.dart';
+import '../src/utils/run_in_root.dart';
+import 'cross_signing.dart';
+import 'key_manager.dart';
+import 'key_verification_manager.dart';
+import 'olm_manager.dart';
+import 'ssss.dart';
+import 'utils/bootstrap.dart';
 
 class Encryption {
   final Client client;

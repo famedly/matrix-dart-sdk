@@ -4,7 +4,7 @@
 
 import 'dart:typed_data';
 
-import 'package:matrix/matrix.dart';
+import '../../../matrix.dart';
 
 enum E2EEKeyMode { kNone, kSharedKey, kPerParticipant }
 

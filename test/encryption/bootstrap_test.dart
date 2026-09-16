@@ -122,7 +122,71 @@ void main() {
       }
 
       expect(await defaultKey.getStored('foxes'), 'floof');
+      expect(client.encryption!.ssss.defaultKeyId, bootstrap.newSsssKey!.keyId);
     }, timeout: Timeout(Duration(minutes: 2)));
+
+    test(
+      'keep old recovery key when cross signing uia is cancelled',
+      () async {
+        final oldKeyId = client.encryption!.ssss.defaultKeyId!;
+        final uiaSub = client.onUiaRequest.stream.listen((uia) => uia.cancel());
+
+        const path = '/client/v3/keys/device_signing/upload';
+        final posts = FakeMatrixApi.currentApi!.api['POST']!;
+        final original = posts[path];
+        posts[path] = (_) => {
+          'errcode': 'M_UNAUTHORIZED',
+          'error': 'Authentication required',
+          'session': 'bootstrap-uia-cancel-test',
+          'flows': [
+            {
+              'stages': ['m.login.password'],
+            },
+          ],
+          'params': <String, dynamic>{},
+        };
+        try {
+          Bootstrap? bootstrap;
+          bootstrap = client.encryption!.bootstrap(
+            onUpdate: (bootstrap) async {
+              if (bootstrap.state == BootstrapState.askWipeSsss) {
+                bootstrap.wipeSsss(true);
+              } else if (bootstrap.state == BootstrapState.askNewSsss) {
+                await bootstrap.newSsss('canceltestfoxies');
+              } else if (bootstrap.state ==
+                  BootstrapState.askWipeCrossSigning) {
+                await bootstrap.wipeCrossSigning(true);
+              } else if (bootstrap.state ==
+                  BootstrapState.askSetupCrossSigning) {
+                await bootstrap.askSetupCrossSigning(
+                  setupMasterKey: true,
+                  setupSelfSigningKey: true,
+                  setupUserSigningKey: true,
+                );
+              }
+            },
+          );
+          while (bootstrap.state != BootstrapState.error) {
+            await Future.delayed(Duration(milliseconds: 50));
+          }
+          expect(bootstrap.state, BootstrapState.error);
+        } finally {
+          if (original != null) {
+            posts[path] = original;
+          } else {
+            posts.remove(path);
+          }
+        }
+
+        await uiaSub.cancel();
+
+        expect(client.encryption!.ssss.defaultKeyId, oldKeyId);
+        final oldKey = client.encryption!.ssss.open(oldKeyId);
+        await oldKey.unlock(passphrase: 'newfoxies');
+        expect(await oldKey.getStored('foxes'), 'floof');
+      },
+      timeout: Timeout(Duration(minutes: 2)),
+    );
 
     test(
       'change passphrase with multiple keys',
@@ -201,6 +265,7 @@ void main() {
       }
       final defaultKey = client.encryption!.ssss.open();
       await defaultKey.unlock(passphrase: 'thenewestfoxies');
+      expect(client.encryption!.ssss.defaultKeyId, defaultKey.keyId);
     }, timeout: Timeout(Duration(minutes: 2)));
 
     test(
@@ -216,6 +281,27 @@ void main() {
 
         expect(bootstrap.state, isNot(BootstrapState.error));
         expect(bootstrap.newSsssKey, isNotNull);
+      },
+      timeout: Timeout(Duration(minutes: 2)),
+    );
+
+    test(
+      'valid default key without secrets starts at askWipeSsss',
+      () async {
+        final testClient = await getClient();
+        await testClient.initCryptoIdentity();
+        for (final type in [
+          EventTypes.CrossSigningMasterKey,
+          EventTypes.CrossSigningSelfSigning,
+          EventTypes.CrossSigningUserSigning,
+          EventTypes.MegolmBackup,
+        ]) {
+          await testClient.setAccountData(testClient.userID!, type, {});
+        }
+
+        final bootstrap = testClient.encryption!.bootstrap();
+
+        expect(bootstrap.state, BootstrapState.askWipeSsss);
       },
       timeout: Timeout(Duration(minutes: 2)),
     );

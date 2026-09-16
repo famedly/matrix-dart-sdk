@@ -10,8 +10,9 @@ import 'dart:typed_data';
 
 import 'package:blurhash_dart/blurhash_dart.dart';
 import 'package:image/image.dart';
-import 'package:matrix/matrix.dart';
 import 'package:mime/mime.dart';
+
+import '../../matrix.dart';
 
 class MatrixFile {
   final Uint8List bytes;
@@ -350,6 +351,43 @@ class MatrixVideoFile extends MatrixFile {
     if (width != null) 'w': width,
     if (height != null) 'h': height,
     if (duration != null) 'duration': duration,
+  });
+}
+
+class MatrixVideoThumbnailArguments {
+  final Uint8List bytes;
+  final String fileName;
+  final String? mimeType;
+  final int maxDimension;
+
+  const MatrixVideoThumbnailArguments({
+    required this.bytes,
+    required this.fileName,
+    this.mimeType,
+    this.maxDimension = Client.defaultThumbnailSize,
+  });
+}
+
+class MatrixVideoThumbnailResponse {
+  final Uint8List bytes;
+  final int width;
+  final int height;
+  final String? mimeType;
+  final String? blurhash;
+
+  final int? originalWidth;
+  final int? originalHeight;
+  final int? duration;
+
+  const MatrixVideoThumbnailResponse({
+    required this.bytes,
+    required this.width,
+    required this.height,
+    this.mimeType,
+    this.blurhash,
+    this.originalWidth,
+    this.originalHeight,
+    this.duration,
   });
 }
 

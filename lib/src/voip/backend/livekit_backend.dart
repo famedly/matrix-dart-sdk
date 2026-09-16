@@ -6,8 +6,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/crypto/crypto.dart';
+import '../../../matrix.dart';
+import '../../utils/crypto/crypto.dart';
 
 class LiveKitBackend extends CallBackend {
   final String livekitServiceUrl;
@@ -323,16 +323,25 @@ class LiveKitBackend extends CallBackend {
     final unencryptedDataToSend = <String, Map<String, Map<String, Object>>>{};
 
     for (final participant in remoteParticipants) {
-      if (participant.deviceId == null) continue;
+      if (participant.deviceId == null) {
+        Logs().w(
+          '[VOIP E2EE] _sendToDeviceEvent: not sending $eventType to ${participant.id}, it has no device id',
+        );
+        continue;
+      }
       if (mustEncrypt) {
         await groupCall.client.userDeviceKeysLoading;
         final deviceKey = groupCall
             .client
             .userDeviceKeys[participant.userId]
             ?.deviceKeys[participant.deviceId];
-        if (deviceKey != null) {
-          mustEncryptkeysToSendTo.add(deviceKey);
+        if (deviceKey == null) {
+          Logs().w(
+            '[VOIP E2EE] _sendToDeviceEvent: not sending $eventType to ${participant.id}, we have no device keys for it',
+          );
+          continue;
         }
+        mustEncryptkeysToSendTo.add(deviceKey);
       } else {
         unencryptedDataToSend.addAll({
           participant.userId: {participant.deviceId!: data},

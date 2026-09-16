@@ -7,11 +7,11 @@ import 'dart:core';
 
 import 'package:collection/collection.dart';
 
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/cached_stream_controller.dart';
-import 'package:matrix/src/voip/models/call_reaction_payload.dart';
-import 'package:matrix/src/voip/models/voip_id.dart';
-import 'package:matrix/src/voip/utils/stream_helper.dart';
+import '../../matrix.dart';
+import '../utils/cached_stream_controller.dart';
+import 'models/call_reaction_payload.dart';
+import 'models/voip_id.dart';
+import 'utils/stream_helper.dart';
 
 /// Holds methods for managing a group call. This class is also responsible for
 /// holding and managing the individual `CallSession`s in a group call.
@@ -424,6 +424,7 @@ class GroupCallSession {
       metadata: {
         'device_id': client.deviceID,
         'call_id': groupCallId,
+        'scope': scope,
         'redacts_type': EventTypes.GroupCallMemberReaction,
       },
     );

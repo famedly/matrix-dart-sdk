@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/matrix_api_lite.dart';
+import '../../matrix_api_lite.dart';
 
 abstract class MatrixSignableKey {
   String userId;
@@ -63,12 +63,12 @@ class MatrixCrossSigningKey extends MatrixSignableKey {
   String? get publicKey => identifier;
 
   MatrixCrossSigningKey(
-    String userId,
+    super.userId,
     this.usage,
-    Map<String, String> keys,
-    Map<String, Map<String, String>> signatures, {
-    Map<String, Object?>? unsigned,
-  }) : super(userId, keys, signatures, unsigned: unsigned);
+    super.keys,
+    Map<String, Map<String, String>> super.signatures, {
+    super.unsigned,
+  });
 
   @override
   String? get identifier => keys.values.first;
@@ -93,13 +93,13 @@ class MatrixDeviceKeys extends MatrixSignableKey {
       unsigned?.tryGet<String>('device_display_name');
 
   MatrixDeviceKeys(
-    String userId,
+    super.userId,
     this.deviceId,
     this.algorithms,
-    Map<String, String> keys,
-    Map<String, Map<String, String>> signatures, {
-    Map<String, Object?>? unsigned,
-  }) : super(userId, keys, signatures, unsigned: unsigned);
+    super.keys,
+    Map<String, Map<String, String>> super.signatures, {
+    super.unsigned,
+  });
 
   @override
   String? get identifier => deviceId;

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:matrix/src/room.dart';
+import '../../../src/room.dart';
 
 class MatrixWidget {
   final Room room;

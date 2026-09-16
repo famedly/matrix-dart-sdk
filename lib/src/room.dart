@@ -9,14 +9,15 @@ import 'dart:math';
 import 'package:async/async.dart';
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
+import 'package:mime/mime.dart';
 
-import 'package:matrix/matrix.dart';
-import 'package:matrix/src/models/timeline_chunk.dart';
-import 'package:matrix/src/utils/cached_stream_controller.dart';
-import 'package:matrix/src/utils/file_send_request_credentials.dart';
-import 'package:matrix/src/utils/markdown.dart';
-import 'package:matrix/src/utils/marked_unread.dart';
-import 'package:matrix/src/utils/space_child.dart';
+import '../matrix.dart';
+import 'models/timeline_chunk.dart';
+import 'utils/cached_stream_controller.dart';
+import 'utils/file_send_request_credentials.dart';
+import 'utils/markdown.dart';
+import 'utils/marked_unread.dart';
+import 'utils/space_child.dart';
 
 /// max PDU size for server to accept the event with some buffer incase the server adds unsigned data f.ex age
 /// https://spec.matrix.org/v1.9/client-server-api/#size-limits
@@ -813,7 +814,8 @@ class Room {
   /// wait until the file has been uploaded.
   /// Optionally specify [extraContent] to tack on to the event.
   ///
-  /// In case [file] is a [MatrixImageFile], [thumbnail] is automatically
+  /// In case [file] is a [MatrixImageFile] or a [MatrixVideoFile] (with
+  /// [Client.customVideoThumbnailGenerator] set), [thumbnail] is automatically
   /// computed unless it is explicitly provided.
   /// Set [shrinkImageMaxDimension] to for example `1600` if you want to shrink
   /// your image before sending. This is ignored if the File is not a
@@ -922,6 +924,75 @@ class Room {
         }
       } catch (e, s) {
         Logs().e('Unable to shrink image before sending!', e, s);
+      }
+    }
+
+    final customVideoThumbnailGenerator = client.customVideoThumbnailGenerator;
+    if (file is MatrixVideoFile &&
+        thumbnail == null &&
+        customVideoThumbnailGenerator != null) {
+      syncUpdate
+              .rooms!
+              .join!
+              .values
+              .first
+              .timeline!
+              .events!
+              .first
+              .unsigned![fileSendingStatusKey] =
+          FileSendingStatus.generatingThumbnail.name;
+      try {
+        final videoThumbnail = await customVideoThumbnailGenerator(
+          MatrixVideoThumbnailArguments(
+            bytes: file.bytes,
+            fileName: file.name,
+            mimeType: file.mimeType,
+          ),
+        );
+        if (videoThumbnail != null) {
+          final thumbnailMimeType = videoThumbnail.mimeType;
+          // Only append a file extension if the mimetype is actually known,
+          // instead of guessing one:
+          final thumbnailExtension = thumbnailMimeType == null
+              ? null
+              : extensionFromMime(thumbnailMimeType);
+          thumbnail = MatrixImageFile(
+            bytes: videoThumbnail.bytes,
+            name:
+                '${file.name}.thumbnail${thumbnailExtension == null ? '' : '.$thumbnailExtension'}',
+            mimeType: thumbnailMimeType,
+            width: videoThumbnail.width,
+            height: videoThumbnail.height,
+            blurhash: videoThumbnail.blurhash,
+          );
+          await client.database.storeFile(
+            Uri(scheme: 'cache', host: 'thumbnail', path: txid),
+            thumbnail.bytes,
+            DateTime.now().millisecondsSinceEpoch,
+          );
+          file = MatrixVideoFile(
+            bytes: file.bytes,
+            name: file.name,
+            mimeType: file.mimeType,
+            width: file.width ?? videoThumbnail.originalWidth,
+            height: file.height ?? videoThumbnail.originalHeight,
+            duration: file.duration ?? videoThumbnail.duration,
+          );
+          syncUpdate
+              .rooms!
+              .join!
+              .values
+              .first
+              .timeline!
+              .events!
+              .first
+              .content['info'] = {
+            ...file.info,
+            'thumbnail_info': thumbnail.info,
+          };
+        }
+      } catch (e, s) {
+        Logs().e('Unable to generate video thumbnail before sending!', e, s);
       }
     }
 
@@ -1077,8 +1148,8 @@ class Room {
           },
         if (thumbnail != null) 'thumbnail_info': thumbnail.info,
         if (thumbnail?.blurhash != null &&
-            file is MatrixImageFile &&
-            file.blurhash == null)
+            ((file is MatrixImageFile && file.blurhash == null) ||
+                file is MatrixVideoFile))
           'xyz.amorgan.blurhash': thumbnail!.blurhash,
       },
       ...?extraContent,
@@ -1424,12 +1495,7 @@ class Room {
   Future<void> forget() async {
     await client.database.forgetRoom(id);
     await client.forgetRoom(id);
-    // Update archived rooms, otherwise an archived room may still be in the
-    // list after a forget room call
-    final roomIndex = client.archivedRooms.indexWhere((r) => r.room.id == id);
-    if (roomIndex != -1) {
-      client.archivedRooms.removeAt(roomIndex);
-    }
+    client.rooms.remove(this);
     return;
   }
 
@@ -1705,20 +1771,13 @@ class Room {
       await client.database.transaction(() async {
         events = await client.database.getEventList(this, limit: limit);
       });
-    } else {
-      final archive = client.getArchiveRoomFromCache(id);
-      events = archive?.timeline.events.toList() ?? [];
-      for (var i = 0; i < events.length; i++) {
-        // Try to decrypt encrypted events but don't update the database.
-        if (encrypted && client.encryptionEnabled) {
-          if (events[i].type == EventTypes.Encrypted) {
-            events[i] = await client.encryption!.decryptRoomEvent(events[i]);
-          }
-        }
-      }
     }
 
-    var chunk = TimelineChunk(events: events);
+    var chunk = TimelineChunk(
+      events: events,
+      // Leave rooms paginate via getRoomEvents which uses chunk.prevBatch.
+      prevBatch: isArchived ? (prev_batch ?? '') : '',
+    );
     // Load the timeline arround eventContextId if set
     if (eventContextId != null) {
       if (!events.any((Event event) => event.eventId == eventContextId)) {
@@ -1835,6 +1894,7 @@ class Room {
     ],
     bool suppressWarning = false,
     bool? cache,
+    bool enforceFetchFromServer = false,
   ]) async {
     if (!participantListComplete || partial) {
       // we aren't fully loaded, maybe the users are in the database
@@ -1849,7 +1909,7 @@ class Room {
     }
 
     // Do not request users from the server if we have already have a complete list locally.
-    if (participantListComplete) {
+    if (participantListComplete && !enforceFetchFromServer) {
       return getParticipants(membershipFilter);
     }
 
@@ -1986,13 +2046,10 @@ class Room {
     required bool requestProfile,
   }) async {
     // Is user already in cache?
-
-    // If not in cache, try the database
     var foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
-    // If the room is not postloaded, check the database
-    if (partial && foundUser == null) {
-      foundUser = await client.database.getUser(mxID, this);
+    if (partial) {
+      foundUser = await client.database.getUser(mxID, this) ?? foundUser;
     }
 
     // If not in the database, try fetching the member from the server
@@ -2051,7 +2108,8 @@ class Room {
     // Set user in the local state if the state changed.
     // If we set the state unconditionally, we might end up with a client calling this over and over thinking the user changed.
     if (userFromCurrentState == null ||
-        userFromCurrentState.displayName != foundUser.displayName) {
+        userFromCurrentState.displayName != foundUser.displayName ||
+        userFromCurrentState.avatarUrl != foundUser.avatarUrl) {
       setState(foundUser);
       // ignore: deprecated_member_use_from_same_package
       onUpdate.add(id);
@@ -2075,7 +2133,7 @@ class Room {
     String mxID, {
     bool ignoreErrors = false,
     bool requestState = true,
-    bool requestProfile = true,
+    bool? requestProfile,
   }) async {
     assert(mxID.isValidMatrixIdStrict());
 
@@ -2083,7 +2141,8 @@ class Room {
       mxID: mxID,
       ignoreErrors: ignoreErrors,
       requestState: requestState,
-      requestProfile: requestProfile,
+      requestProfile:
+          requestProfile ?? client.autoRequestProfileForMissingUsers,
     );
 
     final cache = _inflightUserRequests[parameters] ??= AsyncCache.ephemeral();
@@ -2094,7 +2153,8 @@ class Room {
           mxID,
           ignoreErrors: ignoreErrors,
           requestState: requestState,
-          requestProfile: requestProfile,
+          requestProfile:
+              requestProfile ?? client.autoRequestProfileForMissingUsers,
         ),
       );
       _inflightUserRequests.remove(parameters);
@@ -2457,6 +2517,12 @@ class Room {
     String eventId, {
     String? reason,
     String? txid,
+
+    /// If true the client checks the `/versions` endpoint if the server
+    /// supports MSC3912 for relation based redaction. Otherwise the client
+    /// fetches all edits and redacts them in a loop by themself, while it
+    /// auto resolves rate limits, which can take some time.
+    bool redactAllEdits = false,
   }) async {
     // Create new transaction id
     String messageID;
@@ -2468,6 +2534,39 @@ class Room {
     }
     final data = <String, dynamic>{};
     if (reason != null) data['reason'] = reason;
+
+    if (!redactAllEdits) {
+      return await client.redactEvent(id, eventId, messageID, reason: reason);
+    }
+
+    final versions = await client.getVersions();
+    if (versions.unstableFeatures?['org.matrix.msc3912'] == true) {
+      return await client.redactEventWithRelTypes(
+        id,
+        eventId,
+        messageID,
+        reason: reason,
+        withRelTypes: ['m.replace'],
+      );
+    }
+
+    final edits = await client.getRelatingEventsWithRelType(
+      id,
+      eventId,
+      RelationshipTypes.edit,
+    );
+    for (final edit in edits.chunk) {
+      final txnid = client.generateUniqueTransactionId();
+      try {
+        await client.redactEvent(id, edit.eventId, txnid, reason: reason);
+      } on MatrixException catch (e) {
+        final retryAfterMs = e.retryAfterMs;
+        if (retryAfterMs == null) rethrow;
+        await Future.delayed(Duration(milliseconds: retryAfterMs));
+        await client.redactEvent(id, edit.eventId, txnid, reason: reason);
+      }
+    }
+
     return await client.redactEvent(id, eventId, messageID, reason: reason);
   }
 
@@ -2589,7 +2688,15 @@ class Room {
   Future<List<DeviceKeys>> getUserDeviceKeys() async {
     await client.userDeviceKeysLoading;
     final deviceKeys = <DeviceKeys>[];
-    final users = await requestParticipants();
+
+    final users = await requestParticipants(
+      const [Membership.join, Membership.invite, Membership.knock],
+      true,
+      true,
+      // If this is our first megolm session we want to refetch all members
+      // from the server
+      client.encryption?.keyManager.getOutboundGroupSession(id) == null,
+    );
     users.removeWhere(
       (user) => ![Membership.invite, Membership.join].contains(user.membership),
     );

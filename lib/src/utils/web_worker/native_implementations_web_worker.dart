@@ -8,8 +8,9 @@ import 'dart:js_interop';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:matrix/matrix.dart';
 import 'package:web/web.dart';
+
+import '../../../matrix.dart';
 
 // ignore: unused-code
 class NativeImplementationsWebWorker extends NativeImplementations {
