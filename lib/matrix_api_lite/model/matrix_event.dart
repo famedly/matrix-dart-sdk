@@ -10,7 +10,6 @@ class MatrixEvent extends StrippedStateEvent {
   String? roomId;
   DateTime originServerTs;
   Map<String, Object?>? unsigned;
-  Map<String, Object?>? prevContent;
   String? redacts;
 
   MatrixEvent({
@@ -22,7 +21,6 @@ class MatrixEvent extends StrippedStateEvent {
     this.roomId,
     required this.originServerTs,
     this.unsigned,
-    this.prevContent,
     this.redacts,
   });
 
@@ -33,7 +31,6 @@ class MatrixEvent extends StrippedStateEvent {
         json['origin_server_ts'] as int,
       ),
       unsigned = (json['unsigned'] as Map<String, Object?>?)?.copy(),
-      prevContent = (json['prev_content'] as Map<String, Object?>?)?.copy(),
       redacts = json['redacts'] as String?,
       super.fromJson();
 
@@ -44,9 +41,6 @@ class MatrixEvent extends StrippedStateEvent {
     data['origin_server_ts'] = originServerTs.millisecondsSinceEpoch;
     if (unsigned != null) {
       data['unsigned'] = unsigned;
-    }
-    if (prevContent != null) {
-      data['prev_content'] = prevContent;
     }
     if (roomId != null) {
       data['room_id'] = roomId;
