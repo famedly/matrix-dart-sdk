@@ -287,175 +287,161 @@ void main() {
       },
     );
 
-    test(
-      'Scenario 2: user joins (not invited) in a later sync, then first message',
-      () async {
-        const roomId = '!1234:fakeServer.notExisting';
-        roomCounter++;
-        final dave = FakeRemoteUser(
-          '@dave$roomCounter:remote.server',
-          'DAVEDEV',
-        );
-        registerRemoteUsers([dave]);
+    test('Scenario 2: user joins (not invited) in a later sync, then first message', () async {
+      const roomId = '!1234:fakeServer.notExisting';
+      roomCounter++;
+      final dave = FakeRemoteUser('@dave$roomCounter:remote.server', 'DAVEDEV');
+      registerRemoteUsers([dave]);
 
-        // Sync 1: room creation without any invites (e.g. public room).
-        await emulateSync(
-          SyncUpdate(
-            nextBatch: 'create_$roomCounter',
-            rooms: RoomsUpdate(join: {roomId: newRoomUpdate(invited: [])}),
-          ),
-        );
+      // Sync 1: room creation without any invites (e.g. public room).
+      await emulateSync(
+        SyncUpdate(
+          nextBatch: 'create_$roomCounter',
+          rooms: RoomsUpdate(join: {roomId: newRoomUpdate(invited: [])}),
+        ),
+      );
 
-        final room = client.getRoomById(roomId)!;
-        expect(room.encrypted, true);
-        expect(
-          room.partial,
-          true,
-          reason: 'Precondition: room was never postLoaded/opened',
-        );
+      final room = client.getRoomById(roomId)!;
+      expect(room.encrypted, true);
+      expect(
+        room.partial,
+        true,
+        reason: 'Precondition: room was never postLoaded/opened',
+      );
 
-        // Sync 2: dave joins the room.
-        await emulateSync(
-          SyncUpdate(
-            nextBatch: 'join_$roomCounter',
-            rooms: RoomsUpdate(
-              join: {
-                roomId: JoinedRoomUpdate(
-                  summary: RoomSummary.fromJson({
-                    'm.joined_member_count': 2,
-                    'm.invited_member_count': 0,
-                  }),
-                  timeline: TimelineUpdate(
-                    events: [memberEvent(dave.userId, 'join', 200)],
-                    limited: false,
-                  ),
+      // Sync 2: dave joins the room.
+      await emulateSync(
+        SyncUpdate(
+          nextBatch: 'join_$roomCounter',
+          rooms: RoomsUpdate(
+            join: {
+              roomId: JoinedRoomUpdate(
+                summary: RoomSummary.fromJson({
+                  'm.joined_member_count': 2,
+                  'm.invited_member_count': 0,
+                }),
+                timeline: TimelineUpdate(
+                  events: [memberEvent(dave.userId, 'join', 200)],
+                  limited: false,
                 ),
+              ),
+            },
+          ),
+        ),
+      );
+
+      // Was dave's device list ever fetched?
+      final daveKnown =
+          client.userDeviceKeys[dave.userId]?.deviceKeys.isNotEmpty ?? false;
+
+      // Now the app sends the first message.
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('first message');
+
+      final payload = toDevicePayloadFor(dave);
+      expect(
+        daveKnown,
+        true,
+        reason: 'BUG: The device keys of the joined user were never queried!',
+      );
+      expect(
+        payload,
+        isNotNull,
+        reason: 'BUG: The room key was never sent to the joined user!',
+      );
+    });
+
+    test('Scenario 2c: join in later sync WITH device_lists.changed hint', () async {
+      const roomId = '!1234:fakeServer.notExisting';
+      roomCounter++;
+      final dave = FakeRemoteUser('@dave$roomCounter:remote.server', 'DAVEDEV');
+      registerRemoteUsers([dave]);
+
+      await emulateSync(
+        SyncUpdate(
+          nextBatch: 'create_$roomCounter',
+          rooms: RoomsUpdate(join: {roomId: newRoomUpdate(invited: [])}),
+        ),
+      );
+
+      final room = client.getRoomById(roomId)!;
+      expect(room.partial, true);
+
+      // A real server would include dave in the /members response:
+      FakeMatrixApi
+              .currentApi!
+              .api['GET']!['/client/v3/rooms/!1234%3AfakeServer.notExisting/members'] =
+          (req) => {
+            'chunk': [
+              {
+                'type': 'm.room.member',
+                'content': {'membership': 'join'},
+                'sender': client.userID!,
+                'state_key': client.userID!,
+                'event_id': '\$abcd',
+                'origin_server_ts': 1,
               },
-            ),
-          ),
-        );
+              {
+                'type': 'm.room.member',
+                'content': {'membership': 'join'},
+                'sender': dave.userId,
+                'state_key': dave.userId,
+                'event_id': '\$abcde',
+                'origin_server_ts': 2,
+              },
+            ],
+          };
 
-        // Was dave's device list ever fetched?
-        final daveKnown =
-            client.userDeviceKeys[dave.userId]?.deviceKeys.isNotEmpty ?? false;
-
-        // Now the app sends the first message.
-        FakeMatrixApi.calledEndpoints.clear();
-        await room.sendTextEvent('first message');
-
-        final payload = toDevicePayloadFor(dave);
-        expect(
-          daveKnown,
-          true,
-          reason: 'BUG: The device keys of the joined user were never queried!',
-        );
-        expect(
-          payload,
-          isNotNull,
-          reason: 'BUG: The room key was never sent to the joined user!',
-        );
-      },
-    );
-
-    test(
-      'Scenario 2c: join in later sync WITH device_lists.changed hint',
-      () async {
-        const roomId = '!1234:fakeServer.notExisting';
-        roomCounter++;
-        final dave = FakeRemoteUser(
-          '@dave$roomCounter:remote.server',
-          'DAVEDEV',
-        );
-        registerRemoteUsers([dave]);
-
-        await emulateSync(
-          SyncUpdate(
-            nextBatch: 'create_$roomCounter',
-            rooms: RoomsUpdate(join: {roomId: newRoomUpdate(invited: [])}),
-          ),
-        );
-
-        final room = client.getRoomById(roomId)!;
-        expect(room.partial, true);
-
-        // A real server would include dave in the /members response:
-        FakeMatrixApi
-                .currentApi!
-                .api['GET']!['/client/v3/rooms/!1234%3AfakeServer.notExisting/members'] =
-            (req) => {
-              'chunk': [
-                {
-                  'type': 'm.room.member',
-                  'content': {'membership': 'join'},
-                  'sender': client.userID!,
-                  'state_key': client.userID!,
-                  'event_id': '\$abcd',
-                  'origin_server_ts': 1,
-                },
-                {
-                  'type': 'm.room.member',
-                  'content': {'membership': 'join'},
-                  'sender': dave.userId,
-                  'state_key': dave.userId,
-                  'event_id': '\$abcde',
-                  'origin_server_ts': 2,
-                },
-              ],
-            };
-
-        // Sync 2: dave joined during a gappy sync: his join member event was
-        // truncated out of the limited timeline. Per spec the server includes
-        // dave in device_lists.changed ("users who now share an encrypted
-        // room with the client") - this is the *only* hint the client gets.
-        await emulateSync(
-          SyncUpdate(
-            nextBatch: 'join_$roomCounter',
-            deviceLists: DeviceListsUpdate(changed: [dave.userId]),
-            rooms: RoomsUpdate(
-              join: {
-                roomId: JoinedRoomUpdate(
-                  summary: RoomSummary.fromJson({
-                    'm.joined_member_count': 2,
-                    'm.invited_member_count': 0,
-                  }),
-                  timeline: TimelineUpdate(
-                    events: [
-                      MatrixEvent(
-                        type: 'm.room.message',
-                        content: {'msgtype': 'm.text', 'body': 'hi'},
-                        senderId: dave.userId,
-                        eventId: '\$hi_$roomCounter',
-                        originServerTs: DateTime.fromMillisecondsSinceEpoch(
-                          201,
-                        ),
-                      ),
-                    ],
-                    limited: true,
-                    prevBatch: 't_gappy',
-                  ),
+      // Sync 2: dave joined during a gappy sync: his join member event was
+      // truncated out of the limited timeline. Per spec the server includes
+      // dave in device_lists.changed ("users who now share an encrypted
+      // room with the client") - this is the *only* hint the client gets.
+      await emulateSync(
+        SyncUpdate(
+          nextBatch: 'join_$roomCounter',
+          deviceLists: DeviceListsUpdate(changed: [dave.userId]),
+          rooms: RoomsUpdate(
+            join: {
+              roomId: JoinedRoomUpdate(
+                summary: RoomSummary.fromJson({
+                  'm.joined_member_count': 2,
+                  'm.invited_member_count': 0,
+                }),
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      type: 'm.room.message',
+                      content: {'msgtype': 'm.text', 'body': 'hi'},
+                      senderId: dave.userId,
+                      eventId: '\$hi_$roomCounter',
+                      originServerTs: DateTime.fromMillisecondsSinceEpoch(201),
+                    ),
+                  ],
+                  limited: true,
+                  prevBatch: 't_gappy',
                 ),
-              },
-            ),
+              ),
+            },
           ),
-        );
+        ),
+      );
 
-        final daveKnown =
-            client.userDeviceKeys[dave.userId]?.deviceKeys.isNotEmpty ?? false;
+      final daveKnown =
+          client.userDeviceKeys[dave.userId]?.deviceKeys.isNotEmpty ?? false;
 
-        FakeMatrixApi.calledEndpoints.clear();
-        await room.sendTextEvent('first message');
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('first message');
 
-        final payload = toDevicePayloadFor(dave);
-        expect(
-          daveKnown,
-          true,
-          reason:
-              'BUG: device_lists.changed hint for an untracked user was '
-              'dropped, device keys never queried!',
-        );
-        expect(payload, isNotNull);
-      },
-    );
+      final payload = toDevicePayloadFor(dave);
+      expect(
+        daveKnown,
+        true,
+        reason:
+            'BUG: device_lists.changed hint for an untracked user was '
+            'dropped, device keys never queried!',
+      );
+      expect(payload, isNotNull);
+    });
 
     test(
       'Scenario 2b: same as 2 but room was postLoaded (open in UI)',
@@ -511,123 +497,120 @@ void main() {
       },
     );
 
-    test(
-      'Scenario 4: we join a new room ourselves and send the first message',
-      () async {
-        const roomId = '!1234:fakeServer.notExisting';
-        roomCounter++;
-        // frank created the room and invited us.
-        final frank = FakeRemoteUser(
-          '@frank$roomCounter:remote.server',
-          'FRANKDEV',
-        );
-        registerRemoteUsers([frank]);
+    test('Scenario 4: we join a new room ourselves and send the first message', () async {
+      const roomId = '!1234:fakeServer.notExisting';
+      roomCounter++;
+      // frank created the room and invited us.
+      final frank = FakeRemoteUser(
+        '@frank$roomCounter:remote.server',
+        'FRANKDEV',
+      );
+      registerRemoteUsers([frank]);
 
-        FakeMatrixApi
-                .currentApi!
-                .api['GET']!['/client/v3/rooms/!1234%3AfakeServer.notExisting/members'] =
-            (req) => {
-              'chunk': [
-                {
-                  'type': 'm.room.member',
-                  'content': {'membership': 'join'},
-                  'sender': client.userID!,
-                  'state_key': client.userID!,
-                  'event_id': '\$abcd',
-                  'origin_server_ts': 2,
-                },
-                {
-                  'type': 'm.room.member',
-                  'content': {'membership': 'join'},
-                  'sender': frank.userId,
-                  'state_key': frank.userId,
-                  'event_id': '\$abcde',
-                  'origin_server_ts': 1,
-                },
-              ],
-            };
-
-        // Sync 1: the invite arrives.
-        await emulateSync(
-          SyncUpdate(
-            nextBatch: 'invited_$roomCounter',
-            rooms: RoomsUpdate(
-              invite: {
-                roomId: InvitedRoomUpdate(
-                  inviteState: [
-                    StrippedStateEvent(
-                      type: 'm.room.create',
-                      content: {'creator': frank.userId},
-                      senderId: frank.userId,
-                      stateKey: '',
-                    ),
-                    StrippedStateEvent(
-                      type: 'm.room.encryption',
-                      content: {'algorithm': AlgorithmTypes.megolmV1AesSha2},
-                      senderId: frank.userId,
-                      stateKey: '',
-                    ),
-                    StrippedStateEvent(
-                      type: 'm.room.member',
-                      content: {'membership': 'join'},
-                      senderId: frank.userId,
-                      stateKey: frank.userId,
-                    ),
-                    StrippedStateEvent(
-                      type: 'm.room.member',
-                      content: {'membership': 'invite'},
-                      senderId: frank.userId,
-                      stateKey: client.userID,
-                    ),
-                  ],
-                ),
+      FakeMatrixApi
+              .currentApi!
+              .api['GET']!['/client/v3/rooms/!1234%3AfakeServer.notExisting/members'] =
+          (req) => {
+            'chunk': [
+              {
+                'type': 'm.room.member',
+                'content': {'membership': 'join'},
+                'sender': client.userID!,
+                'state_key': client.userID!,
+                'event_id': '\$abcd',
+                'origin_server_ts': 2,
               },
-            ),
-          ),
-        );
+              {
+                'type': 'm.room.member',
+                'content': {'membership': 'join'},
+                'sender': frank.userId,
+                'state_key': frank.userId,
+                'event_id': '\$abcde',
+                'origin_server_ts': 1,
+              },
+            ],
+          };
 
-        // Sync 2: we joined. Worst case: the server does not re-send the
-        // m.room.encryption event in the state block (we already know it
-        // from the invite), frank's member event is lazy-load-omitted and
-        // there is no device_lists hint.
-        await emulateSync(
-          SyncUpdate(
-            nextBatch: 'joined_$roomCounter',
-            rooms: RoomsUpdate(
-              join: {
-                roomId: JoinedRoomUpdate(
-                  summary: RoomSummary.fromJson({
-                    'm.joined_member_count': 2,
-                    'm.invited_member_count': 0,
-                  }),
-                  timeline: TimelineUpdate(
-                    events: [memberEvent(client.userID!, 'join', 300)],
-                    limited: false,
+      // Sync 1: the invite arrives.
+      await emulateSync(
+        SyncUpdate(
+          nextBatch: 'invited_$roomCounter',
+          rooms: RoomsUpdate(
+            invite: {
+              roomId: InvitedRoomUpdate(
+                inviteState: [
+                  StrippedStateEvent(
+                    type: 'm.room.create',
+                    content: {'creator': frank.userId},
+                    senderId: frank.userId,
+                    stateKey: '',
                   ),
-                ),
-              },
-            ),
+                  StrippedStateEvent(
+                    type: 'm.room.encryption',
+                    content: {'algorithm': AlgorithmTypes.megolmV1AesSha2},
+                    senderId: frank.userId,
+                    stateKey: '',
+                  ),
+                  StrippedStateEvent(
+                    type: 'm.room.member',
+                    content: {'membership': 'join'},
+                    senderId: frank.userId,
+                    stateKey: frank.userId,
+                  ),
+                  StrippedStateEvent(
+                    type: 'm.room.member',
+                    content: {'membership': 'invite'},
+                    senderId: frank.userId,
+                    stateKey: client.userID,
+                  ),
+                ],
+              ),
+            },
           ),
-        );
+        ),
+      );
 
-        final room = client.getRoomById(roomId)!;
-        expect(room.membership, Membership.join);
-        expect(room.encrypted, true);
+      // Sync 2: we joined. Worst case: the server does not re-send the
+      // m.room.encryption event in the state block (we already know it
+      // from the invite), frank's member event is lazy-load-omitted and
+      // there is no device_lists hint.
+      await emulateSync(
+        SyncUpdate(
+          nextBatch: 'joined_$roomCounter',
+          rooms: RoomsUpdate(
+            join: {
+              roomId: JoinedRoomUpdate(
+                summary: RoomSummary.fromJson({
+                  'm.joined_member_count': 2,
+                  'm.invited_member_count': 0,
+                }),
+                timeline: TimelineUpdate(
+                  events: [memberEvent(client.userID!, 'join', 300)],
+                  limited: false,
+                ),
+              ),
+            },
+          ),
+        ),
+      );
 
-        // We send the first message into the new room.
-        FakeMatrixApi.calledEndpoints.clear();
-        await room.sendTextEvent('hello frank');
+      final room = client.getRoomById(roomId)!;
+      expect(room.membership, Membership.join);
+      expect(room.encrypted, true);
 
-        final payload = toDevicePayloadFor(frank);
-        expect(
-          payload,
-          isNotNull,
-          reason:
-              'BUG: The room key was never sent to the room creator - '
-              'they cannot decrypt our first message!',
-        );
-      },
-    );
+      // We send the first message into the new room.
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('hello frank');
+
+      final payload = toDevicePayloadFor(frank);
+      expect(
+        payload,
+        isNotNull,
+        reason:
+            'BUG: The room key was never sent to the room creator - '
+            'they cannot decrypt our first message!',
+      );
+    });
 
     test(
       'Scenario 3: invite arrives in a later sync (room.invite after creation)',

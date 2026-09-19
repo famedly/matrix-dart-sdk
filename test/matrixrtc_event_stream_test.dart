@@ -861,40 +861,37 @@ void main() {
     });
 
     group('GroupCallLocalScreenshareStateChanged Event', () {
-      test(
-        'emits GroupCallLocalScreenshareStateChanged when screenshare is enabled and disabled',
-        () async {
-          groupCall = GroupCallSession.withAutoGenId(
-            room,
-            voip,
-            backend,
-            'm.call',
-            'm.room',
-            'test-group-call-19',
-          );
+      test('emits GroupCallLocalScreenshareStateChanged when screenshare is enabled and disabled', () async {
+        groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          backend,
+          'm.call',
+          'm.room',
+          'test-group-call-19',
+        );
 
-          final events = <GroupCallLocalScreenshareStateChanged>[];
-          groupCall.matrixRTCEventStream.stream
-              .where((event) => event is GroupCallLocalScreenshareStateChanged)
-              .cast<GroupCallLocalScreenshareStateChanged>()
-              .listen(events.add);
+        final events = <GroupCallLocalScreenshareStateChanged>[];
+        groupCall.matrixRTCEventStream.stream
+            .where((event) => event is GroupCallLocalScreenshareStateChanged)
+            .cast<GroupCallLocalScreenshareStateChanged>()
+            .listen(events.add);
 
-          await backend.initLocalStream(groupCall);
-          groupCall.setState(GroupCallState.entered);
+        await backend.initLocalStream(groupCall);
+        groupCall.setState(GroupCallState.entered);
 
-          await backend.setScreensharingEnabled(groupCall, true, '');
-          await pumpEventQueue();
+        await backend.setScreensharingEnabled(groupCall, true, '');
+        await pumpEventQueue();
 
-          expect(events.length, 1);
-          expect(events[0].screensharing, true);
+        expect(events.length, 1);
+        expect(events[0].screensharing, true);
 
-          await backend.setScreensharingEnabled(groupCall, false, '');
-          await pumpEventQueue();
+        await backend.setScreensharingEnabled(groupCall, false, '');
+        await pumpEventQueue();
 
-          expect(events.length, 2);
-          expect(events[1].screensharing, false);
-        },
-      );
+        expect(events.length, 2);
+        expect(events[1].screensharing, false);
+      });
     });
 
     group('Event Stream Integration Tests', () {

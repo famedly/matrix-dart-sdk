@@ -81,9 +81,8 @@ class Event extends MatrixEvent {
     String? stateKey,
     super.redacts,
     required this.room,
-    MatrixEvent? originalSource,
-  }) : _originalSource = originalSource,
-       super(
+    this._originalSource,
+  }) : super(
          eventId: eventId,
          originServerTs: originServerTs,
          roomId: room.id,
@@ -707,9 +706,8 @@ class Event extends MatrixEvent {
         skipScanner: skipScanner,
       );
     } else {
-      return await Uri.parse(
-        thisMxcUrl,
-      ).getDownloadUri(room.client, skipScanner: skipScanner);
+      return await Uri.parse(thisMxcUrl)
+          .getDownloadUri(room.client, skipScanner: skipScanner);
     }
   }
 

@@ -64,12 +64,10 @@ class SessionKey {
 
   SessionKey.fromDb(StoredInboundGroupSession dbEntry, this.key)
     : content = Event.getMapFromPayload(dbEntry.content),
-      indexes = Event.getMapFromPayload(
-        dbEntry.indexes,
-      ).catchMap((k, v) => MapEntry<String, String>(k, v)),
-      allowedAtIndex = Event.getMapFromPayload(
-        dbEntry.allowedAtIndex,
-      ).catchMap((k, v) => MapEntry(k, Map<String, int>.from(v))),
+      indexes = Event.getMapFromPayload(dbEntry.indexes)
+          .catchMap((k, v) => MapEntry<String, String>(k, v)),
+      allowedAtIndex = Event.getMapFromPayload(dbEntry.allowedAtIndex)
+          .catchMap((k, v) => MapEntry(k, Map<String, int>.from(v))),
       roomId = dbEntry.roomId,
       sessionId = dbEntry.sessionId,
       senderKey = dbEntry.senderKey {

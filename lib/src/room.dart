@@ -247,9 +247,9 @@ class Room {
             (hero) => hero.isNotEmpty && hero != client.userID,
           )
           .map(
-            (hero) => unsafeGetUserFromMemoryOrFallback(
-              hero,
-            ).calcDisplayname(i18n: i18n),
+            (hero) =>
+                unsafeGetUserFromMemoryOrFallback(hero)
+                    .calcDisplayname(i18n: i18n),
           )
           .join(', ');
       if (isAbandonedDMRoom) {
@@ -263,18 +263,16 @@ class Room {
 
       if (ownMember.senderId != ownMember.stateKey) {
         return i18n.invitedBy(
-          unsafeGetUserFromMemoryOrFallback(
-            ownMember.senderId,
-          ).calcDisplayname(i18n: i18n),
+          unsafeGetUserFromMemoryOrFallback(ownMember.senderId)
+              .calcDisplayname(i18n: i18n),
         );
       }
     }
     if (membership == Membership.leave) {
       if (directChatMatrixID != null) {
         return i18n.wasDirectChatDisplayName(
-          unsafeGetUserFromMemoryOrFallback(
-            directChatMatrixID,
-          ).calcDisplayname(i18n: i18n),
+          unsafeGetUserFromMemoryOrFallback(directChatMatrixID)
+              .calcDisplayname(i18n: i18n),
         );
       }
     }
@@ -293,9 +291,8 @@ class Room {
   /// before.
   Uri? get avatar {
     // Check content of `m.room.avatar`
-    final avatarUrl = getState(
-      EventTypes.RoomAvatar,
-    )?.content.tryGet<String>('url');
+    final avatarUrl = getState(EventTypes.RoomAvatar)?.content
+        .tryGet<String>('url');
     if (avatarUrl != null) {
       return Uri.tryParse(avatarUrl);
     }
@@ -2245,9 +2242,8 @@ class Room {
   /// Returns the power levels from all users for this room or null if not given.
   @Deprecated('Use `getPowerLevelByUserId(String userId)` instead')
   Map<String, int>? get powerLevels {
-    final powerLevelState = getState(
-      EventTypes.RoomPowerLevels,
-    )?.content['users'];
+    final powerLevelState = getState(EventTypes.RoomPowerLevels)
+        ?.content['users'];
     return (powerLevelState is Map<String, int>) ? powerLevelState : null;
   }
 
@@ -2381,9 +2377,8 @@ class Room {
     final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
     if (powerLevelsMap == null) return PowerLevel.user <= ownPowerLevel;
     return PowerLevel(
-          getState(
-                EventTypes.RoomPowerLevels,
-              )?.content.tryGet<int>('state_default') ??
+          getState(EventTypes.RoomPowerLevels)?.content
+                  .tryGet<int>('state_default') ??
               PowerLevel.defaultModeratorLevel,
         ) <=
         ownPowerLevel;
@@ -2581,9 +2576,8 @@ class Room {
   /// to the room from someone already inside of the room. Currently, knock and private are reserved
   /// keywords which are not implemented.
   JoinRules? get joinRules {
-    final joinRulesString = getState(
-      EventTypes.RoomJoinRules,
-    )?.content.tryGet<String>('join_rule');
+    final joinRulesString = getState(EventTypes.RoomJoinRules)?.content
+        .tryGet<String>('join_rule');
     return JoinRules.values.singleWhereOrNull(
       (element) => element.text == joinRulesString,
     );
@@ -2625,9 +2619,8 @@ class Room {
   /// This event controls whether guest users are allowed to join rooms. If this event
   /// is absent, servers should act as if it is present and has the guest_access value "forbidden".
   GuestAccess get guestAccess {
-    final guestAccessString = getState(
-      EventTypes.GuestAccess,
-    )?.content.tryGet<String>('guest_access');
+    final guestAccessString = getState(EventTypes.GuestAccess)?.content
+        .tryGet<String>('guest_access');
     return GuestAccess.values.singleWhereOrNull(
           (element) => element.text == guestAccessString,
         ) ??
@@ -2647,9 +2640,9 @@ class Room {
 
   /// This event controls whether a user can see the events that happened in a room from before they joined.
   HistoryVisibility? get historyVisibility {
-    final historyVisibilityString = getState(
-      EventTypes.HistoryVisibility,
-    )?.content.tryGet<String>('history_visibility');
+    final historyVisibilityString = getState(EventTypes.HistoryVisibility)
+        ?.content
+        .tryGet<String>('history_visibility');
     return HistoryVisibility.values.singleWhereOrNull(
       (element) => element.text == historyVisibilityString,
     );

@@ -84,9 +84,8 @@ void main() {
       await client.encryption!.olmManager.handleDeviceOneTimeKeysCount({
         'signed_curve25519': 70,
       }, null);
-      await FakeMatrixApi.firstWhereValue(
-        '/client/v3/keys/upload',
-      ).timeout(Duration(milliseconds: 50), onTimeout: () => '');
+      await FakeMatrixApi.firstWhereValue('/client/v3/keys/upload')
+          .timeout(Duration(milliseconds: 50), onTimeout: () => '');
       expect(
         FakeMatrixApi.calledEndpoints.containsKey('/client/v3/keys/upload'),
         false,

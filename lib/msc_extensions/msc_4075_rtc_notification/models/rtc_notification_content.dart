@@ -114,9 +114,8 @@ class RtcNotificationContent {
 
   /// Checks if this notification has expired
   bool isExpired(DateTime originServerTs) {
-    final expiryTime = getEffectiveTimestamp(
-      originServerTs,
-    ).add(cappedLifetime);
+    final expiryTime = getEffectiveTimestamp(originServerTs)
+        .add(cappedLifetime);
     return DateTime.now().isAfter(expiryTime);
   }
 

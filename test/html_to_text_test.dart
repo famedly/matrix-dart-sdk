@@ -19,8 +19,7 @@ void main() {
       '<span data-mx-spoiler="cw spiders">spiders are pretty cool</span>':
           '(cw spiders) ███████████████████████',
       '<img src="test.gif" alt="a test case" />': 'a test case',
-      'List of cute animals:\n<ul>\n<li>Kittens</li>\n<li>Puppies</li>\n<li>Snakes<br/>(I think they\'re cute!)</li>\n</ul>\n(This list is incomplete, you can help by adding to it!)':
-          'List of cute animals:\n• Kittens\n• Puppies\n• Snakes\n  (I think they\'re cute!)\n(This list is incomplete, you can help by adding to it!)',
+      'List of cute animals:\n<ul>\n<li>Kittens</li>\n<li>Puppies</li>\n<li>Snakes<br/>(I think they\'re cute!)</li>\n</ul>\n(This list is incomplete, you can help by adding to it!)': 'List of cute animals:\n• Kittens\n• Puppies\n• Snakes\n  (I think they\'re cute!)\n(This list is incomplete, you can help by adding to it!)',
       '<em>fox</em>': '*fox*',
       '<i>fox</i>': '*fox*',
       '<strong>fox</i>': '**fox**',

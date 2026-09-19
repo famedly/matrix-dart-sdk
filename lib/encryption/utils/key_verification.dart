@@ -232,10 +232,9 @@ class KeyVerification {
     required this.encryption,
     this.room,
     required this.userId,
-    String? deviceId,
+    this._deviceId,
     this.onUpdate,
-  }) : _deviceId = deviceId,
-       lastActivity = DateTime.now();
+  }) : lastActivity = DateTime.now();
 
   void dispose() {
     Logs().i('[Key Verification] disposing object...');

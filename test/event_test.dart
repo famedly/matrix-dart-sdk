@@ -358,9 +358,10 @@ void main() async {
         'content_uri': 'mxc://example.com/videoMxcUri',
       };
       FakeMatrixApi
-              .currentApi!
-              .api['POST']!['/media/v3/upload?filename=$videoFilename.thumbnail'] =
-          (req) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
+          .currentApi!
+          .api['POST']!['/media/v3/upload?filename=$videoFilename.thumbnail'] = (
+        req,
+      ) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
 
       final videoEvent = Event.fromJson(<String, dynamic>{
         'event_id': videoTxId,
@@ -1267,11 +1268,9 @@ void main() async {
 
       event = Event.fromJson({
         'content': {
-          'body':
-              '> Quote\n# Title\nsome text and [link](https://example.com)\nokay and this is **important**',
+          'body': '> Quote\n# Title\nsome text and [link](https://example.com)\nokay and this is **important**',
           'format': 'org.matrix.custom.html',
-          'formatted_body':
-              '<blockquote><p>Quote</p></blockquote><h1>Title</h1>\n<p>some text and <a href="https://example.com">link</a><br>okay and this is <strong>important</strong></p>\n',
+          'formatted_body': '<blockquote><p>Quote</p></blockquote><h1>Title</h1>\n<p>some text and <a href="https://example.com">link</a><br>okay and this is <strong>important</strong></p>\n',
           'msgtype': 'm.text',
         },
         'event_id': '\$143273582443PhrSn:example.org',
@@ -1316,8 +1315,7 @@ void main() async {
 
       event = Event.fromJson({
         'content': {
-          'body':
-              'Alice is requesting to verify your device, but your client does not support verification, so you may need to use a different verification method.',
+          'body': 'Alice is requesting to verify your device, but your client does not support verification, so you may need to use a different verification method.',
           'from_device': 'AliceDevice2',
           'methods': ['m.sas.v1'],
           'msgtype': 'm.key.verification.request',
@@ -1929,28 +1927,24 @@ void main() async {
         expectation: 'body',
         plaintextBody: false,
         body: '> <@some:user.id> acb def\n\nbody',
-        formattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        formattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
         html: true,
         isEdit: false,
         // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
         editBody: '> <@some:user.id> acb def\n\nedit body',
-        editFormattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editFormattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
         editHtml: true,
       );
       testUnlocalizedBody(
         expectation: 'body',
         plaintextBody: true,
         body: '> <@some:user.id> acb def\n\nbody',
-        formattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        formattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
         html: false,
         isEdit: false,
         // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
         editBody: '> <@some:user.id> acb def\n\nedit body',
-        editFormattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editFormattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
         editHtml: true,
       );
       testUnlocalizedBody(
@@ -1962,64 +1956,55 @@ void main() async {
         isEdit: false,
         // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
         editBody: '> <@some:user.id> acb def\n\nedit body',
-        editFormattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editFormattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
         editHtml: true,
       );
       testUnlocalizedBody(
         expectation: '**formatted body**',
         plaintextBody: true,
         body: '> <@some:user.id> acb def\n\nbody',
-        formattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        formattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
         html: true,
         isEdit: false,
         // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
         editBody: '> <@some:user.id> acb def\n\nedit body',
-        editFormattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editFormattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
         editHtml: true,
       );
       testUnlocalizedBody(
         expectation: 'edit body',
         plaintextBody: false,
         body: '> <@some:user.id> acb def\n\nbody',
-        formattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        formattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
         html: true,
         isEdit: true,
         // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
         editBody: '> <@some:user.id> acb def\n\nedit body',
-        editFormattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editFormattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
         editHtml: true,
       );
       testUnlocalizedBody(
         expectation: 'edit body',
         plaintextBody: true,
         body: '> <@some:user.id> acb def\n\nbody',
-        formattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        formattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
         html: true,
         isEdit: true,
         // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
         editBody: '> <@some:user.id> acb def\n\nedit body',
-        editFormattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editFormattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
         editHtml: false,
       );
       testUnlocalizedBody(
         expectation: '**edit formatted body**',
         plaintextBody: true,
         body: '> <@some:user.id> acb def\n\nbody',
-        formattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
+        formattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>formatted body</b>',
         html: true,
         isEdit: true,
         // strictly speaking there is no quote in edits, but we have to handle them anyway because of other clients doing it wrong
         editBody: '> <@some:user.id> acb def\n\nedit body',
-        editFormattedBody:
-            '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
+        editFormattedBody: '<mx-reply><blockquote>abc</blockquote></mx-reply><b>edit formatted body</b>',
         editHtml: true,
       );
     });
@@ -2677,8 +2662,7 @@ void main() async {
 
           ❤❤❤''',
           'format': 'org.matrix.custom.html',
-          'formatted_body':
-              '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>😒😒</blockquote></mx-reply>❤❤❤',
+          'formatted_body': '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>😒😒</blockquote></mx-reply>❤❤❤',
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
@@ -2693,8 +2677,7 @@ void main() async {
 
           ❤❤''',
           'format': 'org.matrix.custom.html',
-          'formatted_body':
-              '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>A 😒</blockquote></mx-reply>❤❤',
+          'formatted_body': '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>A 😒</blockquote></mx-reply>❤❤',
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
@@ -2709,8 +2692,7 @@ void main() async {
 
           ❤A❤''',
           'format': 'org.matrix.custom.html',
-          'formatted_body':
-              '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>😒😒😒</blockquote></mx-reply>❤A❤',
+          'formatted_body': '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>😒😒😒</blockquote></mx-reply>❤A❤',
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
@@ -2725,8 +2707,7 @@ void main() async {
 
           ❤A❤''',
           'format': 'org.matrix.custom.html',
-          'formatted_body':
-              '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>A😒</blockquote></mx-reply>❤A❤',
+          'formatted_body': '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>A😒</blockquote></mx-reply>❤A❤',
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',

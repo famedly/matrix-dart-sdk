@@ -223,22 +223,19 @@ class LiveKitBackend extends CallBackend {
       );
       // now wait for the key to propogate and then set it, hopefully users can
       // stil decrypt everything
-      final useKeyTimeout = Future.delayed(
-        groupCall.voip.timeouts!.useKeyDelay,
-        () async {
-          Logs().i(
-            '[VOIP E2EE] delayed setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
-          );
-          await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
-            participant,
-            encryptionKeyBin,
-            encryptionKeyIndex,
-          );
-          if (participant.isLocal) {
-            _currentLocalKeyIndex = encryptionKeyIndex;
-          }
-        },
-      );
+      final useKeyTimeout = Future.delayed(groupCall.voip.timeouts!.useKeyDelay, () async {
+        Logs().i(
+          '[VOIP E2EE] delayed setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
+        );
+        await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
+          participant,
+          encryptionKeyBin,
+          encryptionKeyIndex,
+        );
+        if (participant.isLocal) {
+          _currentLocalKeyIndex = encryptionKeyIndex;
+        }
+      });
       _setNewKeyTimeouts.add(useKeyTimeout);
     } else {
       Logs().i(

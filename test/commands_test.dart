@@ -252,8 +252,7 @@ void main() {
           'user_ids': ['@test:fakeServer.notExisting'],
         },
         'format': 'org.matrix.custom.html',
-        'formatted_body':
-            '<mx-reply><blockquote><a href="https://matrix.to/#/!1234:fakeServer.notExisting/\$parent_event">In reply to</a> <a href="https://matrix.to/#/@test:fakeServer.notExisting">@test:fakeServer.notExisting</a><br>reply</blockquote></mx-reply>reply',
+        'formatted_body': '<mx-reply><blockquote><a href="https://matrix.to/#/!1234:fakeServer.notExisting/\$parent_event">In reply to</a> <a href="https://matrix.to/#/@test:fakeServer.notExisting">@test:fakeServer.notExisting</a><br>reply</blockquote></mx-reply>reply',
         'm.relates_to': {
           'rel_type': 'm.thread',
           'event_id': '\$parent_event',

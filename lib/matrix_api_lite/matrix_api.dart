@@ -129,9 +129,9 @@ class MatrixApi extends Api {
     if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
       jsonString = '{"chunk":$jsonString}';
     }
-    jsonResp =
-        jsonDecode(jsonString)
-            as Map<String, Object?>?; // May throw FormatException
+    jsonResp = jsonDecode(
+      jsonString,
+    ) as Map<String, Object?>?; // May throw FormatException
 
     if (resp.statusCode >= 400 && resp.statusCode < 500) {
       throw MatrixException(resp);

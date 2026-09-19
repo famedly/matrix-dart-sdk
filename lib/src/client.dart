@@ -196,7 +196,7 @@ class Client extends MatrixApi {
   /// Set [enableDehydratedDevices] to enable experimental support for enabling MSC3814 dehydrated devices.
   Client(
     this.clientName, {
-    required DatabaseApi database,
+    required this._database,
     this.legacyDatabaseBuilder,
     Set<KeyVerificationMethod>? verificationMethods,
     http.Client? httpClient,
@@ -244,7 +244,7 @@ class Client extends MatrixApi {
     this.convertLinebreaksInFormatting = true,
     this.enableLatexMarkdown = true,
     this.dehydratedDeviceDisplayName = 'Dehydrated Device',
-    RoomSorter? customRoomSorter,
+    this._customRoomSorter,
     this.contentScannerConfig,
 
     /// Whether the app automatically requests the profile for users which have
@@ -255,8 +255,7 @@ class Client extends MatrixApi {
     /// Whether the app should get DisplayName and Avatar also from the
     /// previous content of a member state event.
     this.getDisplayNameAndAvatarFromPrevContent = true,
-  }) : _database = database,
-       syncFilter =
+  }) : syncFilter =
            syncFilter ??
            Filter(room: RoomFilter(state: StateFilter(lazyLoadMembers: true))),
        importantStateEvents = importantStateEvents ??= {},
@@ -264,7 +263,6 @@ class Client extends MatrixApi {
        supportedLoginTypes =
            supportedLoginTypes ?? {AuthenticationTypes.password},
        verificationMethods = verificationMethods ?? <KeyVerificationMethod>{},
-       _customRoomSorter = customRoomSorter,
        super(
          httpClient: FixedTimeoutHttpClient(
            httpClient ?? http.Client(),

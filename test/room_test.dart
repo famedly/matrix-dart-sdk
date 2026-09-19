@@ -1180,8 +1180,7 @@ void main() {
       expect(
         called.length,
         updatesAfterFirst,
-        reason:
-            'requestUser must not re-emit onUpdate when leave profile lives in prev_content',
+        reason: 'requestUser must not re-emit onUpdate when leave profile lives in prev_content',
       );
 
       await subscription.cancel();
@@ -1404,8 +1403,7 @@ void main() {
           'user_ids': ['@alice:example.org'],
         },
         'format': 'org.matrix.custom.html',
-        'formatted_body':
-            '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Blah</blockquote></mx-reply>Hello world',
+        'formatted_body': '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Blah</blockquote></mx-reply>Hello world',
         'm.relates_to': {
           'm.in_reply_to': {'event_id': '\$replyEvent'},
         },
@@ -1436,8 +1434,7 @@ void main() {
           'user_ids': ['@alice:example.org'],
         },
         'format': 'org.matrix.custom.html',
-        'formatted_body':
-            '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>&lt;b&gt;Blah&lt;&#47;b&gt;<br>beep</blockquote></mx-reply>Hello world<br/>fox',
+        'formatted_body': '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>&lt;b&gt;Blah&lt;&#47;b&gt;<br>beep</blockquote></mx-reply>Hello world<br/>fox',
         'm.relates_to': {
           'm.in_reply_to': {'event_id': '\$replyEvent'},
         },
@@ -1472,8 +1469,7 @@ void main() {
           'user_ids': ['@alice:example.org'],
         },
         'format': 'org.matrix.custom.html',
-        'formatted_body':
-            '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>meow</blockquote></mx-reply>Hello world',
+        'formatted_body': '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>meow</blockquote></mx-reply>Hello world',
         'm.relates_to': {
           'm.in_reply_to': {'event_id': '\$replyEvent'},
         },
@@ -1503,8 +1499,7 @@ void main() {
           'user_ids': ['@alice:example.org'],
         },
         'format': 'org.matrix.custom.html',
-        'formatted_body':
-            '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hey @room</blockquote></mx-reply>Hello world',
+        'formatted_body': '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hey @room</blockquote></mx-reply>Hello world',
         'm.relates_to': {
           'm.in_reply_to': {'event_id': '\$replyEvent'},
         },
@@ -1520,8 +1515,7 @@ void main() {
             'user_ids': ['@alice:example.org'],
           },
           'format': 'org.matrix.custom.html',
-          'formatted_body':
-              '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hey</blockquote></mx-reply>Hello world',
+          'formatted_body': '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hey</blockquote></mx-reply>Hello world',
           'm.relates_to': {
             'm.in_reply_to': {'event_id': '\$replyEvent'},
           },
@@ -1547,8 +1541,7 @@ void main() {
           'user_ids': ['@alice:example.org'],
         },
         'format': 'org.matrix.custom.html',
-        'formatted_body':
-            '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hello world</blockquote></mx-reply>Fox',
+        'formatted_body': '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hello world</blockquote></mx-reply>Fox',
         'm.relates_to': {
           'm.in_reply_to': {'event_id': '\$replyEvent'},
         },
@@ -1640,18 +1633,20 @@ void main() {
         membership: Membership.join,
       );
       FakeMatrixApi
-              .currentApi!
-              .api['PUT']!['/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid'] =
-          (req) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+          .currentApi!
+          .api['PUT']!['/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid'] = (
+        req,
+      ) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
       FakeMatrixApi
           .currentApi!
           .api['POST']!['/media/v3/upload?filename=file.mp4'] = (req) => {
         'content_uri': 'mxc://example.com/videoTestMxcUri',
       };
       FakeMatrixApi
-              .currentApi!
-              .api['POST']!['/media/v3/upload?filename=file.mp4.thumbnail.jpg'] =
-          (req) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
+          .currentApi!
+          .api['POST']!['/media/v3/upload?filename=file.mp4.thumbnail.jpg'] = (
+        req,
+      ) => {'content_uri': 'mxc://example.com/videoThumbMxcUri'};
       MatrixVideoThumbnailArguments? receivedArguments;
       matrix.customVideoThumbnailGenerator = (arguments) async {
         receivedArguments = arguments;
@@ -1773,9 +1768,10 @@ void main() {
         membership: Membership.join,
       );
       FakeMatrixApi
-              .currentApi!
-              .api['PUT']!['/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid'] =
-          (req) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+          .currentApi!
+          .api['PUT']!['/client/v3/rooms/!video%3Aserver.abc/send/m.room.message/testtxid'] = (
+        req,
+      ) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
       matrix.customVideoThumbnailGenerator = (arguments) async =>
           throw Exception('Unable to decode video');
 
@@ -2341,9 +2337,10 @@ void main() {
       );
 
       FakeMatrixApi
-              .currentApi!
-              .api['GET']!['/client/v3/rooms/!localpart%3Aserver.abc/messages?from=t47409-4357353_219380_26003_2265&dir=b&limit=1000&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%5D%7D'] =
-          (_) => {'start': 't47409-4357353_219380_26003_2265', 'chunk': []};
+          .currentApi!
+          .api['GET']!['/client/v3/rooms/!localpart%3Aserver.abc/messages?from=t47409-4357353_219380_26003_2265&dir=b&limit=1000&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%5D%7D'] = (
+        _,
+      ) => {'start': 't47409-4357353_219380_26003_2265', 'chunk': []};
       final secondResult = await room.searchEvents(
         searchFunc: (_) => true,
         nextBatch: searchResult.nextBatch,

@@ -83,11 +83,10 @@ class MatrixImageFile extends MatrixFile {
     required super.bytes,
     required super.name,
     super.mimeType,
-    int? width,
-    int? height,
+    this._width,
+    this._height,
     this.blurhash,
-  }) : _width = width,
-       _height = height;
+  });
 
   /// Creates a new image file and calculates the width, height and blurhash.
   static Future<MatrixImageFile> create({

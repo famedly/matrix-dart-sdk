@@ -89,204 +89,190 @@ void main() {
       expect(state.connected, true);
     }, timeout: Timeout(Duration(minutes: 2)));
 
-    test(
-      'initCryptoIdentity reuses existing SSSS to heal',
-      () async {
-        final client = await getClient();
-        final recoveryKey = await client.initCryptoIdentity();
-        final defaultKeyId = client.encryption!.ssss.defaultKeyId;
-        final masterPub =
-            client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key;
+    test('initCryptoIdentity reuses existing SSSS to heal', () async {
+      final client = await getClient();
+      final recoveryKey = await client.initCryptoIdentity();
+      final defaultKeyId = client.encryption!.ssss.defaultKeyId;
+      final masterPub =
+          client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key;
 
-        Future<String> healInPlace() async {
-          final ssss = client.encryption!.ssss;
-          return client.initCryptoIdentity(
-            reuseExistingStorageRecoveryKeyOrPassphrase: recoveryKey,
-            wipeSecureStorage: false,
-            wipeKeyBackup: false,
-            wipeCrossSigning: false,
-            setupMasterKey: !ssss.isSecret(EventTypes.CrossSigningMasterKey),
-            setupSelfSigningKey: !ssss.isSecret(
-              EventTypes.CrossSigningSelfSigning,
-            ),
-            setupUserSigningKey: !ssss.isSecret(
-              EventTypes.CrossSigningUserSigning,
-            ),
-            setupOnlineKeyBackup: !ssss.isSecret(EventTypes.MegolmBackup),
-          );
-        }
-
-        // Already initialized — non-destructive; keep key id and master.
-        final reusedKey = await healInPlace();
-        expect(reusedKey, recoveryKey);
-        var state = await client.getCryptoIdentityState();
-        expect(state.initialized, true);
-        expect(state.connected, true);
-        expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
-        expect(
-          client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key,
-          masterPub,
+      Future<String> healInPlace() async {
+        final ssss = client.encryption!.ssss;
+        return client.initCryptoIdentity(
+          reuseExistingStorageRecoveryKeyOrPassphrase: recoveryKey,
+          wipeSecureStorage: false,
+          wipeKeyBackup: false,
+          wipeCrossSigning: false,
+          setupMasterKey: !ssss.isSecret(EventTypes.CrossSigningMasterKey),
+          setupSelfSigningKey: !ssss.isSecret(
+            EventTypes.CrossSigningSelfSigning,
+          ),
+          setupUserSigningKey: !ssss.isSecret(
+            EventTypes.CrossSigningUserSigning,
+          ),
+          setupOnlineKeyBackup: !ssss.isSecret(EventTypes.MegolmBackup),
         );
+      }
 
-        // Preserve master: only self/user signing secrets missing.
-        for (final type in [
-          EventTypes.CrossSigningSelfSigning,
-          EventTypes.CrossSigningUserSigning,
-        ]) {
-          await client.setAccountData(client.userID!, type, {});
-        }
-        state = await client.getCryptoIdentityState();
-        expect(state.keyBackupEnabled, true);
-        expect(state.crossSigningEnabled, false);
-        expect(state.initialized, false);
+      // Already initialized — non-destructive; keep key id and master.
+      final reusedKey = await healInPlace();
+      expect(reusedKey, recoveryKey);
+      var state = await client.getCryptoIdentityState();
+      expect(state.initialized, true);
+      expect(state.connected, true);
+      expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
+      expect(
+        client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key,
+        masterPub,
+      );
 
-        expect(await healInPlace(), recoveryKey);
+      // Preserve master: only self/user signing secrets missing.
+      for (final type in [
+        EventTypes.CrossSigningSelfSigning,
+        EventTypes.CrossSigningUserSigning,
+      ]) {
+        await client.setAccountData(client.userID!, type, {});
+      }
+      state = await client.getCryptoIdentityState();
+      expect(state.keyBackupEnabled, true);
+      expect(state.crossSigningEnabled, false);
+      expect(state.initialized, false);
 
-        state = await client.getCryptoIdentityState();
-        expect(state.initialized, true);
-        expect(state.connected, true);
-        expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
-        expect(
-          client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key,
-          masterPub,
-        );
+      expect(await healInPlace(), recoveryKey);
 
-        await client.encryption!.ssss.clearCache();
-        var open = client.encryption!.ssss.open();
-        await open.unlock(keyOrPassphrase: recoveryKey);
-        expect(open.isUnlocked, true);
+      state = await client.getCryptoIdentityState();
+      expect(state.initialized, true);
+      expect(state.connected, true);
+      expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
+      expect(
+        client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key,
+        masterPub,
+      );
 
-        // Missing all cross-signing secrets (keep key backup so SSSS is usable).
-        for (final type in [
-          EventTypes.CrossSigningMasterKey,
-          EventTypes.CrossSigningSelfSigning,
-          EventTypes.CrossSigningUserSigning,
-        ]) {
-          await client.setAccountData(client.userID!, type, {});
-        }
-        state = await client.getCryptoIdentityState();
-        expect(state.keyBackupEnabled, true);
-        expect(state.crossSigningEnabled, false);
-        expect(state.initialized, false);
+      await client.encryption!.ssss.clearCache();
+      var open = client.encryption!.ssss.open();
+      await open.unlock(keyOrPassphrase: recoveryKey);
+      expect(open.isUnlocked, true);
 
-        expect(await healInPlace(), recoveryKey);
+      // Missing all cross-signing secrets (keep key backup so SSSS is usable).
+      for (final type in [
+        EventTypes.CrossSigningMasterKey,
+        EventTypes.CrossSigningSelfSigning,
+        EventTypes.CrossSigningUserSigning,
+      ]) {
+        await client.setAccountData(client.userID!, type, {});
+      }
+      state = await client.getCryptoIdentityState();
+      expect(state.keyBackupEnabled, true);
+      expect(state.crossSigningEnabled, false);
+      expect(state.initialized, false);
 
-        state = await client.getCryptoIdentityState();
-        expect(state.initialized, true);
-        expect(state.connected, true);
-        expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
+      expect(await healInPlace(), recoveryKey);
 
-        await client.encryption!.ssss.clearCache();
-        open = client.encryption!.ssss.open();
-        await open.unlock(keyOrPassphrase: recoveryKey);
-        expect(open.isUnlocked, true);
+      state = await client.getCryptoIdentityState();
+      expect(state.initialized, true);
+      expect(state.connected, true);
+      expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
 
-        // Missing key backup (keep cross-signing so SSSS is usable).
-        await client.setAccountData(
-          client.userID!,
-          EventTypes.MegolmBackup,
-          {},
-        );
-        state = await client.getCryptoIdentityState();
-        expect(state.keyBackupEnabled, false);
-        expect(state.crossSigningEnabled, true);
-        expect(state.initialized, false);
+      await client.encryption!.ssss.clearCache();
+      open = client.encryption!.ssss.open();
+      await open.unlock(keyOrPassphrase: recoveryKey);
+      expect(open.isUnlocked, true);
 
-        expect(await healInPlace(), recoveryKey);
+      // Missing key backup (keep cross-signing so SSSS is usable).
+      await client.setAccountData(client.userID!, EventTypes.MegolmBackup, {});
+      state = await client.getCryptoIdentityState();
+      expect(state.keyBackupEnabled, false);
+      expect(state.crossSigningEnabled, true);
+      expect(state.initialized, false);
 
-        state = await client.getCryptoIdentityState();
-        expect(state.initialized, true);
-        expect(state.connected, true);
-        expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
+      expect(await healInPlace(), recoveryKey);
 
-        await client.encryption!.ssss.clearCache();
-        open = client.encryption!.ssss.open();
-        await open.unlock(keyOrPassphrase: recoveryKey);
-        expect(open.isUnlocked, true);
+      state = await client.getCryptoIdentityState();
+      expect(state.initialized, true);
+      expect(state.connected, true);
+      expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
 
-        // Only valid SSSS key, no encrypted secrets.
-        for (final type in [
-          EventTypes.CrossSigningMasterKey,
-          EventTypes.CrossSigningSelfSigning,
-          EventTypes.CrossSigningUserSigning,
-          EventTypes.MegolmBackup,
-        ]) {
-          await client.setAccountData(client.userID!, type, {});
-        }
-        state = await client.getCryptoIdentityState();
-        expect(state.initialized, false);
+      await client.encryption!.ssss.clearCache();
+      open = client.encryption!.ssss.open();
+      await open.unlock(keyOrPassphrase: recoveryKey);
+      expect(open.isUnlocked, true);
 
-        expect(await healInPlace(), recoveryKey);
+      // Only valid SSSS key, no encrypted secrets.
+      for (final type in [
+        EventTypes.CrossSigningMasterKey,
+        EventTypes.CrossSigningSelfSigning,
+        EventTypes.CrossSigningUserSigning,
+        EventTypes.MegolmBackup,
+      ]) {
+        await client.setAccountData(client.userID!, type, {});
+      }
+      state = await client.getCryptoIdentityState();
+      expect(state.initialized, false);
 
-        state = await client.getCryptoIdentityState();
-        expect(state.initialized, true);
-        expect(state.connected, true);
-        expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
+      expect(await healInPlace(), recoveryKey);
 
-        await client.encryption!.ssss.clearCache();
-        open = client.encryption!.ssss.open();
-        await open.unlock(keyOrPassphrase: recoveryKey);
-        expect(open.isUnlocked, true);
+      state = await client.getCryptoIdentityState();
+      expect(state.initialized, true);
+      expect(state.connected, true);
+      expect(client.encryption!.ssss.defaultKeyId, defaultKeyId);
 
-        // No usable secret storage key — fall back to destructive init.
-        for (final type in [
-          EventTypes.CrossSigningMasterKey,
-          EventTypes.CrossSigningSelfSigning,
-          EventTypes.CrossSigningUserSigning,
-          EventTypes.MegolmBackup,
-        ]) {
-          await client.setAccountData(client.userID!, type, {});
-        }
-        await client.setAccountData(
-          client.userID!,
-          EventTypes.SecretStorageDefaultKey,
-          {},
-        );
-        state = await client.getCryptoIdentityState();
-        expect(state.initialized, false);
+      await client.encryption!.ssss.clearCache();
+      open = client.encryption!.ssss.open();
+      await open.unlock(keyOrPassphrase: recoveryKey);
+      expect(open.isUnlocked, true);
 
-        expect(healInPlace, throwsA(isA<BootstrapBadStateException>()));
-      },
-      timeout: Timeout(Duration(minutes: 2)),
-    );
+      // No usable secret storage key — fall back to destructive init.
+      for (final type in [
+        EventTypes.CrossSigningMasterKey,
+        EventTypes.CrossSigningSelfSigning,
+        EventTypes.CrossSigningUserSigning,
+        EventTypes.MegolmBackup,
+      ]) {
+        await client.setAccountData(client.userID!, type, {});
+      }
+      await client.setAccountData(
+        client.userID!,
+        EventTypes.SecretStorageDefaultKey,
+        {},
+      );
+      state = await client.getCryptoIdentityState();
+      expect(state.initialized, false);
 
-    test(
-      'initCryptoIdentity selfSign controls device signing',
-      () async {
-        final client = await getClient();
-        final userId = client.userID!;
-        final deviceId = client.deviceID!;
+      expect(healInPlace, throwsA(isA<BootstrapBadStateException>()));
+    }, timeout: Timeout(Duration(minutes: 2)));
 
-        bool uploadContainsDevice(List<dynamic> uploads) {
-          for (final upload in uploads) {
-            final body = jsonDecode(upload as String) as Map;
-            final userKeys = body[userId] as Map?;
-            if (userKeys?.containsKey(deviceId) ?? false) {
-              return true;
-            }
+    test('initCryptoIdentity selfSign controls device signing', () async {
+      final client = await getClient();
+      final userId = client.userID!;
+      final deviceId = client.deviceID!;
+
+      bool uploadContainsDevice(List<dynamic> uploads) {
+        for (final upload in uploads) {
+          final body = jsonDecode(upload as String) as Map;
+          final userKeys = body[userId] as Map?;
+          if (userKeys?.containsKey(deviceId) ?? false) {
+            return true;
           }
-          return false;
         }
+        return false;
+      }
 
-        FakeMatrixApi.calledEndpoints.clear();
-        await client.initCryptoIdentity(selfSign: false);
-        final noSelfSignUploads =
-            FakeMatrixApi
-                .calledEndpoints['/client/v3/keys/signatures/upload'] ??
-            [];
-        expect(uploadContainsDevice(noSelfSignUploads), false);
+      FakeMatrixApi.calledEndpoints.clear();
+      await client.initCryptoIdentity(selfSign: false);
+      final noSelfSignUploads =
+          FakeMatrixApi.calledEndpoints['/client/v3/keys/signatures/upload'] ??
+          [];
+      expect(uploadContainsDevice(noSelfSignUploads), false);
 
-        FakeMatrixApi.calledEndpoints.clear();
-        final recoveryKey = await client.initCryptoIdentity(selfSign: true);
-        final selfSignUploads =
-            FakeMatrixApi
-                .calledEndpoints['/client/v3/keys/signatures/upload'] ??
-            [];
-        expect(uploadContainsDevice(selfSignUploads), true);
-        expect(recoveryKey.length, 59);
-      },
-      timeout: Timeout(Duration(minutes: 2)),
-    );
+      FakeMatrixApi.calledEndpoints.clear();
+      final recoveryKey = await client.initCryptoIdentity(selfSign: true);
+      final selfSignUploads =
+          FakeMatrixApi.calledEndpoints['/client/v3/keys/signatures/upload'] ??
+          [];
+      expect(uploadContainsDevice(selfSignUploads), true);
+      expect(recoveryKey.length, 59);
+    }, timeout: Timeout(Duration(minutes: 2)));
 
     test('Add a second recovery key', () async {
       final client = await getClient();
@@ -345,22 +331,18 @@ void main() {
       expect(state.crossSigningEnabled, false);
     });
 
-    test(
-      'initCryptoIdentity can create a new key after clear',
-      () async {
-        final client = await getClient();
-        addTearDown(() async {
-          await client.dispose(closeDatabase: true);
-        });
-        await client.clearCryptoIdentity();
-        final recoveryKey = await client.initCryptoIdentity();
-        expect(recoveryKey.substring(0, 2), 'Es');
-        final state = await client.getCryptoIdentityState();
-        expect(state.initialized, true);
-        expect(state.connected, true);
-        expect(client.encryption!.ssss.defaultKeyId, isNotNull);
-      },
-      timeout: Timeout(Duration(minutes: 2)),
-    );
+    test('initCryptoIdentity can create a new key after clear', () async {
+      final client = await getClient();
+      addTearDown(() async {
+        await client.dispose(closeDatabase: true);
+      });
+      await client.clearCryptoIdentity();
+      final recoveryKey = await client.initCryptoIdentity();
+      expect(recoveryKey.substring(0, 2), 'Es');
+      final state = await client.getCryptoIdentityState();
+      expect(state.initialized, true);
+      expect(state.connected, true);
+      expect(client.encryption!.ssss.defaultKeyId, isNotNull);
+    }, timeout: Timeout(Duration(minutes: 2)));
   });
 }

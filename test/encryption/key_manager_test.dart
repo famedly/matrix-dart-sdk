@@ -227,8 +227,7 @@ void main() {
         },
         'signatures': {
           '@alice:example.com': {
-            'ed25519:NEWDEVICE':
-                '94GSg8N9vNB8wyWHJtKaaX3MGNWPVOjBatJM+TijY6B1RlDFJT5Cl1h/tjr17AoQz0CDdOf6uFhrYsBkH1/ABg',
+            'ed25519:NEWDEVICE': '94GSg8N9vNB8wyWHJtKaaX3MGNWPVOjBatJM+TijY6B1RlDFJT5Cl1h/tjr17AoQz0CDdOf6uFhrYsBkH1/ABg',
           },
         },
       }, client);
@@ -312,8 +311,7 @@ void main() {
         'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': '!726s6s6q:example.com',
         'session_id': 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU',
-        'session_key':
-            'AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw',
+        'session_key': 'AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw',
       };
       client.encryption!.keyManager.clearInboundGroupSessions();
       expect(
@@ -634,8 +632,7 @@ void main() {
           },
           'signatures': {
             '@alice:example.com': {
-              'ed25519:JLAFKJWSCS':
-                  's/L86jLa8BTroL8GsBeqO0gRLC3ZrSA7Gch6UoLI2SefC1+1ycmnP9UGbLPh3qBJOmlhczMpBLZwelg87qNNDA',
+              'ed25519:JLAFKJWSCS': 's/L86jLa8BTroL8GsBeqO0gRLC3ZrSA7Gch6UoLI2SefC1+1ycmnP9UGbLPh3qBJOmlhczMpBLZwelg87qNNDA',
             },
           },
         };
