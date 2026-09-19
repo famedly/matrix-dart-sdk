@@ -169,11 +169,34 @@ abstract class SignableKey extends MatrixSignableKey {
   bool? _verified;
   bool? _blocked;
 
+  /// Only cross signing keys carry a trust-on-first-use timestamp, but the
+  /// persistence path below is shared, so it is declared here.
+  DateTime? get trustOnFirstUseSince => null;
+
+  /// Persists just this key's trust state. Writing the key itself rather than
+  /// looking it back up via the client means a detached instance can never
+  /// silently lose its update.
+  Future<void> _updateInDatabase() {
+    final identifier = this.identifier;
+    if (identifier == null) return Future.value();
+    return client.database.storeDeviceKeyTrust(
+      userId,
+      identifier,
+      verified: directVerified,
+      blocked: directBlocked,
+      trustOnFirstUseSince: trustOnFirstUseSince,
+    );
+  }
+
   String? get ed25519Key => keys['ed25519:$identifier'];
   bool get verified =>
       identifier != null && (directVerified || crossVerified) && !(blocked);
   bool get blocked => _blocked ?? false;
   set blocked(bool isBlocked) => _blocked = isBlocked;
+
+  /// The stored blocked flag, without the `selfSigned` override that
+  /// [DeviceKeys.blocked] layers on top.
+  bool get directBlocked => _blocked ?? false;
 
   bool get encryptToDevice {
     if (blocked) return false;
@@ -397,6 +420,7 @@ class CrossSigningKey extends SignableKey {
 
   DateTime? _trustOnFirstUseSince;
 
+  @override
   DateTime? get trustOnFirstUseSince => _trustOnFirstUseSince;
 
   String? get publicKey => identifier;
@@ -412,16 +436,10 @@ class CrossSigningKey extends SignableKey {
     DateTime? since,
     bool updateInDatabase = true,
   }) async {
-    since ??= DateTime.now();
+    _trustOnFirstUseSince = since ?? DateTime.now();
     if (updateInDatabase) {
-      await client.database.setVerifiedUserCrossSigningKey(
-        verified,
-        userId,
-        publicKey!,
-        trustOnFirstUseSince: since,
-      );
+      await _updateInDatabase();
     }
-    _trustOnFirstUseSince = since;
   }
 
   @override
@@ -430,12 +448,7 @@ class CrossSigningKey extends SignableKey {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database.setVerifiedUserCrossSigningKey(
-      newVerified,
-      userId,
-      publicKey!,
-      trustOnFirstUseSince: trustOnFirstUseSince,
-    );
+    await _updateInDatabase();
   }
 
   @override
@@ -444,11 +457,7 @@ class CrossSigningKey extends SignableKey {
       throw Exception('setBlocked called on invalid key');
     }
     _blocked = newBlocked;
-    await client.database.setBlockedUserCrossSigningKey(
-      newBlocked,
-      userId,
-      publicKey!,
-    );
+    await _updateInDatabase();
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(
@@ -533,11 +542,7 @@ class DeviceKeys extends SignableKey {
       throw Exception('setVerified called on invalid key');
     }
     await super.setVerified(newVerified, sign);
-    await client.database.setVerifiedUserDeviceKey(
-      newVerified,
-      userId,
-      deviceId!,
-    );
+    await _updateInDatabase();
   }
 
   @override
@@ -546,11 +551,7 @@ class DeviceKeys extends SignableKey {
       throw Exception('setBlocked called on invalid key');
     }
     _blocked = newBlocked;
-    await client.database.setBlockedUserDeviceKey(
-      newBlocked,
-      userId,
-      deviceId!,
-    );
+    await _updateInDatabase();
   }
 
   DeviceKeys.fromMatrixDeviceKeys(

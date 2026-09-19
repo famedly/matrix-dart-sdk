@@ -7,9 +7,53 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:test/test.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import 'fake_database.dart';
+
+Future<void>? _vodInit;
+
+/// vodozemac may only be initialised once per isolate.
+Future<void> ensureVodozemac() => _vodInit ??= vod.init(
+  wasmPath: './pkg/',
+  libraryPath: './rust/target/debug/',
+);
+
+const testUserId = '@test:fakeServer.notExisting';
+const testDeviceId = 'OTHERDEVICE';
+const testPublicKey = 'F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY';
+
+/// A genuinely self-signed device key, so that `DeviceKeys.isValid` passes and
+/// the read path does not silently discard it.
+final validDeviceKey = <String, dynamic>{
+  'user_id': testUserId,
+  'device_id': testDeviceId,
+  'algorithms': [
+    AlgorithmTypes.olmV1Curve25519AesSha2,
+    AlgorithmTypes.megolmV1AesSha2,
+  ],
+  'keys': {
+    'curve25519:$testDeviceId': 'R96BA0qE1+QAWLp7E1jyWSTJ1VXMLpEdiM2SZHlKMXM',
+    'ed25519:$testDeviceId': 'EQo9eYbSygIbOR+tVJziqAY1NI6Gga+JQOVIqJe4mr4',
+  },
+  'signatures': {
+    testUserId: {
+      'ed25519:$testDeviceId':
+          '/rT6pVRypJWxGos1QcI7jHL9HwcA83nkHLHqMcRPeLSxXHh4oHWvC0/tl0Xg06ogyiGw4NuB7TpOISvJBdt7BA',
+      'ed25519:$testPublicKey':
+          'qnjiLl36h/1jlLvcAgt46Igaod2T9lOSnoSVkV0KC+c7vYIjG4QBzXpH+hycfufOT/y+a/kl52dUTLQWctMKCA',
+    },
+  },
+};
+
+final validCrossSigningKey = <String, dynamic>{
+  'user_id': testUserId,
+  'usage': ['master'],
+  'keys': {'ed25519:$testPublicKey': testPublicKey},
+  'signatures': <String, Object?>{},
+};
 
 String createLargeString(String character, int desiredSize) {
   final buffer = StringBuffer();
@@ -30,6 +74,9 @@ void main() {
       late int toDeviceQueueIndex;
 
       test('Setup', () async {
+        // Device key fixtures are signature-checked on read, so vodozemac has
+        // to be up before anything touches them.
+        await ensureVodozemac();
         database = await databaseBuilder.value();
       });
       test('transaction', () async {
@@ -591,40 +638,7 @@ void main() {
           Client('testclient', database: await getMatrixSdkDatabase()),
         );
       });
-      test('storeUserCrossSigningKey', () async {
-        await database.storeUserCrossSigningKey(
-          '@alice:example.com',
-          'publicKey',
-          '{}',
-          false,
-          false,
-        );
-      });
-      test('setVerifiedUserCrossSigningKey', () async {
-        await database.setVerifiedUserCrossSigningKey(
-          true,
-          '@alice:example.com',
-          'publicKey',
-          trustOnFirstUseSince: DateTime(2000),
-        );
-      });
-      test('setBlockedUserCrossSigningKey', () async {
-        await database.setBlockedUserCrossSigningKey(
-          true,
-          '@alice:example.com',
-          'publicKey',
-        );
-      });
-      test('removeUserCrossSigningKey', () async {
-        await database.removeUserCrossSigningKey(
-          '@alice:example.com',
-          'publicKey',
-        );
-      });
-      test('storeUserDeviceKeysInfo', () async {
-        await database.storeUserDeviceKeysInfo('@alice:example.com', true);
-      });
-      test('storeUserDeviceKeysInfo', () async {
+      test('customCacheObject', () async {
         var cache = await database.getCustomCacheObject('test');
         expect(cache, null);
         await database.cacheCustomObject('test', {'foo': 'bar', 'num': 42});
@@ -635,29 +649,87 @@ void main() {
         cache = await database.getCustomCacheObject('test');
         expect(cache, null);
       });
-      test('storeUserDeviceKey', () async {
-        await database.storeUserDeviceKey(
-          '@alice:example.com',
-          'deviceId',
-          '{}',
-          false,
-          false,
-          0,
+      test('storeDeviceKeysList keeps trust state', () async {
+        final client = Client('testclient', database: database);
+        final device = DeviceKeys.fromJson(validDeviceKey, client)
+          ..setDirectVerified(true);
+        final crossKey = CrossSigningKey.fromJson(validCrossSigningKey, client);
+        await crossKey.trustOnFirstUse(
+          since: DateTime.fromMillisecondsSinceEpoch(1600000000000),
+          updateInDatabase: false,
+        );
+
+        await database.storeDeviceKeysList(
+          testUserId,
+          DeviceKeysList(testUserId, client)
+            ..outdated = false
+            ..deviceKeys = {testDeviceId: device}
+            ..crossSigningKeys = {testPublicKey: crossKey},
+        );
+
+        final stored = (await database.getUserDeviceKeys(client))[testUserId];
+        expect(stored?.outdated, false);
+        expect(stored?.deviceKeys.keys, [testDeviceId]);
+        expect(stored?.deviceKeys[testDeviceId]?.directVerified, true);
+        expect(stored?.crossSigningKeys.keys, [testPublicKey]);
+        expect(
+          stored?.crossSigningKeys[testPublicKey]?.trustOnFirstUseSince,
+          DateTime.fromMillisecondsSinceEpoch(1600000000000),
         );
       });
-      test('setVerifiedUserDeviceKey', () async {
-        await database.setVerifiedUserDeviceKey(
-          true,
-          '@alice:example.com',
-          'deviceId',
+      test('storeDeviceKeyTrust updates a single key', () async {
+        final client = Client('testclient', database: database);
+        await database.storeDeviceKeyTrust(
+          testUserId,
+          testDeviceId,
+          verified: false,
+          blocked: true,
+        );
+        final stored = (await database.getUserDeviceKeys(client))[testUserId];
+        expect(stored?.deviceKeys[testDeviceId]?.directVerified, false);
+        expect(stored?.deviceKeys[testDeviceId]?.directBlocked, true);
+      });
+      test('setLastActiveUserDeviceKey is joined back on read', () async {
+        final client = Client('testclient', database: database);
+        await database.setLastActiveUserDeviceKey(
+          1234567890,
+          testUserId,
+          testDeviceId,
+        );
+        final stored = (await database.getUserDeviceKeys(client))[testUserId];
+        expect(
+          stored?.deviceKeys[testDeviceId]?.lastActive,
+          DateTime.fromMillisecondsSinceEpoch(1234567890),
         );
       });
-      test('setBlockedUserDeviceKey', () async {
-        await database.setBlockedUserDeviceKey(
-          true,
-          '@alice:example.com',
-          'deviceId',
+      test('lastSentMessageUserDeviceKey', () async {
+        expect(
+          await database.getLastSentMessageUserDeviceKey(
+            testUserId,
+            testDeviceId,
+          ),
+          <String>[],
         );
+        await database.setLastSentMessageUserDeviceKey(
+          '{"type":"m.dummy"}',
+          testUserId,
+          testDeviceId,
+        );
+        expect(
+          await database.getLastSentMessageUserDeviceKey(
+            testUserId,
+            testDeviceId,
+          ),
+          ['{"type":"m.dummy"}'],
+        );
+      });
+      test('storeUserDeviceKeysInfo', () async {
+        final client = Client('testclient', database: database);
+        await database.storeUserDeviceKeysInfo(testUserId, true);
+        final stored = (await database.getUserDeviceKeys(client))[testUserId];
+        expect(stored?.outdated, true);
+        // Flipping the flag must not disturb the stored key material.
+        expect(stored?.deviceKeys.keys, [testDeviceId]);
       });
       test('getStorePresences', () async {
         const userId = '@alice:example.com';
@@ -722,4 +794,146 @@ void main() {
       });
     });
   }
+
+  // Needs vodozemac, because the assertions go through the real read path and
+  // device keys are signature-checked there.
+  group('Database migrations', tags: 'olm', () {
+    const legacyDeviceKeysBox = 'box_user_device_keys';
+    const legacyCrossSigningBox = 'box_cross_signing_keys';
+    const legacyOutdatedBox = 'box_user_device_keys_outdated';
+
+    /// Builds a v11 database holding one verified device key and one cross
+    /// signing key carrying a TOFU timestamp.
+    Future<Database> buildVersion11Database() async {
+      final sqliteDb = await databaseFactoryFfi.openDatabase(
+        ':memory:',
+        options: OpenDatabaseOptions(singleInstance: false),
+      );
+      for (final name in {
+        'box_client',
+        legacyDeviceKeysBox,
+        legacyCrossSigningBox,
+        legacyOutdatedBox,
+      }) {
+        sqliteDb.execute(
+          'CREATE TABLE IF NOT EXISTS $name (k TEXT PRIMARY KEY NOT NULL, v TEXT)',
+        );
+      }
+      await sqliteDb.insert('box_client', {'k': 'version', 'v': '11'});
+      await sqliteDb.insert(legacyDeviceKeysBox, {
+        'k': TupleKey(testUserId, testDeviceId).toString(),
+        'v': jsonEncode({
+          'user_id': testUserId,
+          'device_id': testDeviceId,
+          'content': jsonEncode(validDeviceKey),
+          'verified': true,
+          'blocked': false,
+          'last_active': 1234567890,
+          'last_sent_message': '{"type":"m.dummy","content":{}}',
+        }),
+      });
+      await sqliteDb.insert(legacyCrossSigningBox, {
+        'k': TupleKey(testUserId, testPublicKey).toString(),
+        'v': jsonEncode({
+          'user_id': testUserId,
+          'public_key': testPublicKey,
+          'content': jsonEncode(validCrossSigningKey),
+          'verified': true,
+          'blocked': false,
+          'tofu': 1600000000000,
+        }),
+      });
+      await sqliteDb.insert(legacyOutdatedBox, {'k': testUserId, 'v': 'false'});
+      return sqliteDb;
+    }
+
+    Future<MatrixSdkDatabase> openOn(Database sqliteDb) =>
+        MatrixSdkDatabase.init(
+          'unit_test.${DateTime.now().microsecondsSinceEpoch}',
+          database: sqliteDb,
+          sqfliteFactory: databaseFactoryFfi,
+        );
+
+    test('v11 keys keep their trust state', () async {
+      await ensureVodozemac();
+      final sqliteDb = await buildVersion11Database();
+      final database = await openOn(sqliteDb);
+
+      final keys = await database.getUserDeviceKeys(
+        Client('testclient', database: database),
+      );
+      final list = keys[testUserId];
+
+      expect(list?.userId, testUserId);
+      expect(list?.outdated, false);
+
+      final device = list?.deviceKeys[testDeviceId];
+      expect(device, isNotNull, reason: 'the device key must survive');
+      expect(device?.directVerified, true);
+      expect(device?.directBlocked, false);
+      expect(
+        device?.lastActive,
+        DateTime.fromMillisecondsSinceEpoch(1234567890),
+      );
+
+      final crossKey = list?.crossSigningKeys[testPublicKey];
+      expect(crossKey, isNotNull);
+      expect(crossKey?.usage, ['master']);
+      expect(crossKey?.directVerified, true);
+      expect(
+        crossKey?.trustOnFirstUseSince,
+        DateTime.fromMillisecondsSinceEpoch(1600000000000),
+      );
+
+      expect(
+        await database.getLastSentMessageUserDeviceKey(
+          testUserId,
+          testDeviceId,
+        ),
+        ['{"type":"m.dummy","content":{}}'],
+      );
+
+      await database.close();
+    });
+
+    test('legacy boxes survive so the copy can be retried', () async {
+      await ensureVodozemac();
+      final sqliteDb = await buildVersion11Database();
+      final database = await openOn(sqliteDb);
+      await database.getUserDeviceKeys(
+        Client('testclient', database: database),
+      );
+
+      for (final box in {legacyDeviceKeysBox, legacyCrossSigningBox}) {
+        expect(
+          (await sqliteDb.query(box)).length,
+          1,
+          reason: '$box must not be cleared by the migration',
+        );
+      }
+      await database.close();
+    });
+
+    test('migrating twice is a no-op', () async {
+      await ensureVodozemac();
+      final sqliteDb = await buildVersion11Database();
+      final database = await openOn(sqliteDb);
+      final client = Client('testclient', database: database);
+
+      await database.getUserDeviceKeys(client);
+      // A later verification must not be undone by a second migration pass.
+      await database.storeDeviceKeyTrust(
+        testUserId,
+        testDeviceId,
+        verified: false,
+        blocked: true,
+      );
+
+      final keys = await database.getUserDeviceKeys(client);
+      expect(keys[testUserId]?.deviceKeys[testDeviceId]?.directVerified, false);
+      expect(keys[testUserId]?.deviceKeys[testDeviceId]?.directBlocked, true);
+
+      await database.close();
+    });
+  });
 }

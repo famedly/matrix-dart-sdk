@@ -212,27 +212,20 @@ abstract class DatabaseApi {
 
   Future deleteOldFiles(int savedAt);
 
+  /// Marks a user's key list as stale so the next `/keys/query` refetches it.
   Future storeUserDeviceKeysInfo(String userId, bool outdated);
 
-  Future storeUserDeviceKey(
+  /// Replaces everything known about [userId]'s keys. Use this for
+  /// `/keys/query` responses; keys missing from [deviceKeysList] are dropped.
+  Future storeDeviceKeysList(String userId, DeviceKeysList deviceKeysList);
+
+  /// Updates the local trust state of a single device or cross signing key.
+  /// [keyId] is the device ID or the cross signing public key.
+  Future storeDeviceKeyTrust(
     String userId,
-    String deviceId,
-    String content,
-    bool verified,
-    bool blocked,
-    int lastActive,
-  );
-
-  Future removeUserDeviceKey(String userId, String deviceId);
-
-  Future removeUserCrossSigningKey(String userId, String publicKey);
-
-  Future storeUserCrossSigningKey(
-    String userId,
-    String publicKey,
-    String content,
-    bool verified,
-    bool blocked, {
+    String keyId, {
+    required bool verified,
+    required bool blocked,
     DateTime? trustOnFirstUseSince,
   });
 
@@ -241,27 +234,6 @@ abstract class DatabaseApi {
   Future removeEvent(String eventId, String roomId);
 
   Future setRoomPrevBatch(String? prevBatch, String roomId, Client client);
-
-  Future setVerifiedUserCrossSigningKey(
-    bool verified,
-    String userId,
-    String publicKey, {
-    DateTime? trustOnFirstUseSince,
-  });
-
-  Future setBlockedUserCrossSigningKey(
-    bool blocked,
-    String userId,
-    String publicKey,
-  );
-
-  Future setVerifiedUserDeviceKey(
-    bool verified,
-    String userId,
-    String deviceId,
-  );
-
-  Future setBlockedUserDeviceKey(bool blocked, String userId, String deviceId);
 
   Future<List<Event>> getUnimportantRoomEventStatesForRoom(
     List<String> events,
