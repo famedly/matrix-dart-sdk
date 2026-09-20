@@ -802,6 +802,25 @@ void main() {
     const legacyCrossSigningBox = 'box_cross_signing_keys';
     const legacyOutdatedBox = 'box_user_device_keys_outdated';
 
+    final legacyDeviceKeyRow = {
+      'user_id': testUserId,
+      'device_id': testDeviceId,
+      'content': jsonEncode(validDeviceKey),
+      'verified': true,
+      'blocked': false,
+      'last_active': 1234567890,
+      'last_sent_message': '{"type":"m.dummy","content":{}}',
+    };
+
+    final legacyCrossSigningRow = {
+      'user_id': testUserId,
+      'public_key': testPublicKey,
+      'content': jsonEncode(validCrossSigningKey),
+      'verified': true,
+      'blocked': false,
+      'tofu': 1600000000000,
+    };
+
     /// Builds a v11 database holding one verified device key and one cross
     /// signing key carrying a TOFU timestamp.
     Future<Database> buildVersion11Database() async {
@@ -822,26 +841,11 @@ void main() {
       await sqliteDb.insert('box_client', {'k': 'version', 'v': '11'});
       await sqliteDb.insert(legacyDeviceKeysBox, {
         'k': TupleKey(testUserId, testDeviceId).toString(),
-        'v': jsonEncode({
-          'user_id': testUserId,
-          'device_id': testDeviceId,
-          'content': jsonEncode(validDeviceKey),
-          'verified': true,
-          'blocked': false,
-          'last_active': 1234567890,
-          'last_sent_message': '{"type":"m.dummy","content":{}}',
-        }),
+        'v': jsonEncode(legacyDeviceKeyRow),
       });
       await sqliteDb.insert(legacyCrossSigningBox, {
         'k': TupleKey(testUserId, testPublicKey).toString(),
-        'v': jsonEncode({
-          'user_id': testUserId,
-          'public_key': testPublicKey,
-          'content': jsonEncode(validCrossSigningKey),
-          'verified': true,
-          'blocked': false,
-          'tofu': 1600000000000,
-        }),
+        'v': jsonEncode(legacyCrossSigningRow),
       });
       await sqliteDb.insert(legacyOutdatedBox, {'k': testUserId, 'v': 'false'});
       return sqliteDb;
@@ -932,6 +936,46 @@ void main() {
       final keys = await database.getUserDeviceKeys(client);
       expect(keys[testUserId]?.deviceKeys[testDeviceId]?.directVerified, false);
       expect(keys[testUserId]?.deviceKeys[testDeviceId]?.directBlocked, true);
+
+      await database.close();
+    });
+
+    test('a v11 dump can still be imported', () async {
+      await ensureVodozemac();
+      // Take an empty dump and rewrite it into the v11 shape: the legacy boxes
+      // instead of the ones v12 partitioned them into.
+      final dump =
+          Map<String, dynamic>.from(
+            jsonDecode(await (await getMatrixSdkDatabase()).exportDump()),
+          )..removeWhere(
+            (boxName, _) => const {
+              'box_device_keys_material',
+              'box_device_key_trust',
+              'box_last_active_devices',
+              'box_last_sent_olm_messages',
+            }.contains(boxName),
+          );
+      dump['box_client'] = {'version': '11'};
+      dump[legacyDeviceKeysBox] = {
+        TupleKey(testUserId, testDeviceId).toString(): legacyDeviceKeyRow,
+      };
+      dump[legacyCrossSigningBox] = {
+        TupleKey(testUserId, testPublicKey).toString(): legacyCrossSigningRow,
+      };
+      dump[legacyOutdatedBox] = {testUserId: false};
+
+      final database = await getMatrixSdkDatabase();
+      expect(await database.importDump(jsonEncode(dump)), true);
+
+      final list = (await database.getUserDeviceKeys(
+        Client('testclient', database: database),
+      ))[testUserId];
+      expect(list?.outdated, false);
+      expect(list?.deviceKeys[testDeviceId]?.directVerified, true);
+      expect(
+        list?.crossSigningKeys[testPublicKey]?.trustOnFirstUseSince,
+        DateTime.fromMillisecondsSinceEpoch(1600000000000),
+      );
 
       await database.close();
     });

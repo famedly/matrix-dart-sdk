@@ -1687,13 +1687,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       for (final key in json[_olmSessionsBoxName]!.keys) {
         await _olmSessionsBox.put(key, json[_olmSessionsBoxName]![key]);
       }
-      for (final key in json[_deviceKeysMaterialBoxName]!.keys) {
+      // A dump taken before v12 carries the legacy device key boxes instead of
+      // the partitioned ones, so all of these may be missing.
+      for (final key in json[_deviceKeysMaterialBoxName]?.keys ?? const []) {
         await _deviceKeysMaterialBox.put(
           key,
           json[_deviceKeysMaterialBoxName]![key],
         );
       }
-      for (final key in json[_deviceKeyTrustBoxName]!.keys) {
+      for (final key in json[_deviceKeyTrustBoxName]?.keys ?? const []) {
         await _deviceKeyTrustBox.put(key, json[_deviceKeyTrustBoxName]![key]);
       }
       for (final key in json[_userDeviceKeysOutdatedBoxName]!.keys) {
@@ -1702,17 +1704,31 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           json[_userDeviceKeysOutdatedBoxName]![key],
         );
       }
-      for (final key in json[_lastActiveDevicesBoxName]!.keys) {
+      for (final key in json[_lastActiveDevicesBoxName]?.keys ?? const []) {
         await _lastActiveDevicesBox.put(
           key,
           json[_lastActiveDevicesBoxName]![key],
         );
       }
-      for (final key in json[_lastSentOlmMessagesBoxName]!.keys) {
+      for (final key in json[_lastSentOlmMessagesBoxName]?.keys ?? const []) {
         await _lastSentOlmMessagesBox.put(
           key,
           json[_lastSentOlmMessagesBoxName]![key],
         );
+      }
+      // Restore the legacy boxes as they are without setting
+      // [_deviceKeysMigratedKey], so [_migrateLegacyDeviceKeys] folds them into
+      // the new layout on the first read.
+      for (final boxName in const [
+        _legacyUserDeviceKeysBoxName,
+        _legacyUserCrossSigningKeysBoxName,
+      ]) {
+        final legacyValues = json[boxName];
+        if (legacyValues == null) continue;
+        final legacyBox = _collection.openBox<Map>(boxName);
+        for (final key in legacyValues.keys) {
+          await legacyBox.put(key, legacyValues[key]);
+        }
       }
       for (final key in json[_ssssCacheBoxName]!.keys) {
         await _ssssCacheBox.put(key, json[_ssssCacheBoxName]![key]);
