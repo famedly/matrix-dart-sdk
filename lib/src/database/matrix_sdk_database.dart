@@ -71,8 +71,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   /// `/keys/query`.
   late Box<Map> _deviceKeysMaterialBox;
 
-  /// Key is a tuple as TupleKey(userId, deviceId or publicKey), value the
-  /// locally decided trust state. Written when the user verifies or blocks.
+  /// Key is the user ID, value maps each device ID or cross signing public key
+  /// to its locally decided trust state. Written when the user verifies or
+  /// blocks. One row per user rather than per key, because `/keys/query`
+  /// rewrites a whole user at once and a row per key made that N times as
+  /// many statements.
   late Box<Map> _deviceKeyTrustBox;
 
   /// Key is the user ID as a String. Written per `device_lists.changed`.
@@ -790,20 +793,22 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         for (final userId in {...material.keys, ...outdated.keys}) {
           final raw = material[userId];
           final stored = raw == null ? const <String, Object?>{} : copyMap(raw);
+          final userTrust = trust[userId];
 
           final childEntries = <Map<String, dynamic>>[];
           for (final entry
               in (stored.tryGetMap<String, Object?>('device_keys') ?? {})
                   .entries) {
-            final tuple = TupleKey(userId, entry.key).toString();
-            final keyTrust = trust[tuple];
+            final keyTrust = userTrust?[entry.key] as Map?;
             childEntries.add({
               'user_id': userId,
               'device_id': entry.key,
               'content': entry.value,
               'verified': keyTrust?['verified'] ?? false,
               'blocked': keyTrust?['blocked'] ?? false,
-              'last_active': lastActive[tuple] ?? 0,
+              'self_signed': keyTrust?['self_signed'],
+              'last_active':
+                  lastActive[TupleKey(userId, entry.key).toString()] ?? 0,
             });
           }
 
@@ -811,7 +816,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           for (final entry
               in (stored.tryGetMap<String, Object?>('cross_signing_keys') ?? {})
                   .entries) {
-            final keyTrust = trust[TupleKey(userId, entry.key).toString()];
+            final keyTrust = userTrust?[entry.key] as Map?;
             crossSigningEntries.add({
               'user_id': userId,
               'public_key': entry.key,
@@ -878,10 +883,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       })['device_keys']![deviceId] = Event.getMapFromPayload(
         row['content'],
       );
-      trust[tuple] = {
-        'verified': row.tryGet<bool>('verified') ?? false,
-        'blocked': row.tryGet<bool>('blocked') ?? false,
-      };
+      (trust[userId] ??= {})[deviceId] = _trustEntry(
+        verified: row.tryGet<bool>('verified') ?? false,
+        blocked: row.tryGet<bool>('blocked') ?? false,
+      );
       final active = row.tryGet<int>('last_active');
       if (active != null && active > 0) lastActive[tuple] = active;
       final lastSent = row.tryGet<String>('last_sent_message');
@@ -902,11 +907,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       })['cross_signing_keys']![publicKey] = Event.getMapFromPayload(
         row['content'],
       );
-      trust[TupleKey(userId, publicKey).toString()] = {
-        'verified': row.tryGet<bool>('verified') ?? false,
-        'blocked': row.tryGet<bool>('blocked') ?? false,
-        'tofu': ?row.tryGet<int>('tofu'),
-      };
+      final tofu = row.tryGet<int>('tofu');
+      (trust[userId] ??= {})[publicKey] = _trustEntry(
+        verified: row.tryGet<bool>('verified') ?? false,
+        blocked: row.tryGet<bool>('blocked') ?? false,
+        trustOnFirstUseSince: tofu == null
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(tofu),
+      );
     }
 
     await transaction(() async {
@@ -1064,6 +1072,18 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     return;
   }
 
+  static Map<String, Object?> _trustEntry({
+    required bool verified,
+    required bool blocked,
+    DateTime? trustOnFirstUseSince,
+    bool? selfSigned,
+  }) => {
+    'verified': verified,
+    'blocked': blocked,
+    'tofu': ?trustOnFirstUseSince?.millisecondsSinceEpoch,
+    'self_signed': ?selfSigned,
+  };
+
   @override
   Future<void> storeDeviceKeyTrust(
     String userId,
@@ -1071,11 +1091,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     required bool verified,
     required bool blocked,
     DateTime? trustOnFirstUseSince,
-  }) => _deviceKeyTrustBox.put(TupleKey(userId, keyId).toString(), {
-    'verified': verified,
-    'blocked': blocked,
-    'tofu': ?trustOnFirstUseSince?.millisecondsSinceEpoch,
-  });
+  }) async {
+    final trust = copyMap(await _deviceKeyTrustBox.get(userId) ?? {});
+    trust[keyId] = _trustEntry(
+      verified: verified,
+      blocked: blocked,
+      trustOnFirstUseSince: trustOnFirstUseSince,
+    );
+    await _deviceKeyTrustBox.put(userId, trust);
+  }
 
   @override
   Future<void> setLastActiveUserDeviceKey(
@@ -1416,11 +1440,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<void> storeUserDeviceKeysInfo(String userId, bool outdated) =>
       _userDeviceKeysOutdatedBox.put(userId, outdated);
 
+  /// Deliberately not wrapped in [transaction]: callers that need atomicity
+  /// already provide one, and opening a nested transaction makes
+  /// [BoxCollection] commit a sub-batch and drop the outer batch, which turns
+  /// a bulk `/keys/query` write into one commit per user.
   @override
   Future<void> storeDeviceKeysList(
     String userId,
     DeviceKeysList deviceKeysList,
-  ) => transaction(() async {
+  ) async {
     // Replacing the whole material row is what drops keys the server no
     // longer reports, so no separate delete bookkeeping is needed.
     await _deviceKeysMaterialBox.put(userId, {
@@ -1433,24 +1461,22 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     });
     await _userDeviceKeysOutdatedBox.put(userId, deviceKeysList.outdated);
 
-    for (final entry in deviceKeysList.deviceKeys.entries) {
-      await storeDeviceKeyTrust(
-        userId,
-        entry.key,
-        verified: entry.value.directVerified,
-        blocked: entry.value.directBlocked,
-      );
-    }
-    for (final entry in deviceKeysList.crossSigningKeys.entries) {
-      await storeDeviceKeyTrust(
-        userId,
-        entry.key,
-        verified: entry.value.directVerified,
-        blocked: entry.value.directBlocked,
-        trustOnFirstUseSince: entry.value.trustOnFirstUseSince,
-      );
-    }
-  });
+    await _deviceKeyTrustBox.put(userId, {
+      for (final entry in deviceKeysList.deviceKeys.entries)
+        entry.key: _trustEntry(
+          verified: entry.value.directVerified,
+          blocked: entry.value.directBlocked,
+          // Already computed by the caller's validity check, so free here.
+          selfSigned: entry.value.selfSigned,
+        ),
+      for (final entry in deviceKeysList.crossSigningKeys.entries)
+        entry.key: _trustEntry(
+          verified: entry.value.directVerified,
+          blocked: entry.value.directBlocked,
+          trustOnFirstUseSince: entry.value.trustOnFirstUseSince,
+        ),
+    });
+  }
 
   @override
   Future<void> transaction(Future<void> Function() action) =>

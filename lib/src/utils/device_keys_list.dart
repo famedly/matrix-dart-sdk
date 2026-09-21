@@ -572,6 +572,11 @@ class DeviceKeys extends SignableKey {
     algorithms = json['algorithms'].cast<String>();
     _verified = dbEntry['verified'];
     _blocked = dbEntry['blocked'];
+    // A key only enters the store after `_updateUserDeviceKeys` validated its
+    // self-signature, and the signed content cannot change without another
+    // `/keys/query`. Reusing that verdict avoids re-verifying every device on
+    // every launch. Absent (e.g. rows written before v12) means verify lazily.
+    _validSelfSignature = dbEntry['self_signed'] as bool?;
     lastActive = DateTime.fromMillisecondsSinceEpoch(
       dbEntry['last_active'] ?? 0,
     );
