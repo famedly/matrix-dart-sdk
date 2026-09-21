@@ -997,6 +997,14 @@ Future<Map<String, Measurement>> runLayout(
     }
   });
 
+  // The real startup shape: after a fresh login every tracked user is
+  // outdated, so one `/keys/query` response persists all of them at once.
+  results['keysQuery ALL'] = await measure('keysQuery ALL', () async {
+    for (final user in fixtures) {
+      await layout.persistUser(user);
+    }
+  });
+
   await db.close();
   final size = File(path).existsSync() ? File(path).lengthSync() : 0;
   results['db size'] = Measurement('db size', 0, size);
@@ -1055,6 +1063,7 @@ Future<void> runDataset({
     'setVerified x200',
     'outdated x100',
     'keysQuery x50',
+    'keysQuery ALL',
     'db size',
   ];
 
