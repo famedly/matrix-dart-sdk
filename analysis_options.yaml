@@ -9,9 +9,27 @@ linter:
     # TODO: Enable these lints one after another and fix them
     non_constant_identifier_names: false
 
-dart_code_linter:
-  rules:
+plugins:
+  dart_code_linter:
+    version: ^4.4.0
     # TODO: Enable these lints one after another and fix them
+    diagnostics:
+      avoid-late-keyword: false
+      avoid-redundant-async: false
+      member-ordering: false
+      prefer-match-file-name: false
+      avoid-dynamic: false
+      avoid-global-state: false
+      avoid-unrelated-type-assertions: false
+      avoid-unnecessary-type-casts: false
+      prefer-first: false
+      prefer-enums-by-name: false
+      prefer-immediate-return: false
+
+dart_code_linter:
+  version: ^4.4.0
+  # TODO: Enable these lints one after another and fix them
+  rules:
     avoid-late-keyword: false
     avoid-redundant-async: false
     member-ordering: false
