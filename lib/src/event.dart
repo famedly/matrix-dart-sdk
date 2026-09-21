@@ -1334,6 +1334,10 @@ class Event extends MatrixEvent {
       room: mentionsMap?.tryGet<bool>('room') ?? false,
     );
   }
+
+  /// Returns validated user mentions from `m.mentions`.
+  List<UserId> get userMentions =>
+      mentions.userIds.map(UserId.tryParse).whereType<UserId>().toList();
 }
 
 enum FileSendingStatus { generatingThumbnail, encrypting, uploading }

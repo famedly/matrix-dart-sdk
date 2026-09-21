@@ -19,6 +19,29 @@ class User extends StrippedStateEvent {
   final Map<String, Object?>? prevContent;
   final DateTime? originServerTs;
 
+  /// Creates a room user with a strongly typed [UserId].
+  factory User.typed(
+    UserId userId, {
+    String? membership,
+    String? displayName,
+    String? avatarUrl,
+    DateTime? originServerTs,
+    required Room room,
+  }) {
+    return User.fromTypedState(
+      stateKey: userId.value,
+      senderUserId: userId,
+      content: {
+        'membership': ?membership,
+        'displayname': ?displayName,
+        'avatar_url': ?avatarUrl,
+      },
+      typeKey: EventTypes.RoomMember,
+      room: room,
+      originServerTs: originServerTs,
+    );
+  }
+
   factory User(
     String id, {
     String? membership,
@@ -41,6 +64,16 @@ class User extends StrippedStateEvent {
     );
   }
 
+  User.fromTypedState({
+    required String super.stateKey,
+    super.content = const {},
+    required String typeKey,
+    required super.senderUserId,
+    required this.room,
+    this.originServerTs,
+    this.prevContent,
+  }) : super.typed(type: typeKey);
+
   User.fromState({
     required String super.stateKey,
     super.content = const {},
@@ -51,7 +84,11 @@ class User extends StrippedStateEvent {
     this.prevContent,
   }) : super(type: typeKey);
 
+  /// The validated Matrix user ID.
+  UserId? get userId => stateKey != null ? UserId.tryParse(stateKey!) : null;
+
   /// The full qualified Matrix ID in the format @username:server.abc.
+  @Deprecated('Use userId instead.')
   String get id => stateKey ?? '@unknown:unknown';
 
   /// The displayname of the user if the user has set one.

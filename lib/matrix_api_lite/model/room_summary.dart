@@ -2,10 +2,16 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import 'matrix_id.dart';
+
 class RoomSummary {
   List<String>? mHeroes;
   int? mJoinedMemberCount;
   int? mInvitedMemberCount;
+
+  /// The validated hero user IDs for this room summary.
+  List<UserId>? get heroes =>
+      mHeroes?.map(UserId.tryParse).whereType<UserId>().toList();
 
   RoomSummary.fromJson(Map<String, Object?> json)
     : mHeroes = json['m.heroes'] != null

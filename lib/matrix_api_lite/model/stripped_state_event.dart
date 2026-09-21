@@ -14,6 +14,13 @@ class StrippedStateEvent extends BasicEventWithSender {
     this.stateKey,
   });
 
+  StrippedStateEvent.typed({
+    required super.type,
+    required super.content,
+    required super.senderUserId,
+    this.stateKey,
+  }) : super.typed();
+
   StrippedStateEvent.fromJson(super.json)
     : stateKey = json.tryGet<String>('state_key'),
       super.fromJson();

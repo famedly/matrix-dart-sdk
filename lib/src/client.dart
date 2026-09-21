@@ -386,6 +386,13 @@ class Client extends MatrixApi {
   String? get deviceID => _deviceID;
   String? _deviceID;
 
+  /// The validated Matrix user ID of the current logged in user.
+  UserId? get userId => _userID != null ? UserId.tryParse(_userID!) : null;
+
+  /// The validated Matrix device ID of the current logged in session.
+  DeviceId? get deviceId =>
+      _deviceID != null ? DeviceId.tryParse(_deviceID!) : null;
+
   /// The device name is a human readable identifier for this device.
   String? get deviceName => _deviceName;
   String? _deviceName;
@@ -500,6 +507,16 @@ class Client extends MatrixApi {
           (list is! List) ? [] : list.whereType<String>().toList(),
         ),
       );
+
+  /// Returns the first room ID from the store which is a private chat with [userId].
+  String? getDirectChatForUser(UserId userId) =>
+      getDirectChatFromUserId(userId.value);
+
+  /// Returns the first room ID from the store which is a private chat with [userId] as a typed [RoomId].
+  RoomId? getDirectChatRoomIdForUser(UserId userId) {
+    final rawId = getDirectChatForUser(userId);
+    return rawId != null ? RoomId.tryParse(rawId) : null;
+  }
 
   /// Returns the first room ID from the store (the room with the latest event)
   /// which is a private chat with the user [userId].
@@ -890,6 +907,25 @@ class Client extends MatrixApi {
     );
     return completer.future;
   }
+
+  /// Returns an existing direct room ID with this [user] or creates a new one.
+  Future<String> startDirectChatWithUser(
+    UserId user, {
+    bool? enableEncryption,
+    List<StateEvent>? initialState,
+    bool waitForSync = true,
+    Map<String, dynamic>? powerLevelContentOverride,
+    CreateRoomPreset? preset = CreateRoomPreset.trustedPrivateChat,
+    bool skipExistingChat = false,
+  }) => startDirectChat(
+    user.value,
+    enableEncryption: enableEncryption,
+    initialState: initialState,
+    waitForSync: waitForSync,
+    powerLevelContentOverride: powerLevelContentOverride,
+    preset: preset,
+    skipExistingChat: skipExistingChat,
+  );
 
   /// Returns an existing direct room ID with this user or creates a new one.
   /// By default encryption will be enabled if the client supports encryption
@@ -2247,6 +2283,11 @@ class Client extends MatrixApi {
   /// Used for testing only
   void setUserId(String s) {
     _userID = s;
+  }
+
+  /// Used for testing only
+  void setDeviceId(String s) {
+    _deviceID = s;
   }
 
   /// Resets all settings and stops the synchronisation.
@@ -4005,6 +4046,14 @@ class Client extends MatrixApi {
     await clearCache();
     return;
   }
+
+  /// Ignores a user by their strongly typed [UserId].
+  Future<void> ignoreUserByUserId(UserId userId, {bool leaveRooms = true}) =>
+      ignoreUser(userId.value, leaveRooms: leaveRooms);
+
+  /// Unignores a user by their strongly typed [UserId].
+  Future<void> unignoreUserByUserId(UserId userId) =>
+      unignoreUser(userId.value);
 
   /// The newest presence of this user if there is any. Fetches it from the
   /// database first and then from the server if necessary or returns offline.

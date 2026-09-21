@@ -2149,6 +2149,19 @@ class Room {
   >
   _inflightUserRequests = {};
 
+  /// Requests a missing [User] for this room by their strongly typed [UserId].
+  Future<User?> requestUserById(
+    UserId userId, {
+    bool ignoreErrors = false,
+    bool requestState = true,
+    bool? requestProfile,
+  }) => requestUser(
+    userId.value,
+    ignoreErrors: ignoreErrors,
+    requestState: requestState,
+    requestProfile: requestProfile,
+  );
+
   /// Requests a missing [User] for this room. Important for clients using
   /// lazy loading. If the user can't be found this method tries to fetch
   /// the displayname and avatar from the server if [requestState] is true.
