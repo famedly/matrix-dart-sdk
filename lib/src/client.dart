@@ -490,6 +490,10 @@ class Client extends MatrixApi {
     return null;
   }
 
+  /// Searches in the local cache for the room matching [roomId], returning null if not found.
+  /// This does not include archived rooms.
+  Room? getRoomByRoomId(RoomId roomId) => getRoomById(roomId.value);
+
   /// Searches in the local cache for the given room and returns null if not
   /// found. This does not include archived rooms.
   Room? getRoomById(String id) {

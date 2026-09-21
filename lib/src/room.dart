@@ -34,6 +34,9 @@ class Room {
   /// The full qualified Matrix ID for the room in the format '!localid:server.abc'.
   final String id;
 
+  /// The strongly typed, validated [RoomId] for this room, or null if malformed.
+  RoomId? get roomId => RoomId.tryParse(id);
+
   /// Membership status of the user for this room.
   Membership membership;
 
@@ -488,6 +491,31 @@ class Room {
 
   /// Your current client instance.
   final Client client;
+
+  /// Constructs a [Room] with a strongly typed [RoomId].
+  Room.typed({
+    required RoomId roomId,
+    Membership membership = Membership.join,
+    int notificationCount = 0,
+    int highlightCount = 0,
+    String? prev_batch,
+    required Client client,
+    Map<String, BasicEvent>? roomAccountData,
+    RoomSummary? summary,
+    Event? lastEvent,
+    LatestReceiptState? receiptState,
+  }) : this(
+         id: roomId.value,
+         membership: membership,
+         notificationCount: notificationCount,
+         highlightCount: highlightCount,
+         prev_batch: prev_batch,
+         client: client,
+         roomAccountData: roomAccountData,
+         summary: summary,
+         lastEvent: lastEvent,
+         receiptState: receiptState,
+       );
 
   Room({
     required this.id,

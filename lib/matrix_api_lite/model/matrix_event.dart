@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import '../utils/map_copy_extension.dart';
+import 'matrix_id.dart';
 import 'stripped_state_event.dart';
 
 class MatrixEvent extends StrippedStateEvent {
@@ -11,6 +12,29 @@ class MatrixEvent extends StrippedStateEvent {
   DateTime originServerTs;
   Map<String, Object?>? unsigned;
   String? redacts;
+
+  /// The validated room ID as a [RoomId], or null if unset or malformed.
+  RoomId? get parsedRoomId => roomId != null ? RoomId.tryParse(roomId!) : null;
+
+  set parsedRoomId(RoomId? room) {
+    roomId = room?.value;
+  }
+
+  /// The validated event ID as an [EventId], or null if malformed or synthetic.
+  EventId? get eventIdentifier =>
+      eventId.isEmpty ? null : EventId.tryParse(eventId);
+
+  set eventIdentifier(EventId id) {
+    eventId = id.value;
+  }
+
+  /// The validated event ID that this event redacts, or null if unset or malformed.
+  EventId? get redactsEventId =>
+      redacts != null ? EventId.tryParse(redacts!) : null;
+
+  set redactsEventId(EventId? id) {
+    redacts = id?.value;
+  }
 
   MatrixEvent({
     required super.type,
@@ -23,6 +47,21 @@ class MatrixEvent extends StrippedStateEvent {
     this.unsigned,
     this.redacts,
   });
+
+  MatrixEvent.typed({
+    required super.type,
+    required super.content,
+    required super.senderUserId,
+    super.stateKey,
+    required EventId eventIdentifier,
+    RoomId? room,
+    required this.originServerTs,
+    this.unsigned,
+    EventId? redacts,
+  }) : eventId = eventIdentifier.value,
+       roomId = room?.value,
+       redacts = redacts?.value,
+       super.typed();
 
   MatrixEvent.fromJson(super.json)
     : eventId = json['event_id'] as String,
