@@ -1093,10 +1093,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     DateTime? trustOnFirstUseSince,
   }) async {
     final trust = copyMap(await _deviceKeyTrustBox.get(userId) ?? {});
+    // The cached self-signature verdict is not part of the trust state updated
+    // here, so carry it over instead of forcing a re-verification on load.
     trust[keyId] = _trustEntry(
       verified: verified,
       blocked: blocked,
       trustOnFirstUseSince: trustOnFirstUseSince,
+      selfSigned: (trust[keyId] as Map?)?['self_signed'] as bool?,
     );
     await _deviceKeyTrustBox.put(userId, trust);
   }
