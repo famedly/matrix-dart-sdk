@@ -101,3 +101,19 @@ bool _isValidServerName(String serverName) {
   }
   return true;
 }
+
+/// Validation for a Matrix device ID.
+///
+/// Device IDs are opaque non-empty client-assigned or server-generated strings
+/// without NUL or unpaired surrogates.
+void validateDeviceId(String value) {
+  if (value.isEmpty) {
+    throw const FormatException('Device ID cannot be empty');
+  }
+  if (value.runes.any((rune) => rune == 0 || _isSurrogate(rune))) {
+    throw FormatException(
+      'Device ID contains NUL or an unpaired surrogate',
+      value,
+    );
+  }
+}

@@ -117,6 +117,9 @@ extension MatrixIdExtension on String {
   /// Parses this string as any [MatrixId], or returns null if invalid.
   MatrixId? get asMatrixId => MatrixId.tryParse(this);
 
+  /// Parses this string as a [DeviceId], or returns null if invalid.
+  DeviceId? get asDeviceId => DeviceId.tryParse(this);
+
   bool equals(String? other) => toLowerCase() == other?.toLowerCase();
 
   /// Parse a matrix identifier string into a Uri. Primary and secondary identifiers
