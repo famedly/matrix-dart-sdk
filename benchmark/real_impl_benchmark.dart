@@ -201,7 +201,27 @@ Future<void> runDataset({
       );
     }
   });
-  stdout.writeln('  lastActive x1000   ${fmt(lastActive).padLeft(10)}');
+  stdout.writeln('  lastActive x1000   ${fmt(lastActive).padLeft(10)}  (bare)');
+
+  // The shape that actually occurs: _handleToDeviceEvents runs inside
+  // _handleSync, which runs inside database.transaction(), so a sync's worth
+  // of to-device events lands in one batch rather than one commit each.
+  final lastActiveBatched = await measure(() async {
+    for (var sync = 0; sync < 5; sync++) {
+      await database.transaction(() async {
+        for (var i = 0; i < 200; i++) {
+          await database.setLastActiveUserDeviceKey(
+            1700000000000 + i,
+            hot.userId,
+            hotDevice,
+          );
+        }
+      });
+    }
+  });
+  stdout.writeln(
+    '  lastActive 5x200   ${fmt(lastActiveBatched).padLeft(10)}  (in sync txn)',
+  );
 
   final lastSent = await measure(() async {
     for (var i = 0; i < 1000; i++) {
