@@ -21,7 +21,7 @@ jobs:
   dart:
     permissions:
       contents: read
-    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@v1.1.0
+    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@v2.0.0
     with:
       env_file: ".github/workflows/versions.env"
 
