@@ -178,6 +178,10 @@ class Room {
   String get fullyRead =>
       roomAccountData['m.fully_read']?.content.tryGet<String>('event_id') ?? '';
 
+  /// The validated event ID of the fully read marker, or null if unset or malformed.
+  EventId? get fullyReadEventId =>
+      fullyRead.isEmpty ? null : EventId.tryParse(fullyRead);
+
   /// If something changes, this callback will be triggered. Will return the
   /// room id.
   @Deprecated('Use `client.onSync` instead and filter for this room ID')
@@ -400,6 +404,9 @@ class Room {
   bool get isDirectChat => directChatMatrixID != null;
 
   Event? lastEvent;
+
+  /// The strongly typed event ID of [lastEvent], or null if none or synthetic.
+  EventId? get lastEventId => lastEvent?.eventIdentifier;
 
   /// Fetches the most recent event in the timeline from the server to have
   /// a valid preview after receiving a limited timeline from the sync. Will
@@ -2253,6 +2260,10 @@ class Room {
   }
 
   /// Returns the room version if specified in the `m.room.create` state event.
+  /// Searches for an event in this room by its strongly typed [EventId].
+  Future<Event?> getEventByEventId(EventId eventId) =>
+      getEventById(eventId.value);
+
   String? get roomVersion =>
       getState(EventTypes.RoomCreate)?.content.tryGet<String>('room_version');
 
@@ -2633,6 +2644,19 @@ class Room {
 
     return await client.redactEvent(id, eventId, messageID, reason: reason);
   }
+
+  /// Redacts an event in this room by its strongly typed [EventId].
+  Future<String?> redactEventById(
+    EventId eventId, {
+    String? reason,
+    String? txid,
+    bool redactAllEdits = false,
+  }) => redactEvent(
+    eventId.value,
+    reason: reason,
+    txid: txid,
+    redactAllEdits: redactAllEdits,
+  );
 
   /// This tells the server that the user is typing for the next N milliseconds
   /// where N is the value specified in the timeout key. Alternatively, if typing is false,
