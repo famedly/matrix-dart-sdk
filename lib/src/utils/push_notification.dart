@@ -4,6 +4,8 @@
 
 import 'dart:convert';
 
+import '../../matrix_api_lite.dart';
+
 /// Push Notification object from https://spec.matrix.org/v1.2/push-gateway-api/
 class PushNotification {
   final Map<String, Object?>? content;
@@ -11,12 +13,21 @@ class PushNotification {
   final List<PushNotificationDevice>? devices;
   final String? eventId;
   final String? prio;
+
+  /// The raw push payload value, retained for lossless JSON round trips.
+  /// Use [parsedRoomAlias] when consuming the alias in the SDK.
   final String? roomAlias;
   final String? roomId;
   final String? roomName;
   final String? sender;
   final String? senderDisplayName;
   final String? type;
+
+  /// The validated alias, or null if the push payload omits it or is malformed.
+  RoomAlias? get parsedRoomAlias {
+    final alias = roomAlias;
+    return alias == null ? null : RoomAlias.tryParse(alias);
+  }
 
   const PushNotification({
     this.content,

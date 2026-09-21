@@ -53,6 +53,15 @@ class Room {
   /// methods `getState()` and `setState()` to interact with the room states.
   Map<String, Map<String, StrippedStateEvent>> states = {};
 
+  String? _notificationName;
+  RoomAlias? _notificationAlias;
+
+  /// Applies room metadata supplied separately from an event in a push payload.
+  void applyPushNotification(PushNotification notification) {
+    _notificationName = notification.roomName ?? _notificationName;
+    _notificationAlias = notification.parsedRoomAlias ?? _notificationAlias;
+  }
+
   /// Key-Value store for ephemerals.
   Map<String, BasicEvent> ephemerals = {};
 
@@ -155,6 +164,8 @@ class Room {
       return;
     }
 
+    if (state.type == EventTypes.RoomName) _notificationName = null;
+    if (state.type == EventTypes.RoomCanonicalAlias) _notificationAlias = null;
     (states[state.type] ??= {})[stateKey] = state;
 
     client.onRoomState.add((roomId: id, state: state));
@@ -176,6 +187,7 @@ class Room {
 
   /// The name of the room if set by a participant.
   String get name {
+    if (_notificationName case final name?) return name;
     final n = getState(EventTypes.RoomName)?.content['name'];
     return (n is String) ? n : '';
   }
@@ -230,7 +242,7 @@ class Room {
   ]) {
     if (name.isNotEmpty) return name;
 
-    final canonicalAlias = this.canonicalAlias.localpart;
+    final canonicalAlias = canonicalRoomAlias?.localpart;
     if (canonicalAlias != null && canonicalAlias.isNotEmpty) {
       return canonicalAlias;
     }
@@ -307,20 +319,36 @@ class Room {
   }
 
   /// The address in the format: #roomname:homeserver.org.
+  @Deprecated('Use canonicalRoomAlias instead, which returns RoomAlias?.')
   String get canonicalAlias {
+    if (_notificationAlias case final alias?) return alias.value;
     final alias = getState(EventTypes.RoomCanonicalAlias)?.content['alias'];
     return (alias is String) ? alias : '';
   }
 
+  /// The validated canonical alias, or null if absent or malformed.
+  /// The original state event remains available through [getState].
+  RoomAlias? get canonicalRoomAlias {
+    if (_notificationAlias case final alias?) return alias;
+    final alias = getState(EventTypes.RoomCanonicalAlias)?.content['alias'];
+    return alias is String ? RoomAlias.tryParse(alias) : null;
+  }
+
   /// Sets the canonical alias. If the [canonicalAlias] is not yet an alias of
   /// this room, it will create one.
-  Future<void> setCanonicalAlias(String canonicalAlias) async {
-    final aliases = await client.getLocalAliases(id);
-    if (!aliases.contains(canonicalAlias)) {
-      await client.setRoomAlias(canonicalAlias, id);
+  @Deprecated('Use setCanonicalRoomAlias with a RoomAlias instead.')
+  Future<void> setCanonicalAlias(String canonicalAlias) async =>
+      setCanonicalRoomAlias(RoomAlias(canonicalAlias));
+
+  /// Sets the canonical [alias], creating it first if necessary.
+  Future<void> setCanonicalRoomAlias(RoomAlias alias) async {
+    final rId = RoomId(id);
+    final aliases = await client.getRoomAliases(rId);
+    if (!aliases.contains(alias)) {
+      await client.createRoomAlias(alias, rId);
     }
     await client.setRoomStateWithKey(id, EventTypes.RoomCanonicalAlias, '', {
-      'alias': canonicalAlias,
+      'alias': alias.value,
     });
   }
 
@@ -2801,9 +2829,10 @@ class Room {
 
   /// Generates a matrix.to link with appropriate routing info to share the room
   Future<Uri> matrixToInviteLink() async {
-    if (canonicalAlias.isNotEmpty) {
+    final alias = canonicalRoomAlias;
+    if (alias != null) {
       return Uri.parse(
-        'https://matrix.to/#/${Uri.encodeComponent(canonicalAlias)}',
+        'https://matrix.to/#/${Uri.encodeComponent(alias.value)}',
       );
     }
     final queryParameters = [];

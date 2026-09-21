@@ -467,9 +467,18 @@ class Client extends MatrixApi {
     return '$clientName-$_transactionCounter-${DateTime.now().millisecondsSinceEpoch}';
   }
 
+  /// Finds a cached room with this canonical alias.
+  /// Returns null if [alias] is invalid or the room is not cached.
+  @Deprecated('Use findRoomByAlias with a RoomAlias instead.')
   Room? getRoomByAlias(String alias) {
+    final parsed = RoomAlias.tryParse(alias);
+    return parsed == null ? null : findRoomByAlias(parsed);
+  }
+
+  /// Finds a cached room with this canonical alias, excluding archived rooms.
+  Room? findRoomByAlias(RoomAlias alias) {
     for (final room in rooms) {
-      if (room.canonicalAlias == alias) return room;
+      if (room.canonicalRoomAlias == alias) return room;
     }
     return null;
   }
@@ -1871,34 +1880,7 @@ class Client extends MatrixApi {
       room = getRoomById(roomId) ?? Room(id: roomId, client: this);
     }
 
-    final roomName = notification.roomName;
-    final roomAlias = notification.roomAlias;
-    if (roomName != null) {
-      room.setState(
-        Event(
-          eventId: 'TEMP',
-          stateKey: '',
-          type: EventTypes.RoomName,
-          content: {'name': roomName},
-          room: room,
-          senderId: 'UNKNOWN',
-          originServerTs: DateTime.now(),
-        ),
-      );
-    }
-    if (roomAlias != null) {
-      room.setState(
-        Event(
-          eventId: 'TEMP',
-          stateKey: '',
-          type: EventTypes.RoomCanonicalAlias,
-          content: {'alias': roomAlias},
-          room: room,
-          senderId: 'UNKNOWN',
-          originServerTs: DateTime.now(),
-        ),
-      );
-    }
+    room.applyPushNotification(notification);
 
     // Load the event from the notification or from the database or from server:
     MatrixEvent? matrixEvent;
