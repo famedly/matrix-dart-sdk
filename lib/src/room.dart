@@ -1600,6 +1600,14 @@ class Room {
     );
   }
 
+  /// Sets the power level for the given [user].
+  Future<String> setPowerForUser(UserId user, int power) =>
+      setPower(user.value, power);
+
+  /// Invites a user to this room by their strongly typed [UserId].
+  Future<void> inviteUserById(UserId user, {String? reason}) =>
+      invite(user.value, reason: reason);
+
   /// Call the Matrix API to invite a user to this room.
   Future<void> invite(String userID, {String? reason}) =>
       client.inviteUser(id, userID, reason: reason);
@@ -2309,6 +2317,10 @@ class Room {
       userSpecificPowerLevel ?? defaultUserPowerLevel ?? fallbackPowerLevel,
     );
   }
+
+  /// Returns the power level of the given strongly typed [user].
+  PowerLevel getPowerLevelForUser(UserId user) =>
+      getPowerLevelByUserId(user.value);
 
   /// Returns the user's own power level.
   PowerLevel get ownPowerLevel {

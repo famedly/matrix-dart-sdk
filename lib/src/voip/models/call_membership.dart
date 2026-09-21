@@ -73,6 +73,48 @@ class CallMembership {
   final VoIP voip;
   final String roomId;
 
+  /// The validated user ID as a [UserId], or null if malformed.
+  UserId? get userIdentifier => UserId.tryParse(userId);
+
+  /// The validated device ID as a [DeviceId], or null if malformed.
+  DeviceId? get deviceIdentifier => DeviceId.tryParse(deviceId);
+
+  /// The validated event ID as an [EventId], or null if unset or malformed.
+  EventId? get eventIdentifier =>
+      eventId != null ? EventId.tryParse(eventId!) : null;
+
+  /// The validated room ID as a [RoomId], or null if malformed.
+  RoomId? get roomIdentifier => RoomId.tryParse(roomId);
+
+  /// Constructs a [CallMembership] with strongly typed identifiers.
+  CallMembership.typed({
+    required UserId user,
+    required String callId,
+    required CallBackend backend,
+    required DeviceId device,
+    EventId? event,
+    required int expiresTs,
+    required RoomId room,
+    required String membershipId,
+    required VoIP voip,
+    String? application = 'm.call',
+    String? scope = 'm.room',
+    List? feeds,
+  }) : this(
+         userId: user.value,
+         callId: callId,
+         backend: backend,
+         deviceId: device.value,
+         eventId: event?.value,
+         expiresTs: expiresTs,
+         roomId: room.value,
+         membershipId: membershipId,
+         voip: voip,
+         application: application,
+         scope: scope,
+         feeds: feeds,
+       );
+
   CallMembership({
     required this.userId,
     required this.callId,

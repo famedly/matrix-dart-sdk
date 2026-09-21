@@ -4059,6 +4059,15 @@ class Client extends MatrixApi {
   Future<void> unignoreUserByUserId(UserId userId) =>
       unignoreUser(userId.value);
 
+  /// Fetches the newest presence for [user].
+  Future<CachedPresence> fetchCurrentPresenceForUser(
+    UserId user, {
+    bool fetchOnlyFromCached = false,
+  }) => fetchCurrentPresence(
+    user.value,
+    fetchOnlyFromCached: fetchOnlyFromCached,
+  );
+
   /// The newest presence of this user if there is any. Fetches it from the
   /// database first and then from the server if necessary or returns offline.
   Future<CachedPresence> fetchCurrentPresence(

@@ -10,6 +10,10 @@ class SpaceChild {
   final String order;
   final bool? suggested;
 
+  /// The validated room ID as a [RoomId], or null if unset or malformed.
+  RoomId? get roomIdentifier =>
+      roomId != null ? RoomId.tryParse(roomId!) : null;
+
   SpaceChild.fromState(StrippedStateEvent state)
     : assert(state.type == EventTypes.SpaceChild),
       roomId = state.stateKey,
@@ -22,6 +26,10 @@ class SpaceParent {
   final String? roomId;
   final List<String> via;
   final bool? canonical;
+
+  /// The validated room ID as a [RoomId], or null if unset or malformed.
+  RoomId? get roomIdentifier =>
+      roomId != null ? RoomId.tryParse(roomId!) : null;
 
   SpaceParent.fromState(StrippedStateEvent state)
     : assert(state.type == EventTypes.SpaceParent),
