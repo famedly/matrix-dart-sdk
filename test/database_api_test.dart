@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:test/test.dart';
 
 import 'fake_database.dart';
@@ -719,6 +720,24 @@ void main() {
         final reopenedDatabase = await getMatrixSdkDatabase();
         final dump = await reopenedDatabase.getAccountData();
         expect(dump.isEmpty, true);
+      });
+    });
+
+    group('Apply pragma key', () {
+      test('Apply pragma key', () async {
+        const path = ':memory:';
+        final factory = createDatabaseFactoryFfi();
+        final database = await factory.openDatabase(path);
+        final helper = SQfLiteEncryptionHelper(
+          factory: factory,
+          cipher: '1234',
+          path: path,
+        );
+        await helper.applyPragmaKey(
+          database,
+          ensureIncrementalAutoVacuum: true,
+        );
+        await database.close();
       });
     });
   }
