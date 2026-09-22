@@ -3527,7 +3527,7 @@ class Client extends MatrixApi {
                 Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
               }
             }
-            // Drop old/unused entries by not adding them back to deviceKeys.
+
             userKeys.outdated = false;
             usersToPersist.add(userId);
           }
