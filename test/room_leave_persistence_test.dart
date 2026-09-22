@@ -50,6 +50,13 @@ void main() {
       ),
     );
 
+    Future<void> syncInvite() => client.handleSync(
+      SyncUpdate(
+        nextBatch: 'invite',
+        rooms: RoomsUpdate(invite: {roomId: InvitedRoomUpdate()}),
+      ),
+    );
+
     test('known room is forgotten on leave without includeLeave', () async {
       await syncJoin();
       expect(await membershipAfterRestart(), Membership.join);
@@ -89,5 +96,43 @@ void main() {
 
       expect(await membershipAfterRestart(), Membership.leave);
     });
+
+    // Storing the leave must not strand the row at `leave` when the invite
+    // arrives afterwards. Synapse sends the room in both leave and invite when
+    // you get re-invited while offline, and in invite alone on a later sync.
+    test('re-invite after a stored leave is persisted', () async {
+      client.syncFilter.room?.includeLeave = true;
+
+      await syncJoin();
+      await syncLeave();
+      expect(await membershipAfterRestart(), Membership.leave);
+
+      await syncInvite();
+
+      expect(client.getRoomById(roomId)?.membership, Membership.invite);
+      expect(await membershipAfterRestart(), Membership.invite);
+    });
+
+    test(
+      'leave and re-invite in the same sync is persisted as invite',
+      () async {
+        client.syncFilter.room?.includeLeave = true;
+
+        await syncJoin();
+
+        await client.handleSync(
+          SyncUpdate(
+            nextBatch: 'leaveThenInvite',
+            rooms: RoomsUpdate(
+              leave: {roomId: LeftRoomUpdate()},
+              invite: {roomId: InvitedRoomUpdate()},
+            ),
+          ),
+        );
+
+        expect(client.getRoomById(roomId)?.membership, Membership.invite);
+        expect(await membershipAfterRestart(), Membership.invite);
+      },
+    );
   });
 }

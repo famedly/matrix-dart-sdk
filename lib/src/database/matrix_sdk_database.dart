@@ -1263,7 +1263,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     Event? lastEvent,
     Client client,
   ) async {
-    // Leave room if membership is leave
+    // A leave is only kept when the sync filter asks for left rooms, otherwise
+    // the room and everything attached to it is dropped.
     if (roomUpdate is LeftRoomUpdate &&
         client.syncFilter.room?.includeLeave != true) {
       await forgetRoom(roomId);
@@ -1274,66 +1275,47 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         : roomUpdate is InvitedRoomUpdate
         ? Membership.invite
         : Membership.join;
-    // Make sure room exists
+
     final currentRawRoom = await _roomsBox.get(roomId);
-    if (currentRawRoom == null) {
-      await _roomsBox.put(
-        roomId,
-        roomUpdate is JoinedRoomUpdate
-            ? Room(
-                client: client,
-                id: roomId,
-                membership: membership,
-                highlightCount:
-                    roomUpdate.unreadNotifications?.highlightCount ?? 0,
-                notificationCount:
-                    roomUpdate.unreadNotifications?.notificationCount ?? 0,
-                prev_batch: roomUpdate.timeline?.prevBatch,
-                summary: roomUpdate.summary,
-                lastEvent: lastEvent,
-              ).toJson()
-            : Room(
-                client: client,
-                id: roomId,
-                prev_batch: roomUpdate is LeftRoomUpdate
-                    ? roomUpdate.timeline?.prevBatch
-                    : null,
-                membership: membership,
-                lastEvent: lastEvent,
-              ).toJson(),
-      );
-    } else if (roomUpdate is JoinedRoomUpdate) {
-      final currentRoom = Room.fromJson(copyMap(currentRawRoom), client);
-      await _roomsBox.put(
-        roomId,
-        Room(
-          client: client,
-          id: roomId,
-          membership: membership,
-          highlightCount:
-              roomUpdate.unreadNotifications?.highlightCount ??
-              currentRoom.highlightCount,
-          notificationCount:
-              roomUpdate.unreadNotifications?.notificationCount ??
-              currentRoom.notificationCount,
-          prev_batch: roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch,
-          summary: RoomSummary.fromJson(
-            currentRoom.summary.toJson()
-              ..addAll(roomUpdate.summary?.toJson() ?? {}),
-          ),
-          lastEvent: lastEvent,
-        ).toJson(),
-      );
-    } else if (roomUpdate is LeftRoomUpdate) {
-      // Without this the row would keep its old membership and the
-      // room would come back as joined on the next launch.
-      final currentRoom = Room.fromJson(copyMap(currentRawRoom), client);
-      currentRoom.membership = membership;
-      currentRoom.prev_batch =
-          roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch;
-      if (lastEvent != null) currentRoom.lastEvent = lastEvent;
-      await _roomsBox.put(roomId, currentRoom.toJson());
-    }
+    final currentRoom = currentRawRoom == null
+        ? null
+        : Room.fromJson(copyMap(currentRawRoom), client);
+
+    // Counts, summary and prev_batch only ever arrive with a joined or left
+    // update, but every update must write the membership: a row keeping its
+    // previous one is what makes a room come back wrong on the next launch.
+    final joinedUpdate = roomUpdate is JoinedRoomUpdate ? roomUpdate : null;
+    final leftUpdate = roomUpdate is LeftRoomUpdate ? roomUpdate : null;
+
+    await _roomsBox.put(
+      roomId,
+      Room(
+        client: client,
+        id: roomId,
+        membership: membership,
+        highlightCount:
+            joinedUpdate?.unreadNotifications?.highlightCount ??
+            currentRoom?.highlightCount ??
+            0,
+        notificationCount:
+            joinedUpdate?.unreadNotifications?.notificationCount ??
+            currentRoom?.notificationCount ??
+            0,
+        prev_batch:
+            joinedUpdate?.timeline?.prevBatch ??
+            leftUpdate?.timeline?.prevBatch ??
+            currentRoom?.prev_batch,
+        summary: RoomSummary.fromJson({
+          ...?currentRoom?.summary.toJson(),
+          ...?joinedUpdate?.summary?.toJson(),
+        }),
+        // A joined update deliberately clears the last event when the timeline
+        // was limited, the other types must not lose it.
+        lastEvent: joinedUpdate != null
+            ? lastEvent
+            : lastEvent ?? currentRoom?.lastEvent,
+      ).toJson(),
+    );
   }
 
   @override
