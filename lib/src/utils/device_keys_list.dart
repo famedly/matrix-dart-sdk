@@ -131,40 +131,71 @@ class DeviceKeysList {
     ),
   };
 
-  factory DeviceKeysList.fromJson(Map<String, Object?> json, Client client) =>
-      DeviceKeysList(
-        json['user_id'] as String,
-        client,
-        outdated: json['outdated'] as bool,
-        deviceKeys: (json['device_keys'] as Map).map(
-          (k, v) => MapEntry(
-            k as String,
-            DeviceKeys.fromDb(Map<String, dynamic>.from(v as Map), client),
-          ),
-        ),
-        crossSigningKeys: (json['cross_signing_keys'] as Map).map(
-          (k, v) => MapEntry(
-            k as String,
-            CrossSigningKey.fromDbJson(
-              Map<String, dynamic>.from(v as Map),
-              client,
-            ),
-          ),
-        ),
-      );
+  factory DeviceKeysList.fromJson(
+    Map<String, Object?> json,
+    Client client, {
+    bool skipSignatureCheck = false,
+  }) {
+    var outdated = json['outdated'] as bool;
+
+    final deviceKeys = <String, DeviceKeys>{};
+    for (final entry in (json['device_keys'] as Map).entries) {
+      try {
+        final keys = DeviceKeys.fromDb(
+          Map<String, dynamic>.from(entry.value as Map),
+          client,
+        );
+        if (!skipSignatureCheck && !keys.isValid) {
+          throw Exception('Invalid device keys');
+        }
+        deviceKeys[entry.key] = keys;
+      } catch (e, s) {
+        Logs().w('Skipping invalid user device key', e, s);
+        outdated = true;
+      }
+    }
+
+    final crossSigningKeys = <String, CrossSigningKey>{};
+    for (final entry in (json['cross_signing_keys'] as Map).entries) {
+      try {
+        final keys = CrossSigningKey.fromDbJson(
+          Map<String, dynamic>.from(entry.value as Map),
+          client,
+        );
+        if (!skipSignatureCheck && !keys.isValid) {
+          throw Exception('Invalid device keys');
+        }
+        crossSigningKeys[entry.key] = keys;
+      } catch (e, s) {
+        Logs().w('Skipping invalid user device key', e, s);
+        outdated = true;
+      }
+    }
+
+    return DeviceKeysList(
+      json['user_id'] as String,
+      client,
+      outdated: outdated,
+      deviceKeys: deviceKeys,
+      crossSigningKeys: crossSigningKeys,
+    );
+  }
 
   DeviceKeysList.fromDbJson(
     Map<String, dynamic> dbEntry,
     List<Map<String, dynamic>> childEntries,
     List<Map<String, dynamic>> crossSigningEntries,
-    this.client,
-  ) : userId = dbEntry['user_id'] ?? '' {
+    this.client, {
+    bool skipSignatureCheck = false,
+  }) : userId = dbEntry['user_id'] ?? '' {
     outdated = dbEntry['outdated'];
     deviceKeys = {};
     for (final childEntry in childEntries) {
       try {
         final entry = DeviceKeys.fromDb(childEntry, client);
-        if (!entry.isValid) throw Exception('Invalid device keys');
+        if (!skipSignatureCheck) {
+          if (!entry.isValid) throw Exception('Invalid device keys');
+        }
         deviceKeys[childEntry['device_id']] = entry;
       } catch (e, s) {
         Logs().w('Skipping invalid user device key', e, s);
@@ -174,7 +205,9 @@ class DeviceKeysList {
     for (final crossSigningEntry in crossSigningEntries) {
       try {
         final entry = CrossSigningKey.fromDbJson(crossSigningEntry, client);
-        if (!entry.isValid) throw Exception('Invalid device keys');
+        if (!skipSignatureCheck) {
+          if (!entry.isValid) throw Exception('Invalid device keys');
+        }
         crossSigningKeys[crossSigningEntry['public_key']] = entry;
       } catch (e, s) {
         Logs().w('Skipping invalid cross siging key', e, s);
@@ -207,10 +240,15 @@ abstract class SignableKey extends MatrixSignableKey {
   bool? _verified;
   bool? _blocked;
 
-  Future<void> _updateInDatabase() => client.database.storeDeviceKeysList(
-    userId,
-    client.userDeviceKeys[userId]!,
-  );
+  Future<void> _updateInDatabase() {
+    final deviceKeysList = client.userDeviceKeys[userId];
+    if (deviceKeysList == null) {
+      throw Exception(
+        'Unable to update device keys list of $userId in database because client.userDeviceKeys["$userId"] is null!',
+      );
+    }
+    return client.database.storeDeviceKeysList(deviceKeysList);
+  }
 
   String? get ed25519Key => keys['ed25519:$identifier'];
   bool get verified =>

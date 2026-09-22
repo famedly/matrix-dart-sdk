@@ -85,7 +85,11 @@ void main() async {
       );
       expect(
         deviceKeysList.toJson(),
-        DeviceKeysList.fromJson(deviceKeysList.toJson(), client).toJson(),
+        DeviceKeysList.fromJson(
+          deviceKeysList.toJson(),
+          client,
+          skipSignatureCheck: true,
+        ).toJson(),
       );
     });
 

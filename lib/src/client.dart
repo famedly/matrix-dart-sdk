@@ -2627,7 +2627,7 @@ class Client extends MatrixApi {
         final userKeys = _userDeviceKeys[userId];
         if (userKeys != null) {
           userKeys.outdated = true;
-          await database.storeDeviceKeysList(userId, userKeys);
+          await database.storeDeviceKeysList(userKeys);
         } else {
           // Per spec `changed` also includes users who *now* share an
           // encrypted room with us. We might not know about them yet, for
@@ -3536,7 +3536,21 @@ class Client extends MatrixApi {
                 Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
               }
             }
-            // Drop old/unused entries by not adding them back to deviceKeys.
+
+            // delete old/unused entries
+            for (final oldDeviceKeyEntry in oldKeys.entries) {
+              final deviceId = oldDeviceKeyEntry.key;
+              if (!userKeys.deviceKeys.containsKey(deviceId)) {
+                // we need to remove an old key
+                dbActions.add(
+                  () => database.removeLastSentMessageUserDeviceKey(
+                    userId,
+                    deviceId,
+                  ),
+                );
+              }
+            }
+
             userKeys.outdated = false;
             usersToPersist.add(userId);
           }
@@ -3607,7 +3621,7 @@ class Client extends MatrixApi {
         for (final userId in usersToPersist) {
           final list = _userDeviceKeys[userId];
           if (list == null) continue;
-          dbActions.add(() => database.storeDeviceKeysList(userId, list));
+          dbActions.add(() => database.storeDeviceKeysList(list));
         }
 
         // now process all the failures
@@ -4146,7 +4160,7 @@ class Client extends MatrixApi {
     Logs().d('Migrate Device Keys...');
     final userDeviceKeys = await legacyDatabase.getUserDeviceKeys(this);
     for (final userId in userDeviceKeys.keys) {
-      await database.storeDeviceKeysList(userId, userDeviceKeys[userId]!);
+      await database.storeDeviceKeysList(userDeviceKeys[userId]!);
     }
     Logs().d('Migrate inbound group sessions...');
     try {

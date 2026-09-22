@@ -185,12 +185,6 @@ abstract class DatabaseApi {
     int lastReceived,
   );
 
-  Future setLastActiveUserDeviceKey(
-    int lastActive,
-    String userId,
-    String deviceId,
-  );
-
   Future setLastSentMessageUserDeviceKey(
     String lastSentMessage,
     String userId,
@@ -237,6 +231,11 @@ abstract class DatabaseApi {
   /// Please do `jsonEncode(content)` in your code to stay compatible with
   /// auto generated methods here.
   Future insertIntoToDeviceQueue(String type, String txnId, String content);
+
+  Future<void> removeLastSentMessageUserDeviceKey(
+    String userId,
+    String deviceId,
+  );
 
   Future<List<String>> getLastSentMessageUserDeviceKey(
     String userId,
@@ -285,8 +284,5 @@ abstract class DatabaseApi {
 
   Future<DeviceKeysList?> getDeviceKeysList(String userId, Client client);
 
-  Future<void> storeDeviceKeysList(
-    String userId,
-    DeviceKeysList deviceKeysList,
-  );
+  Future<void> storeDeviceKeysList(DeviceKeysList deviceKeysList);
 }

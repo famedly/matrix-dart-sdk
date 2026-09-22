@@ -280,17 +280,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<void> _migrateFromVersion(int currentVersion) async {
     Logs().i('Migrate store database from version $currentVersion to $version');
 
-    if (currentVersion <= 11) {
-      final deviceKeysLists = await _legacyGetUserDeviceKeys(
-        Client('migrationclient', database: this),
-      );
-      for (final entry in deviceKeysLists.entries) {
-        Logs().d('Migrate user keys', entry.key);
-        await storeDeviceKeysList(entry.key, entry.value);
-      }
-    }
-
-    if (version == 8) {
+    if (currentVersion < 8) {
       // Migrate to inbound group sessions upload queue:
       final allInboundGroupSessions = await getAllInboundGroupSessions();
       final sessionsToUpload = allInboundGroupSessions
@@ -308,10 +298,20 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           );
         }
       });
-      if (currentVersion == 7) {
-        await _clientBox.put('version', version.toString());
-        return;
-      }
+    }
+
+    if (currentVersion < 12) {
+      await transaction(() async {
+        final deviceKeysLists = await _legacyGetUserDeviceKeys(
+          Client('migrationclient', database: this),
+        );
+        for (final entry in deviceKeysLists.entries) {
+          Logs().d('Migrate user keys', entry.key);
+          await storeDeviceKeysList(entry.value);
+        }
+      });
+      await _clientBox.put('version', version.toString());
+      if (version == 12 && currentVersion == 11) return;
     }
 
     // The default version upgrade:
@@ -517,6 +517,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     final sessions = await Future.wait(sessionFutures);
     return sessions.whereType<StoredInboundGroupSession>().toList();
   }
+
+  @override
+  Future<void> removeLastSentMessageUserDeviceKey(
+    String userId,
+    String deviceId,
+  ) => _lastSentOlmMessagesBox.delete(TupleKey(userId, deviceId).toString());
 
   @override
   Future<List<String>> getLastSentMessageUserDeviceKey(
@@ -741,13 +747,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<Map<String, DeviceKeysList>> _legacyGetUserDeviceKeys(
     Client client,
   ) async {
-    final legacyUserDeviceKeysBox = _collection.openBox(
+    final legacyUserDeviceKeysBox = _collection.openBox<Map>(
       _legacyUserDeviceKeysBoxName,
     );
-    final legacyUserDeviceKeysOutdatedBox = _collection.openBox(
+    final legacyUserDeviceKeysOutdatedBox = _collection.openBox<bool>(
       _legacyUserDeviceKeysOutdatedBoxName,
     );
-    final legacyUserCrossSigningKeysBox = _collection.openBox(
+    final legacyUserCrossSigningKeysBox = _collection.openBox<Map>(
       _legacyUserCrossSigningKeysBoxName,
     );
 
@@ -802,11 +808,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
             .toList()
             .cast<Map<String, dynamic>>(),
         client,
+        skipSignatureCheck: true,
       );
     }
-    legacyUserDeviceKeysBox.clear();
-    legacyUserCrossSigningKeysBox.clear();
-    legacyUserDeviceKeysOutdatedBox.clear();
+    await legacyUserDeviceKeysBox.clear();
+    await legacyUserCrossSigningKeysBox.clear();
+    await legacyUserDeviceKeysOutdatedBox.clear();
     return res;
   }
 
@@ -946,20 +953,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<void> removeOutboundGroupSession(String roomId) async {
     await _outboundGroupSessionsBox.delete(roomId);
     return;
-  }
-
-  @override
-  Future<void> setLastActiveUserDeviceKey(
-    int lastActive,
-    String userId,
-    String deviceId,
-  ) async {
-    final keys = await getDeviceKeysList(userId, Client('db', database: this));
-    if (keys == null || !keys.deviceKeys.containsKey(deviceId)) return;
-    keys.deviceKeys[deviceId]?.lastActive = DateTime.fromMillisecondsSinceEpoch(
-      lastActive,
-    );
-    await storeDeviceKeysList(userId, keys);
   }
 
   @override
@@ -1691,32 +1684,43 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   @override
   Future<DeviceKeysList?> getDeviceKeysList(
     String userId,
-    Client client,
-  ) async {
+    Client client, {
+    bool skipSignatureCheck = false,
+  }) async {
     final raw = await _deviceKeysListBox.get(userId);
     if (raw == null) return null;
     final json = copyMap(raw);
-    return DeviceKeysList.fromJson(json, client);
+    return DeviceKeysList.fromJson(
+      json,
+      client,
+      skipSignatureCheck: skipSignatureCheck,
+    );
   }
 
   @override
-  Future<void> storeDeviceKeysList(
-    String userId,
-    DeviceKeysList deviceKeysList,
-  ) => _deviceKeysListBox.put(userId, deviceKeysList.toJson());
+  Future<void> storeDeviceKeysList(DeviceKeysList deviceKeysList) =>
+      _deviceKeysListBox.put(deviceKeysList.userId, deviceKeysList.toJson());
 
   @override
-  Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client) async {
-    final raw = await _deviceKeysListBox.getAllValues();
-    return raw.map((k, v) {
-      try {
-        return MapEntry(k, DeviceKeysList.fromJson(copyMap(v), client));
-      } catch (e, s) {
-        Logs().w('Unable to parse device keys list for $k', e, s);
-        return MapEntry(k, DeviceKeysList(k, client, outdated: true));
-      }
-    });
-  }
+  Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client) =>
+      runBenchmarked('Get all user device keys from store', () async {
+        final raw = await _deviceKeysListBox.getAllValues();
+        return raw.map((k, v) {
+          try {
+            return MapEntry(
+              k,
+              DeviceKeysList.fromJson(
+                copyMap(v),
+                client,
+                skipSignatureCheck: true, // Check was on put into db already
+              ),
+            );
+          } catch (e, s) {
+            Logs().w('Unable to parse device keys list for $k', e, s);
+            return MapEntry(k, DeviceKeysList(k, client, outdated: true));
+          }
+        });
+      });
 }
 
 class TupleKey {
