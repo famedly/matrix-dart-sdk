@@ -2229,7 +2229,7 @@ void main() {
       // work in postLoaded room
       expect(room.lastEvent?.eventId, 'event_too_large');
       expect(
-        await room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
+        room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Cancelled sending message',
       );
 
@@ -2248,7 +2248,7 @@ void main() {
 
       expect(roomFromDB?.lastEvent?.eventId, 'event_too_large');
       expect(
-        await room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
+        room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Cancelled sending message',
       );
 
@@ -2259,7 +2259,7 @@ void main() {
 
       expect(roomFromDB?.lastEvent?.eventId, 'event_too_large');
       expect(
-        await room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
+        room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Cancelled sending message',
       );
     });
