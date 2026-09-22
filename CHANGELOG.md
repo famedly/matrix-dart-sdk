@@ -3,6 +3,12 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [12.1.0] 22nd September 2026
+- feat: add method to clear free database pages (Christian Kußowski)
+- fix: dart code linter (td)
+- fix: persist leave rooms in db corerctly (td)
+- fix: prev_content handling (Christian Kußowski)
+- refactor: drop redundant database index (Christian Kußowski)
 
 ## [12.0.1] 2nd September 2026
 - fix: wrong if condition where rooms get removed from list even when includeLeave == true (Christian Kußowski)
