@@ -1324,6 +1324,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           lastEvent: lastEvent,
         ).toJson(),
       );
+    } else if (roomUpdate is LeftRoomUpdate) {
+      // Without this the row would keep its old membership and the
+      // room would come back as joined on the next launch.
+      final currentRoom = Room.fromJson(copyMap(currentRawRoom), client);
+      currentRoom.membership = membership;
+      currentRoom.prev_batch =
+          roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch;
+      if (lastEvent != null) currentRoom.lastEvent = lastEvent;
+      await _roomsBox.put(roomId, currentRoom.toJson());
     }
   }
 
