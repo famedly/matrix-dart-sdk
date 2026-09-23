@@ -230,6 +230,14 @@ abstract class SignableKey extends MatrixSignableKey {
     String signature, {
     bool isSignatureWithoutLibolmValid = false,
   }) {
+    if (isSignatureWithoutLibolmValid) {
+      try {
+        if (!vod.isInitialized()) return true;
+      } catch (_) {
+        return true;
+      }
+    }
+
     var valid = false;
     try {
       vod.Ed25519PublicKey.fromBase64(pubKey).verify(
