@@ -5,7 +5,6 @@
 import 'dart:async';
 
 import '../../matrix.dart';
-import '../ssss.dart';
 import 'bootstrap.dart';
 
 extension CryptoSetupExtension on Client {
@@ -119,6 +118,7 @@ extension CryptoSetupExtension on Client {
             case BootstrapState.openExistingSsss:
               await bootstrap.newSsssKey!.unlock(
                 keyOrPassphrase: keyOrPassphrase,
+                postUnlock: selfSign,
               );
               await bootstrap.openExistingSsss();
               break;
@@ -151,10 +151,6 @@ extension CryptoSetupExtension on Client {
     );
 
     await completer.future;
-
-    if (selfSign) {
-      await encryption.crossSigning.selfSign(keyOrPassphrase: keyOrPassphrase);
-    }
   }
 
   /// Bootstraps a crypto identity for the client. Creates secret storage and
@@ -225,7 +221,6 @@ extension CryptoSetupExtension on Client {
     }
 
     String? recoveryKey;
-    OpenSSSS? openedSsss;
     final completer = Completer();
     encryption.bootstrap(
       onUpdate: (bootstrap) async {
@@ -292,9 +287,9 @@ extension CryptoSetupExtension on Client {
               }
               await bootstrap.newSsssKey!.unlock(
                 keyOrPassphrase: reuseCredential,
+                postUnlock: selfSign,
               );
               recoveryKey ??= bootstrap.newSsssKey?.recoveryKey;
-              openedSsss = bootstrap.newSsssKey;
               await bootstrap.openExistingSsss();
               break;
             case BootstrapState.error:
@@ -313,13 +308,6 @@ extension CryptoSetupExtension on Client {
     );
 
     await completer.future;
-
-    if (reuseExisting && selfSign && (encryption.crossSigning.enabled)) {
-      await encryption.crossSigning.selfSign(
-        keyOrPassphrase: reuseCredential,
-        openSsss: openedSsss,
-      );
-    }
 
     return recoveryKey!;
   }
