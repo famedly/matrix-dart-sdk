@@ -1924,17 +1924,28 @@ class Client extends MatrixApi {
         roomId,
         eventId,
       ).timeout(timeoutForServerRequests);
-    } on MatrixException catch (_) {
-      // No access to the MatrixEvent. Search in /notifications
-      await ensureNotSoftLoggedOut();
-      final notificationsResponse = await getNotifications();
-      matrixEvent ??= notificationsResponse.notifications
-          .firstWhereOrNull(
-            (notification) =>
-                notification.roomId == roomId &&
-                notification.event.eventId == eventId,
-          )
-          ?.event;
+    } on MatrixException catch (e, s) {
+      Logs().w(
+        'Unable to fetch event directly, trying notifications endpoint.',
+        e,
+        s,
+      );
+
+      try {
+        await ensureNotSoftLoggedOut();
+
+        final notificationsResponse = await getNotifications();
+
+        matrixEvent ??= notificationsResponse.notifications
+            .firstWhereOrNull(
+              (notification) =>
+                  notification.roomId == roomId &&
+                  notification.event.eventId == eventId,
+            )
+            ?.event;
+      } on MatrixException catch (e, s) {
+        Logs().w('Unable to fetch event from notifications endpoint.', e, s);
+      }
     }
 
     if (matrixEvent == null) {
