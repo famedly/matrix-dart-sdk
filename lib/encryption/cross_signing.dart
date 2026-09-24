@@ -80,9 +80,9 @@ class CrossSigning {
     );
     String? masterPubkey;
     try {
-      masterPubkey = vod.PkSigning.fromSecretKey(
-        base64Encode(masterPrivateKey),
-      ).publicKey.toBase64();
+      masterPubkey = vod.PkSigning.fromSecretKey(base64Encode(masterPrivateKey))
+          .publicKey
+          .toBase64();
     } catch (e) {
       masterPubkey = null;
     }

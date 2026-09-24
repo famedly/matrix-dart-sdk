@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import '../../matrix_api_lite.dart';
+
 const Set<String> validSigils = {'@', '!', '#', '\$', '+'};
 
 const int maxLength = 255;
@@ -100,6 +102,24 @@ extension MatrixIdExtension on String {
 
   String? get domain => isValidMatrixIdStrict() ? _getParts().last : null;
 
+  /// Parses this string as a [RoomAlias], or returns null if invalid.
+  RoomAlias? get asRoomAlias => RoomAlias.tryParse(this);
+
+  /// Parses this string as a [UserId], or returns null if invalid.
+  UserId? get asUserId => UserId.tryParse(this);
+
+  /// Parses this string as a [RoomId], or returns null if invalid.
+  RoomId? get asRoomId => RoomId.tryParse(this);
+
+  /// Parses this string as an [EventId], or returns null if invalid.
+  EventId? get asEventId => EventId.tryParse(this);
+
+  /// Parses this string as any [MatrixId], or returns null if invalid.
+  MatrixId? get asMatrixId => MatrixId.tryParse(this);
+
+  /// Parses this string as a [DeviceId], or returns null if invalid.
+  DeviceId? get asDeviceId => DeviceId.tryParse(this);
+
   bool equals(String? other) => toLowerCase() == other?.toLowerCase();
 
   /// Parse a matrix identifier string into a Uri. Primary and secondary identifiers
@@ -131,12 +151,11 @@ extension MatrixIdExtension on String {
       );
     } else {
       return Uri(
-        pathSegments: RegExp(
-          r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?',
-        ).allMatches('/$this').map((m) => m[1]!),
-        query: RegExp(
-          r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)',
-        ).firstMatch('/$this')?[1],
+        pathSegments: RegExp(r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?')
+            .allMatches('/$this')
+            .map((m) => m[1]!),
+        query: RegExp(r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)')
+            .firstMatch('/$this')?[1],
       );
     }
   }

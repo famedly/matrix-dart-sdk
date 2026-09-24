@@ -111,8 +111,7 @@ void main() {
             'https://scanner.example/_matrix/media_proxy/unstable/download/',
         'download_thumbnail_uri':
             'https://scanner.example/_matrix/media_proxy/unstable/thumbnail/',
-        'download_encrypted':
-            'https://scanner.example/_matrix/media_proxy/unstable/download_encrypted',
+        'download_encrypted': 'https://scanner.example/_matrix/media_proxy/unstable/download_encrypted',
         'with_auth_header': true,
         'scan_before_preview': true,
       };
@@ -191,9 +190,8 @@ void main() {
         httpClient: MockClient((_) async => http.Response('', 404)),
         scanner: _config(),
       );
-      final uri = await Uri.parse(
-        'mxc://example.org:8448/media123',
-      ).getDownloadUri(client);
+      final uri = await Uri.parse('mxc://example.org:8448/media123')
+          .getDownloadUri(client);
       expect(
         uri.toString(),
         'https://scanner.example/_matrix/media_proxy/unstable/download/example.org:8448/media123',
@@ -268,44 +266,47 @@ void main() {
       },
     }, room);
 
-    test('POSTs to download_encrypted with file JSON and auth header', () async {
-      http.Request? seenRequest;
-      final mockHttp = MockClient((req) async {
-        seenRequest = req;
-        return http.Response(
-          jsonEncode({'reason': 'MCS_MEDIA_REQUEST_FAILED', 'info': 'boom'}),
-          502,
+    test(
+      'POSTs to download_encrypted with file JSON and auth header',
+      () async {
+        http.Request? seenRequest;
+        final mockHttp = MockClient((req) async {
+          seenRequest = req;
+          return http.Response(
+            jsonEncode({'reason': 'MCS_MEDIA_REQUEST_FAILED', 'info': 'boom'}),
+            502,
+          );
+        });
+        final client = await _freshClient(
+          httpClient: mockHttp,
+          scanner: _config(),
+          encryptionEnabled: true,
         );
-      });
-      final client = await _freshClient(
-        httpClient: mockHttp,
-        scanner: _config(),
-        encryptionEnabled: true,
-      );
-      final room = Room(id: '!room:example.org', client: client);
-      final event = buildEncryptedEvent(room);
+        final room = Room(id: '!room:example.org', client: client);
+        final event = buildEncryptedEvent(room);
 
-      await expectLater(
-        event.downloadAndDecryptAttachment(),
-        throwsA(isA<ContentScannerException>()),
-      );
+        await expectLater(
+          event.downloadAndDecryptAttachment(),
+          throwsA(isA<ContentScannerException>()),
+        );
 
-      expect(seenRequest, isNotNull);
-      expect(seenRequest!.method, 'POST');
-      expect(
-        seenRequest!.url.toString(),
-        'https://scanner.example/_matrix/media_proxy/unstable/download_encrypted',
-      );
-      expect(seenRequest!.headers['content-type'], 'application/json');
-      expect(seenRequest!.headers['authorization'], 'Bearer $_accessToken');
-      final body = jsonDecode(seenRequest!.body) as Map<String, Object?>;
-      final fileMap = body['file'] as Map<String, Object?>;
-      expect(fileMap['url'], _encryptedMxc);
-      expect(fileMap['iv'], _encryptedFileIv);
-      expect(fileMap['v'], 'v2');
+        expect(seenRequest, isNotNull);
+        expect(seenRequest!.method, 'POST');
+        expect(
+          seenRequest!.url.toString(),
+          'https://scanner.example/_matrix/media_proxy/unstable/download_encrypted',
+        );
+        expect(seenRequest!.headers['content-type'], 'application/json');
+        expect(seenRequest!.headers['authorization'], 'Bearer $_accessToken');
+        final body = jsonDecode(seenRequest!.body) as Map<String, Object?>;
+        final fileMap = body['file'] as Map<String, Object?>;
+        expect(fileMap['url'], _encryptedMxc);
+        expect(fileMap['iv'], _encryptedFileIv);
+        expect(fileMap['v'], 'v2');
 
-      await client.dispose(closeDatabase: true);
-    });
+        await client.dispose(closeDatabase: true);
+      },
+    );
 
     test('decrypts encrypted bytes returned by download_encrypted', () async {
       http.Request? seenRequest;
@@ -378,43 +379,46 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
 
-    test('unencrypted file GETs scanner download URL with auth header', () async {
-      http.BaseRequest? seenRequest;
-      final payload = Uint8List.fromList([7, 7, 7]);
-      final mockHttp = MockClient((req) async {
-        seenRequest = req;
-        return http.Response.bytes(payload, 200);
-      });
-      final client = await _freshClient(
-        httpClient: mockHttp,
-        scanner: _config(),
-      );
-      final room = Room(id: '!room:example.org', client: client);
-      final event = Event.fromJson({
-        'type': EventTypes.Message,
-        'event_id': '\$evt2',
-        'sender': '@alice:example.org',
-        'origin_server_ts': 0,
-        'content': {
-          'msgtype': 'm.file',
-          'body': 'note.txt',
-          'filename': 'note.txt',
-          'info': {'mimetype': 'text/plain', 'size': 3},
-          'url': _mxc,
-        },
-      }, room);
+    test(
+      'unencrypted file GETs scanner download URL with auth header',
+      () async {
+        http.BaseRequest? seenRequest;
+        final payload = Uint8List.fromList([7, 7, 7]);
+        final mockHttp = MockClient((req) async {
+          seenRequest = req;
+          return http.Response.bytes(payload, 200);
+        });
+        final client = await _freshClient(
+          httpClient: mockHttp,
+          scanner: _config(),
+        );
+        final room = Room(id: '!room:example.org', client: client);
+        final event = Event.fromJson({
+          'type': EventTypes.Message,
+          'event_id': '\$evt2',
+          'sender': '@alice:example.org',
+          'origin_server_ts': 0,
+          'content': {
+            'msgtype': 'm.file',
+            'body': 'note.txt',
+            'filename': 'note.txt',
+            'info': {'mimetype': 'text/plain', 'size': 3},
+            'url': _mxc,
+          },
+        }, room);
 
-      final file = await event.downloadAndDecryptAttachment();
-      expect(file.bytes, payload);
-      expect(seenRequest!.method, 'GET');
-      expect(
-        seenRequest!.url.toString(),
-        'https://scanner.example/_matrix/media_proxy/unstable/download/example.org/abcd1234',
-      );
-      expect(seenRequest!.headers['authorization'], 'Bearer $_accessToken');
+        final file = await event.downloadAndDecryptAttachment();
+        expect(file.bytes, payload);
+        expect(seenRequest!.method, 'GET');
+        expect(
+          seenRequest!.url.toString(),
+          'https://scanner.example/_matrix/media_proxy/unstable/download/example.org/abcd1234',
+        );
+        expect(seenRequest!.headers['authorization'], 'Bearer $_accessToken');
 
-      await client.dispose(closeDatabase: true);
-    });
+        await client.dispose(closeDatabase: true);
+      },
+    );
 
     test(
       'unencrypted file omits Authorization when withAuthHeader is false',

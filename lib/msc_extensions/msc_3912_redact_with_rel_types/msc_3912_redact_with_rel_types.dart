@@ -5,6 +5,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart';
+
 import '../../matrix_api_lite/generated/api.dart';
 
 extension Msc3912RedactWithRelTypes on Api {

@@ -44,8 +44,7 @@ void main() async {
         },
         'signatures': {
           '@alice:example.com': {
-            'ed25519:JLAFKJWSCS':
-                'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA',
+            'ed25519:JLAFKJWSCS': 'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA',
           },
         },
         'unsigned': {'device_display_name': "Alice's mobile phone"},
@@ -115,28 +114,26 @@ void main() async {
     test('set blocked / verified', () async {
       final key =
           client.userDeviceKeys[client.userID]!.deviceKeys['OTHERDEVICE']!;
-      client
-          .userDeviceKeys[client.userID]
-          ?.deviceKeys['UNSIGNEDDEVICE'] = DeviceKeys.fromJson({
-        'user_id': '@test:fakeServer.notExisting',
-        'device_id': 'UNSIGNEDDEVICE',
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2,
-        ],
-        'keys': {
-          'curve25519:UNSIGNEDDEVICE':
-              'ds6+bItpDiWyRaT/b0ofoz1R+GCy7YTbORLJI4dmYho',
-          'ed25519:UNSIGNEDDEVICE':
-              'CdDKVf44LO2QlfWopP6VWmqedSrRaf9rhHKvdVyH38w',
-        },
-        'signatures': {
-          '@test:fakeServer.notExisting': {
-            'ed25519:UNSIGNEDDEVICE':
-                'f2p1kv6PIz+hnoFYnHEurhUKIyRsdxwR2RTKT1EnQ3aF2zlZOjmnndOCtIT24Q8vs2PovRw+/jkHKj4ge2yDDw',
-          },
-        },
-      }, client);
+      client.userDeviceKeys[client.userID]?.deviceKeys['UNSIGNEDDEVICE'] =
+          DeviceKeys.fromJson({
+            'user_id': '@test:fakeServer.notExisting',
+            'device_id': 'UNSIGNEDDEVICE',
+            'algorithms': [
+              AlgorithmTypes.olmV1Curve25519AesSha2,
+              AlgorithmTypes.megolmV1AesSha2,
+            ],
+            'keys': {
+              'curve25519:UNSIGNEDDEVICE':
+                  'ds6+bItpDiWyRaT/b0ofoz1R+GCy7YTbORLJI4dmYho',
+              'ed25519:UNSIGNEDDEVICE':
+                  'CdDKVf44LO2QlfWopP6VWmqedSrRaf9rhHKvdVyH38w',
+            },
+            'signatures': {
+              '@test:fakeServer.notExisting': {
+                'ed25519:UNSIGNEDDEVICE': 'f2p1kv6PIz+hnoFYnHEurhUKIyRsdxwR2RTKT1EnQ3aF2zlZOjmnndOCtIT24Q8vs2PovRw+/jkHKj4ge2yDDw',
+              },
+            },
+          }, client);
 
       client.shareKeysWith = ShareKeysWith.all;
       expect(key.encryptToDevice, true);

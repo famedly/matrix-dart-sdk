@@ -3,6 +3,10 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## Unreleased
+
+- build: require Dart 3.13 for primary constructors and concise named constructors.
+
 ## [13.0.0] 22nd September 2026
 - feat: add method to clear free database pages (Christian Kußowski)
 - fix: dart code linter (td)

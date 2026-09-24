@@ -70,6 +70,33 @@ class Event extends MatrixEvent {
   Map<String, Object?>? get prevContent =>
       unsigned?.tryGetMap<String, Object?>('prev_content');
 
+  /// Creates an [Event] with strongly typed identifiers.
+  Event.typed({
+    EventStatus status = defaultStatus,
+    required Map<String, dynamic> content,
+    required String type,
+    required EventId eventIdentifier,
+    required UserId senderUserId,
+    required DateTime originServerTs,
+    Map<String, dynamic>? unsigned,
+    String? stateKey,
+    EventId? redacts,
+    required Room room,
+    MatrixEvent? originalSource,
+  }) : this(
+         status: status,
+         content: content,
+         type: type,
+         eventId: eventIdentifier.value,
+         senderId: senderUserId.value,
+         originServerTs: originServerTs,
+         unsigned: unsigned,
+         stateKey: stateKey,
+         redacts: redacts?.value,
+         room: room,
+         originalSource: originalSource,
+       );
+
   Event({
     this.status = defaultStatus,
     required Map<String, dynamic> super.content,
@@ -81,9 +108,8 @@ class Event extends MatrixEvent {
     String? stateKey,
     super.redacts,
     required this.room,
-    MatrixEvent? originalSource,
-  }) : _originalSource = originalSource,
-       super(
+    this._originalSource,
+  }) : super(
          eventId: eventId,
          originServerTs: originServerTs,
          roomId: room.id,
@@ -707,9 +733,8 @@ class Event extends MatrixEvent {
         skipScanner: skipScanner,
       );
     } else {
-      return await Uri.parse(
-        thisMxcUrl,
-      ).getDownloadUri(room.client, skipScanner: skipScanner);
+      return await Uri.parse(thisMxcUrl)
+          .getDownloadUri(room.client, skipScanner: skipScanner);
     }
   }
 
@@ -1180,6 +1205,18 @@ class Event extends MatrixEvent {
         ?.tryGet<String>('event_id');
   }
 
+  /// The validated event ID that this event has a relationship to (such as
+  /// an edit or reaction target), or null if none or malformed.
+  EventId? get relationshipTargetEventId => relationshipEventId != null
+      ? EventId.tryParse(relationshipEventId!)
+      : null;
+
+  /// The validated event ID this event is replying to, or null if not a reply or malformed.
+  EventId? inReplyToEventIdentifier({bool includingFallback = true}) {
+    final raw = inReplyToEventId(includingFallback: includingFallback);
+    return raw != null ? EventId.tryParse(raw) : null;
+  }
+
   /// Get whether this event has aggregated events from a certain [type]
   /// To be able to do that you need to pass a [timeline]
   bool hasAggregatedEvents(Timeline timeline, String type) =>
@@ -1336,6 +1373,10 @@ class Event extends MatrixEvent {
       room: mentionsMap?.tryGet<bool>('room') ?? false,
     );
   }
+
+  /// Returns validated user mentions from `m.mentions`.
+  List<UserId> get userMentions =>
+      mentions.userIds.map(UserId.tryParse).whereType<UserId>().toList();
 }
 
 enum FileSendingStatus { generatingThumbnail, encrypting, uploading }

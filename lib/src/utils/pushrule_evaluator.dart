@@ -75,9 +75,9 @@ class _PatternCondition {
     if (tempPat == null) {
       throw 'PushCondition is missing pattern';
     }
-    tempPat = RegExp.escape(
-      tempPat,
-    ).replaceAll('\\*', '.*').replaceAll('\\?', '.');
+    tempPat = RegExp.escape(tempPat)
+        .replaceAll('\\*', '.*')
+        .replaceAll('\\?', '.');
 
     if (field == 'content.body') {
       pattern = RegExp('(^|\\W)$tempPat(\$|\\W)', caseSensitive: false);

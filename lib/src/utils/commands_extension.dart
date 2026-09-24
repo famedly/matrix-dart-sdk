@@ -10,8 +10,10 @@ import '../../matrix.dart';
 /// callback taking [CommandArgs] as input and a [StringBuffer] as standard output
 /// optionally returns an event ID as in the [Room.sendEvent] syntax.
 /// a [CommandException] should be thrown if the specified arguments are considered invalid
-typedef CommandExecutionCallback =
-    FutureOr<String?> Function(CommandArgs, StringBuffer? stdout);
+typedef CommandExecutionCallback = FutureOr<String?> Function(
+  CommandArgs,
+  StringBuffer? stdout,
+);
 
 extension CommandsClientExtension on Client {
   /// Add a command to the command handler. `command` is its name, and `callback` is the

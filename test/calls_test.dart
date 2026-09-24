@@ -241,8 +241,7 @@ void main() {
                             'sdpMLineIndex': 0,
                           },
                           {
-                            'candidate':
-                                'candidate:31TCP2105524479uwu9typhosttcptypeactive',
+                            'candidate': 'candidate:31TCP2105524479uwu9typhosttcptypeactive',
                             'sdpMid': '0',
                             'sdpMLineIndex': 0,
                           },
@@ -393,8 +392,7 @@ void main() {
                             'sdpMLineIndex': 0,
                           },
                           {
-                            'candidate':
-                                'candidate:31TCP2105524479uwu9typhosttcptypeactive',
+                            'candidate': 'candidate:31TCP2105524479uwu9typhosttcptypeactive',
                             'sdpMid': '0',
                             'sdpMLineIndex': 0,
                           },
@@ -513,8 +511,7 @@ void main() {
                             'sdpMLineIndex': 0,
                           },
                           {
-                            'candidate':
-                                'candidate:31TCP2105524479uwu9typhosttcptypeactive',
+                            'candidate': 'candidate:31TCP2105524479uwu9typhosttcptypeactive',
                             'sdpMid': '0',
                             'sdpMLineIndex': 0,
                           },
@@ -999,313 +996,294 @@ void main() {
         expect(mem1, equals(mem2));
       });
 
-      test(
-        'onMemberStateChanged counts participants regardless of their application',
-        () async {
-          final groupCall = GroupCallSession.withAutoGenId(
-            room,
-            voip,
-            MeshBackend(),
-            'm.call',
-            'm.room',
-            'test_app_agnostic',
-          );
-          await MeshBackend().initLocalStream(groupCall);
-          groupCall.setState(GroupCallState.entered);
+      test('onMemberStateChanged counts participants regardless of their application', () async {
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          MeshBackend(),
+          'm.call',
+          'm.room',
+          'test_app_agnostic',
+        );
+        await MeshBackend().initLocalStream(groupCall);
+        groupCall.setState(GroupCallState.entered);
 
-          room.setState(
-            Event(
-              room: room,
-              eventId: 'local_mem_app_test',
-              originServerTs: DateTime.now(),
-              type: EventTypes.GroupCallMember,
-              content: {
-                'memberships': [
-                  CallMembership(
-                    userId: matrix.userID!,
-                    roomId: room.id,
-                    callId: 'test_app_agnostic',
-                    application: 'm.call',
-                    scope: 'm.room',
-                    backend: MeshBackend(),
-                    deviceId: matrix.deviceID!,
-                    expiresTs: DateTime.now()
-                        .add(Duration(hours: 1))
-                        .millisecondsSinceEpoch,
-                    membershipId: voip.currentSessionId,
-                    voip: voip,
-                  ).toJson(),
-                ],
-              },
-              senderId: matrix.userID!,
-              stateKey: matrix.userID,
-            ),
-          );
+        room.setState(
+          Event(
+            room: room,
+            eventId: 'local_mem_app_test',
+            originServerTs: DateTime.now(),
+            type: EventTypes.GroupCallMember,
+            content: {
+              'memberships': [
+                CallMembership(
+                  userId: matrix.userID!,
+                  roomId: room.id,
+                  callId: 'test_app_agnostic',
+                  application: 'm.call',
+                  scope: 'm.room',
+                  backend: MeshBackend(),
+                  deviceId: matrix.deviceID!,
+                  expiresTs: DateTime.now()
+                      .add(Duration(hours: 1))
+                      .millisecondsSinceEpoch,
+                  membershipId: voip.currentSessionId,
+                  voip: voip,
+                ).toJson(),
+              ],
+            },
+            senderId: matrix.userID!,
+            stateKey: matrix.userID,
+          ),
+        );
 
-          // Remote user joins with a different application value
-          room.setState(
-            Event(
-              room: room,
-              eventId: 'remote_mem_app_test',
-              originServerTs: DateTime.now(),
-              type: EventTypes.GroupCallMember,
-              content: {
-                'memberships': [
-                  CallMembership(
-                    userId: '@remoteuser:example.com',
-                    roomId: room.id,
-                    callId: 'test_app_agnostic',
-                    application: 'com.example.upgraded',
-                    scope: 'm.room',
-                    backend: MeshBackend(),
-                    deviceId: 'REMOTE_DEVICE',
-                    expiresTs: DateTime.now()
-                        .add(Duration(hours: 1))
-                        .millisecondsSinceEpoch,
-                    membershipId: 'remoteSession',
-                    voip: voip,
-                  ).toJson(),
-                ],
-              },
-              senderId: '@remoteuser:example.com',
-              stateKey: '@remoteuser:example.com',
-            ),
-          );
+        // Remote user joins with a different application value
+        room.setState(
+          Event(
+            room: room,
+            eventId: 'remote_mem_app_test',
+            originServerTs: DateTime.now(),
+            type: EventTypes.GroupCallMember,
+            content: {
+              'memberships': [
+                CallMembership(
+                  userId: '@remoteuser:example.com',
+                  roomId: room.id,
+                  callId: 'test_app_agnostic',
+                  application: 'com.example.upgraded',
+                  scope: 'm.room',
+                  backend: MeshBackend(),
+                  deviceId: 'REMOTE_DEVICE',
+                  expiresTs: DateTime.now()
+                      .add(Duration(hours: 1))
+                      .millisecondsSinceEpoch,
+                  membershipId: 'remoteSession',
+                  voip: voip,
+                ).toJson(),
+              ],
+            },
+            senderId: '@remoteuser:example.com',
+            stateKey: '@remoteuser:example.com',
+          ),
+        );
 
-          await groupCall.onMemberStateChanged();
+        await groupCall.onMemberStateChanged();
 
-          expect(groupCall.participants.length, 2);
-          expect(
-            groupCall.participants.any((p) => p.userId == matrix.userID!),
-            isTrue,
-          );
-          expect(
-            groupCall.participants.any(
-              (p) => p.userId == '@remoteuser:example.com',
-            ),
-            isTrue,
-          );
-        },
-      );
+        expect(groupCall.participants.length, 2);
+        expect(
+          groupCall.participants.any((p) => p.userId == matrix.userID!),
+          isTrue,
+        );
+        expect(
+          groupCall.participants.any(
+            (p) => p.userId == '@remoteuser:example.com',
+          ),
+          isTrue,
+        );
+      });
 
-      test(
-        'sendMemberStateEvent resend loop keeps firing after call is entered',
-        () async {
-          final shortTimerVoip = VoIP(
-            matrix,
-            MockWebRTCDelegate(),
-            timeouts: CallTimeouts(
-              updateExpireTsTimerDuration: Duration(milliseconds: 50),
-            ),
-          );
+      test('sendMemberStateEvent resend loop keeps firing after call is entered', () async {
+        final shortTimerVoip = VoIP(
+          matrix,
+          MockWebRTCDelegate(),
+          timeouts: CallTimeouts(
+            updateExpireTsTimerDuration: Duration(milliseconds: 50),
+          ),
+        );
 
-          final groupCall = GroupCallSession.withAutoGenId(
-            room,
-            shortTimerVoip,
-            MeshBackend(),
-            'm.call',
-            'm.room',
-            'test_resend_timer',
-          );
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          shortTimerVoip,
+          MeshBackend(),
+          'm.call',
+          'm.room',
+          'test_resend_timer',
+        );
 
-          FakeMatrixApi.calledEndpoints.clear();
+        FakeMatrixApi.calledEndpoints.clear();
 
-          await groupCall.enter();
+        await groupCall.enter();
 
-          // 1 send from enter() itself
-          final countAfterEnter = FakeMatrixApi.calledEndpoints.entries
-              .where((e) => e.key.contains('/state/com.famedly.call.member/'))
-              .fold<int>(0, (sum, e) => sum + e.value.length);
+        // 1 send from enter() itself
+        final countAfterEnter = FakeMatrixApi.calledEndpoints.entries
+            .where((e) => e.key.contains('/state/com.famedly.call.member/'))
+            .fold<int>(0, (sum, e) => sum + e.value.length);
 
-          // Wait long enough for the 50ms timer to fire at least twice more
-          await Future.delayed(Duration(milliseconds: 200));
+        // Wait long enough for the 50ms timer to fire at least twice more
+        await Future.delayed(Duration(milliseconds: 200));
 
-          final countAfterWait = FakeMatrixApi.calledEndpoints.entries
-              .where((e) => e.key.contains('/state/com.famedly.call.member/'))
-              .fold<int>(0, (sum, e) => sum + e.value.length);
+        final countAfterWait = FakeMatrixApi.calledEndpoints.entries
+            .where((e) => e.key.contains('/state/com.famedly.call.member/'))
+            .fold<int>(0, (sum, e) => sum + e.value.length);
 
-          // The periodic timer should have fired and called sendMemberStateEvent
-          // at least twice beyond the initial call from enter()
-          expect(countAfterWait, greaterThan(countAfterEnter + 1));
+        // The periodic timer should have fired and called sendMemberStateEvent
+        // at least twice beyond the initial call from enter()
+        expect(countAfterWait, greaterThan(countAfterEnter + 1));
 
-          await groupCall.leave();
-        },
-      );
+        await groupCall.leave();
+      });
 
-      test(
-        'delayed event canceller is cleaned up when removeFamedlyCallMemberEvent is called',
-        () async {
-          const callId = 'test_delayed_cleanup';
+      test('delayed event canceller is cleaned up when removeFamedlyCallMemberEvent is called', () async {
+        const callId = 'test_delayed_cleanup';
 
-          // Simulate a delayed event canceller that was set up for this call
-          voip.delayedEventCancellers['${room.id}|$callId|m.room'] =
-              DelayedEventCanceller(
-                delayedEventId: 'fake_delayed_event_id',
-                restartTimer: Timer.periodic(
-                  Duration(hours: 1),
-                  (_) {}, // intentionally long; will be cancelled
-                ),
-              );
+        // Simulate a delayed event canceller that was set up for this call
+        voip.delayedEventCancellers['${room.id}|$callId|m.room'] =
+            DelayedEventCanceller(
+              delayedEventId: 'fake_delayed_event_id',
+              restartTimer: Timer.periodic(
+                Duration(hours: 1),
+                (_) {}, // intentionally long; will be cancelled
+              ),
+            );
 
-          expect(
-            voip.delayedEventCancellers.containsKey(
-              '${room.id}|$callId|m.room',
-            ),
-            isTrue,
-          );
+        expect(
+          voip.delayedEventCancellers.containsKey('${room.id}|$callId|m.room'),
+          isTrue,
+        );
 
-          // removeFamedlyCallMemberEvent will try to cancel the delayed event
-          // via manageDelayedEvent. Since the fake client doesn't support the
-          // msc4140 endpoint, that call throws and the catch block removes the
-          // canceller from the map.
-          await room.removeFamedlyCallMemberEvent(callId, voip);
+        // removeFamedlyCallMemberEvent will try to cancel the delayed event
+        // via manageDelayedEvent. Since the fake client doesn't support the
+        // msc4140 endpoint, that call throws and the catch block removes the
+        // canceller from the map.
+        await room.removeFamedlyCallMemberEvent(callId, voip);
 
-          expect(
-            voip.delayedEventCancellers.containsKey(
-              '${room.id}|$callId|m.room',
-            ),
-            isFalse,
-          );
-        },
-      );
+        expect(
+          voip.delayedEventCancellers.containsKey('${room.id}|$callId|m.room'),
+          isFalse,
+        );
+      });
 
-      test(
-        'delayed leave heartbeat stops when the delayed event is gone (M_NOT_FOUND)',
-        () async {
-          const callId = 'test_delayed_not_found';
+      test('delayed leave heartbeat stops when the delayed event is gone (M_NOT_FOUND)', () async {
+        const callId = 'test_delayed_not_found';
 
-          // advertise msc4140 support via the cached versions response
-          await matrix.database.cacheCustomObject('get_versions', {
-            'versions': ['v1.1', 'v1.2', 'v1.11'],
-            'unstable_features': {'org.matrix.msc4140': true},
-          });
+        // advertise msc4140 support via the cached versions response
+        await matrix.database.cacheCustomObject('get_versions', {
+          'versions': ['v1.1', 'v1.2', 'v1.11'],
+          'unstable_features': {'org.matrix.msc4140': true},
+        });
 
-          final api = FakeMatrixApi.currentApi!;
-          // no already scheduled delayed events
-          api.api['GET']!['/client/unstable/org.matrix.msc4140/delayed_events'] =
-              (req) => {'delayed_events': []};
-          // the delayed leave state event returns a known delay id
-          api.api['PUT']!['/client/v3/rooms/${Uri.encodeComponent(room.id)}/state/${Uri.encodeComponent(EventTypes.GroupCallMember)}/${Uri.encodeComponent(matrix.userID!)}?org.matrix.msc4140.delay=400'] =
-              (req) => {'delay_id': 'faildelayid'};
-          // every restart heartbeat fails because the delayed event is gone
-          var restartCalls = 0;
-          api.api['POST']!['/client/unstable/org.matrix.msc4140/delayed_events/faildelayid'] =
-              (req) {
-                restartCalls++;
-                return {
-                  'errcode': 'M_NOT_FOUND',
-                  'error': 'Delayed event not found',
-                };
+        final api = FakeMatrixApi.currentApi!;
+        // no already scheduled delayed events
+        api.api['GET']!['/client/unstable/org.matrix.msc4140/delayed_events'] =
+            (req) => {'delayed_events': []};
+        // the delayed leave state event returns a known delay id
+        api.api['PUT']!['/client/v3/rooms/${Uri.encodeComponent(room.id)}/state/${Uri.encodeComponent(EventTypes.GroupCallMember)}/${Uri.encodeComponent(matrix.userID!)}?org.matrix.msc4140.delay=400'] =
+            (req) => {'delay_id': 'faildelayid'};
+        // every restart heartbeat fails because the delayed event is gone
+        var restartCalls = 0;
+        api.api['POST']!['/client/unstable/org.matrix.msc4140/delayed_events/faildelayid'] =
+            (req) {
+              restartCalls++;
+              return {
+                'errcode': 'M_NOT_FOUND',
+                'error': 'Delayed event not found',
               };
+            };
 
-          final shortTimerVoip = VoIP(
-            matrix,
-            MockWebRTCDelegate(),
-            timeouts: CallTimeouts(
-              delayedEventApplyLeave: Duration(milliseconds: 400),
-              delayedEventRestart: Duration(milliseconds: 50),
-            ),
-          );
+        final shortTimerVoip = VoIP(
+          matrix,
+          MockWebRTCDelegate(),
+          timeouts: CallTimeouts(
+            delayedEventApplyLeave: Duration(milliseconds: 400),
+            delayedEventRestart: Duration(milliseconds: 50),
+          ),
+        );
 
-          await room.setFamedlyCallMemberEvent(
-            {'memberships': []},
-            shortTimerVoip,
-            callId,
-          );
+        await room.setFamedlyCallMemberEvent(
+          {'memberships': []},
+          shortTimerVoip,
+          callId,
+        );
 
-          expect(
-            shortTimerVoip.delayedEventCancellers.containsKey(
-              '${room.id}|$callId|m.room',
-            ),
-            isTrue,
-          );
+        expect(
+          shortTimerVoip.delayedEventCancellers.containsKey(
+            '${room.id}|$callId|m.room',
+          ),
+          isTrue,
+        );
 
-          // let the heartbeat fire; the M_NOT_FOUND response must stop the
-          // timer and remove the canceller instead of throwing unhandled
-          // errors forever
-          await Future.delayed(Duration(milliseconds: 300));
+        // let the heartbeat fire; the M_NOT_FOUND response must stop the
+        // timer and remove the canceller instead of throwing unhandled
+        // errors forever
+        await Future.delayed(Duration(milliseconds: 300));
 
-          expect(shortTimerVoip.delayedEventCancellers, isEmpty);
-          expect(restartCalls, 1);
-        },
-      );
+        expect(shortTimerVoip.delayedEventCancellers, isEmpty);
+        expect(restartCalls, 1);
+      });
 
-      test(
-        'application change mid-call: sendMemberStateEvent still works and loop continues',
-        () async {
-          final shortTimerVoip = VoIP(
-            matrix,
-            MockWebRTCDelegate(),
-            timeouts: CallTimeouts(
-              updateExpireTsTimerDuration: Duration(milliseconds: 50),
-            ),
-          );
+      test('application change mid-call: sendMemberStateEvent still works and loop continues', () async {
+        final shortTimerVoip = VoIP(
+          matrix,
+          MockWebRTCDelegate(),
+          timeouts: CallTimeouts(
+            updateExpireTsTimerDuration: Duration(milliseconds: 50),
+          ),
+        );
 
-          const callId = 'test_app_upgrade';
+        const callId = 'test_app_upgrade';
 
-          // Set up our own membership with application = 'm.call'
-          room.setState(
-            Event(
-              room: room,
-              eventId: 'own_mem_before_upgrade',
-              originServerTs: DateTime.now(),
-              type: EventTypes.GroupCallMember,
-              content: {
-                'memberships': [
-                  CallMembership(
-                    userId: matrix.userID!,
-                    roomId: room.id,
-                    callId: callId,
-                    application: 'm.call',
-                    scope: 'm.room',
-                    backend: MeshBackend(),
-                    deviceId: matrix.deviceID!,
-                    expiresTs: DateTime.now()
-                        .add(Duration(hours: 1))
-                        .millisecondsSinceEpoch,
-                    membershipId: shortTimerVoip.currentSessionId,
-                    voip: shortTimerVoip,
-                  ).toJson(),
-                ],
-              },
-              senderId: matrix.userID!,
-              stateKey: matrix.userID,
-            ),
-          );
+        // Set up our own membership with application = 'm.call'
+        room.setState(
+          Event(
+            room: room,
+            eventId: 'own_mem_before_upgrade',
+            originServerTs: DateTime.now(),
+            type: EventTypes.GroupCallMember,
+            content: {
+              'memberships': [
+                CallMembership(
+                  userId: matrix.userID!,
+                  roomId: room.id,
+                  callId: callId,
+                  application: 'm.call',
+                  scope: 'm.room',
+                  backend: MeshBackend(),
+                  deviceId: matrix.deviceID!,
+                  expiresTs: DateTime.now()
+                      .add(Duration(hours: 1))
+                      .millisecondsSinceEpoch,
+                  membershipId: shortTimerVoip.currentSessionId,
+                  voip: shortTimerVoip,
+                ).toJson(),
+              ],
+            },
+            senderId: matrix.userID!,
+            stateKey: matrix.userID,
+          ),
+        );
 
-          final groupCall = GroupCallSession.withAutoGenId(
-            room,
-            shortTimerVoip,
-            MeshBackend(),
-            'm.call',
-            'm.room',
-            callId,
-          );
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          shortTimerVoip,
+          MeshBackend(),
+          'm.call',
+          'm.room',
+          callId,
+        );
 
-          await groupCall.enter();
-          expect(groupCall.state, GroupCallState.entered);
+        await groupCall.enter();
+        expect(groupCall.state, GroupCallState.entered);
 
-          // Simulate application upgrade
-          groupCall.application = 'com.example.upgraded';
+        // Simulate application upgrade
+        groupCall.application = 'com.example.upgraded';
 
-          FakeMatrixApi.calledEndpoints.clear();
+        FakeMatrixApi.calledEndpoints.clear();
 
-          // sendMemberStateEvent should still succeed after the application change
-          await expectLater(groupCall.sendMemberStateEvent(), completes);
+        // sendMemberStateEvent should still succeed after the application change
+        await expectLater(groupCall.sendMemberStateEvent(), completes);
 
-          // Resend timer should still be firing with the updated application
-          await Future.delayed(Duration(milliseconds: 200));
+        // Resend timer should still be firing with the updated application
+        await Future.delayed(Duration(milliseconds: 200));
 
-          final stateEventCalls = FakeMatrixApi.calledEndpoints.entries
-              .where((e) => e.key.contains('/state/com.famedly.call.member/'))
-              .fold<int>(0, (sum, e) => sum + e.value.length);
+        final stateEventCalls = FakeMatrixApi.calledEndpoints.entries
+            .where((e) => e.key.contains('/state/com.famedly.call.member/'))
+            .fold<int>(0, (sum, e) => sum + e.value.length);
 
-          // At least the explicit sendMemberStateEvent() call plus timer firings
-          expect(stateEventCalls, greaterThan(1));
+        // At least the explicit sendMemberStateEvent() call plus timer firings
+        expect(stateEventCalls, greaterThan(1));
 
-          await groupCall.leave();
-        },
-      );
+        await groupCall.leave();
+      });
     });
 
     test('call persists after sending invite', () async {

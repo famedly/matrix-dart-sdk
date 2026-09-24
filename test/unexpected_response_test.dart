@@ -50,8 +50,7 @@ void main() {
       expect(
         () => api.unexpectedResponse(response, body),
         throwsA(isNot(isA<MatrixException>())),
-        reason:
-            'Should not interpret valid JSON as MatrixException if it lacks spec fields',
+        reason: 'Should not interpret valid JSON as MatrixException if it lacks spec fields',
       );
     }
 

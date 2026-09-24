@@ -660,15 +660,12 @@ void main() {
       expect(orphan.keyId, isNot(used.keyId));
     });
 
-    test(
-      'keyIdForNamedSecretStorageKey returns only matching key when name is unused',
-      () async {
-        final ssss = client.encryption!.ssss;
-        const unusedName = 'unused-passphrase-name-test';
-        final key = await ssss.createKey('orphan-only-pass', unusedName);
-        expect(ssss.keyIdForNamedSecretStorageKey(unusedName), key.keyId);
-      },
-    );
+    test('keyIdForNamedSecretStorageKey returns only matching key when name is unused', () async {
+      final ssss = client.encryption!.ssss;
+      const unusedName = 'unused-passphrase-name-test';
+      final key = await ssss.createKey('orphan-only-pass', unusedName);
+      expect(ssss.keyIdForNamedSecretStorageKey(unusedName), key.keyId);
+    });
 
     test(
       'keyIdForNamedSecretStorageKey returns key id for single orphan key',
@@ -680,50 +677,44 @@ void main() {
       },
     );
 
-    test(
-      'keyIdForNamedSecretStorageKey returns null for multiple unused matching keys',
-      () async {
-        final ssss = client.encryption!.ssss;
-        const dupUnusedName = 'duplicate-unused-passphrase-name-test';
-        await ssss.createKey('unused-1', dupUnusedName);
-        await ssss.createKey('unused-2', dupUnusedName);
+    test('keyIdForNamedSecretStorageKey returns null for multiple unused matching keys', () async {
+      final ssss = client.encryption!.ssss;
+      const dupUnusedName = 'duplicate-unused-passphrase-name-test';
+      await ssss.createKey('unused-1', dupUnusedName);
+      await ssss.createKey('unused-2', dupUnusedName);
 
-        expect(ssss.keyIdForNamedSecretStorageKey(dupUnusedName), isNull);
-      },
-    );
+      expect(ssss.keyIdForNamedSecretStorageKey(dupUnusedName), isNull);
+    });
 
-    test(
-      'hasInvalidEncryptedEntries detects malformed entries and invalid key ids',
-      () async {
-        final ssss = client.encryption!.ssss;
-        final defaultKeyId = ssss.defaultKeyId!;
-        final encrypted = client
-            .accountData[EventTypes.CrossSigningSelfSigning]!
-            .content
-            .tryGetMap<String, Object?>('encrypted')!;
-        final validPayload = Map<String, Object?>.from(
-          encrypted[defaultKeyId] as Map,
-        );
+    test('hasInvalidEncryptedEntries detects malformed entries and invalid key ids', () async {
+      final ssss = client.encryption!.ssss;
+      final defaultKeyId = ssss.defaultKeyId!;
+      final encrypted = client
+          .accountData[EventTypes.CrossSigningSelfSigning]!
+          .content
+          .tryGetMap<String, Object?>('encrypted')!;
+      final validPayload = Map<String, Object?>.from(
+        encrypted[defaultKeyId] as Map,
+      );
 
-        await client.setAccountData(client.userID!, 'm.test.valid.secret', {
-          'encrypted': {defaultKeyId: validPayload},
-        });
-        expect(ssss.hasInvalidEncryptedEntries('m.test.valid.secret'), false);
+      await client.setAccountData(client.userID!, 'm.test.valid.secret', {
+        'encrypted': {defaultKeyId: validPayload},
+      });
+      expect(ssss.hasInvalidEncryptedEntries('m.test.valid.secret'), false);
 
-        await client.setAccountData(client.userID!, 'm.test.invalid.secret', {
-          'encrypted': {
-            'missing-fields': {'iv': 'a'},
-            'invalid-key-id': validPayload,
-          },
-        });
-        expect(ssss.hasInvalidEncryptedEntries('m.test.invalid.secret'), true);
+      await client.setAccountData(client.userID!, 'm.test.invalid.secret', {
+        'encrypted': {
+          'missing-fields': {'iv': 'a'},
+          'invalid-key-id': validPayload,
+        },
+      });
+      expect(ssss.hasInvalidEncryptedEntries('m.test.invalid.secret'), true);
 
-        await client.setAccountData(client.userID!, 'm.test.nonmap.secret', {
-          'encrypted': {defaultKeyId: 'not-a-map'},
-        });
-        expect(ssss.hasInvalidEncryptedEntries('m.test.nonmap.secret'), true);
-      },
-    );
+      await client.setAccountData(client.userID!, 'm.test.nonmap.secret', {
+        'encrypted': {defaultKeyId: 'not-a-map'},
+      });
+      expect(ssss.hasInvalidEncryptedEntries('m.test.nonmap.secret'), true);
+    });
 
     test('dispose client', () async {
       await client.dispose(closeDatabase: true);

@@ -398,9 +398,8 @@ void main() {
       const key = 'abc def!/_-';
       const roomId = '!726s6s6q:example.com';
       await matrix.setAccountDataPerRoom(matrix.userID!, roomId, key, content);
-      final roomFromList = (await matrix.database.getRoomList(
-        matrix,
-      )).firstWhere((room) => room.id == roomId);
+      final roomFromList = (await matrix.database.getRoomList(matrix))
+          .firstWhere((room) => room.id == roomId);
       final roomFromDb = await matrix.database.getSingleRoom(matrix, roomId);
 
       expect(
@@ -1811,11 +1810,11 @@ void main() {
       ], reason: 'Rooms sorted by custom sorter (alphabetically)');
 
       matrix.setCustomRoomSorter(null);
-      expect(
-        matrix.rooms,
-        [roomB, roomC, roomA],
-        reason: 'Rooms should revert to default sort by latest event time',
-      );
+      expect(matrix.rooms, [
+        roomB,
+        roomC,
+        roomA,
+      ], reason: 'Rooms should revert to default sort by latest event time');
     });
 
     tearDown(() async {

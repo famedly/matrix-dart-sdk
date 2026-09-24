@@ -998,8 +998,7 @@ class FakeMatrixApi extends BaseClient {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
                 'iv': 'eIb2IITxtmcq+1TrT8D5eQ==',
-                'ciphertext':
-                    'lWRTPo5qxf4LAVwVPzGHOyMcP181n7bb9/B0lvkLDC2Oy4DvAL0eLx2x3bY=',
+                'ciphertext': 'lWRTPo5qxf4LAVwVPzGHOyMcP181n7bb9/B0lvkLDC2Oy4DvAL0eLx2x3bY=',
                 'mac': 'Ynx89tIxPkx0o6ljMgxszww17JOgB4tg4etmNnMC9XI=',
               },
             },
@@ -1011,8 +1010,7 @@ class FakeMatrixApi extends BaseClient {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
                 'iv': 'YqU2XIjYulYZl+bkZtGgVw==',
-                'ciphertext':
-                    'kM2TSoy/jR/4d357ZoRPbpPypxQl6XRLo3FsEXz+f7vIOp82GeRp28RYb3k=',
+                'ciphertext': 'kM2TSoy/jR/4d357ZoRPbpPypxQl6XRLo3FsEXz+f7vIOp82GeRp28RYb3k=',
                 'mac': 'F+DZa5tAFmWsYSryw5EuEpzTmmABRab4GETkM85bGGo=',
               },
             },
@@ -1024,8 +1022,7 @@ class FakeMatrixApi extends BaseClient {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
                 'iv': 'D7AM3LXFu7ZlyGOkR+OeqQ==',
-                'ciphertext':
-                    'bYA2+OMgsO6QB1E31aY+ESAWrT0fUBTXqajy4qmL7bVDSZY4Uj64EXNbHuA=',
+                'ciphertext': 'bYA2+OMgsO6QB1E31aY+ESAWrT0fUBTXqajy4qmL7bVDSZY4Uj64EXNbHuA=',
                 'mac': 'j2UtyPo/UBSoiaQCWfzCiRZXp3IRt0ZZujuXgUMjnw4=',
               },
             },
@@ -1037,8 +1034,7 @@ class FakeMatrixApi extends BaseClient {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
                 'iv': 'cL/0MJZaiEd3fNU+I9oJrw==',
-                'ciphertext':
-                    'WL73Pzdk5wZdaaSpaeRH0uZYKcxkuV8IS6Qa2FEfA1+vMeRLuHcWlXbMX0w=',
+                'ciphertext': 'WL73Pzdk5wZdaaSpaeRH0uZYKcxkuV8IS6Qa2FEfA1+vMeRLuHcWlXbMX0w=',
                 'mac': '+xozp909S6oDX8KRV8D8ZFVRyh7eEYQpPP76f+DOsnw=',
               },
             },
@@ -1088,8 +1084,7 @@ class FakeMatrixApi extends BaseClient {
             'ciphertext': {
               '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk': {
                 'type': 0,
-                'body':
-                    'Awogyh7K4iLUQjcOxIfi7q7LhBBqv9w0mQ6JI9+U9tv7iF4SIHC6xb5YFWf9voRnmDBbd+0vxD/xDlVNRDlPIKliLGkYGiAkEbtlo+fng4ELtO4gSLKVbcFn7tZwZCEUE8H2miBsCCKABgMKIFrKDJwB7gM3lXPt9yVoh6gQksafKt7VFCNRN5KLKqsDEAAi0AX5EfTV7jJ1ZWAbxftjoSN6kCVIxzGclbyg1HjchmNCX7nxNCHWl+q5ZgqHYZVu2n2mCVmIaKD0kvoEZeY3tV1Itb6zf67BLaU0qgW/QzHCHg5a44tNLjucvL2mumHjIG8k0BY2uh+52HeiMCvSOvtDwHg7nzCASGdqPVCj9Kzw6z7F6nL4e3mYim8zvJd7f+mD9z3ARrypUOLGkTGYbB2PQOovf0Do8WzcaRzfaUCnuu/YVZWKK7DPgG8uhw/TjR6XtraAKZysF+4DJYMG9SQWx558r6s7Z5EUOF5CU2M35w1t1Xxllb3vrS83dtf9LPCrBhLsEBeYEUBE2+bTBfl0BDKqLiB0Cc0N0ixOcHIt6e40wAvW622/gMgHlpNSx8xG12u0s6h6EMWdCXXLWd9fy2q6glFUHvA67A35q7O+M8DVml7Y9xG55Y3DHkMDc9cwgwFkBDCAYQe6pQF1nlKytcVCGREpBs/gq69gHAStMQ8WEg38Lf8u8eBr2DFexrN4U+QAk+S//P3fJgf0bQx/Eosx4fvWSz9En41iC+ADCsWQpMbwHn4JWvtAbn3oW0XmL/OgThTkJMLiCymduYAa1Hnt7a3tP0KTL2/x11F02ggQHL28cCjq5W4zUGjWjl5wo2PsKB6t8aAvMg2ujGD2rCjb4yrv5VIzAKMOZLyj7K0vSK9gwDLQ/4vq+QnKUBG5zrcOze0hX+kz2909/tmAdeCH61Ypw7gbPUJAKnmKYUiB/UgwkJvzMJSsk/SEs5SXosHDI+HsJHJp4Mp4iKD0xRMst+8f9aTjaWwh8ZvELE1ZOhhCbF3RXhxi3x2Nu8ORIz+vhEQ1NOlMc7UIo98Fk/96T36vL/fviowT4C/0AlaapZDJBmKwhmwqisMjY2n1vY29oM2p5BzY1iwP7q9BYdRFst6xwo57TNSuRwQw7IhFsf0k+ABuPEZy5xB5nPHyIRTf/pr3Hw',
+                'body': 'Awogyh7K4iLUQjcOxIfi7q7LhBBqv9w0mQ6JI9+U9tv7iF4SIHC6xb5YFWf9voRnmDBbd+0vxD/xDlVNRDlPIKliLGkYGiAkEbtlo+fng4ELtO4gSLKVbcFn7tZwZCEUE8H2miBsCCKABgMKIFrKDJwB7gM3lXPt9yVoh6gQksafKt7VFCNRN5KLKqsDEAAi0AX5EfTV7jJ1ZWAbxftjoSN6kCVIxzGclbyg1HjchmNCX7nxNCHWl+q5ZgqHYZVu2n2mCVmIaKD0kvoEZeY3tV1Itb6zf67BLaU0qgW/QzHCHg5a44tNLjucvL2mumHjIG8k0BY2uh+52HeiMCvSOvtDwHg7nzCASGdqPVCj9Kzw6z7F6nL4e3mYim8zvJd7f+mD9z3ARrypUOLGkTGYbB2PQOovf0Do8WzcaRzfaUCnuu/YVZWKK7DPgG8uhw/TjR6XtraAKZysF+4DJYMG9SQWx558r6s7Z5EUOF5CU2M35w1t1Xxllb3vrS83dtf9LPCrBhLsEBeYEUBE2+bTBfl0BDKqLiB0Cc0N0ixOcHIt6e40wAvW622/gMgHlpNSx8xG12u0s6h6EMWdCXXLWd9fy2q6glFUHvA67A35q7O+M8DVml7Y9xG55Y3DHkMDc9cwgwFkBDCAYQe6pQF1nlKytcVCGREpBs/gq69gHAStMQ8WEg38Lf8u8eBr2DFexrN4U+QAk+S//P3fJgf0bQx/Eosx4fvWSz9En41iC+ADCsWQpMbwHn4JWvtAbn3oW0XmL/OgThTkJMLiCymduYAa1Hnt7a3tP0KTL2/x11F02ggQHL28cCjq5W4zUGjWjl5wo2PsKB6t8aAvMg2ujGD2rCjb4yrv5VIzAKMOZLyj7K0vSK9gwDLQ/4vq+QnKUBG5zrcOze0hX+kz2909/tmAdeCH61Ypw7gbPUJAKnmKYUiB/UgwkJvzMJSsk/SEs5SXosHDI+HsJHJp4Mp4iKD0xRMst+8f9aTjaWwh8ZvELE1ZOhhCbF3RXhxi3x2Nu8ORIz+vhEQ1NOlMc7UIo98Fk/96T36vL/fviowT4C/0AlaapZDJBmKwhmwqisMjY2n1vY29oM2p5BzY1iwP7q9BYdRFst6xwo57TNSuRwQw7IhFsf0k+ABuPEZy5xB5nPHyIRTf/pr3Hw',
               },
             },
           },
@@ -1486,8 +1481,7 @@ class FakeMatrixApi extends BaseClient {
                   {
                     'ip': '10.0.0.2',
                     'last_seen': 1411996332123,
-                    'user_agent':
-                        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36',
+                    'user_agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36',
                   },
                 ],
               },
@@ -1495,8 +1489,9 @@ class FakeMatrixApi extends BaseClient {
           },
         },
       },
-      '/client/v3/user/%40alice%3Aexample.com/account_data/test.account.data':
-          (req) => {'foo': 'bar'},
+      '/client/v3/user/%40alice%3Aexample.com/account_data/test.account.data': (
+        req,
+      ) => {'foo': 'bar'},
       '/client/v3/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
           (req) => {'foo': 'bar'},
       '/client/v3/directory/room/%23testalias%3Aexample.com': (reqI) => {
@@ -2179,8 +2174,7 @@ class FakeMatrixApi extends BaseClient {
             'is_verified': true,
             'session_data': {
               'ephemeral': 'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
-              'ciphertext':
-                  '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+              'ciphertext': '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
               'mac': 'QzKV/fgAs4U',
             },
           },
@@ -2193,8 +2187,7 @@ class FakeMatrixApi extends BaseClient {
                 'is_verified': true,
                 'session_data': {
                   'ephemeral': 'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
-                  'ciphertext':
-                      '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+                  'ciphertext': '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
                   'mac': 'QzKV/fgAs4U',
                 },
               },
@@ -2210,8 +2203,7 @@ class FakeMatrixApi extends BaseClient {
                 'is_verified': true,
                 'session_data': {
                   'ephemeral': 'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
-                  'ciphertext':
-                      '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+                  'ciphertext': '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
                   'mac': 'QzKV/fgAs4U',
                 },
               },
@@ -2376,8 +2368,7 @@ class FakeMatrixApi extends BaseClient {
                   'key': 'ikMXajRlkS7Xi9CROrAh3jXnbygk8mLBdSaY9/al0X0',
                   'signatures': {
                     '@alice:example.com': {
-                      'ed25519:JLAFKJWSCS':
-                          'XdboCa0Ljoh0Y0i/IVnmMqy/+T1hJyu8BA/nRYniJMQ7QWh/pGS5AsWswdARD+MAX+r4u98Qzk0y27HUddZXDA',
+                      'ed25519:JLAFKJWSCS': 'XdboCa0Ljoh0Y0i/IVnmMqy/+T1hJyu8BA/nRYniJMQ7QWh/pGS5AsWswdARD+MAX+r4u98Qzk0y27HUddZXDA',
                     },
                   },
                 },
@@ -2393,8 +2384,7 @@ class FakeMatrixApi extends BaseClient {
                   'key': 'qc72ve94cA28iuE0fXa98QO3uls39DHWdQlYyvvhGh0',
                   'signatures': {
                     '@test:fakeServer.notExisting': {
-                      'ed25519:GHTYAJCE':
-                          'dFwffr5kTKefO7sjnWLMhTzw7oV31nkPIDRxFy5OQT2OP5++Ao0KRbaBZ6qfuT7lW1owKK0Xk3s7QTBvc/eNDA',
+                      'ed25519:GHTYAJCE': 'dFwffr5kTKefO7sjnWLMhTzw7oV31nkPIDRxFy5OQT2OP5++Ao0KRbaBZ6qfuT7lW1owKK0Xk3s7QTBvc/eNDA',
                     },
                   },
                 },
@@ -2426,9 +2416,10 @@ class FakeMatrixApi extends BaseClient {
         'one_time_key_counts': {
           'curve25519': 10,
           'signed_curve25519':
-              tryCast<Map<String, Object?>>(
-                decodeJson(req),
-              )?.tryGetMap<String, Object?>('one_time_keys')?.keys.length ??
+              tryCast<Map<String, Object?>>(decodeJson(req))
+                  ?.tryGetMap<String, Object?>('one_time_keys')
+                  ?.keys
+                  .length ??
               0,
         },
       },
@@ -2451,8 +2442,7 @@ class FakeMatrixApi extends BaseClient {
               },
               'signatures': {
                 '@alice:example.com': {
-                  'ed25519:JLAFKJWSCS':
-                      'go3mi5o3Ile+Ik+lCEpHmBmyJmKWfnRDCBBvfaVlKsMyha5IORuYcxwEUrAeLyAeeeHvkWDFX+No5eY1jYeKBw',
+                  'ed25519:JLAFKJWSCS': 'go3mi5o3Ile+Ik+lCEpHmBmyJmKWfnRDCBBvfaVlKsMyha5IORuYcxwEUrAeLyAeeeHvkWDFX+No5eY1jYeKBw',
                 },
               },
               'unsigned': {'device_display_name': 'Alices mobile phone'},
@@ -2472,8 +2462,7 @@ class FakeMatrixApi extends BaseClient {
               },
               'signatures': {
                 '@alice:example.com': {
-                  'ed25519:OTHERDEVICE':
-                      'bwHd6ylISP13AICdDPd0HQd4V6dvvd4vno8/OwUNdm9UAprr3YjkDqVw425I74u2UQAarq9bytBqVqFyD6trAw',
+                  'ed25519:OTHERDEVICE': 'bwHd6ylISP13AICdDPd0HQd4V6dvvd4vno8/OwUNdm9UAprr3YjkDqVw425I74u2UQAarq9bytBqVqFyD6trAw',
                 },
               },
             },
@@ -2494,10 +2483,8 @@ class FakeMatrixApi extends BaseClient {
               },
               'signatures': {
                 '@test:fakeServer.notExisting': {
-                  'ed25519:GHTYAJCE':
-                      'NEQeTgv7ew1IZSLQphWd0y60EdHdcNfHgvoaMQco5XKeIYyiUZIWd7F4x/mkPDjUizv6yWMbTDCWdSg5XcgNBA',
-                  'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
-                      'Q4/55vZjEJD7M2EC40bgZqd9Zuy/4C75UPVopJdXeioQVaKtFf6EF0nUUuql0yD+r3hinsZcock0wO6Q2xcoAQ',
+                  'ed25519:GHTYAJCE': 'NEQeTgv7ew1IZSLQphWd0y60EdHdcNfHgvoaMQco5XKeIYyiUZIWd7F4x/mkPDjUizv6yWMbTDCWdSg5XcgNBA',
+                  'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY': 'Q4/55vZjEJD7M2EC40bgZqd9Zuy/4C75UPVopJdXeioQVaKtFf6EF0nUUuql0yD+r3hinsZcock0wO6Q2xcoAQ',
                 },
               },
             },
@@ -2516,10 +2503,8 @@ class FakeMatrixApi extends BaseClient {
               },
               'signatures': {
                 '@test:fakeServer.notExisting': {
-                  'ed25519:OTHERDEVICE':
-                      '/rT6pVRypJWxGos1QcI7jHL9HwcA83nkHLHqMcRPeLSxXHh4oHWvC0/tl0Xg06ogyiGw4NuB7TpOISvJBdt7BA',
-                  'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
-                      'qnjiLl36h/1jlLvcAgt46Igaod2T9lOSnoSVkV0KC+c7vYIjG4QBzXpH+hycfufOT/y+a/kl52dUTLQWctMKCA',
+                  'ed25519:OTHERDEVICE': '/rT6pVRypJWxGos1QcI7jHL9HwcA83nkHLHqMcRPeLSxXHh4oHWvC0/tl0Xg06ogyiGw4NuB7TpOISvJBdt7BA',
+                  'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY': 'qnjiLl36h/1jlLvcAgt46Igaod2T9lOSnoSVkV0KC+c7vYIjG4QBzXpH+hycfufOT/y+a/kl52dUTLQWctMKCA',
                 },
               },
             },
@@ -2540,8 +2525,7 @@ class FakeMatrixApi extends BaseClient {
               },
               'signatures': {
                 '@othertest:fakeServer.notExisting': {
-                  'ed25519:FOXDEVICE':
-                      '2lJ3atmRIWgkyQNC9gvWEpxwuozsBQsg33M2IMDJqLhx/+g3Ds1vQ683dJsYIu04ORa4U0L9TqieHVpV/7qqDA',
+                  'ed25519:FOXDEVICE': '2lJ3atmRIWgkyQNC9gvWEpxwuozsBQsg33M2IMDJqLhx/+g3Ds1vQ683dJsYIu04ORa4U0L9TqieHVpV/7qqDA',
                 },
               },
             },
@@ -2577,8 +2561,7 @@ class FakeMatrixApi extends BaseClient {
             },
             'signatures': {
               '@test:fakeServer.notExisting': {
-                'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
-                    'afkrbGvPn5Zb5zc7Lk9cz2skI3QrzI/L0st1GS+/GATxNjMzc6vKmGu7r9cMb1GJxy4RdeUpfH3L7Fs/fNL1Dw',
+                'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8': 'afkrbGvPn5Zb5zc7Lk9cz2skI3QrzI/L0st1GS+/GATxNjMzc6vKmGu7r9cMb1GJxy4RdeUpfH3L7Fs/fNL1Dw',
               },
             },
           },
@@ -2599,8 +2582,7 @@ class FakeMatrixApi extends BaseClient {
             },
             'signatures': {
               '@test:fakeServer.notExisting': {
-                'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
-                    'pvgbZxEbllaElhpiRnb7/uOIUhrglvHCFnpoxr3/5ZrWa0EK/uaefhex9eEV4uBLrHjHg2ymwdNaM7ap9+sBBg',
+                'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8': 'pvgbZxEbllaElhpiRnb7/uOIUhrglvHCFnpoxr3/5ZrWa0EK/uaefhex9eEV4uBLrHjHg2ymwdNaM7ap9+sBBg',
               },
             },
           },
@@ -2679,8 +2661,7 @@ class FakeMatrixApi extends BaseClient {
                   'ciphertext': {
                     '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk': {
                       'type': 0,
-                      'body':
-                          'Awogyh7K4iLUQjcOxIfi7q7LhBBqv9w0mQ6JI9+U9tv7iF4SIHC6xb5YFWf9voRnmDBbd+0vxD/xDlVNRDlPIKliLGkYGiAkEbtlo+fng4ELtO4gSLKVbcFn7tZwZCEUE8H2miBsCCKABgMKIFrKDJwB7gM3lXPt9yVoh6gQksafKt7VFCNRN5KLKqsDEAAi0AX5EfTV7jJ1ZWAbxftjoSN6kCVIxzGclbyg1HjchmNCX7nxNCHWl+q5ZgqHYZVu2n2mCVmIaKD0kvoEZeY3tV1Itb6zf67BLaU0qgW/QzHCHg5a44tNLjucvL2mumHjIG8k0BY2uh+52HeiMCvSOvtDwHg7nzCASGdqPVCj9Kzw6z7F6nL4e3mYim8zvJd7f+mD9z3ARrypUOLGkTGYbB2PQOovf0Do8WzcaRzfaUCnuu/YVZWKK7DPgG8uhw/TjR6XtraAKZysF+4DJYMG9SQWx558r6s7Z5EUOF5CU2M35w1t1Xxllb3vrS83dtf9LPCrBhLsEBeYEUBE2+bTBfl0BDKqLiB0Cc0N0ixOcHIt6e40wAvW622/gMgHlpNSx8xG12u0s6h6EMWdCXXLWd9fy2q6glFUHvA67A35q7O+M8DVml7Y9xG55Y3DHkMDc9cwgwFkBDCAYQe6pQF1nlKytcVCGREpBs/gq69gHAStMQ8WEg38Lf8u8eBr2DFexrN4U+QAk+S//P3fJgf0bQx/Eosx4fvWSz9En41iC+ADCsWQpMbwHn4JWvtAbn3oW0XmL/OgThTkJMLiCymduYAa1Hnt7a3tP0KTL2/x11F02ggQHL28cCjq5W4zUGjWjl5wo2PsKB6t8aAvMg2ujGD2rCjb4yrv5VIzAKMOZLyj7K0vSK9gwDLQ/4vq+QnKUBG5zrcOze0hX+kz2909/tmAdeCH61Ypw7gbPUJAKnmKYUiB/UgwkJvzMJSsk/SEs5SXosHDI+HsJHJp4Mp4iKD0xRMst+8f9aTjaWwh8ZvELE1ZOhhCbF3RXhxi3x2Nu8ORIz+vhEQ1NOlMc7UIo98Fk/96T36vL/fviowT4C/0AlaapZDJBmKwhmwqisMjY2n1vY29oM2p5BzY1iwP7q9BYdRFst6xwo57TNSuRwQw7IhFsf0k+ABuPEZy5xB5nPHyIRTf/pr3Hw',
+                      'body': 'Awogyh7K4iLUQjcOxIfi7q7LhBBqv9w0mQ6JI9+U9tv7iF4SIHC6xb5YFWf9voRnmDBbd+0vxD/xDlVNRDlPIKliLGkYGiAkEbtlo+fng4ELtO4gSLKVbcFn7tZwZCEUE8H2miBsCCKABgMKIFrKDJwB7gM3lXPt9yVoh6gQksafKt7VFCNRN5KLKqsDEAAi0AX5EfTV7jJ1ZWAbxftjoSN6kCVIxzGclbyg1HjchmNCX7nxNCHWl+q5ZgqHYZVu2n2mCVmIaKD0kvoEZeY3tV1Itb6zf67BLaU0qgW/QzHCHg5a44tNLjucvL2mumHjIG8k0BY2uh+52HeiMCvSOvtDwHg7nzCASGdqPVCj9Kzw6z7F6nL4e3mYim8zvJd7f+mD9z3ARrypUOLGkTGYbB2PQOovf0Do8WzcaRzfaUCnuu/YVZWKK7DPgG8uhw/TjR6XtraAKZysF+4DJYMG9SQWx558r6s7Z5EUOF5CU2M35w1t1Xxllb3vrS83dtf9LPCrBhLsEBeYEUBE2+bTBfl0BDKqLiB0Cc0N0ixOcHIt6e40wAvW622/gMgHlpNSx8xG12u0s6h6EMWdCXXLWd9fy2q6glFUHvA67A35q7O+M8DVml7Y9xG55Y3DHkMDc9cwgwFkBDCAYQe6pQF1nlKytcVCGREpBs/gq69gHAStMQ8WEg38Lf8u8eBr2DFexrN4U+QAk+S//P3fJgf0bQx/Eosx4fvWSz9En41iC+ADCsWQpMbwHn4JWvtAbn3oW0XmL/OgThTkJMLiCymduYAa1Hnt7a3tP0KTL2/x11F02ggQHL28cCjq5W4zUGjWjl5wo2PsKB6t8aAvMg2ujGD2rCjb4yrv5VIzAKMOZLyj7K0vSK9gwDLQ/4vq+QnKUBG5zrcOze0hX+kz2909/tmAdeCH61Ypw7gbPUJAKnmKYUiB/UgwkJvzMJSsk/SEs5SXosHDI+HsJHJp4Mp4iKD0xRMst+8f9aTjaWwh8ZvELE1ZOhhCbF3RXhxi3x2Nu8ORIz+vhEQ1NOlMc7UIo98Fk/96T36vL/fviowT4C/0AlaapZDJBmKwhmwqisMjY2n1vY29oM2p5BzY1iwP7q9BYdRFst6xwo57TNSuRwQw7IhFsf0k+ABuPEZy5xB5nPHyIRTf/pr3Hw',
                     },
                   },
                 },
@@ -2703,26 +2684,32 @@ class FakeMatrixApi extends BaseClient {
       '/client/v3/pushrules/global/content/nocake/actions': (req) => {},
       '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.history_visibility':
           (req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.join_rules':
-          (req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.guest_access':
-          (req) => {'event_id': '1234'},
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.join_rules': (
+        req,
+      ) => {'event_id': '1234'},
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.guest_access': (
+        req,
+      ) => {'event_id': '1234'},
       '/client/v3/rooms/!calls%3Aexample.com/send/m.call.invite/1234': (req) =>
           {'event_id': '1234'},
       '/client/v3/rooms/!calls%3Aexample.com/send/m.call.answer/1234': (req) =>
           {'event_id': '1234'},
-      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.select_answer/1234':
-          (req) => {'event_id': '1234'},
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.select_answer/1234': (
+        req,
+      ) => {'event_id': '1234'},
       '/client/v3/rooms/!calls%3Aexample.com/send/m.call.reject/1234': (req) =>
           {'event_id': '1234'},
-      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.negotiate/1234':
-          (req) => {'event_id': '1234'},
-      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.candidates/1234':
-          (req) => {'event_id': '1234'},
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.negotiate/1234': (
+        req,
+      ) => {'event_id': '1234'},
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.candidates/1234': (
+        req,
+      ) => {'event_id': '1234'},
       '/client/v3/rooms/!calls%3Aexample.com/send/m.call.hangup/1234': (req) =>
           {'event_id': '1234'},
-      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.replaces/1234':
-          (req) => {'event_id': '1234'},
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.replaces/1234': (
+        req,
+      ) => {'event_id': '1234'},
       '/client/v3/rooms/!calls%3Aexample.com/send/m.call.asserted_identity/1234':
           (req) => {'event_id': '1234'},
       '/client/v3/rooms/!calls%3Aexample.com/send/m.call.sdp_stream_metadata_changed/1234':
@@ -2744,24 +2731,28 @@ class FakeMatrixApi extends BaseClient {
           {},
       '/client/v3/devices/QBUAZIFURK': (req) => {},
       '/client/v3/directory/room/%23testalias%3Aexample.com': (reqI) => {},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.room.message/testtxid':
-          (reqI) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.reaction/testtxid':
-          (reqI) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'},
+      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.room.message/testtxid': (
+        reqI,
+      ) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'},
+      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.reaction/testtxid': (
+        reqI,
+      ) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'},
       '/client/v3/rooms/!localpart%3Aexample.com/typing/%40alice%3Aexample.com':
           (req) => {},
       '/client/v3/rooms/!1234%3Aexample.com/send/m.room.message/1234': (reqI) =>
           {'event_id': '\$event${FakeMatrixApi.eventCounter++}'},
-      '/client/v3/rooms/!1234%3Aexample.com/send/m.room.message/newresend':
-          (reqI) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'},
+      '/client/v3/rooms/!1234%3Aexample.com/send/m.room.message/newresend': (
+        reqI,
+      ) => {'event_id': '\$event${FakeMatrixApi.eventCounter++}'},
       '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.favourite':
           (req) => {},
       '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.lowpriority':
           (req) => {},
       '/client/v3/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags/testtag':
           (req) => {},
-      '/client/v3/user/%40alice%3Aexample.com/account_data/test.account.data':
-          (req) => {},
+      '/client/v3/user/%40alice%3Aexample.com/account_data/test.account.data': (
+        req,
+      ) => {},
       '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/best%20animal':
           (req) => {},
       '/client/v3/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
@@ -2772,14 +2763,17 @@ class FakeMatrixApi extends BaseClient {
           (req) => {},
       '/client/v3/profile/%40alice%3Aexample.com/displayname': (reqI) => {},
       '/client/v3/profile/%40alice%3Aexample.com/avatar_url': (reqI) => {},
-      '/client/v3/profile/%40test%3AfakeServer.notExisting/avatar_url':
-          (reqI) => {},
-      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.encryption':
-          (reqI) => {'event_id': 'YUwRidLecu:example.com'},
+      '/client/v3/profile/%40test%3AfakeServer.notExisting/avatar_url': (
+        reqI,
+      ) => {},
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.encryption': (
+        reqI,
+      ) => {'event_id': 'YUwRidLecu:example.com'},
       '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.avatar': (reqI) =>
           {'event_id': 'YUwRidLecu:example.com'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.room.message/1234':
-          (reqI) => {'event_id': 'YUwRidLecu:example.com'},
+      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.room.message/1234': (
+        reqI,
+      ) => {'event_id': 'YUwRidLecu:example.com'},
       '/client/v3/rooms/!localpart%3Aserver.abc/redact/1234/1234': (reqI) => {
         'event_id': 'YUwRidLecu:example.com',
       },
@@ -2789,12 +2783,15 @@ class FakeMatrixApi extends BaseClient {
       '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.topic': (reqI) => {
         'event_id': '42',
       },
-      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.pinned_events':
-          (reqI) => {'event_id': '42'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.power_levels':
-          (reqI) => {'event_id': '42'},
-      '/client/v3/rooms/!calls%3Aexample.com/state/m.room.power_levels':
-          (reqI) => {'event_id': '42'},
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.pinned_events': (
+        reqI,
+      ) => {'event_id': '42'},
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.power_levels': (
+        reqI,
+      ) => {'event_id': '42'},
+      '/client/v3/rooms/!calls%3Aexample.com/state/m.room.power_levels': (
+        reqI,
+      ) => {'event_id': '42'},
       '/client/v3/rooms/!calls%3Aexample.com/state/com.famedly.call.member/%40test%3AfakeServer.notExisting':
           (reqI) => {'event_id': 'call_member_42'},
       '/client/v3/rooms/!calls%3Aexample.com/state/com.famedly.call.member/%40remoteuser%3Aexample.com':

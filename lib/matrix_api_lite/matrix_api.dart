@@ -55,6 +55,23 @@ class MatrixApi extends Api {
   MatrixApi({Uri? homeserver, String? accessToken, super.httpClient})
     : super(baseUri: homeserver, bearerToken: accessToken);
 
+  /// Creates or updates an alias for [roomId].
+  /// The generated [setRoomAlias] API remains available for raw wire values.
+  Future<void> createRoomAlias(RoomAlias alias, RoomId roomId) =>
+      setRoomAlias(alias.value, roomId.value);
+
+  /// Removes an alias from the room directory.
+  Future<void> removeRoomAlias(RoomAlias alias) => deleteRoomAlias(alias.value);
+
+  /// Resolves a validated alias to a room ID and routing servers.
+  Future<GetRoomIdByAliasResponse> resolveRoomAlias(RoomAlias alias) =>
+      getRoomIdByAlias(alias.value);
+
+  /// Returns this homeserver's aliases for [roomId].
+  /// Throws [FormatException] if the server returns an invalid alias.
+  Future<List<RoomAlias>> getRoomAliases(RoomId roomId) async =>
+      (await getLocalAliases(roomId.value)).map(RoomAlias.parse).toList();
+
   /// Used for all Matrix json requests using the [c2s API](https://matrix.org/docs/spec/client_server/r0.6.0.html).
   ///
   /// Throws: FormatException, MatrixException
@@ -129,9 +146,9 @@ class MatrixApi extends Api {
     if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
       jsonString = '{"chunk":$jsonString}';
     }
-    jsonResp =
-        jsonDecode(jsonString)
-            as Map<String, Object?>?; // May throw FormatException
+    jsonResp = jsonDecode(
+      jsonString,
+    ) as Map<String, Object?>?; // May throw FormatException
 
     if (resp.statusCode >= 400 && resp.statusCode < 500) {
       throw MatrixException(resp);
@@ -232,3 +249,8 @@ typedef PublicRoomsChunk = PublishedRoomsChunk;
 
 @Deprecated('Use SpaceRoomsChunk\$1 or SpaceRoomsChunk\$2 instead')
 typedef SpaceRoomsChunk = SpaceRoomsChunk$2;
+
+extension GetRoomIdByAliasResponseExtension on GetRoomIdByAliasResponse {
+  /// The validated Matrix [RoomId], or null if unset or malformed.
+  RoomId? get parsedRoomId => roomId != null ? RoomId.tryParse(roomId!) : null;
+}

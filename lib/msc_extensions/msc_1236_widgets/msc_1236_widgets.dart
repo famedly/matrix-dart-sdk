@@ -12,15 +12,16 @@ export 'src/widget.dart';
 extension MatrixWidgets on Room {
   /// Returns all present Widgets in the room.
   List<MatrixWidget> get widgets =>
-      {
-        ...states['m.widget'] ?? states['im.vector.modular.widgets'] ?? {},
-      }.values.expand((e) {
-        try {
-          return [MatrixWidget.fromJson(e.content, this)];
-        } catch (_) {
-          return <MatrixWidget>[];
-        }
-      }).toList();
+      {...states['m.widget'] ?? states['im.vector.modular.widgets'] ?? {}}
+          .values
+          .expand((e) {
+            try {
+              return [MatrixWidget.fromJson(e.content, this)];
+            } catch (_) {
+              return <MatrixWidget>[];
+            }
+          })
+          .toList();
 
   Future<String> addWidget(MatrixWidget widget) {
     final user = client.userID;

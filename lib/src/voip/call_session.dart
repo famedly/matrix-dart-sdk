@@ -1506,12 +1506,9 @@ class CallSession {
       'version': version,
       'lifetime': lifetime,
       'offer': {'sdp': sdp, 'type': type},
-      'invitee':
-          ?remoteUserId, // TODO: rename this to invitee_user_id? breaks spec though
+      'invitee': ?remoteUserId, // TODO: rename this to invitee_user_id? breaks spec though
       'invitee_device_id': ?remoteDeviceId,
-      if (remoteDeviceId != null)
-        'device_id': client
-            .deviceID!, // Having a remoteDeviceId means you are doing to-device events, so you want to send your deviceId too
+      if (remoteDeviceId != null) 'device_id': client.deviceID!, // Having a remoteDeviceId means you are doing to-device events, so you want to send your deviceId too
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };

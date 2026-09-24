@@ -34,6 +34,9 @@ class Room {
   /// The full qualified Matrix ID for the room in the format '!localid:server.abc'.
   final String id;
 
+  /// The strongly typed, validated [RoomId] for this room, or null if malformed.
+  RoomId? get roomId => RoomId.tryParse(id);
+
   /// Membership status of the user for this room.
   Membership membership;
 
@@ -52,6 +55,15 @@ class Room {
   /// In a lot of cases the `state_key` might be an empty string. You **should** use the
   /// methods `getState()` and `setState()` to interact with the room states.
   Map<String, Map<String, StrippedStateEvent>> states = {};
+
+  String? _notificationName;
+  RoomAlias? _notificationAlias;
+
+  /// Applies room metadata supplied separately from an event in a push payload.
+  void applyPushNotification(PushNotification notification) {
+    _notificationName = notification.roomName ?? _notificationName;
+    _notificationAlias = notification.parsedRoomAlias ?? _notificationAlias;
+  }
 
   /// Key-Value store for ephemerals.
   Map<String, BasicEvent> ephemerals = {};
@@ -155,6 +167,8 @@ class Room {
       return;
     }
 
+    if (state.type == EventTypes.RoomName) _notificationName = null;
+    if (state.type == EventTypes.RoomCanonicalAlias) _notificationAlias = null;
     (states[state.type] ??= {})[stateKey] = state;
 
     client.onRoomState.add((roomId: id, state: state));
@@ -163,6 +177,10 @@ class Room {
   /// ID of the fully read marker event.
   String get fullyRead =>
       roomAccountData['m.fully_read']?.content.tryGet<String>('event_id') ?? '';
+
+  /// The validated event ID of the fully read marker, or null if unset or malformed.
+  EventId? get fullyReadEventId =>
+      fullyRead.isEmpty ? null : EventId.tryParse(fullyRead);
 
   /// If something changes, this callback will be triggered. Will return the
   /// room id.
@@ -176,6 +194,7 @@ class Room {
 
   /// The name of the room if set by a participant.
   String get name {
+    if (_notificationName case final name?) return name;
     final n = getState(EventTypes.RoomName)?.content['name'];
     return (n is String) ? n : '';
   }
@@ -230,7 +249,7 @@ class Room {
   ]) {
     if (name.isNotEmpty) return name;
 
-    final canonicalAlias = this.canonicalAlias.localpart;
+    final canonicalAlias = canonicalRoomAlias?.localpart;
     if (canonicalAlias != null && canonicalAlias.isNotEmpty) {
       return canonicalAlias;
     }
@@ -247,9 +266,9 @@ class Room {
             (hero) => hero.isNotEmpty && hero != client.userID,
           )
           .map(
-            (hero) => unsafeGetUserFromMemoryOrFallback(
-              hero,
-            ).calcDisplayname(i18n: i18n),
+            (hero) =>
+                unsafeGetUserFromMemoryOrFallback(hero)
+                    .calcDisplayname(i18n: i18n),
           )
           .join(', ');
       if (isAbandonedDMRoom) {
@@ -263,18 +282,16 @@ class Room {
 
       if (ownMember.senderId != ownMember.stateKey) {
         return i18n.invitedBy(
-          unsafeGetUserFromMemoryOrFallback(
-            ownMember.senderId,
-          ).calcDisplayname(i18n: i18n),
+          unsafeGetUserFromMemoryOrFallback(ownMember.senderId)
+              .calcDisplayname(i18n: i18n),
         );
       }
     }
     if (membership == Membership.leave) {
       if (directChatMatrixID != null) {
         return i18n.wasDirectChatDisplayName(
-          unsafeGetUserFromMemoryOrFallback(
-            directChatMatrixID,
-          ).calcDisplayname(i18n: i18n),
+          unsafeGetUserFromMemoryOrFallback(directChatMatrixID)
+              .calcDisplayname(i18n: i18n),
         );
       }
     }
@@ -293,9 +310,8 @@ class Room {
   /// before.
   Uri? get avatar {
     // Check content of `m.room.avatar`
-    final avatarUrl = getState(
-      EventTypes.RoomAvatar,
-    )?.content.tryGet<String>('url');
+    final avatarUrl = getState(EventTypes.RoomAvatar)?.content
+        .tryGet<String>('url');
     if (avatarUrl != null) {
       return Uri.tryParse(avatarUrl);
     }
@@ -310,20 +326,36 @@ class Room {
   }
 
   /// The address in the format: #roomname:homeserver.org.
+  @Deprecated('Use canonicalRoomAlias instead, which returns RoomAlias?.')
   String get canonicalAlias {
+    if (_notificationAlias case final alias?) return alias.value;
     final alias = getState(EventTypes.RoomCanonicalAlias)?.content['alias'];
     return (alias is String) ? alias : '';
   }
 
+  /// The validated canonical alias, or null if absent or malformed.
+  /// The original state event remains available through [getState].
+  RoomAlias? get canonicalRoomAlias {
+    if (_notificationAlias case final alias?) return alias;
+    final alias = getState(EventTypes.RoomCanonicalAlias)?.content['alias'];
+    return alias is String ? RoomAlias.tryParse(alias) : null;
+  }
+
   /// Sets the canonical alias. If the [canonicalAlias] is not yet an alias of
   /// this room, it will create one.
-  Future<void> setCanonicalAlias(String canonicalAlias) async {
-    final aliases = await client.getLocalAliases(id);
-    if (!aliases.contains(canonicalAlias)) {
-      await client.setRoomAlias(canonicalAlias, id);
+  @Deprecated('Use setCanonicalRoomAlias with a RoomAlias instead.')
+  Future<void> setCanonicalAlias(String canonicalAlias) async =>
+      setCanonicalRoomAlias(RoomAlias(canonicalAlias));
+
+  /// Sets the canonical [alias], creating it first if necessary.
+  Future<void> setCanonicalRoomAlias(RoomAlias alias) async {
+    final rId = RoomId(id);
+    final aliases = await client.getRoomAliases(rId);
+    if (!aliases.contains(alias)) {
+      await client.createRoomAlias(alias, rId);
     }
     await client.setRoomStateWithKey(id, EventTypes.RoomCanonicalAlias, '', {
-      'alias': canonicalAlias,
+      'alias': alias.value,
     });
   }
 
@@ -372,6 +404,9 @@ class Room {
   bool get isDirectChat => directChatMatrixID != null;
 
   Event? lastEvent;
+
+  /// The strongly typed event ID of [lastEvent], or null if none or synthetic.
+  EventId? get lastEventId => lastEvent?.eventIdentifier;
 
   /// Fetches the most recent event in the timeline from the server to have
   /// a valid preview after receiving a limited timeline from the sync. Will
@@ -463,6 +498,31 @@ class Room {
 
   /// Your current client instance.
   final Client client;
+
+  /// Constructs a [Room] with a strongly typed [RoomId].
+  Room.typed({
+    required RoomId roomId,
+    Membership membership = Membership.join,
+    int notificationCount = 0,
+    int highlightCount = 0,
+    String? prev_batch,
+    required Client client,
+    Map<String, BasicEvent>? roomAccountData,
+    RoomSummary? summary,
+    Event? lastEvent,
+    LatestReceiptState? receiptState,
+  }) : this(
+         id: roomId.value,
+         membership: membership,
+         notificationCount: notificationCount,
+         highlightCount: highlightCount,
+         prev_batch: prev_batch,
+         client: client,
+         roomAccountData: roomAccountData,
+         summary: summary,
+         lastEvent: lastEvent,
+         receiptState: receiptState,
+       );
 
   Room({
     required this.id,
@@ -1540,6 +1600,14 @@ class Room {
     );
   }
 
+  /// Sets the power level for the given [user].
+  Future<String> setPowerForUser(UserId user, int power) =>
+      setPower(user.value, power);
+
+  /// Invites a user to this room by their strongly typed [UserId].
+  Future<void> inviteUserById(UserId user, {String? reason}) =>
+      invite(user.value, reason: reason);
+
   /// Call the Matrix API to invite a user to this room.
   Future<void> invite(String userID, {String? reason}) =>
       client.inviteUser(id, userID, reason: reason);
@@ -2124,6 +2192,19 @@ class Room {
   >
   _inflightUserRequests = {};
 
+  /// Requests a missing [User] for this room by their strongly typed [UserId].
+  Future<User?> requestUserById(
+    UserId userId, {
+    bool ignoreErrors = false,
+    bool requestState = true,
+    bool? requestProfile,
+  }) => requestUser(
+    userId.value,
+    ignoreErrors: ignoreErrors,
+    requestState: requestState,
+    requestProfile: requestProfile,
+  );
+
   /// Requests a missing [User] for this room. Important for clients using
   /// lazy loading. If the user can't be found this method tries to fetch
   /// the displayname and avatar from the server if [requestState] is true.
@@ -2187,6 +2268,10 @@ class Room {
   }
 
   /// Returns the room version if specified in the `m.room.create` state event.
+  /// Searches for an event in this room by its strongly typed [EventId].
+  Future<Event?> getEventByEventId(EventId eventId) =>
+      getEventById(eventId.value);
+
   String? get roomVersion =>
       getState(EventTypes.RoomCreate)?.content.tryGet<String>('room_version');
 
@@ -2233,6 +2318,10 @@ class Room {
     );
   }
 
+  /// Returns the power level of the given strongly typed [user].
+  PowerLevel getPowerLevelForUser(UserId user) =>
+      getPowerLevelByUserId(user.value);
+
   /// Returns the user's own power level.
   PowerLevel get ownPowerLevel {
     final userId = client.userID;
@@ -2245,9 +2334,8 @@ class Room {
   /// Returns the power levels from all users for this room or null if not given.
   @Deprecated('Use `getPowerLevelByUserId(String userId)` instead')
   Map<String, int>? get powerLevels {
-    final powerLevelState = getState(
-      EventTypes.RoomPowerLevels,
-    )?.content['users'];
+    final powerLevelState = getState(EventTypes.RoomPowerLevels)
+        ?.content['users'];
     return (powerLevelState is Map<String, int>) ? powerLevelState : null;
   }
 
@@ -2381,9 +2469,8 @@ class Room {
     final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
     if (powerLevelsMap == null) return PowerLevel.user <= ownPowerLevel;
     return PowerLevel(
-          getState(
-                EventTypes.RoomPowerLevels,
-              )?.content.tryGet<int>('state_default') ??
+          getState(EventTypes.RoomPowerLevels)?.content
+                  .tryGet<int>('state_default') ??
               PowerLevel.defaultModeratorLevel,
         ) <=
         ownPowerLevel;
@@ -2570,6 +2657,19 @@ class Room {
     return await client.redactEvent(id, eventId, messageID, reason: reason);
   }
 
+  /// Redacts an event in this room by its strongly typed [EventId].
+  Future<String?> redactEventById(
+    EventId eventId, {
+    String? reason,
+    String? txid,
+    bool redactAllEdits = false,
+  }) => redactEvent(
+    eventId.value,
+    reason: reason,
+    txid: txid,
+    redactAllEdits: redactAllEdits,
+  );
+
   /// This tells the server that the user is typing for the next N milliseconds
   /// where N is the value specified in the timeout key. Alternatively, if typing is false,
   /// it tells the server that the user has stopped typing.
@@ -2581,9 +2681,8 @@ class Room {
   /// to the room from someone already inside of the room. Currently, knock and private are reserved
   /// keywords which are not implemented.
   JoinRules? get joinRules {
-    final joinRulesString = getState(
-      EventTypes.RoomJoinRules,
-    )?.content.tryGet<String>('join_rule');
+    final joinRulesString = getState(EventTypes.RoomJoinRules)?.content
+        .tryGet<String>('join_rule');
     return JoinRules.values.singleWhereOrNull(
       (element) => element.text == joinRulesString,
     );
@@ -2625,9 +2724,8 @@ class Room {
   /// This event controls whether guest users are allowed to join rooms. If this event
   /// is absent, servers should act as if it is present and has the guest_access value "forbidden".
   GuestAccess get guestAccess {
-    final guestAccessString = getState(
-      EventTypes.GuestAccess,
-    )?.content.tryGet<String>('guest_access');
+    final guestAccessString = getState(EventTypes.GuestAccess)?.content
+        .tryGet<String>('guest_access');
     return GuestAccess.values.singleWhereOrNull(
           (element) => element.text == guestAccessString,
         ) ??
@@ -2647,9 +2745,9 @@ class Room {
 
   /// This event controls whether a user can see the events that happened in a room from before they joined.
   HistoryVisibility? get historyVisibility {
-    final historyVisibilityString = getState(
-      EventTypes.HistoryVisibility,
-    )?.content.tryGet<String>('history_visibility');
+    final historyVisibilityString = getState(EventTypes.HistoryVisibility)
+        ?.content
+        .tryGet<String>('history_visibility');
     return HistoryVisibility.values.singleWhereOrNull(
       (element) => element.text == historyVisibilityString,
     );
@@ -2808,9 +2906,10 @@ class Room {
 
   /// Generates a matrix.to link with appropriate routing info to share the room
   Future<Uri> matrixToInviteLink() async {
-    if (canonicalAlias.isNotEmpty) {
+    final alias = canonicalRoomAlias;
+    if (alias != null) {
       return Uri.parse(
-        'https://matrix.to/#/${Uri.encodeComponent(canonicalAlias)}',
+        'https://matrix.to/#/${Uri.encodeComponent(alias.value)}',
       );
     }
     final queryParameters = [];

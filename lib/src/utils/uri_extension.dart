@@ -79,9 +79,8 @@ extension MxcUriExtension on Uri {
 
     final scanner = skipScanner ? null : client.contentScannerConfig;
     if (scanner != null) {
-      return _appendMxcTo(
-        scanner.downloadThumbnailUri,
-      ).replace(queryParameters: queryParameters);
+      return _appendMxcTo(scanner.downloadThumbnailUri)
+          .replace(queryParameters: queryParameters);
     }
 
     final homeserver = client.homeserver;
