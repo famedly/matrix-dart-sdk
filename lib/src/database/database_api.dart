@@ -11,12 +11,30 @@ import '../../encryption/utils/stored_inbound_group_session.dart';
 import '../../matrix.dart';
 import '../utils/queued_to_device_event.dart';
 
+enum ClientField {
+  homeserverUrl('homeserver_url'),
+  accessToken('token'),
+  tokenExpiresIn('token_expires_at'),
+  refreshToken('refresh_token'),
+  userId('user_id'),
+  deviceId('device_id'),
+  deviceName('device_name'),
+  prevBatch('prev_batch'),
+  olmAccount('olm_account'),
+  oidcClientId('oidc_client_id');
+
+  final String name;
+  const ClientField(this.name);
+}
+
 abstract class DatabaseApi {
   int get maxFileSize => 1 * 1000 * 1000;
 
   bool get supportsFileStoring => false;
 
   Future<Map<String, dynamic>?> getClient(String name);
+
+  Future updateClientFields(Map<ClientField, String> fields);
 
   Future updateClient(
     String homeserverUrl,
