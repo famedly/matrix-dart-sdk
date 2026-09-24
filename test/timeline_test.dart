@@ -552,6 +552,184 @@ void main() {
       },
     );
 
+    test(
+      'Own receipts fall back to timestamps for unknown positions',
+      () async {
+        await client.handleSync(
+          SyncUpdate(
+            nextBatch: 'something',
+            rooms: RoomsUpdate(
+              join: {
+                room.id: JoinedRoomUpdate(
+                  timeline: TimelineUpdate(
+                    events: [
+                      MatrixEvent.fromJson({
+                        'type': 'm.room.message',
+                        'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                        'sender': '@alice:example.com',
+                        'status': EventStatus.synced.intValue,
+                        'event_id': '\$1',
+                        'origin_server_ts': 1000,
+                      }),
+                    ],
+                  ),
+                ),
+              },
+            ),
+          ),
+        );
+
+        // Own private receipt on the locally known event, as SDK clients
+        // always send one alongside their public receipts.
+        await client.handleSync(
+          SyncUpdate(
+            nextBatch: 'something2',
+            rooms: RoomsUpdate(
+              join: {
+                room.id: JoinedRoomUpdate(
+                  ephemeral: [
+                    BasicEvent.fromJson({
+                      'type': 'm.receipt',
+                      'content': {
+                        '\$1': {
+                          'm.read.private': {
+                            client.userID: {'ts': 2000},
+                          },
+                        },
+                      },
+                    }),
+                  ],
+                ),
+              },
+            ),
+          ),
+        );
+
+        expect(room.receiptState.global.latestOwnReceipt?.eventId, '\$1');
+
+        // A client which only sends public receipts (e.g. Cinny) reads an
+        // event this device has not stored, so its timeline position is
+        // unknown. Its newer timestamp must win over the stale private
+        // receipt instead of being ignored.
+        await client.handleSync(
+          SyncUpdate(
+            nextBatch: 'something3',
+            rooms: RoomsUpdate(
+              join: {
+                room.id: JoinedRoomUpdate(
+                  ephemeral: [
+                    BasicEvent.fromJson({
+                      'type': 'm.receipt',
+                      'content': {
+                        '\$unknown': {
+                          'm.read': {
+                            client.userID: {'ts': 3000},
+                          },
+                        },
+                      },
+                    }),
+                  ],
+                ),
+              },
+            ),
+          ),
+        );
+
+        expect(room.receiptState.global.ownPublic?.eventId, '\$unknown');
+        expect(room.receiptState.global.latestOwnReceipt?.eventId, '\$unknown');
+
+        // With both positions unknown the timestamps decide: the newer
+        // private receipt wins.
+        await client.handleSync(
+          SyncUpdate(
+            nextBatch: 'something4',
+            rooms: RoomsUpdate(
+              join: {
+                room.id: JoinedRoomUpdate(
+                  ephemeral: [
+                    BasicEvent.fromJson({
+                      'type': 'm.receipt',
+                      'content': {
+                        '\$unknown2': {
+                          'm.read.private': {
+                            client.userID: {'ts': 4000},
+                          },
+                        },
+                      },
+                    }),
+                  ],
+                ),
+              },
+            ),
+          ),
+        );
+
+        expect(
+          room.receiptState.global.latestOwnReceipt?.eventId,
+          '\$unknown2',
+        );
+
+        // ... and a public receipt with the same timestamp loses the tie
+        // against the private one.
+        await client.handleSync(
+          SyncUpdate(
+            nextBatch: 'something5',
+            rooms: RoomsUpdate(
+              join: {
+                room.id: JoinedRoomUpdate(
+                  ephemeral: [
+                    BasicEvent.fromJson({
+                      'type': 'm.receipt',
+                      'content': {
+                        '\$unknown3': {
+                          'm.read': {
+                            client.userID: {'ts': 4000},
+                          },
+                        },
+                      },
+                    }),
+                  ],
+                ),
+              },
+            ),
+          ),
+        );
+
+        expect(
+          room.receiptState.global.latestOwnReceipt?.eventId,
+          '\$unknown2',
+        );
+
+        // A public receipt on a locally known event with a newer timestamp
+        // wins against a private receipt on an unknown event.
+        await client.handleSync(
+          SyncUpdate(
+            nextBatch: 'something6',
+            rooms: RoomsUpdate(
+              join: {
+                room.id: JoinedRoomUpdate(
+                  ephemeral: [
+                    BasicEvent.fromJson({
+                      'type': 'm.receipt',
+                      'content': {
+                        '\$1': {
+                          'm.read': {
+                            client.userID: {'ts': 5000},
+                          },
+                        },
+                      },
+                    }),
+                  ],
+                ),
+              },
+            ),
+          ),
+        );
+
+        expect(room.receiptState.global.latestOwnReceipt?.eventId, '\$1');
+      },
+    );
+
     test('Send message', () async {
       await room.sendTextEvent('test', txid: '1234');
 

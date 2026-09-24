@@ -300,12 +300,22 @@ class LatestReceiptState {
         final privatePos = eventOrder.indexOf(private.eventId);
         final publicPos = eventOrder.indexOf(public.eventId);
 
-        if (publicPos < 0 ||
-            privatePos <= publicPos ||
-            (privatePos < 0 && private.ts > public.ts)) {
-          timeline.latestOwnReceipt = private;
+        if (privatePos < 0 || publicPos < 0) {
+          // At least one receipt points at an event which is not in the
+          // locally stored timeline (for example because a limited sync
+          // wiped the timeline fragments), so their positions can not be
+          // compared. Fall back to the receipt timestamps and prefer the
+          // private receipt on ties, as clients of this SDK always send
+          // one alongside their public receipts.
+          timeline.latestOwnReceipt = private.ts >= public.ts
+              ? private
+              : public;
         } else {
-          timeline.latestOwnReceipt = public;
+          // Both positions are known: the receipt furthest down the
+          // timeline wins.
+          timeline.latestOwnReceipt = privatePos <= publicPos
+              ? private
+              : public;
         }
       }
     }
