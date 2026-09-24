@@ -3431,6 +3431,11 @@ class Client extends MatrixApi {
         final response = await queryKeys(outdatedLists, timeout: 10000);
         if (!isLogged()) return;
 
+        // Each user's list is written once at the end rather than per key, so
+        // that a `/keys/query` response lands atomically and keys the server
+        // dropped disappear without separate delete bookkeeping.
+        final usersToPersist = <String>{};
+
         final deviceKeys = response.deviceKeys;
         if (deviceKeys != null) {
           for (final rawDeviceKeyListEntry in deviceKeys.entries) {
@@ -3515,16 +3520,6 @@ class Client extends MatrixApi {
                     // Always trust the own device
                     entry.setDirectVerified(true);
                   }
-                  dbActions.add(
-                    () => database.storeUserDeviceKey(
-                      userId,
-                      deviceId,
-                      json.encode(entry.toJson()),
-                      entry.directVerified,
-                      entry.blocked,
-                      entry.lastActive.millisecondsSinceEpoch,
-                    ),
-                  );
                 } else if (oldKeys.containsKey(deviceId)) {
                   // This shouldn't ever happen. The same device ID has gotten
                   // a new public key. So we ignore the update. TODO: ask krille
@@ -3535,20 +3530,8 @@ class Client extends MatrixApi {
                 Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
               }
             }
-            // delete old/unused entries
-            for (final oldDeviceKeyEntry in oldKeys.entries) {
-              final deviceId = oldDeviceKeyEntry.key;
-              if (!userKeys.deviceKeys.containsKey(deviceId)) {
-                // we need to remove an old key
-                dbActions.add(
-                  () => database.removeUserDeviceKey(userId, deviceId),
-                );
-              }
-            }
             userKeys.outdated = false;
-            dbActions.add(
-              () => database.storeUserDeviceKeysInfo(userId, false),
-            );
+            usersToPersist.add(userId);
           }
         }
         // next we parse and persist the cross signing keys
@@ -3577,13 +3560,6 @@ class Client extends MatrixApi {
             for (final oldEntry in oldKeys.entries) {
               if (!oldEntry.value.usage.contains(keyType)) {
                 userKeys.crossSigningKeys[oldEntry.key] = oldEntry.value;
-              } else {
-                // There is a previous cross-signing key with  this usage, that we no
-                // longer need/use. Clear it from the database.
-                dbActions.add(
-                  () =>
-                      database.removeUserCrossSigningKey(userId, oldEntry.key),
-                );
               }
             }
             final entry = CrossSigningKey.fromMatrixCrossSigningKey(
@@ -3613,22 +3589,16 @@ class Client extends MatrixApi {
                 // if we should instead use the new key with unknown verified / blocked status
                 userKeys.crossSigningKeys[publicKey] = oldKey;
               }
-              dbActions.add(
-                () => database.storeUserCrossSigningKey(
-                  userId,
-                  publicKey,
-                  json.encode(entry.toJson()),
-                  entry.directVerified,
-                  entry.blocked,
-                  trustOnFirstUseSince: entry.trustOnFirstUseSince,
-                ),
-              );
             }
             _userDeviceKeys[userId]?.outdated = false;
-            dbActions.add(
-              () => database.storeUserDeviceKeysInfo(userId, false),
-            );
+            usersToPersist.add(userId);
           }
+        }
+
+        for (final userId in usersToPersist) {
+          final list = _userDeviceKeys[userId];
+          if (list == null) continue;
+          dbActions.add(() => database.storeDeviceKeysList(userId, list));
         }
 
         // now process all the failures
@@ -4166,44 +4136,17 @@ class Client extends MatrixApi {
     }
     Logs().d('Migrate Device Keys...');
     final userDeviceKeys = await legacyDatabase.getUserDeviceKeys(this);
-    for (final userId in userDeviceKeys.keys) {
-      Logs().d('Migrate Device Keys of user $userId...');
-      final deviceKeysList = userDeviceKeys[userId];
-      for (final crossSigningKey
-          in deviceKeysList?.crossSigningKeys.values ?? <CrossSigningKey>[]) {
-        final pubKey = crossSigningKey.publicKey;
-        if (pubKey != null) {
-          Logs().d(
-            'Migrate cross signing key with usage ${crossSigningKey.usage} and verified ${crossSigningKey.directVerified}...',
-          );
-          await database.storeUserCrossSigningKey(
-            userId,
-            pubKey,
-            jsonEncode(crossSigningKey.toJson()),
-            crossSigningKey.directVerified,
-            crossSigningKey.blocked,
-            trustOnFirstUseSince: crossSigningKey.trustOnFirstUseSince,
-          );
-        }
-      }
-
-      if (deviceKeysList != null) {
-        for (final deviceKeys in deviceKeysList.deviceKeys.values) {
-          final deviceId = deviceKeys.deviceId;
-          if (deviceId != null) {
-            Logs().d('Migrate device keys for ${deviceKeys.deviceId}...');
-            await database.storeUserDeviceKey(
-              userId,
-              deviceId,
-              jsonEncode(deviceKeys.toJson()),
-              deviceKeys.directVerified,
-              deviceKeys.blocked,
-              deviceKeys.lastActive.millisecondsSinceEpoch,
-            );
-          }
-        }
-        Logs().d('Migrate user device keys info...');
-        await database.storeUserDeviceKeysInfo(userId, deviceKeysList.outdated);
+    for (final entry in userDeviceKeys.entries) {
+      Logs().d('Migrate Device Keys of user ${entry.key}...');
+      await database.storeDeviceKeysList(entry.key, entry.value);
+      for (final deviceKeys in entry.value.deviceKeys.values) {
+        final deviceId = deviceKeys.deviceId;
+        if (deviceId == null) continue;
+        await database.setLastActiveUserDeviceKey(
+          deviceKeys.lastActive.millisecondsSinceEpoch,
+          entry.key,
+          deviceId,
+        );
       }
     }
     Logs().d('Migrate inbound group sessions...');

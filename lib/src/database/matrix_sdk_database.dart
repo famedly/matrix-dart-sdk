@@ -34,7 +34,7 @@ import 'sqflite_box.dart' if (dart.library.js_interop) 'indexeddb_box.dart';
 /// Learn more at:
 /// https://github.com/famedly/matrix-dart-sdk/issues/1642#issuecomment-1865827227
 class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
-  static const int version = 11;
+  static const int version = 12;
   final String name;
 
   late BoxCollection _collection;
@@ -63,14 +63,31 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   late Box<Map> _outboundGroupSessionsBox;
   late Box<Map> _olmSessionsBox;
 
-  /// Key is a tuple as TupleKey(userId, deviceId)
-  late Box<Map> _userDeviceKeysBox;
+  /// Boxes are split by how often they are written, not by entity. Device keys
+  /// are read from disk once per session but written on wildly different
+  /// schedules, from `/keys/query` down to every single olm message.
 
-  /// Key is the user ID as a String
+  /// Key is the user ID, value the server-signed key material only. Written on
+  /// `/keys/query`.
+  late Box<Map> _deviceKeysMaterialBox;
+
+  /// Key is the user ID, value maps each device ID or cross signing public key
+  /// to its locally decided trust state. Written when the user verifies or
+  /// blocks. One row per user rather than per key, because `/keys/query`
+  /// rewrites a whole user at once and a row per key made that N times as
+  /// many statements.
+  late Box<Map> _deviceKeyTrustBox;
+
+  /// Key is the user ID as a String. Written per `device_lists.changed`.
   late Box<bool> _userDeviceKeysOutdatedBox;
 
-  /// Key is a tuple as TupleKey(userId, publicKey)
-  late Box<Map> _userCrossSigningKeysBox;
+  /// Key is a tuple as TupleKey(userId, deviceId). Written on every incoming
+  /// olm message.
+  late Box<int> _lastActiveDevicesBox;
+
+  /// Key is a tuple as TupleKey(userId, deviceId). Written on every outgoing
+  /// olm message.
+  late Box<String> _lastSentOlmMessagesBox;
   late Box<Map> _ssssCacheBox;
   late Box<Map> _presencesBox;
 
@@ -128,12 +145,28 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   static const String _olmSessionsBoxName = 'box_olm_session';
 
-  static const String _userDeviceKeysBoxName = 'box_user_device_keys';
+  static const String _deviceKeysMaterialBoxName = 'box_device_keys_material';
+
+  static const String _deviceKeyTrustBoxName = 'box_device_key_trust';
 
   static const String _userDeviceKeysOutdatedBoxName =
       'box_user_device_keys_outdated';
 
-  static const String _userCrossSigningKeysBoxName = 'box_cross_signing_keys';
+  static const String _lastActiveDevicesBoxName = 'box_last_active_devices';
+
+  static const String _lastSentOlmMessagesBoxName =
+      'box_last_sent_olm_messages';
+
+  /// Pre-v12 boxes. Kept readable so [_migrateLegacyDeviceKeys] can be retried
+  /// after a failure; a later schema version may drop them.
+  static const String _legacyUserDeviceKeysBoxName = 'box_user_device_keys';
+
+  static const String _legacyUserCrossSigningKeysBoxName =
+      'box_cross_signing_keys';
+
+  /// Set in [_clientBox] once the legacy boxes have been folded into the new
+  /// ones, so the copy runs exactly once.
+  static const String _deviceKeysMigratedKey = 'device_keys_migrated';
 
   static const String _ssssCacheBoxName = 'box_ssss_cache';
 
@@ -216,9 +249,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         _inboundGroupSessionsUploadQueueBoxName,
         _outboundGroupSessionsBoxName,
         _olmSessionsBoxName,
-        _userDeviceKeysBoxName,
+        _deviceKeysMaterialBoxName,
+        _deviceKeyTrustBoxName,
         _userDeviceKeysOutdatedBoxName,
-        _userCrossSigningKeysBoxName,
+        _lastActiveDevicesBoxName,
+        _lastSentOlmMessagesBoxName,
+        _legacyUserDeviceKeysBoxName,
+        _legacyUserCrossSigningKeysBoxName,
         _ssssCacheBoxName,
         _presencesBoxName,
         _timelineFragmentsBoxName,
@@ -251,13 +288,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       _outboundGroupSessionsBoxName,
     );
     _olmSessionsBox = _collection.openBox(_olmSessionsBoxName);
-    _userDeviceKeysBox = _collection.openBox(_userDeviceKeysBoxName);
+    _deviceKeysMaterialBox = _collection.openBox(_deviceKeysMaterialBoxName);
+    _deviceKeyTrustBox = _collection.openBox(_deviceKeyTrustBoxName);
     _userDeviceKeysOutdatedBox = _collection.openBox(
       _userDeviceKeysOutdatedBoxName,
     );
-    _userCrossSigningKeysBox = _collection.openBox(
-      _userCrossSigningKeysBoxName,
-    );
+    _lastActiveDevicesBox = _collection.openBox(_lastActiveDevicesBoxName);
+    _lastSentOlmMessagesBox = _collection.openBox(_lastSentOlmMessagesBoxName);
     _ssssCacheBox = _collection.openBox(_ssssCacheBoxName);
     _presencesBox = _collection.openBox(_presencesBoxName);
     _timelineFragmentsBox = _collection.openBox(_timelineFragmentsBoxName);
@@ -281,7 +318,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<void> _migrateFromVersion(int currentVersion) async {
     Logs().i('Migrate store database from version $currentVersion to $version');
 
-    if (version == 8) {
+    // Every step guards on the version it upgrades *from* and none of them
+    // return, so a database several versions behind runs all the steps it
+    // missed and the version is written exactly once, at the end.
+    if (currentVersion < 8) {
       // Migrate to inbound group sessions upload queue:
       final allInboundGroupSessions = await getAllInboundGroupSessions();
       final sessionsToUpload = allInboundGroupSessions
@@ -299,14 +339,16 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           );
         }
       });
-      if (currentVersion == 7) {
-        await _clientBox.put('version', version.toString());
-        return;
-      }
     }
 
-    // The default version upgrade:
-    await clearCache();
+    // Version 12 re-partitioned the device key boxes. That data is copied
+    // lazily by [_migrateLegacyDeviceKeys] on the first read rather than here,
+    // so that a half-finished copy can simply be retried.
+
+    // Schemas before 11 may hold cache entries the current code cannot read.
+    // Everything from 11 onwards only added boxes, so the cache can stay.
+    if (currentVersion < 11) await clearCache();
+
     await _clientBox.put('version', version.toString());
   }
 
@@ -324,9 +366,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _inboundGroupSessionsUploadQueueBox.clearQuickAccessCache();
     _outboundGroupSessionsBox.clearQuickAccessCache();
     _olmSessionsBox.clearQuickAccessCache();
-    _userDeviceKeysBox.clearQuickAccessCache();
+    _deviceKeysMaterialBox.clearQuickAccessCache();
+    _deviceKeyTrustBox.clearQuickAccessCache();
     _userDeviceKeysOutdatedBox.clearQuickAccessCache();
-    _userCrossSigningKeysBox.clearQuickAccessCache();
+    _lastActiveDevicesBox.clearQuickAccessCache();
+    _lastSentOlmMessagesBox.clearQuickAccessCache();
     _ssssCacheBox.clearQuickAccessCache();
     _presencesBox.clearQuickAccessCache();
     _timelineFragmentsBox.clearQuickAccessCache();
@@ -515,11 +559,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String userId,
     String deviceId,
   ) async {
-    final raw = await _userDeviceKeysBox.get(
+    final message = await _lastSentOlmMessagesBox.get(
       TupleKey(userId, deviceId).toString(),
     );
-    if (raw == null) return <String>[];
-    return <String>[raw['last_sent_message']];
+    return [?message];
   }
 
   @override
@@ -730,60 +773,166 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client) =>
-      runBenchmarked<Map<String, DeviceKeysList>>(
-        'Get all user device keys from store',
-        () async {
-          final deviceKeysOutdated = await _userDeviceKeysOutdatedBox
-              .getAllValues();
-          if (deviceKeysOutdated.isEmpty) {
-            return {};
+  Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client) async {
+    if (await _clientBox.get(_deviceKeysMigratedKey) != 'true') {
+      await _migrateLegacyDeviceKeys();
+    }
+    return runBenchmarked<Map<String, DeviceKeysList>>(
+      'Get all user device keys from store',
+      () async {
+        final material = await _deviceKeysMaterialBox.getAllValues();
+        final outdated = await _userDeviceKeysOutdatedBox.getAllValues();
+        if (material.isEmpty && outdated.isEmpty) {
+          return <String, DeviceKeysList>{};
+        }
+        final trust = await _deviceKeyTrustBox.getAllValues();
+        final lastActive = await _lastActiveDevicesBox.getAllValues();
+
+        final res = <String, DeviceKeysList>{};
+        // A user can be known as outdated before we ever stored keys for them.
+        for (final userId in {...material.keys, ...outdated.keys}) {
+          final raw = material[userId];
+          final stored = raw == null ? const <String, Object?>{} : copyMap(raw);
+          final userTrust = trust[userId];
+
+          final childEntries = <Map<String, dynamic>>[];
+          for (final entry
+              in (stored.tryGetMap<String, Object?>('device_keys') ?? {})
+                  .entries) {
+            final keyTrust = userTrust?[entry.key] as Map?;
+            childEntries.add({
+              'user_id': userId,
+              'device_id': entry.key,
+              'content': entry.value,
+              'verified': keyTrust?['verified'] ?? false,
+              'blocked': keyTrust?['blocked'] ?? false,
+              'self_signed': keyTrust?['self_signed'],
+              'last_active':
+                  lastActive[TupleKey(userId, entry.key).toString()] ?? 0,
+            });
           }
-          final res = <String, DeviceKeysList>{};
-          final userDeviceKeys = await _userDeviceKeysBox.getAllValues();
-          final userCrossSigningKeys = await _userCrossSigningKeysBox
-              .getAllValues();
-          for (final userId in deviceKeysOutdated.keys) {
-            final deviceKeysBoxKeys = userDeviceKeys.keys.where((tuple) {
-              final tupleKey = TupleKey.fromString(tuple);
-              return tupleKey.parts.first == userId;
+
+          final crossSigningEntries = <Map<String, dynamic>>[];
+          for (final entry
+              in (stored.tryGetMap<String, Object?>('cross_signing_keys') ?? {})
+                  .entries) {
+            final keyTrust = userTrust?[entry.key] as Map?;
+            crossSigningEntries.add({
+              'user_id': userId,
+              'public_key': entry.key,
+              'content': entry.value,
+              'verified': keyTrust?['verified'] ?? false,
+              'blocked': keyTrust?['blocked'] ?? false,
+              'tofu': keyTrust?['tofu'],
             });
-            final crossSigningKeysBoxKeys = userCrossSigningKeys.keys.where((
-              tuple,
-            ) {
-              final tupleKey = TupleKey.fromString(tuple);
-              return tupleKey.parts.first == userId;
-            });
-            final childEntries = deviceKeysBoxKeys.map((key) {
-              final userDeviceKey = userDeviceKeys[key];
-              if (userDeviceKey == null) return null;
-              return copyMap(userDeviceKey);
-            });
-            final crossSigningEntries = crossSigningKeysBoxKeys.map((key) {
-              final crossSigningKey = userCrossSigningKeys[key];
-              if (crossSigningKey == null) return null;
-              return copyMap(crossSigningKey);
-            });
-            res[userId] = DeviceKeysList.fromDbJson(
-              {
-                'client_id': client.id,
-                'user_id': userId,
-                'outdated': deviceKeysOutdated[userId],
-              },
-              childEntries
-                  .where((c) => c != null)
-                  .toList()
-                  .cast<Map<String, dynamic>>(),
-              crossSigningEntries
-                  .where((c) => c != null)
-                  .toList()
-                  .cast<Map<String, dynamic>>(),
-              client,
-            );
           }
-          return res;
-        },
+
+          res[userId] = DeviceKeysList.fromDbJson(
+            {
+              'client_id': client.id,
+              'user_id': userId,
+              'outdated': outdated[userId] ?? true,
+            },
+            childEntries,
+            crossSigningEntries,
+            client,
+          );
+        }
+        return res;
+      },
+    );
+  }
+
+  /// Copies the pre-v12 device key boxes into the new ones. This is a plain
+  /// data copy: it never parses or validates a key, so it does not depend on
+  /// vodozemac being initialised. The legacy boxes are left in place, so a
+  /// failure here is retried on the next read instead of losing trust state.
+  Future<void> _migrateLegacyDeviceKeys() async {
+    final legacyDeviceKeys = await _collection
+        .openBox<Map>(_legacyUserDeviceKeysBoxName)
+        .getAllValues();
+    final legacyCrossSigningKeys = await _collection
+        .openBox<Map>(_legacyUserCrossSigningKeysBoxName)
+        .getAllValues();
+
+    if (legacyDeviceKeys.isEmpty && legacyCrossSigningKeys.isEmpty) {
+      await _clientBox.put(_deviceKeysMigratedKey, 'true');
+      return;
+    }
+
+    Logs().i(
+      'Migrate ${legacyDeviceKeys.length} device keys and '
+      '${legacyCrossSigningKeys.length} cross signing keys to the v12 layout...',
+    );
+
+    final material = <String, Map<String, Map<String, Object?>>>{};
+    final trust = <String, Map<String, Object?>>{};
+    final lastActive = <String, int>{};
+    final lastSentMessages = <String, String>{};
+
+    for (final entry in legacyDeviceKeys.entries) {
+      final row = copyMap(entry.value);
+      final userId = row.tryGet<String>('user_id');
+      final deviceId = row.tryGet<String>('device_id');
+      if (userId == null || deviceId == null) continue;
+      final tuple = TupleKey(userId, deviceId).toString();
+
+      (material[userId] ??= {
+        'device_keys': {},
+        'cross_signing_keys': {},
+      })['device_keys']![deviceId] = Event.getMapFromPayload(
+        row['content'],
       );
+      (trust[userId] ??= {})[deviceId] = _trustEntry(
+        verified: row.tryGet<bool>('verified') ?? false,
+        blocked: row.tryGet<bool>('blocked') ?? false,
+      );
+      final active = row.tryGet<int>('last_active');
+      if (active != null && active > 0) lastActive[tuple] = active;
+      final lastSent = row.tryGet<String>('last_sent_message');
+      if (lastSent != null && lastSent.isNotEmpty) {
+        lastSentMessages[tuple] = lastSent;
+      }
+    }
+
+    for (final entry in legacyCrossSigningKeys.entries) {
+      final row = copyMap(entry.value);
+      final userId = row.tryGet<String>('user_id');
+      final publicKey = row.tryGet<String>('public_key');
+      if (userId == null || publicKey == null) continue;
+
+      (material[userId] ??= {
+        'device_keys': {},
+        'cross_signing_keys': {},
+      })['cross_signing_keys']![publicKey] = Event.getMapFromPayload(
+        row['content'],
+      );
+      final tofu = row.tryGet<int>('tofu');
+      (trust[userId] ??= {})[publicKey] = _trustEntry(
+        verified: row.tryGet<bool>('verified') ?? false,
+        blocked: row.tryGet<bool>('blocked') ?? false,
+        trustOnFirstUseSince: tofu == null
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(tofu),
+      );
+    }
+
+    await transaction(() async {
+      for (final entry in material.entries) {
+        await _deviceKeysMaterialBox.put(entry.key, entry.value);
+      }
+      for (final entry in trust.entries) {
+        await _deviceKeyTrustBox.put(entry.key, entry.value);
+      }
+      for (final entry in lastActive.entries) {
+        await _lastActiveDevicesBox.put(entry.key, entry.value);
+      }
+      for (final entry in lastSentMessages.entries) {
+        await _lastSentOlmMessagesBox.put(entry.key, entry.value);
+      }
+      await _clientBox.put(_deviceKeysMigratedKey, 'true');
+    });
+  }
 
   @override
   Future<List<User>> getUsers(Room room) async {
@@ -923,55 +1072,33 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     return;
   }
 
-  @override
-  Future<void> removeUserCrossSigningKey(
-    String userId,
-    String publicKey,
-  ) async {
-    await _userCrossSigningKeysBox.delete(
-      TupleKey(userId, publicKey).toString(),
-    );
-    return;
-  }
+  static Map<String, Object?> _trustEntry({
+    required bool verified,
+    required bool blocked,
+    DateTime? trustOnFirstUseSince,
+    bool? selfSigned,
+  }) => {
+    'verified': verified,
+    'blocked': blocked,
+    'tofu': ?trustOnFirstUseSince?.millisecondsSinceEpoch,
+    'self_signed': ?selfSigned,
+  };
 
   @override
-  Future<void> removeUserDeviceKey(String userId, String deviceId) async {
-    await _userDeviceKeysBox.delete(TupleKey(userId, deviceId).toString());
-    return;
-  }
-
-  @override
-  Future<void> setBlockedUserCrossSigningKey(
-    bool blocked,
+  Future<void> storeDeviceKeyTrust(
     String userId,
-    String publicKey,
-  ) async {
-    final raw = copyMap(
-      await _userCrossSigningKeysBox.get(
-            TupleKey(userId, publicKey).toString(),
-          ) ??
-          {},
+    String keyId, {
+    required bool verified,
+    required bool blocked,
+    DateTime? trustOnFirstUseSince,
+  }) async {
+    final trust = copyMap(await _deviceKeyTrustBox.get(userId) ?? {});
+    trust[keyId] = _trustEntry(
+      verified: verified,
+      blocked: blocked,
+      trustOnFirstUseSince: trustOnFirstUseSince,
     );
-    raw['blocked'] = blocked;
-    await _userCrossSigningKeysBox.put(
-      TupleKey(userId, publicKey).toString(),
-      raw,
-    );
-    return;
-  }
-
-  @override
-  Future<void> setBlockedUserDeviceKey(
-    bool blocked,
-    String userId,
-    String deviceId,
-  ) async {
-    final raw = copyMap(
-      await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ?? {},
-    );
-    raw['blocked'] = blocked;
-    await _userDeviceKeysBox.put(TupleKey(userId, deviceId).toString(), raw);
-    return;
+    await _deviceKeyTrustBox.put(userId, trust);
   }
 
   @override
@@ -979,27 +1106,20 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     int lastActive,
     String userId,
     String deviceId,
-  ) async {
-    final raw = copyMap(
-      await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ?? {},
-    );
-
-    raw['last_active'] = lastActive;
-    await _userDeviceKeysBox.put(TupleKey(userId, deviceId).toString(), raw);
-  }
+  ) => _lastActiveDevicesBox.put(
+    TupleKey(userId, deviceId).toString(),
+    lastActive,
+  );
 
   @override
   Future<void> setLastSentMessageUserDeviceKey(
     String lastSentMessage,
     String userId,
     String deviceId,
-  ) async {
-    final raw = copyMap(
-      await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ?? {},
-    );
-    raw['last_sent_message'] = lastSentMessage;
-    await _userDeviceKeysBox.put(TupleKey(userId, deviceId).toString(), raw);
-  }
+  ) => _lastSentOlmMessagesBox.put(
+    TupleKey(userId, deviceId).toString(),
+    lastSentMessage,
+  );
 
   @override
   Future<void> setRoomPrevBatch(
@@ -1012,44 +1132,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     final room = Room.fromJson(copyMap(raw), client);
     room.prev_batch = prevBatch;
     await _roomsBox.put(roomId, room.toJson());
-    return;
-  }
-
-  @override
-  Future<void> setVerifiedUserCrossSigningKey(
-    bool verified,
-    String userId,
-    String publicKey, {
-    DateTime? trustOnFirstUseSince,
-  }) async {
-    final raw = copyMap(
-      (await _userCrossSigningKeysBox.get(
-            TupleKey(userId, publicKey).toString(),
-          )) ??
-          {},
-    );
-    raw['verified'] = verified;
-    if (trustOnFirstUseSince != null) {
-      raw['tofu'] = trustOnFirstUseSince.millisecondsSinceEpoch;
-    }
-    await _userCrossSigningKeysBox.put(
-      TupleKey(userId, publicKey).toString(),
-      raw,
-    );
-    return;
-  }
-
-  @override
-  Future<void> setVerifiedUserDeviceKey(
-    bool verified,
-    String userId,
-    String deviceId,
-  ) async {
-    final raw = copyMap(
-      await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ?? {},
-    );
-    raw['verified'] = verified;
-    await _userDeviceKeysBox.put(TupleKey(userId, deviceId).toString(), raw);
     return;
   }
 
@@ -1367,50 +1449,45 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> storeUserCrossSigningKey(
-    String userId,
-    String publicKey,
-    String content,
-    bool verified,
-    bool blocked, {
-    DateTime? trustOnFirstUseSince,
-  }) async {
-    await _userCrossSigningKeysBox.put(TupleKey(userId, publicKey).toString(), {
-      'user_id': userId,
-      'public_key': publicKey,
-      'content': content,
-      'verified': verified,
-      'blocked': blocked,
-      if (trustOnFirstUseSince != null)
-        'tofu': trustOnFirstUseSince.millisecondsSinceEpoch,
-    });
-  }
+  Future<void> storeUserDeviceKeysInfo(String userId, bool outdated) =>
+      _userDeviceKeysOutdatedBox.put(userId, outdated);
 
+  /// Deliberately not wrapped in [transaction]: callers that need atomicity
+  /// already provide one, and opening a nested transaction makes
+  /// [BoxCollection] commit a sub-batch and drop the outer batch, which turns
+  /// a bulk `/keys/query` write into one commit per user.
   @override
-  Future<void> storeUserDeviceKey(
+  Future<void> storeDeviceKeysList(
     String userId,
-    String deviceId,
-    String content,
-    bool verified,
-    bool blocked,
-    int lastActive,
+    DeviceKeysList deviceKeysList,
   ) async {
-    await _userDeviceKeysBox.put(TupleKey(userId, deviceId).toString(), {
-      'user_id': userId,
-      'device_id': deviceId,
-      'content': content,
-      'verified': verified,
-      'blocked': blocked,
-      'last_active': lastActive,
-      'last_sent_message': '',
+    // Replacing the whole material row is what drops keys the server no
+    // longer reports, so no separate delete bookkeeping is needed.
+    await _deviceKeysMaterialBox.put(userId, {
+      'device_keys': deviceKeysList.deviceKeys.map(
+        (deviceId, key) => MapEntry(deviceId, key.toJson()),
+      ),
+      'cross_signing_keys': deviceKeysList.crossSigningKeys.map(
+        (publicKey, key) => MapEntry(publicKey, key.toJson()),
+      ),
     });
-    return;
-  }
+    await _userDeviceKeysOutdatedBox.put(userId, deviceKeysList.outdated);
 
-  @override
-  Future<void> storeUserDeviceKeysInfo(String userId, bool outdated) async {
-    await _userDeviceKeysOutdatedBox.put(userId, outdated);
-    return;
+    await _deviceKeyTrustBox.put(userId, {
+      for (final entry in deviceKeysList.deviceKeys.entries)
+        entry.key: _trustEntry(
+          verified: entry.value.directVerified,
+          blocked: entry.value.directBlocked,
+          // Already computed by the caller's validity check, so free here.
+          selfSigned: entry.value.selfSigned,
+        ),
+      for (final entry in deviceKeysList.crossSigningKeys.entries)
+        entry.key: _trustEntry(
+          verified: entry.value.directVerified,
+          blocked: entry.value.directBlocked,
+          trustOnFirstUseSince: entry.value.trustOnFirstUseSince,
+        ),
+    });
   }
 
   @override
@@ -1573,11 +1650,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       _outboundGroupSessionsBoxName: await _outboundGroupSessionsBox
           .getAllValues(),
       _olmSessionsBoxName: await _olmSessionsBox.getAllValues(),
-      _userDeviceKeysBoxName: await _userDeviceKeysBox.getAllValues(),
+      _deviceKeysMaterialBoxName: await _deviceKeysMaterialBox.getAllValues(),
+      _deviceKeyTrustBoxName: await _deviceKeyTrustBox.getAllValues(),
       _userDeviceKeysOutdatedBoxName: await _userDeviceKeysOutdatedBox
           .getAllValues(),
-      _userCrossSigningKeysBoxName: await _userCrossSigningKeysBox
-          .getAllValues(),
+      _lastActiveDevicesBoxName: await _lastActiveDevicesBox.getAllValues(),
+      _lastSentOlmMessagesBoxName: await _lastSentOlmMessagesBox.getAllValues(),
       _ssssCacheBoxName: await _ssssCacheBox.getAllValues(),
       _presencesBoxName: await _presencesBox.getAllValues(),
       _timelineFragmentsBoxName: await _timelineFragmentsBox.getAllValues(),
@@ -1647,8 +1725,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       for (final key in json[_olmSessionsBoxName]!.keys) {
         await _olmSessionsBox.put(key, json[_olmSessionsBoxName]![key]);
       }
-      for (final key in json[_userDeviceKeysBoxName]!.keys) {
-        await _userDeviceKeysBox.put(key, json[_userDeviceKeysBoxName]![key]);
+      for (final key in json[_deviceKeysMaterialBoxName]!.keys) {
+        await _deviceKeysMaterialBox.put(
+          key,
+          json[_deviceKeysMaterialBoxName]![key],
+        );
+      }
+      for (final key in json[_deviceKeyTrustBoxName]!.keys) {
+        await _deviceKeyTrustBox.put(key, json[_deviceKeyTrustBoxName]![key]);
       }
       for (final key in json[_userDeviceKeysOutdatedBoxName]!.keys) {
         await _userDeviceKeysOutdatedBox.put(
@@ -1656,10 +1740,16 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           json[_userDeviceKeysOutdatedBoxName]![key],
         );
       }
-      for (final key in json[_userCrossSigningKeysBoxName]!.keys) {
-        await _userCrossSigningKeysBox.put(
+      for (final key in json[_lastActiveDevicesBoxName]!.keys) {
+        await _lastActiveDevicesBox.put(
           key,
-          json[_userCrossSigningKeysBoxName]![key],
+          json[_lastActiveDevicesBoxName]![key],
+        );
+      }
+      for (final key in json[_lastSentOlmMessagesBoxName]!.keys) {
+        await _lastSentOlmMessagesBox.put(
+          key,
+          json[_lastSentOlmMessagesBoxName]![key],
         );
       }
       for (final key in json[_ssssCacheBoxName]!.keys) {
