@@ -263,13 +263,9 @@ abstract class EventLocalizations {
       }
     },
     EventTypes.Encryption: (event, i18n, body) {
-      var localizedBody = i18n.activatedEndToEndEncryption(
+      return i18n.activatedEndToEndEncryption(
         event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
       );
-      if (event.room.client.encryptionEnabled == false) {
-        localizedBody += '. ${i18n.needPantalaimonWarning}';
-      }
-      return localizedBody;
     },
     EventTypes.CallAnswer: (event, i18n, body) => i18n.answeredTheCall(
       event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),

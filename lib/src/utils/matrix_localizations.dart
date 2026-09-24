@@ -24,8 +24,6 @@ abstract class MatrixLocalizations {
 
   String get anyoneCanJoin;
 
-  String get needPantalaimonWarning;
-
   String get channelCorruptedDecryptError;
 
   String get encryptionNotEnabled;

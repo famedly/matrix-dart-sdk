@@ -139,9 +139,6 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
       '$senderName banned $targetName';
 
   @override
-  String get needPantalaimonWarning => 'Need pantalaimon';
-
-  @override
   String get noPermission => 'No permission';
 
   @override
