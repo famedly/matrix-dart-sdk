@@ -958,7 +958,7 @@ void main() async {
       }, room);
       expect(
         await event.calcLocalizedBody(MatrixDefaultLocalizations()),
-        'Example activated end to end encryption. Need pantalaimon',
+        'Example activated end to end encryption',
       );
       expect(event.isEventTypeKnown, true);
 
