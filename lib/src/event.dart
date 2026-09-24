@@ -587,6 +587,15 @@ class Event extends MatrixEvent {
   bool get hasThumbnail =>
       infoMap['thumbnail_url'] is String || infoMap['thumbnail_file'] is Map;
 
+  /// Whether [downloadAndDecryptAttachment] with `getThumbnail: true` can
+  /// return an image. True when the event already has a thumbnail, or when it
+  /// is a video and [Client.customVideoThumbnailGenerator] can build one from
+  /// the attachment — including videos sent before thumbnail support.
+  bool get canProvideThumbnail =>
+      hasThumbnail ||
+      (messageType == MessageTypes.Video &&
+          room.client.customVideoThumbnailGenerator != null);
+
   /// Returns if a file events attachment is encrypted
   bool get isAttachmentEncrypted => content['file'] is Map;
 
@@ -807,6 +816,11 @@ class Event extends MatrixEvent {
   /// if you want to retrieve the attachment from the local store only without
   /// making http request.
   ///
+  /// For video events that were sent without a thumbnail,
+  /// `getThumbnail: true` generates one locally via
+  /// [Client.customVideoThumbnailGenerator] (when set) and caches it. The
+  /// original event content, including `video/quicktime`, is left unchanged.
+  ///
   /// With `Client.contentScannerConfig`, network downloads use the scanner.
   /// Scanner errors throw [ContentScannerException]. For encrypted scanner
   /// downloads, [downloadCallback] is ignored.
@@ -826,6 +840,13 @@ class Event extends MatrixEvent {
     if (!status.isSent) {
       final localFile = await _getCachedFile(getThumbnail: getThumbnail);
       if (localFile != null) return localFile;
+    }
+    final requestedThumbnail = getThumbnail;
+    if (requestedThumbnail &&
+        !hasThumbnail &&
+        messageType == MessageTypes.Video) {
+      final cachedThumbnail = await _cachedGeneratedVideoThumbnail();
+      if (cachedThumbnail != null) return cachedThumbnail;
     }
     final database = room.client.database;
     final mxcUrl = attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
@@ -921,6 +942,13 @@ class Event extends MatrixEvent {
       }
     }
 
+    if (requestedThumbnail &&
+        !hasThumbnail &&
+        messageType == MessageTypes.Video) {
+      final generated = await _generateVideoThumbnailFromBytes(uint8list);
+      if (generated != null) return generated;
+    }
+
     final useThumbnail = getThumbnail && hasThumbnail;
     final filename = content.tryGet<String>('filename') ?? body;
 
@@ -929,6 +957,84 @@ class Event extends MatrixEvent {
       name: useThumbnail ? _thumbnailFileName(filename) : filename,
       mimeType: useThumbnail ? thumbnailMimetype : attachmentMimetype,
     );
+  }
+
+  Uri get _generatedVideoThumbnailCacheUri => Uri(
+    scheme: 'cache',
+    host: 'generated-video-thumbnail',
+    // Legacy event IDs can contain characters such as ':' that are illegal in
+    // Windows file names, so the raw ID must not be used as a path segment.
+    path: eventId.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_'),
+  );
+
+  MatrixImageFile _videoThumbnailImageFile(
+    Uint8List bytes, {
+    String? mimeType,
+    int? width,
+    int? height,
+    String? blurhash,
+  }) {
+    final filename = content.tryGet<String>('filename') ?? body;
+    // Only append a file extension if the mimetype is actually known, instead
+    // of guessing one, matching the behaviour of [_thumbnailFileName].
+    final knownMime = mimeType ?? lookupMimeType('', headerBytes: bytes);
+    final extension = knownMime == null ? null : extensionFromMime(knownMime);
+    return MatrixImageFile(
+      bytes: bytes,
+      name: '$filename.thumbnail${extension == null ? '' : '.$extension'}',
+      mimeType: knownMime ?? 'image/jpeg',
+      width: width,
+      height: height,
+      blurhash: blurhash,
+    );
+  }
+
+  Future<MatrixImageFile?> _cachedGeneratedVideoThumbnail() async {
+    final bytes = await room.client.database.getFile(
+      _generatedVideoThumbnailCacheUri,
+    );
+    if (bytes == null) return null;
+    return _videoThumbnailImageFile(bytes);
+  }
+
+  Future<MatrixImageFile?> _generateVideoThumbnailFromBytes(
+    Uint8List videoBytes,
+  ) async {
+    final cached = await _cachedGeneratedVideoThumbnail();
+    if (cached != null) return cached;
+    final generator = room.client.customVideoThumbnailGenerator;
+    if (generator == null) return null;
+    try {
+      final result = await generator(
+        MatrixVideoThumbnailArguments(
+          bytes: videoBytes,
+          fileName: content.tryGet<String>('filename') ?? body,
+          mimeType: attachmentMimetype,
+        ),
+      );
+      if (result == null || result.bytes.isEmpty) return null;
+      if (result.bytes.lengthInBytes <= room.client.database.maxFileSize) {
+        await room.client.database.storeFile(
+          _generatedVideoThumbnailCacheUri,
+          result.bytes,
+          DateTime.now().millisecondsSinceEpoch,
+        );
+      }
+      return _videoThumbnailImageFile(
+        result.bytes,
+        mimeType: result.mimeType,
+        width: result.width,
+        height: result.height,
+        blurhash: result.blurhash,
+      );
+    } catch (e, s) {
+      Logs().e(
+        'Unable to generate video thumbnail from already-sent attachment',
+        e,
+        s,
+      );
+      return null;
+    }
   }
 
   Future<Uint8List> _downloadEncryptedAttachmentViaScanner({

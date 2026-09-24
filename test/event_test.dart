@@ -2268,6 +2268,206 @@ void main() async {
       );
       expect(buffer.name, 'image.thumbnail.jpg');
     });
+
+    test(
+      'already-sent video/quicktime generates thumbnail on download',
+      () async {
+        final FILE_BUFF = Uint8List.fromList([0]);
+        final THUMBNAIL_BUFF = Uint8List.fromList([9, 8, 7]);
+        Future<Uint8List> downloadCallback(Uri uri) async {
+          return {
+            '/_matrix/client/v1/media/download/example.org/file': FILE_BUFF,
+          }[uri.path]!;
+        }
+
+        await client.checkHomeserver(
+          Uri.parse('https://fakeserver.notexisting'),
+          checkWellKnown: false,
+        );
+        final room = Room(id: '!localpart:server.abc', client: client);
+        final event = Event.fromJson({
+          'type': EventTypes.Message,
+          'content': {
+            'body': 'clip.mov',
+            'filename': 'clip.mov',
+            'msgtype': 'm.video',
+            'url': 'mxc://example.org/file',
+            'info': {'mimetype': 'video/quicktime', 'size': 1},
+          },
+          'event_id': '\$old-quicktime',
+          'sender': '@alice:example.org',
+        }, room);
+
+        expect(event.hasThumbnail, false);
+        expect(event.attachmentMimetype, 'video/quicktime');
+        expect(event.canProvideThumbnail, false);
+
+        final withoutGenerator = await event.downloadAndDecryptAttachment(
+          getThumbnail: true,
+          downloadCallback: downloadCallback,
+        );
+        expect(withoutGenerator.bytes, FILE_BUFF);
+        expect(withoutGenerator.mimeType, 'video/quicktime');
+
+        var generatorCalls = 0;
+        client.customVideoThumbnailGenerator = (arguments) async {
+          generatorCalls++;
+          expect(arguments.fileName, 'clip.mov');
+          expect(arguments.mimeType, 'video/quicktime');
+          expect(arguments.bytes, FILE_BUFF);
+          return MatrixVideoThumbnailResponse(
+            bytes: THUMBNAIL_BUFF,
+            width: 320,
+            height: 240,
+            mimeType: 'image/jpeg',
+          );
+        };
+        expect(event.canProvideThumbnail, true);
+
+        try {
+          var thumbnail = await event.downloadAndDecryptAttachment(
+            getThumbnail: true,
+            downloadCallback: downloadCallback,
+          );
+          expect(thumbnail, isA<MatrixImageFile>());
+          expect(thumbnail.bytes, THUMBNAIL_BUFF);
+          expect(thumbnail.mimeType, 'image/jpeg');
+          expect(thumbnail.name, 'clip.mov.thumbnail.jpg');
+          expect(generatorCalls, 1);
+          expect(event.hasThumbnail, false);
+          expect(event.attachmentMimetype, 'video/quicktime');
+
+          thumbnail = await event.downloadAndDecryptAttachment(
+            getThumbnail: true,
+            downloadCallback: downloadCallback,
+          );
+          expect(thumbnail.bytes, THUMBNAIL_BUFF);
+          expect(generatorCalls, 1);
+        } finally {
+          client.customVideoThumbnailGenerator = null;
+        }
+      },
+    );
+
+    test(
+      'legacy colon event id caches generated video thumbnail',
+      () async {
+        final FILE_BUFF = Uint8List.fromList([0]);
+        final THUMBNAIL_BUFF = Uint8List.fromList([9, 8, 7]);
+        Future<Uint8List> downloadCallback(Uri uri) async {
+          return {
+            '/_matrix/client/v1/media/download/example.org/file': FILE_BUFF,
+          }[uri.path]!;
+        }
+
+        await client.checkHomeserver(
+          Uri.parse('https://fakeserver.notexisting'),
+          checkWellKnown: false,
+        );
+        final room = Room(id: '!localpart:server.abc', client: client);
+        // Legacy (pre-room-v4) event IDs contain a ':', which is illegal in
+        // Windows file names and must not be used unsanitized as a cache path.
+        final event = Event.fromJson({
+          'type': EventTypes.Message,
+          'content': {
+            'body': 'clip.mov',
+            'filename': 'clip.mov',
+            'msgtype': 'm.video',
+            'url': 'mxc://example.org/file',
+            'info': {'mimetype': 'video/quicktime', 'size': 1},
+          },
+          'event_id': '\$legacyeventid:example.org',
+          'sender': '@alice:example.org',
+        }, room);
+
+        var generatorCalls = 0;
+        client.customVideoThumbnailGenerator = (arguments) async {
+          generatorCalls++;
+          return MatrixVideoThumbnailResponse(
+            bytes: THUMBNAIL_BUFF,
+            width: 320,
+            height: 240,
+            mimeType: 'image/jpeg',
+          );
+        };
+
+        try {
+          var thumbnail = await event.downloadAndDecryptAttachment(
+            getThumbnail: true,
+            downloadCallback: downloadCallback,
+          );
+          expect(thumbnail.bytes, THUMBNAIL_BUFF);
+          expect(generatorCalls, 1);
+
+          // The cache write must have succeeded despite the ':' in the event
+          // id, so a second fetch hits the cache instead of regenerating.
+          thumbnail = await event.downloadAndDecryptAttachment(
+            getThumbnail: true,
+            downloadCallback: downloadCallback,
+          );
+          expect(thumbnail.bytes, THUMBNAIL_BUFF);
+          expect(generatorCalls, 1);
+        } finally {
+          client.customVideoThumbnailGenerator = null;
+        }
+      },
+    );
+
+    test(
+      'generated video thumbnail with unknown mimetype has no guessed '
+      'extension',
+      () async {
+        final FILE_BUFF = Uint8List.fromList([0]);
+        // Bytes that don't sniff to any known image mimetype.
+        final THUMBNAIL_BUFF = Uint8List.fromList([1, 2, 3, 4]);
+        Future<Uint8List> downloadCallback(Uri uri) async {
+          return {
+            '/_matrix/client/v1/media/download/example.org/file': FILE_BUFF,
+          }[uri.path]!;
+        }
+
+        await client.checkHomeserver(
+          Uri.parse('https://fakeserver.notexisting'),
+          checkWellKnown: false,
+        );
+        final room = Room(id: '!localpart:server.abc', client: client);
+        final event = Event.fromJson({
+          'type': EventTypes.Message,
+          'content': {
+            'body': 'clip.mov',
+            'filename': 'clip.mov',
+            'msgtype': 'm.video',
+            'url': 'mxc://example.org/file',
+            'info': {'mimetype': 'video/quicktime', 'size': 1},
+          },
+          'event_id': '\$unknown-mime-thumbnail',
+          'sender': '@alice:example.org',
+        }, room);
+
+        client.customVideoThumbnailGenerator = (arguments) async {
+          // No mimeType provided by the generator, and the bytes don't sniff
+          // to a known type either.
+          return MatrixVideoThumbnailResponse(
+            bytes: THUMBNAIL_BUFF,
+            width: 320,
+            height: 240,
+          );
+        };
+
+        try {
+          final thumbnail = await event.downloadAndDecryptAttachment(
+            getThumbnail: true,
+            downloadCallback: downloadCallback,
+          );
+          expect(thumbnail.bytes, THUMBNAIL_BUFF);
+          // No extension should be guessed, matching _thumbnailFileName.
+          expect(thumbnail.name, 'clip.mov.thumbnail');
+        } finally {
+          client.customVideoThumbnailGenerator = null;
+        }
+      },
+    );
+
     test('encrypted attachments', tags: 'olm', () async {
       final FILE_BUFF_ENC = Uint8List.fromList([0x3B, 0x6B, 0xB2, 0x8C, 0xAF]);
       final FILE_BUFF_DEC = Uint8List.fromList([0x74, 0x65, 0x73, 0x74, 0x0A]);
