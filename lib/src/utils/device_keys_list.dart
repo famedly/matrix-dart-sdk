@@ -133,7 +133,7 @@ class DeviceKeysList {
     for (final childEntry in childEntries) {
       try {
         final entry = DeviceKeys.fromDb(childEntry, client);
-        if (!entry.isValid) throw Exception('Invalid device keys');
+        if (!entry._noFieldsMissing) throw Exception('Invalid device keys');
         deviceKeys[childEntry['device_id']] = entry;
       } catch (e, s) {
         Logs().w('Skipping invalid user device key', e, s);
@@ -520,12 +520,13 @@ class DeviceKeys extends SignableKey {
   @override
   bool get blocked => super.blocked || !selfSigned;
 
-  bool get isValid =>
+  bool get _noFieldsMissing =>
       deviceId != null &&
       keys.isNotEmpty &&
       curve25519Key != null &&
-      ed25519Key != null &&
-      selfSigned;
+      ed25519Key != null;
+
+  bool get isValid => _noFieldsMissing && selfSigned;
 
   @override
   Future<void> setVerified(bool newVerified, [bool sign = true]) async {
