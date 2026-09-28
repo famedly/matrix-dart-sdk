@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:http/http.dart' as http;
 import 'package:vodozemac/vodozemac.dart' as vod;
 
 import '../../matrix.dart';
@@ -98,7 +99,7 @@ extension Msc2964OidcLoginFlow on Client {
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
     if (response.statusCode >= 400) {
-      unexpectedResponse(response, response.bodyBytes);
+      throw OidcException.fromResponse(response);
     }
     if (response.statusCode != 200) {
       Logs().w(
@@ -136,7 +137,7 @@ extension Msc2964OidcLoginFlow on Client {
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
     if (response.statusCode >= 400) {
-      unexpectedResponse(response, response.bodyBytes);
+      throw OidcException.fromResponse(response);
     }
     if (response.statusCode != 200) {
       Logs().w(
@@ -163,7 +164,7 @@ extension Msc2964OidcLoginFlow on Client {
       headers: {'content-type': 'application/x-www-form-urlencoded'},
     );
     if (response.statusCode >= 400) {
-      unexpectedResponse(response, response.bodyBytes);
+      throw OidcException.fromResponse(response);
     }
     if (response.statusCode != 200) {
       Logs().w(
@@ -171,6 +172,19 @@ extension Msc2964OidcLoginFlow on Client {
       );
     }
   }
+}
+
+class OidcException implements Exception {
+  final String error;
+  final String? errorDescription;
+
+  OidcException({required this.error, required this.errorDescription});
+  factory OidcException.fromJson(Map<String, Object?> json) => OidcException(
+    error: json['error'] as String,
+    errorDescription: json['error_description'] as String?,
+  );
+  factory OidcException.fromResponse(http.Response response) =>
+      OidcException.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
 }
 
 class OidcAuthResponse {
