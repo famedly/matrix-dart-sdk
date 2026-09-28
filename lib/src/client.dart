@@ -2373,6 +2373,15 @@ class Client extends MatrixApi {
         );
         await clear(reason: SessionClearReason.softLogoutRefreshFailed);
         rethrow;
+      } on OidcException catch (e) {
+        if (e.error == 'invalid_grant') {
+          Logs().w(
+            'Unable to refresh session after soft logout. Clearing session...',
+            e,
+          );
+          await clear(reason: SessionClearReason.softLogoutRefreshFailed);
+        }
+        rethrow;
       } catch (e, s) {
         Logs().e(
           'Unable to refresh session after soft logout. Try again...',
