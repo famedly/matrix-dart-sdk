@@ -407,10 +407,8 @@ class OlmManager {
         }
         if (device != null) {
           device.lastActive = DateTime.now();
-          await encryption.olmDatabase?.setLastActiveUserDeviceKey(
-            device.lastActive.millisecondsSinceEpoch,
-            device.userId,
-            device.deviceId!,
+          await client.database.storeDeviceKeysList(
+            client.userDeviceKeys[event.sender]!,
           );
         }
       } catch (e, s) {
