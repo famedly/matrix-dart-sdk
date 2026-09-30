@@ -1951,12 +1951,11 @@ class Client extends MatrixApi {
 
       if (readMarkerEvent != null &&
           readMarkerEvent.originServerTs.isAfter(
-            matrixEvent.originServerTs
-              // As origin server timestamps are not always correct data in
-              // a federated environment, we add 10 minutes to the calculation
-              // to reduce the possibility that an event is marked as read which
-              // isn't.
-              ..add(Duration(minutes: 10)),
+            // As origin server timestamps are not always correct data in
+            // a federated environment, we add 10 minutes to the calculation
+            // to reduce the possibility that an event is marked as read which
+            // isn't.
+            matrixEvent.originServerTs.add(Duration(minutes: 10)),
           )) {
         return null;
       }
