@@ -100,6 +100,11 @@ class Room {
   /// Flag if the room is partial, meaning not all state events have been loaded yet
   bool partial = true;
 
+  /// Set by [invite] until [requestParticipants] has fetched the members from
+  /// the server: the invite only reaches the local member list with the next
+  /// sync, and a message encrypted before that would leave out the invitee.
+  bool _membersOutdated = false;
+
   /// Post-loads the room.
   /// This load all the missing state events for the room from the database
   /// If the room has already been loaded, this does nothing.
@@ -1541,8 +1546,10 @@ class Room {
   }
 
   /// Call the Matrix API to invite a user to this room.
-  Future<void> invite(String userID, {String? reason}) =>
-      client.inviteUser(id, userID, reason: reason);
+  Future<void> invite(String userID, {String? reason}) async {
+    await client.inviteUser(id, userID, reason: reason);
+    _membersOutdated = true;
+  }
 
   /// Request more previous events from the server. [historyCount] defines how many events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
@@ -1909,7 +1916,9 @@ class Room {
     }
 
     // Do not request users from the server if we have already have a complete list locally.
-    if (participantListComplete && !enforceFetchFromServer) {
+    if (participantListComplete &&
+        !enforceFetchFromServer &&
+        !_membersOutdated) {
       return getParticipants(membershipFilter);
     }
 
@@ -1941,6 +1950,7 @@ class Room {
           client,
         );
       }
+      _membersOutdated = false;
     }
 
     users.removeWhere((u) => !membershipFilter.contains(u.membership));

@@ -703,5 +703,67 @@ void main() {
         );
       },
     );
+    test('Scenario 5: room.invite in a room with a megolm session, then send '
+        'before the invite comes down /sync', () async {
+      const roomId = '!1234:fakeServer.notExisting';
+      roomCounter++;
+      final grace = FakeRemoteUser(
+        '@grace$roomCounter:remote.server',
+        'GRACEDEV',
+      );
+      registerRemoteUsers([grace]);
+
+      await emulateSync(
+        SyncUpdate(
+          nextBatch: 'create_$roomCounter',
+          rooms: RoomsUpdate(join: {roomId: newRoomUpdate(invited: [])}),
+        ),
+      );
+      final room = client.getRoomById(roomId)!;
+      await room.sendTextEvent('before the invite');
+      expect(
+        client.encryption!.keyManager.getOutboundGroupSession(roomId),
+        isNotNull,
+        reason: 'Precondition: the room already has a megolm session',
+      );
+
+      // The server knows the invite as soon as POST /invite returns.
+      FakeMatrixApi
+              .currentApi!
+              .api['GET']!['/client/v3/rooms/!1234%3AfakeServer.notExisting/members'] =
+          (req) => {
+            'chunk': [
+              {
+                'type': 'm.room.member',
+                'content': {'membership': 'join'},
+                'sender': client.userID!,
+                'state_key': client.userID!,
+                'event_id': '\$abcd',
+                'origin_server_ts': 1,
+              },
+              {
+                'type': 'm.room.member',
+                'content': {'membership': 'invite'},
+                'sender': client.userID!,
+                'state_key': grace.userId,
+                'event_id': '\$abcde',
+                'origin_server_ts': 2,
+              },
+            ],
+          };
+      await room.invite(grace.userId);
+
+      // No sync in between: the app sends right after inviting.
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('right after the invite');
+
+      expect(
+        toDevicePayloadFor(grace),
+        isNotNull,
+        reason:
+            'BUG: The room key was not sent to the invited user, so the '
+            'message right after the invite is undecryptable for them!',
+      );
+    });
   });
 }
