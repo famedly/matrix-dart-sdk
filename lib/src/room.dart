@@ -100,9 +100,10 @@ class Room {
   /// Flag if the room is partial, meaning not all state events have been loaded yet
   bool partial = true;
 
-  /// Set by [invite] until [requestParticipants] has fetched the members from
-  /// the server: the invite only reaches the local member list with the next
-  /// sync, and a message encrypted before that would leave out the invitee.
+  /// Set by [invite] in encrypted rooms until [requestParticipants] has fetched
+  /// and cached the members from the server: the invite only reaches the local
+  /// member list with the next sync, and a message encrypted before that would
+  /// leave out the invitee.
   bool _membersOutdated = false;
 
   /// Post-loads the room.
@@ -1548,7 +1549,7 @@ class Room {
   /// Call the Matrix API to invite a user to this room.
   Future<void> invite(String userID, {String? reason}) async {
     await client.inviteUser(id, userID, reason: reason);
-    _membersOutdated = true;
+    if (encrypted) _membersOutdated = true;
   }
 
   /// Request more previous events from the server. [historyCount] defines how many events should
