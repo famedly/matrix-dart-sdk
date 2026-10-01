@@ -58,6 +58,11 @@ class CrossSigning {
             null;
   }
 
+  bool get isSelfSigned =>
+      client.userDeviceKeys[client.userID]?.deviceKeys[client.deviceID]
+          ?.hasValidSignatureChain(verifiedByTheirMasterKey: true) ==
+      true;
+
   Future<void> selfSign({
     String? passphrase,
     String? recoveryKey,

@@ -119,6 +119,7 @@ extension CryptoSetupExtension on Client {
             case BootstrapState.openExistingSsss:
               await bootstrap.newSsssKey!.unlock(
                 keyOrPassphrase: keyOrPassphrase,
+                postUnlock: selfSign,
               );
               await bootstrap.openExistingSsss();
               break;
@@ -152,7 +153,7 @@ extension CryptoSetupExtension on Client {
 
     await completer.future;
 
-    if (selfSign) {
+    if (selfSign && !encryption.crossSigning.isSelfSigned) {
       await encryption.crossSigning.selfSign(keyOrPassphrase: keyOrPassphrase);
     }
   }
@@ -292,6 +293,7 @@ extension CryptoSetupExtension on Client {
               }
               await bootstrap.newSsssKey!.unlock(
                 keyOrPassphrase: reuseCredential,
+                postUnlock: selfSign,
               );
               recoveryKey ??= bootstrap.newSsssKey?.recoveryKey;
               openedSsss = bootstrap.newSsssKey;
@@ -314,7 +316,10 @@ extension CryptoSetupExtension on Client {
 
     await completer.future;
 
-    if (reuseExisting && selfSign && (encryption.crossSigning.enabled)) {
+    if (reuseExisting &&
+        selfSign &&
+        (encryption.crossSigning.enabled) &&
+        !encryption.crossSigning.isSelfSigned) {
       await encryption.crossSigning.selfSign(
         keyOrPassphrase: reuseCredential,
         openSsss: openedSsss,
