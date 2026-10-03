@@ -1581,10 +1581,12 @@ void main() {
 
       const body = 'Middle of the ocean';
       const geoUri = 'geo:0.0,0.0';
+      final ts = DateTime.now();
       final dynamic resp = await room.sendLocation(
         body,
         geoUri,
         txid: 'testtxid',
+        ts: ts,
       );
       expect(resp?.startsWith('\$event'), true);
 
@@ -1596,6 +1598,9 @@ void main() {
         'msgtype': 'm.location',
         'body': body,
         'geo_uri': geoUri,
+        'org.matrix.msc3488.location': {'uri': 'geo:0.0,0.0'},
+        'org.matrix.msc3488.asset': {'type': 'm.self'},
+        'org.matrix.msc3488.ts': ts.millisecondsSinceEpoch,
       });
     });
 
