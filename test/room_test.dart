@@ -878,7 +878,38 @@ void main() {
     });
 
     test('invite', () async {
-      await room.invite('Testname');
+      final inviteCompleter = Completer();
+      room
+          .invite('@testuser:example.com', waitForSync: true)
+          .then(inviteCompleter.complete);
+      await Future.delayed(const Duration(seconds: 1));
+      expect(inviteCompleter.isCompleted, false);
+      await room.client.handleSync(
+        SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      roomId: room.id,
+                      type: EventTypes.RoomMember,
+                      content: {'membership': 'invite'},
+                      senderId: room.client.userID!,
+                      stateKey: '@testuser:example.com',
+                      eventId: '\$abcdfake',
+                      originServerTs: DateTime.now(),
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+      await inviteCompleter.future.timeout(const Duration(seconds: 1));
+      expect(inviteCompleter.isCompleted, true);
     });
 
     test('join and leave wait for sync', () async {
@@ -925,7 +956,8 @@ void main() {
 
     test('getParticipants', () async {
       var userList = room.getParticipants();
-      expect(userList.length, 5);
+      // includes @testuser:example.com invited in the invite test
+      expect(userList.length, 6);
       // add new user
       room.setState(
         Event(
@@ -939,8 +971,8 @@ void main() {
         ),
       );
       userList = room.getParticipants();
-      expect(userList.length, 6);
-      expect(userList[5].displayName, 'alice');
+      expect(userList.length, 7);
+      expect(userList[6].displayName, 'alice');
     });
 
     test('addToDirectChat', () async {
@@ -1215,7 +1247,7 @@ void main() {
 
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
-      expect(timeline.events.length, 19);
+      expect(timeline.events.length, 20);
     });
 
     test('Refresh last event', () async {
