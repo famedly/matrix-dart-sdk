@@ -2529,7 +2529,7 @@ class Client extends MatrixApi {
         }
       }
     } on SyncConnectionException catch (e, s) {
-      Logs().w('Syncloop failed: Client has not connection to the server');
+      Logs().w('Syncloop failed: Client has no connection to the server');
       onSyncStatus.add(
         SyncStatusUpdate(
           SyncStatus.error,
