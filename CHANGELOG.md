@@ -3,6 +3,21 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [14.0.0] 8th Oct 2026
+- build: set flutter version for analyze in ci (Christian Kußowski)
+- chore: make DeviceKeysList serializable (Christian Kußowski)
+- chore: remove pantalaimon reference (Christian Kußowski)
+- feat: allow set timestamp, asset type and location from MSC3488 to Room.sendLocation() (Christian Kußowski)
+- fix: add missing skip signature check when vodozemac is not enabled (Christian Kußowski)
+- fix: correctly handle oidc errors (Christian Kußowski)
+- fix: correctly self sign (Christian Kußowski)
+- fix: decrypt stored events in getEventById when the keys arrived later (Niklas Zender)
+- fix: do not overwrite queued to-device events of the same millisecond (Christian Kußowski)
+- fix: optionally await sync after join() and leave() (Niklas Zender)
+- fix: send the join key to the participants who just joined (td)
+- refactor: (BREAKING) replace three boxes with a single deviceKeysLists box in database (Christian Kußowski)
+- refactor: add dedicated box for last sent olm message (Christian Kußowski)
+
 ## [13.0.0] 22nd September 2026
 - feat: add method to clear free database pages (Christian Kußowski)
 - fix: dart code linter (td)
