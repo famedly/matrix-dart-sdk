@@ -4,7 +4,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
@@ -2242,8 +2241,9 @@ void main() {
       try {
         await room.sendTextEvent(
           txid: 'event_too_large',
-          // data just bigger than maxBodySize
-          base64Encode(List<int>.generate(60001, (i) => Random().nextInt(256))),
+          // data just bigger than maxBodySize. Fixed, so it never starts with
+          // `/` (a command, nothing sent); spaces keep markdown parsing fast.
+          'x ' * 30001,
         );
       } catch (e) {
         expect(e.runtimeType, EventTooLarge);
