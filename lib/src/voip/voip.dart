@@ -340,7 +340,7 @@ class VoIP {
       }
     }
     Logs().v(
-      '[VOIP] Handling event of type: ${event.type}, content ${event.content} from sender ${event.senderId} rp: $remoteUserId:$remoteDeviceId',
+      '[VOIP] Handling event of type: ${event.type} from sender ${event.senderId} rp: $remoteUserId:$remoteDeviceId',
     );
 
     switch (event.type) {
