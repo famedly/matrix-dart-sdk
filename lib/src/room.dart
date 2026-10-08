@@ -1450,6 +1450,10 @@ class Room {
     /// In case of the room is not found on the server, the client leaves the
     /// room and rethrows the exception.
     bool leaveIfNotFound = true,
+
+    /// Set to true to wait for the join to appear in sync, so that the room
+    /// is joined locally when this returns.
+    bool waitForSync = false,
   }) async {
     final dmId = directChatMatrixID;
     try {
@@ -1457,8 +1461,15 @@ class Room {
       // event might be the join event already and there is also a race condition there for SDK users.
       if (dmId != null) await addToDirectChat(dmId);
 
+      // Listen before the request, the sync can be faster. Joining again
+      // creates no new event, so there is nothing to wait for.
+      final joinedInSync =
+          waitForSync && client.getRoomById(id)?.membership != Membership.join
+          ? client.waitForRoomInSync(id, join: true)
+          : null;
       // now join
       await client.joinRoomById(id);
+      await joinedInSync;
     } on MatrixException catch (exception) {
       if (dmId != null) await removeFromDirectChat();
       if (leaveIfNotFound &&
@@ -1478,9 +1489,18 @@ class Room {
 
   /// Call the Matrix API to leave this room. If this room is set as a direct
   /// chat, this will be removed too.
-  Future<void> leave() async {
+  Future<void> leave({
+    /// Set to true to wait for the leave to appear in sync, so that the room
+    /// is left locally when this returns.
+    bool waitForSync = false,
+  }) async {
     try {
+      // Listen before the request, the sync can be faster.
+      final leftInSync = waitForSync
+          ? client.waitForRoomInSync(id, leave: true)
+          : null;
       await client.leaveRoom(id);
+      await leftInSync;
     } on MatrixException catch (e, s) {
       if ([MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN].contains(e.error)) {
         Logs().w(
