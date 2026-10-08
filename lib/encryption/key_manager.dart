@@ -417,7 +417,7 @@ class KeyManager {
 
           // check if any new devices need keys
           final newDevices = newDeviceIds.difference(oldDeviceIds);
-          if (newDeviceIds.isNotEmpty) {
+          if (newDevices.isNotEmpty) {
             devicesToReceive.addAll(
               newDeviceKeys.where(
                 (d) => d.userId == userId && newDevices.contains(d.deviceId),
