@@ -64,11 +64,15 @@ class BoxCollection with ZoneTransactionMixin {
     return dbOpenCompleter.future;
   }
 
+  final _boxes = <Box>{};
+
   Box<V> openBox<V>(String name) {
     if (!boxNames.contains(name)) {
       throw ('Box with name $name is not in the known box names of this collection.');
     }
-    return Box<V>(name, this);
+    final box = Box<V>(name, this);
+    _boxes.add(box);
+    return box;
   }
 
   List<Future<void> Function(IDBTransaction txn)>? _txnCache;
@@ -78,12 +82,23 @@ class BoxCollection with ZoneTransactionMixin {
     List<String>? boxNames,
     bool readOnly = false,
   }) => zoneTransaction(() async {
+    // A nested transaction joins the outer one, so all writes stay in order.
+    if (_txnCache != null) return action();
     final txnCache = _txnCache = [];
-    await action();
+    try {
+      await action();
+    } catch (_) {
+      // Nothing of a failed transaction may stay visible in the caches.
+      for (final box in _boxes) {
+        box.clearQuickAccessCache();
+      }
+      rethrow;
+    } finally {
+      _txnCache = null;
+    }
     final cache = List<Future<void> Function(IDBTransaction txn)>.from(
       txnCache,
     );
-    _txnCache = null;
     if (cache.isEmpty) return;
 
     final transactionCompleter = Completer<void>();
@@ -102,6 +117,9 @@ class BoxCollection with ZoneTransactionMixin {
 
     txn.onerror = (Event event) {
       Logs().e('[IndexedDBBox] [transaction] Error - ${txn.error}');
+      for (final box in _boxes) {
+        box.clearQuickAccessCache();
+      }
       transactionCompleter.completeError(
         'Transaction not completed due to an error - ${txn.error}'.toJS,
       );

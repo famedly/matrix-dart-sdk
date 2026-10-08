@@ -42,11 +42,15 @@ class BoxCollection with ZoneTransactionMixin {
     return BoxCollection(sqfliteDatabase, boxNames, name);
   }
 
+  final _boxes = <Box>{};
+
   Box<V> openBox<V>(String name) {
     if (!boxNames.contains(name)) {
       throw ('Box with name $name is not in the known box names of this collection.');
     }
-    return Box<V>(name, this);
+    final box = Box<V>(name, this);
+    _boxes.add(box);
+    return box;
   }
 
   Batch? _activeBatch;
@@ -56,11 +60,23 @@ class BoxCollection with ZoneTransactionMixin {
     List<String>? boxNames,
     bool readOnly = false,
   }) => zoneTransaction(() async {
-    final batch = _db.batch();
-    _activeBatch = batch;
-    await action();
-    _activeBatch = null;
-    await batch.commit(noResult: true);
+    // A nested transaction joins the outer one, so all writes stay in order.
+    if (_activeBatch != null) return action();
+    final batch = _activeBatch = _db.batch();
+    try {
+      try {
+        await action();
+      } finally {
+        _activeBatch = null;
+      }
+      await batch.commit(noResult: true);
+    } catch (_) {
+      // Nothing of a failed transaction may stay visible in the caches.
+      for (final box in _boxes) {
+        box.clearQuickAccessCache();
+      }
+      rethrow;
+    }
   });
 
   Future<void> clear() => transaction(() async {
