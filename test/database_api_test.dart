@@ -61,6 +61,19 @@ void main() {
         final toDeviceQueue = await database.getToDeviceEventQueue();
         expect(toDeviceQueue.isEmpty, true);
       });
+      test('insertIntoToDeviceQueue twice in the same millisecond', () async {
+        // Both ids are computed synchronously before the first await.
+        final ids = await Future.wait([
+          database.insertIntoToDeviceQueue('m.test', 'txnId1', '{}'),
+          database.insertIntoToDeviceQueue('m.test', 'txnId2', '{}'),
+        ]);
+        expect(ids.toSet().length, 2);
+        final toDeviceQueue = await database.getToDeviceEventQueue();
+        expect(toDeviceQueue.map((e) => e.txnId).toSet(), {'txnId1', 'txnId2'});
+        for (final id in ids) {
+          await database.deleteFromToDeviceQueue(id);
+        }
+      });
       test('storeFile and deleteFile', () async {
         await database.storeFile(
           Uri.parse('mxc://test'),
