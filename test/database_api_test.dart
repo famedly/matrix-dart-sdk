@@ -385,6 +385,46 @@ void main() {
 
         expect(room?.name, 'update3');
       });
+      test('storeEventUpdate re-sorts a sent event once synced', () async {
+        const roomid = '!sentthensynced:example.com';
+        final client = Client(
+          'testclient',
+          database: await getMatrixSdkDatabase(),
+        );
+        MatrixEvent message(String eventId, EventStatus status) =>
+            MatrixEvent.fromJson({
+              'type': EventTypes.Message,
+              'content': {'body': eventId, 'msgtype': 'm.text'},
+              'event_id': eventId,
+              'sender': '@bob:example.org',
+              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+              'unsigned': {messageSendingStatusKey: status.intValue},
+            });
+
+        for (final (eventId, status) in [
+          ('\$a:example.com', EventStatus.sent),
+          ('\$b:example.com', EventStatus.synced),
+          ('\$a:example.com', EventStatus.synced),
+        ]) {
+          await database.storeEventUpdate(
+            roomid,
+            message(eventId, status),
+            EventUpdateType.timeline,
+            client,
+          );
+        }
+
+        final events = await database.getEventList(
+          Room(id: roomid, client: client),
+        );
+        expect(events.map((e) => e.eventId), [
+          '\$a:example.com',
+          '\$b:example.com',
+        ]);
+        expect(events.first.status, EventStatus.synced);
+
+        await database.forgetRoom(roomid);
+      });
       test('getEventById', () async {
         final event = await database.getEventById(
           '\$event:example.com',

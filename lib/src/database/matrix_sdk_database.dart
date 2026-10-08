@@ -1089,6 +1089,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         // Status changes from 1 -> 2? Make sure event is correctly sorted.
         eventIds.remove(eventId);
         eventIds.insert(0, eventId);
+        await _timelineFragmentsBox.put(key, eventIds);
       }
 
       // If event comes from server timeline, remove sending events with this ID
