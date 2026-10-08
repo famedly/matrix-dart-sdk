@@ -881,6 +881,32 @@ void main() {
       await room.invite('Testname');
     });
 
+    test('join and leave wait for sync', () async {
+      final room = Room(id: '!localpart:example.com', client: matrix);
+      Future<void> expectWaitsForSync(
+        Future<void> action,
+        RoomsUpdate rooms,
+      ) async {
+        var done = false;
+        unawaited(action.then((_) => done = true));
+        await Future.delayed(const Duration(milliseconds: 100));
+        expect(done, isFalse);
+        await matrix.handleSync(SyncUpdate(nextBatch: '', rooms: rooms));
+        await Future.delayed(Duration.zero);
+        matrix.onSyncStatus.add(const SyncStatusUpdate(SyncStatus.finished));
+        await action.timeout(const Duration(seconds: 1));
+      }
+
+      await expectWaitsForSync(
+        room.leave(waitForSync: true),
+        RoomsUpdate(leave: {room.id: LeftRoomUpdate()}),
+      );
+      await expectWaitsForSync(
+        room.join(waitForSync: true),
+        RoomsUpdate(join: {room.id: JoinedRoomUpdate()}),
+      );
+    });
+
     test('setPower', () async {
       final powerLevelMap = room
           .getState(EventTypes.RoomPowerLevels, '')!
