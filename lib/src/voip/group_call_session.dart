@@ -291,6 +291,7 @@ class GroupCallSession {
 
     if (anyJoined.isNotEmpty || anyLeft.isNotEmpty) {
       if (anyJoined.isNotEmpty) {
+        _participants.addAll(anyJoined);
         final nonLocalAnyJoined = Set<CallParticipant>.from(anyJoined)
           ..remove(localParticipant);
         if (nonLocalAnyJoined.isNotEmpty && state == GroupCallState.entered) {
@@ -299,7 +300,6 @@ class GroupCallSession {
           );
           await backend.onNewParticipant(this, nonLocalAnyJoined.toList());
         }
-        _participants.addAll(anyJoined);
         matrixRTCEventStream.add(
           ParticipantsJoinEvent(participants: anyJoined.toList()),
         );
