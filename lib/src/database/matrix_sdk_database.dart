@@ -380,36 +380,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   @override
   Future<void> forgetRoom(String roomId) async {
     await _timelineFragmentsBox.delete(TupleKey(roomId, '').toString());
-    final eventsBoxKeys = await _eventsBox.getAllKeys();
-    for (final key in eventsBoxKeys) {
-      final multiKey = TupleKey.fromString(key);
-      if (multiKey.parts.first != roomId) continue;
-      await _eventsBox.delete(key);
-    }
-    final preloadRoomStateBoxKeys = await _preloadRoomStateBox.getAllKeys();
-    for (final key in preloadRoomStateBoxKeys) {
-      final multiKey = TupleKey.fromString(key);
-      if (multiKey.parts.first != roomId) continue;
-      await _preloadRoomStateBox.delete(key);
-    }
-    final nonPreloadRoomStateBoxKeys = await _nonPreloadRoomStateBox
-        .getAllKeys();
-    for (final key in nonPreloadRoomStateBoxKeys) {
-      final multiKey = TupleKey.fromString(key);
-      if (multiKey.parts.first != roomId) continue;
-      await _nonPreloadRoomStateBox.delete(key);
-    }
-    final roomMembersBoxKeys = await _roomMembersBox.getAllKeys();
-    for (final key in roomMembersBoxKeys) {
-      final multiKey = TupleKey.fromString(key);
-      if (multiKey.parts.first != roomId) continue;
-      await _roomMembersBox.delete(key);
-    }
-    final roomAccountDataBoxKeys = await _roomAccountDataBox.getAllKeys();
-    for (final key in roomAccountDataBoxKeys) {
-      final multiKey = TupleKey.fromString(key);
-      if (multiKey.parts.first != roomId) continue;
-      await _roomAccountDataBox.delete(key);
+    for (final box in [
+      _eventsBox,
+      _preloadRoomStateBox,
+      _nonPreloadRoomStateBox,
+      _roomMembersBox,
+      _roomAccountDataBox,
+    ]) {
+      await box.deleteAll(await _roomKeys(box, roomId));
     }
     await _readReceiptsBox.delete(roomId);
     await _roomsBox.delete(roomId);
@@ -447,6 +425,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     if (raw == null) return null;
     return Event.fromJson(copyMap(raw), room);
   }
+
+  // All keys of a box which belong to this room.
+  Future<List<String>> _roomKeys(Box<Map> box, String roomId) =>
+      box.getKeysWithPrefix(TupleKey(roomId, '').toString());
 
   /// Loads a whole list of events at once from the store for a specific room
   Future<List<Event>> _getEventsByIds(List<String> eventIds, Room room) async {
@@ -602,10 +584,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     final room = Room.fromJson(copyMap(roomData), client);
 
     // Get the room account data
-    final allKeys = await _roomAccountDataBox.getAllKeys();
-    final roomAccountDataKeys = allKeys
-        .where((key) => TupleKey.fromString(key).parts.first == roomId)
-        .toList();
+    final roomAccountDataKeys = await _roomKeys(_roomAccountDataBox, roomId);
     final roomAccountDataList = await _roomAccountDataBox.getAll(
       roomAccountDataKeys,
     );
@@ -622,10 +601,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
     // Get important states:
     if (loadImportantStates) {
-      final preloadRoomStateKeys = await _preloadRoomStateBox.getAllKeys();
-      final keysForRoom = preloadRoomStateKeys
-          .where((key) => TupleKey.fromString(key).parts.first == roomId)
-          .toList();
+      final keysForRoom = await _roomKeys(_preloadRoomStateBox, roomId);
       final rawStates = await _preloadRoomStateBox.getAll(keysForRoom);
 
       for (final raw in rawStates) {
@@ -718,19 +694,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     List<String> events,
     Room room,
   ) async {
-    final keys = (await _nonPreloadRoomStateBox.getAllKeys()).where((key) {
-      final tuple = TupleKey.fromString(key);
-      return tuple.parts.first == room.id && !events.contains(tuple.parts[1]);
-    });
-
-    final unimportantEvents = <Event>[];
-    for (final key in keys) {
-      final raw = await _nonPreloadRoomStateBox.get(key);
-      if (raw == null) continue;
-      unimportantEvents.add(Event.fromJson(copyMap(raw), room));
-    }
-
-    return unimportantEvents.where((event) => event.stateKey != null).toList();
+    final keys = (await _roomKeys(_nonPreloadRoomStateBox, room.id))
+        .where((key) => !events.contains(TupleKey.fromString(key).parts[1]))
+        .toList();
+    final raws = await _nonPreloadRoomStateBox.getAll(keys);
+    return [
+      for (final raw in raws)
+        if (raw != null) Event.fromJson(copyMap(raw), room),
+    ].where((event) => event.stateKey != null).toList();
   }
 
   @override
@@ -820,9 +791,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   @override
   Future<List<User>> getUsers(Room room) async {
     final users = <User>[];
-    final keys = (await _roomMembersBox.getAllKeys())
-        .where((key) => TupleKey.fromString(key).parts.first == room.id)
-        .toList();
+    final keys = await _roomKeys(_roomMembersBox, room.id);
     final states = await _roomMembersBox.getAll(keys);
     states.removeWhere((state) => state == null);
     for (final state in states) {
@@ -935,10 +904,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   @override
   Future<void> removeEvent(String eventId, String roomId) async {
     await _eventsBox.delete(TupleKey(roomId, eventId).toString());
-    final keys = await _timelineFragmentsBox.getAllKeys();
-    for (final key in keys) {
-      final multiKey = TupleKey.fromString(key);
-      if (multiKey.parts.first != roomId) continue;
+    for (final key in [
+      TupleKey(roomId, '').toString(),
+      TupleKey(roomId, 'SENDING').toString(),
+    ]) {
       final eventIds = List<String>.from(
         await _timelineFragmentsBox.get(key) ?? [],
       );

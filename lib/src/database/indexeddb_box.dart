@@ -243,6 +243,50 @@ class Box<V> {
     return (request.result?.dartify() as List?)?.cast<String>() ?? [];
   }
 
+  /// Returns all keys starting with [prefix], using the key order of the
+  /// object store.
+  Future<List<String>> getKeysWithPrefix(
+    String prefix, [
+    IDBTransaction? txn,
+  ]) async {
+    txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
+    final request = txn
+        .objectStore(name)
+        .getAllKeys(
+          IDBKeyRange.bound(prefix.toJS, _prefixEnd(prefix).toJS, false, true),
+        );
+    final completer = Completer();
+    request.onerror = (Event event) {
+      Logs().e('[IndexedDBBox] [getKeysWithPrefix] Error - ${request.error}');
+      completer.completeError(
+        '[IndexedDBBox] [getKeysWithPrefix] Error - ${request.error}'.toJS,
+      );
+    }.toJS;
+    request.onsuccess = (Event event) {
+      completer.complete();
+    }.toJS;
+    await completer.future;
+    return _withCachedChanges(
+      (request.result?.dartify() as List?)?.cast<String>() ?? [],
+      prefix,
+    );
+  }
+
+  /// The smallest key after all keys starting with [prefix].
+  static String _prefixEnd(String prefix) =>
+      prefix.substring(0, prefix.length - 1) +
+      String.fromCharCode(prefix.codeUnitAt(prefix.length - 1) + 1);
+
+  // Changes of a running transaction are only in the cache yet.
+  List<String> _withCachedChanges(Iterable<String> keys, String prefix) => {
+    ...keys.where(
+      (key) =>
+          _quickAccessCache[key] != null || !_quickAccessCache.containsKey(key),
+    ),
+    for (final entry in _quickAccessCache.entries)
+      if (entry.value != null && entry.key.startsWith(prefix)) entry.key,
+  }.toList();
+
   Future<Map<String, V>> getAllValues([IDBTransaction? txn]) async {
     txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
     final store = txn.objectStore(name);
