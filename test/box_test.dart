@@ -132,6 +132,18 @@ void main() {
       },
     );
 
+    test('a transaction failing at commit clears the caches', () async {
+      final box = collection.openBox<Map>('cats');
+      await collection.close();
+      // Committing to a closed database throws, so only a stale cache could
+      // still answer the read.
+      await expectLater(
+        collection.transaction(() => box.put('fluffy', data)),
+        throwsA(anything),
+      );
+      await expectLater(box.get('fluffy'), throwsA(anything));
+    });
+
     test('Box.deleteAll', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('fluffy', data);
