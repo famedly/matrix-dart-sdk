@@ -107,6 +107,10 @@ class Client extends MatrixApi {
 
   ShareKeysWith shareKeysWith;
 
+  /// Whether [inviteUser] shares the keys of the room history with the
+  /// invitee first, if the history visibility allows it (MSC4268).
+  bool shareHistoryOnInvite;
+
   Future<void> Function(Client client)? onSoftLogout;
 
   DateTime? get accessTokenExpiresAt => _accessTokenExpiresAt;
@@ -171,6 +175,7 @@ class Client extends MatrixApi {
   ///     - m.room.message
   ///     - m.room.encrypted
   ///     - m.room.encryption
+  ///     - m.room.history_visibility
   ///     - m.room.canonical_alias
   ///     - m.room.tombstone
   ///     - *some* m.room.member events, where needed
@@ -224,6 +229,7 @@ class Client extends MatrixApi {
     this.customImageResizer,
     this.customVideoThumbnailGenerator,
     this.shareKeysWith = ShareKeysWith.crossVerifiedIfEnabled,
+    this.shareHistoryOnInvite = true,
     this.enableDehydratedDevices = false,
     this.receiptsPublicByDefault = true,
 
@@ -276,6 +282,8 @@ class Client extends MatrixApi {
       EventTypes.RoomName,
       EventTypes.RoomAvatar,
       EventTypes.Encryption,
+      // Needed to know if room keys may be shared on invite (MSC4268).
+      EventTypes.HistoryVisibility,
       EventTypes.RoomCanonicalAlias,
       EventTypes.RoomTombstone,
       EventTypes.SpaceChild,
@@ -1609,6 +1617,91 @@ class Client extends MatrixApi {
     return mxc;
   }
 
+  /// Invites a user to a room. If [shareHistoryOnInvite] is enabled, the keys
+  /// of the encrypted room history are shared with the invitee first
+  /// (MSC4268). This queries the invitee's devices, loads the room's keys from
+  /// the online key backup and uploads the key bundle, so the invite can take
+  /// several seconds. Failing to share the keys is only logged and does not
+  /// prevent the invite.
+  @override
+  Future<void> inviteUser(
+    String roomId,
+    String userId, {
+    String? reason,
+  }) async {
+    final room = getRoomById(roomId);
+    final encryption = this.encryption;
+    if (shareHistoryOnInvite &&
+        encryptionEnabled &&
+        encryption != null &&
+        room != null &&
+        room.encrypted) {
+      try {
+        await encryption.keyManager.shareRoomKeyBundle(room, userId);
+      } catch (e, s) {
+        Logs().e('Unable to share the room history with $userId', e, s);
+      }
+    }
+    return super.inviteUser(roomId, userId, reason: reason);
+  }
+
+  /// Joins a room. If we accepted an invite, the keys the inviter shared with
+  /// us for the room history get imported in the background (MSC4268).
+  @override
+  Future<String> joinRoomById(
+    String roomId, {
+    String? reason,
+    ThirdPartySigned? thirdPartySigned,
+  }) async {
+    final inviter = _getInviter(roomId);
+    roomId = await super.joinRoomById(
+      roomId,
+      reason: reason,
+      thirdPartySigned: thirdPartySigned,
+    );
+    await _onInviteAccepted(roomId, inviter);
+    return roomId;
+  }
+
+  /// Joins a room by its ID or alias. If we accepted an invite, the keys the
+  /// inviter shared with us for the room history get imported in the
+  /// background (MSC4268).
+  @override
+  Future<String> joinRoom(
+    Object? roomIdOrAlias, {
+    List<String>? via,
+    String? reason,
+    ThirdPartySigned? thirdPartySigned,
+  }) async {
+    var inviter = _getInviter(roomIdOrAlias.toString());
+    final roomId = await super.joinRoom(
+      roomIdOrAlias,
+      via: via,
+      reason: reason,
+      thirdPartySigned: thirdPartySigned,
+    );
+    // The invite is still there locally until the join comes down the sync.
+    inviter ??= _getInviter(roomId);
+    await _onInviteAccepted(roomId, inviter);
+    return roomId;
+  }
+
+  String? _getInviter(String roomId) {
+    final room = getRoomById(roomId);
+    if (room == null || room.membership != Membership.invite) return null;
+    return room.getState(EventTypes.RoomMember, userID!)?.senderId;
+  }
+
+  Future<void> _onInviteAccepted(String roomId, String? inviter) async {
+    final encryption = this.encryption;
+    if (inviter == null || encryption == null) return;
+    try {
+      await encryption.keyManager.onInviteAccepted(roomId, inviter);
+    } catch (e, s) {
+      Logs().e('Unable to remember the inviter of $roomId', e, s);
+    }
+  }
+
   /// Sends a typing notification and initiates a megolm session, if needed
   @override
   Future<void> setTyping(
@@ -2235,6 +2328,11 @@ class Client extends MatrixApi {
 
       /// Timeout of 0, so that we don't see a spinner for 30 seconds.
       firstSyncReceived = _sync(timeout: Duration.zero);
+      // Resume key bundle imports which got interrupted (MSC4268).
+      final keyManager = encryption?.keyManager;
+      if (keyManager != null) {
+        runInRoot(keyManager.importPendingRoomKeyBundles);
+      }
       if (waitForFirstSync) {
         onInitStateChanged?.call(InitState.waitingForFirstSync);
         await firstSyncReceived;

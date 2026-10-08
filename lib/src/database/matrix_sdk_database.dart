@@ -90,6 +90,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   /// Is a Tuple(userId, deviceId) to the last sent message as a json map:
   late Box<String> _lastSentOlmMessagesBox;
 
+  /// Key is a tuple as TupleKey(roomId, senderId) to the received but not yet
+  /// imported key bundle (MSC4268).
+  late Box<Map> _roomKeyBundlesBox;
+
+  /// Key is the roomId to the inviter and time of an accepted invite, whose
+  /// key bundle we still want to import (MSC4268).
+  late Box<Map> _pendingRoomKeyBundlesBox;
+
   @override
   final int maxFileSize;
 
@@ -159,6 +167,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   static const String _lastSentOlmMessagesBoxName =
       'box_last_sent_olm_messages';
+
+  static const String _roomKeyBundlesBoxName = 'box_room_key_bundles';
+
+  static const String _pendingRoomKeyBundlesBoxName =
+      'box_pending_room_key_bundles';
 
   Database? database;
 
@@ -239,6 +252,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         _readReceiptsBoxName,
         _deviceKeysListBoxName,
         _lastSentOlmMessagesBoxName,
+        _roomKeyBundlesBoxName,
+        _pendingRoomKeyBundlesBoxName,
       },
       sqfliteDatabase: database,
       sqfliteFactory: sqfliteFactory,
@@ -276,6 +291,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _readReceiptsBox = _collection.openBox(_readReceiptsBoxName);
     _deviceKeysListBox = _collection.openBox(_deviceKeysListBoxName);
     _lastSentOlmMessagesBox = _collection.openBox(_lastSentOlmMessagesBoxName);
+    _roomKeyBundlesBox = _collection.openBox(_roomKeyBundlesBoxName);
+    _pendingRoomKeyBundlesBox = _collection.openBox(
+      _pendingRoomKeyBundlesBoxName,
+    );
 
     // Check version and check if we need a migration
     final currentVersion = int.tryParse(await _clientBox.get('version') ?? '');
@@ -324,6 +343,20 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     }
 
     if (currentVersion < 13) {
+      // The history visibility became an important state for MSC4268.
+      await transaction(() async {
+        final keys = await _nonPreloadRoomStateBox.getAllKeys();
+        for (final key in keys) {
+          if (TupleKey.fromString(key).parts.elementAtOrNull(1) !=
+              EventTypes.HistoryVisibility) {
+            continue;
+          }
+          final state = await _nonPreloadRoomStateBox.get(key);
+          if (state != null) await _preloadRoomStateBox.put(key, state);
+          await _nonPreloadRoomStateBox.delete(key);
+        }
+      });
+
       // Index the inbound group sessions by room. In chunks, as big accounts
       // have more sessions than fit into memory at once.
       final sessionIds = await _inboundGroupSessionsBox.getAllKeys();
@@ -384,6 +417,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _readReceiptsBox.clearQuickAccessCache();
     _deviceKeysListBox.clearQuickAccessCache();
     _lastSentOlmMessagesBox.clearQuickAccessCache();
+    _roomKeyBundlesBox.clearQuickAccessCache();
+    _pendingRoomKeyBundlesBox.clearQuickAccessCache();
 
     await _collection.clear();
   }
@@ -997,6 +1032,47 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     await _outboundGroupSessionsBox.delete(roomId);
     return;
   }
+
+  @override
+  Future<void> storeRoomKeyBundle(
+    String roomId,
+    String senderId,
+    Map<String, Object?> bundleInfo,
+  ) => _roomKeyBundlesBox.put(
+    TupleKey(roomId, senderId).toString(),
+    copyMap(bundleInfo),
+  );
+
+  @override
+  Future<Map<String, Object?>?> getRoomKeyBundle(
+    String roomId,
+    String senderId,
+  ) async {
+    final raw = await _roomKeyBundlesBox.get(
+      TupleKey(roomId, senderId).toString(),
+    );
+    return raw == null ? null : copyMap(raw);
+  }
+
+  @override
+  Future<void> removeRoomKeyBundle(String roomId, String senderId) =>
+      _roomKeyBundlesBox.delete(TupleKey(roomId, senderId).toString());
+
+  @override
+  Future<void> storePendingRoomKeyBundle(
+    String roomId,
+    Map<String, Object?> details,
+  ) => _pendingRoomKeyBundlesBox.put(roomId, copyMap(details));
+
+  @override
+  Future<Map<String, Map<String, Object?>>> getPendingRoomKeyBundles() async {
+    final raw = await _pendingRoomKeyBundlesBox.getAllValues();
+    return raw.map((roomId, details) => MapEntry(roomId, copyMap(details)));
+  }
+
+  @override
+  Future<void> removePendingRoomKeyBundle(String roomId) =>
+      _pendingRoomKeyBundlesBox.delete(roomId);
 
   @override
   Future<void> setLastSentMessageUserDeviceKey(

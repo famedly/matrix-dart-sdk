@@ -842,6 +842,155 @@ void main() => group('Integration tests', () {
     }
     return;
   });
+
+  test('Share room history on invite (MSC4268)', () async {
+    Client? testClientA, testClientB;
+    final uiaSubscriptions = <StreamSubscription>[];
+
+    Future<Client> login(String name, String userName, String password) async {
+      final client = Client(name, database: await getDatabase());
+      await client.checkHomeserver(Uri.parse(homeserver));
+      for (var attempt = 1; ; attempt++) {
+        try {
+          await client.login(
+            LoginType.mLoginPassword,
+            identifier: AuthenticationUserIdentifier(user: userName),
+            password: password,
+          );
+          break;
+        } on MatrixException catch (e) {
+          // The tests before log in the same users, so the server may limit.
+          if (e.error != MatrixError.M_LIMIT_EXCEEDED || attempt == 5) rethrow;
+          await Future.delayed(Duration(milliseconds: e.retryAfterMs ?? 1000));
+        }
+      }
+      final handledUiaRequests = <UiaRequest>{};
+      uiaSubscriptions.add(
+        client.onUiaRequest.stream.listen((uiaRequest) async {
+          if (!uiaRequest.nextStages.contains(AuthenticationTypes.password) ||
+              !handledUiaRequests.add(uiaRequest)) {
+            return;
+          }
+          await uiaRequest.completeStage(
+            AuthenticationPassword(
+              session: uiaRequest.session,
+              password: password,
+              identifier: AuthenticationUserIdentifier(user: userName),
+            ),
+          );
+        }),
+      );
+      client.backgroundSync = true;
+      // The devices must be cross-signed to send and receive key bundles.
+      await client.initCryptoIdentity(passphrase: '${password}100%');
+      return client;
+    }
+
+    try {
+      Logs().i('++++ Login Alice and Bob with cross-signing ++++');
+      testClientA = await login(
+        'TestClientA',
+        Users.user1.name,
+        Users.user1.password,
+      );
+      testClientB = await login(
+        'TestClientB',
+        Users.user2.name,
+        Users.user2.password,
+      );
+
+      Logs().i('++++ (Alice) Create encrypted room without Bob ++++');
+      final roomId = await testClientA.createGroupChat(
+        enableEncryption: true,
+        historyVisibility: HistoryVisibility.shared,
+      );
+      final room = testClientA.getRoomById(roomId)!;
+      while (!room.encrypted || room.historyVisibility == null) {
+        await testClientA.onSync.stream.first;
+      }
+
+      Future<void> setHistoryVisibility(HistoryVisibility visibility) async {
+        await room.setHistoryVisibility(visibility);
+        while (room.historyVisibility != visibility) {
+          await testClientA!.onSync.stream.first;
+        }
+      }
+
+      Logs().i('++++ (Alice) Send messages before inviting Bob ++++');
+      final eventId1 = (await room.sendTextEvent(testMessage))!;
+      // Sessions created while history is not shared must not be shared.
+      await setHistoryVisibility(HistoryVisibility.joined);
+      await room.sendTextEvent(testMessage2);
+      final notSharedSessionId = testClientA.encryption!.keyManager
+          .getOutboundGroupSession(roomId)!
+          .outboundGroupSession!
+          .sessionId;
+      await setHistoryVisibility(HistoryVisibility.shared);
+      final eventId3 = (await room.sendTextEvent(testMessage3))!;
+
+      Logs().i('++++ (Alice) Invite Bob ++++');
+      final invite = testClientB.waitForRoomInSync(roomId, invite: true);
+      await room.invite(testClientB.userID!);
+      await invite;
+
+      Logs().i('++++ (Bob) Accept the invite ++++');
+      final bobRoom = testClientB.getRoomById(roomId)!;
+      // Not waiting for the join in the sync, as Conduit may never send it if
+      // the join happens during a long polling sync.
+      await bobRoom.join();
+
+      Logs().i('++++ (Bob) Decrypt the history ++++');
+      Future<Event> decrypt(String eventId) async {
+        for (var i = 0; i < 30; i++) {
+          final event = await testClientB!.encryption!.decryptRoomEvent(
+            Event.fromMatrixEvent(
+              await testClientB.getOneRoomEvent(roomId, eventId),
+              bobRoom,
+            ),
+          );
+          if (event.type == EventTypes.Message) return event;
+          await Future.delayed(Duration(seconds: 1));
+        }
+        throw Exception('Unable to decrypt $eventId');
+      }
+
+      for (final (eventId, body) in [
+        (eventId1, testMessage),
+        (eventId3, testMessage3),
+      ]) {
+        final event = await decrypt(eventId);
+        expect(event.body, body);
+        expect(event.keysSharedBy, testClientA.userID);
+      }
+      expect(
+        testClientB.encryption!.keyManager.getInboundGroupSession(
+          roomId,
+          notSharedSessionId,
+        ),
+        isNull,
+      );
+
+      await bobRoom.leave();
+      await bobRoom.forget();
+      await room.leave();
+      await room.forget();
+    } catch (e, s) {
+      Logs().e('Test failed', e, s);
+      rethrow;
+    } finally {
+      for (final subscription in uiaSubscriptions) {
+        await subscription.cancel();
+      }
+      if (testClientA?.isLogged() ?? false) {
+        await testClientA!.logoutAll();
+      }
+      if (testClientB?.isLogged() ?? false) {
+        await testClientB!.logoutAll();
+      }
+      await testClientA?.dispose(closeDatabase: false);
+      await testClientB?.dispose(closeDatabase: false);
+    }
+  });
 }, timeout: Timeout(Duration(minutes: 6)));
 
 Object get olmLengthMatcher {

@@ -2670,6 +2670,14 @@ class Room {
     );
   }
 
+  /// Whether users invited later can read the history, so encrypted messages
+  /// sent now may be shared with them on invite (MSC4268). Without a history
+  /// visibility event the spec defaults to `shared`.
+  bool get isHistoryShared => {
+    HistoryVisibility.shared,
+    HistoryVisibility.worldReadable,
+  }.contains(historyVisibility ?? HistoryVisibility.shared);
+
   /// Changes the history visibility. You should check first if the user is able to change it.
   Future<void> setHistoryVisibility(HistoryVisibility historyVisibility) async {
     await client.setRoomStateWithKey(id, EventTypes.HistoryVisibility, '', {

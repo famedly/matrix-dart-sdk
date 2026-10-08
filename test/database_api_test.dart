@@ -453,6 +453,37 @@ void main() {
         );
         expect(event, null);
       });
+      test('room key bundles', () async {
+        const roomId = '!room:example.com';
+        const senderId = '@alice:example.com';
+        expect(await database.getRoomKeyBundle(roomId, senderId), null);
+        await database.storeRoomKeyBundle(roomId, senderId, {
+          'sender_key': 'abc',
+          'file': {'url': 'mxc://example.com/abc'},
+        });
+        expect(await database.getRoomKeyBundle(roomId, senderId), {
+          'sender_key': 'abc',
+          'file': {'url': 'mxc://example.com/abc'},
+        });
+        expect(
+          await database.getRoomKeyBundle(roomId, '@bob:example.com'),
+          null,
+        );
+        await database.removeRoomKeyBundle(roomId, senderId);
+        expect(await database.getRoomKeyBundle(roomId, senderId), null);
+      });
+      test('pending room key bundles', () async {
+        const roomId = '!room:example.com';
+        await database.storePendingRoomKeyBundle(roomId, {
+          'inviter': '@alice:example.com',
+          'invite_accepted_at': 1234,
+        });
+        expect(await database.getPendingRoomKeyBundles(), {
+          roomId: {'inviter': '@alice:example.com', 'invite_accepted_at': 1234},
+        });
+        await database.removePendingRoomKeyBundle(roomId);
+        expect(await database.getPendingRoomKeyBundles(), isEmpty);
+      });
       test('getAllInboundGroupSessions', () async {
         final result = await database.getAllInboundGroupSessions();
         expect(result.isEmpty, true);
@@ -865,6 +896,8 @@ void main() {
         for (final name in {
           'box_client',
           'box_rooms',
+          'box_preload_room_states',
+          'box_non_preload_room_states',
           'box_inbound_group_session',
         }) {
           sqliteDb.execute(
@@ -875,6 +908,15 @@ void main() {
         await sqliteDb.insert('box_rooms', {
           'k': '!room:example.com',
           'v': jsonEncode({'id': '!room:example.com', 'membership': 'join'}),
+        });
+        final historyVisibilityKey = TupleKey(
+          '!room:example.com',
+          EventTypes.HistoryVisibility,
+          '',
+        ).toString();
+        await sqliteDb.insert('box_non_preload_room_states', {
+          'k': historyVisibilityKey,
+          'v': jsonEncode({'type': EventTypes.HistoryVisibility}),
         });
         // More sessions than fit into one chunk of the migration.
         for (var i = 0; i < 1200; i++) {
@@ -907,6 +949,12 @@ void main() {
         expect(
           await database.getInboundGroupSessionsByRoom('!room1:example.com'),
           hasLength(400),
+        );
+        // The history visibility is an important state now.
+        expect(await sqliteDb.query('box_non_preload_room_states'), isEmpty);
+        expect(
+          (await sqliteDb.query('box_preload_room_states')).single['k'],
+          historyVisibilityKey,
         );
         final version = await sqliteDb.query(
           'box_client',
