@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import 'dart:async';
+
 import 'package:matrix/src/database/sqflite_box.dart'
     if (dart.library.js_interop) 'package:matrix/src/database/indexeddb_box.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -176,6 +178,120 @@ void main() {
         throwsA(anything),
       );
       await expectLater(box.get('fluffy'), throwsA(anything));
+    });
+
+    test('a transaction writes the last value of each key', () async {
+      final box = collection.openBox<Map>('cats');
+      await box.put('gone', data);
+      await collection.transaction(() async {
+        await box.put('fluffy', data);
+        await box.put('fluffy', data2);
+        await box.delete('gone');
+        await box.put('loki', data);
+        await box.delete('loki');
+        await box.put('loki', data2);
+      });
+      box.clearQuickAccessCache();
+      expect(await box.get('fluffy'), data2);
+      expect(await box.get('loki'), data2);
+      expect(await box.get('gone'), null);
+      await box.clear();
+    });
+
+    test('reads in a transaction see its pending writes', () async {
+      final box = collection.openBox<Map>('cats');
+      await box.put('stored', data);
+      await box.put('deleted', data);
+      box.clearQuickAccessCache();
+      await collection.transaction(() async {
+        await box.put('new', data2);
+        await box.delete('deleted');
+        expect(await box.get('new'), data2);
+        expect(await box.get('deleted'), null);
+        expect(await box.getAll(['stored', 'new', 'deleted']), [
+          data,
+          data2,
+          null,
+        ]);
+        expect((await box.getAllKeys())..sort(), ['new', 'stored']);
+        expect(await box.getAllValues(), {'stored': data, 'new': data2});
+      });
+      await box.clear();
+    });
+
+    test('clear in a transaction keeps only later writes', () async {
+      final box = collection.openBox<Map>('cats');
+      await box.put('fluffy', data);
+      await collection.transaction(() async {
+        await box.clear();
+        await box.put('loki', data2);
+        expect(await box.get('fluffy'), null);
+        expect(await box.getAllKeys(), ['loki']);
+      });
+      box.clearQuickAccessCache();
+      expect(await box.get('fluffy'), null);
+      expect(await box.get('loki'), data2);
+      await box.clear();
+    });
+
+    test('writes during commit are kept in order', () async {
+      final box = collection.openBox<Map>('cats');
+      late Future<void> lateWrite;
+      final transaction = collection.transaction(() async {
+        await box.put('fluffy', data);
+        // Fires outside the transaction's zone after the action returned,
+        // i.e. while the transaction commits.
+        lateWrite = Zone.root.run(() => Future(() => box.put('fluffy', data2)));
+      });
+      await transaction;
+      await lateWrite;
+      box.clearQuickAccessCache();
+      expect(await box.get('fluffy'), data2);
+      await box.clear();
+    });
+
+    test('getAll and deleteAll with 2000 keys', () async {
+      final box = collection.openBox<Map>('cats');
+      final keys = [for (var i = 0; i < 2000; i++) 'cat$i'];
+      await collection.transaction(() async {
+        for (final key in keys) {
+          await box.put(key, data);
+        }
+      });
+      box.clearQuickAccessCache();
+      expect((await box.getAll(keys)).every((v) => v != null), isTrue);
+      await box.deleteAll(keys);
+      box.clearQuickAccessCache();
+      expect((await box.getAll(keys)).every((v) => v == null), isTrue);
+      await box.clear();
+    });
+
+    test('reads sent before the commit see its writes', () async {
+      final box = collection.openBox<Map>('cats');
+      late Future<void> olderReads;
+      late Future<List<String>> keys;
+      late Future<Map<String, Map>> values;
+      await collection.transaction(() async {
+        // Answered with the store state from before the writes.
+        olderReads = Zone.root.run(
+          () => Future.wait([
+            box.get('!a|1'),
+            box.getAll(['!a|2']),
+          ]),
+        );
+        await box.put('!a|1', data);
+        await box.put('!a|2', data2);
+        // Outside the transaction's zone, answered while it commits.
+        keys = Zone.root.run(() => box.getKeysWithPrefix('!a|'));
+        values = Zone.root.run(box.getAllValues);
+      });
+      expect((await keys)..sort(), ['!a|1', '!a|2']);
+      expect(await values, {'!a|1': data, '!a|2': data2});
+      await olderReads;
+      // The older answers must not shadow the writes in the cache.
+      expect(await box.get('!a|1'), data);
+      expect(await box.getAll(['!a|2']), [data2]);
+      await box.clear();
     });
 
     test('Box.deleteAll', () async {
