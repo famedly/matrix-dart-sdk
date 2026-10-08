@@ -843,17 +843,79 @@ void main() {
       });
     }
 
+    test(
+      'the outbound session is rotated if the invite fails after sharing the bundle',
+      () async {
+        FakeMatrixApi.currentApi = aliceApi;
+        final keyManager = alice.encryption!.keyManager;
+        await alice.encryption!.encryptGroupMessagePayload(roomId, {
+          'msgtype': MessageTypes.Text,
+          'body': 'Before the failed invite',
+        });
+        expect(keyManager.getOutboundGroupSession(roomId), isNotNull);
+        FakeMatrixApi.calledEndpoints.clear();
+        final invite = '/client/v3/rooms/${Uri.encodeComponent(roomId)}/invite';
+        final original = aliceApi.api['POST']![invite];
+        aliceApi.api['POST']![invite] = (_) => {
+          'errcode': 'M_FORBIDDEN',
+          'error': 'You are not allowed to invite',
+        };
+        try {
+          await expectLater(
+            alice.inviteUser(roomId, bobId),
+            throwsA(
+              isA<MatrixException>().having(
+                (e) => e.errcode,
+                'errcode',
+                'M_FORBIDDEN',
+              ),
+            ),
+          );
+        } finally {
+          aliceApi.api['POST']![invite] = original;
+        }
+        expect(
+          called(
+            (action) =>
+                action.startsWith('/client/v3/sendToDevice/m.room.encrypted/'),
+          ),
+          true,
+        );
+        expect(keyManager.getOutboundGroupSession(roomId), null);
+        expect(
+          await alice.database.getOutboundGroupSession(roomId, aliceId),
+          null,
+        );
+      },
+    );
+
+    test('the outbound session is kept if the invite succeeds', () async {
+      FakeMatrixApi.currentApi = aliceApi;
+      final keyManager = alice.encryption!.keyManager;
+      await alice.encryption!.encryptGroupMessagePayload(roomId, {
+        'msgtype': MessageTypes.Text,
+        'body': 'Before the invite',
+      });
+      FakeMatrixApi.calledEndpoints.clear();
+      await alice.inviteUser(roomId, bobId);
+      expect(sharedKeyBundle(), true);
+      expect(invited(), true);
+      expect(keyManager.getOutboundGroupSession(roomId), isNotNull);
+    });
+
     test('the outbound session is kept on a join', () async {
       await alice.encryption!.encryptGroupMessagePayload(roomId, {
         'msgtype': MessageTypes.Text,
-        'body': 'Before a profile change',
+        'body': 'Before a join',
       });
       await syncState(
         alice,
-        stateEvent(EventTypes.RoomMember, {
-          'membership': 'join',
-          'displayname': 'Alice',
-        }, stateKey: aliceId),
+        stateEvent(
+          EventTypes.RoomMember,
+          {'membership': 'join'},
+          stateKey: bobId,
+          sender: bobId,
+        ),
       );
       expect(
         alice.encryption!.keyManager.getOutboundGroupSession(roomId),

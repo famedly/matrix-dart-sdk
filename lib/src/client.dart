@@ -1631,18 +1631,37 @@ class Client extends MatrixApi {
   }) async {
     final room = getRoomById(roomId);
     final encryption = this.encryption;
+    var sharedBundle = false;
     if (shareHistoryOnInvite &&
         encryptionEnabled &&
         encryption != null &&
         room != null &&
         room.encrypted) {
       try {
-        await encryption.keyManager.shareRoomKeyBundle(room, userId);
+        sharedBundle = await encryption.keyManager.shareRoomKeyBundle(
+          room,
+          userId,
+        );
       } catch (e, s) {
         Logs().e('Unable to share the room history with $userId', e, s);
       }
     }
-    return super.inviteUser(roomId, userId, reason: reason);
+    try {
+      return await super.inviteUser(roomId, userId, reason: reason);
+    } catch (_) {
+      // The bundle contains our current session, but without an invite no
+      // membership event arrives that would rotate it.
+      if (sharedBundle) {
+        try {
+          final keyManager = encryption!.keyManager;
+          await keyManager.loadOutboundGroupSession(roomId);
+          await keyManager.clearOrUseOutboundGroupSession(roomId, wipe: true);
+        } catch (e, s) {
+          Logs().e('Unable to rotate the session of $roomId', e, s);
+        }
+      }
+      rethrow;
+    }
   }
 
   /// Joins a room. If we accepted an invite, the keys the inviter shared with

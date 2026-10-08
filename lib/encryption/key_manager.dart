@@ -1241,11 +1241,11 @@ class KeyManager {
   /// Shares the keys of all shareable sessions in this room with the devices
   /// of [userId] which are cross-signed by their owner (MSC4268). Call this
   /// before inviting the user. `Client.inviteUser()` does this automatically
-  /// if `Client.shareHistoryOnInvite` is enabled.
-  Future<void> shareRoomKeyBundle(Room room, String userId) async {
+  /// if `Client.shareHistoryOnInvite` is enabled. Returns whether it was sent.
+  Future<bool> shareRoomKeyBundle(Room room, String userId) async {
     if (!room.isHistoryShared) {
       Logs().v('[KeyManager] Not sharing history as it is not shared');
-      return;
+      return false;
     }
     await client.userDeviceKeysLoading;
     // Recipients reject bundles from devices their owner did not cross-sign.
@@ -1255,7 +1255,7 @@ class KeyManager {
       Logs().w(
         '[KeyManager] Not sharing history from a not cross-signed device',
       );
-      return;
+      return false;
     }
 
     // The bundle must not go to devices an attacker added to the account.
@@ -1271,7 +1271,7 @@ class KeyManager {
         [];
     if (devices.isEmpty) {
       Logs().i('[KeyManager] $userId has no cross-signed devices for history');
-      return;
+      return false;
     }
 
     if (await isCached()) {
@@ -1284,7 +1284,7 @@ class KeyManager {
 
     final bundle = await buildRoomKeyBundle(room.id);
     final roomKeys = bundle['room_keys'] as List;
-    if (roomKeys.isEmpty && (bundle['withheld'] as List).isEmpty) return;
+    if (roomKeys.isEmpty && (bundle['withheld'] as List).isEmpty) return false;
     final encryptedFile = await encryptFile(utf8.encode(json.encode(bundle)));
     final uri = await client.uploadContent(
       encryptedFile.data,
@@ -1298,6 +1298,7 @@ class KeyManager {
       'room_id': room.id,
       'file': encryptedFile.toJson(uri),
     });
+    return true;
   }
 
   /// Remembers that we accepted an invite from [inviterId] on this device, so
