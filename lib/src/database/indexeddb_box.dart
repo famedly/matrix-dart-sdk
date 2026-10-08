@@ -33,6 +33,8 @@ class BoxCollection with ZoneTransactionMixin {
     final request = idbFactory.open(name, version);
 
     request.onerror = (Event event) {
+      // An aborted upgrade also fails the open request after db.onerror.
+      if (dbOpenCompleter.isCompleted) return;
       Logs().e('[IndexedDBBox] Error loading database - ${request.error}');
       dbOpenCompleter.completeError(
         'Error loading database - ${request.error}',
@@ -43,6 +45,8 @@ class BoxCollection with ZoneTransactionMixin {
       final db = (event.target! as IDBOpenDBRequest).result as IDBDatabase;
 
       db.onerror = (Event event) {
+        // This db stays the collection's, so later errors bubble here too.
+        if (dbOpenCompleter.isCompleted) return;
         Logs().e('[IndexedDBBox] [onupgradeneeded] Error loading database');
         dbOpenCompleter.completeError(
           'Error loading database onupgradeneeded.',
@@ -270,8 +274,14 @@ class Box<V> {
     _quickAccessCache.remove(key);
     _quickAccessCache[key] = value;
     final cacheSize = this.cacheSize;
-    if (cacheSize != null && _quickAccessCache.length > cacheSize) {
-      _quickAccessCache.remove(_quickAccessCache.keys.first);
+    if (cacheSize != null &&
+        _quickAccessCache.length > cacheSize + cacheSize ~/ 10) {
+      // Dropping in batches keeps eviction O(1) amortized; keys.first has to
+      // skip the deleted slots at the front of the map.
+      _quickAccessCache.keys
+          .take(_quickAccessCache.length - cacheSize)
+          .toList()
+          .forEach(_quickAccessCache.remove);
     }
   }
 

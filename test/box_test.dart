@@ -475,6 +475,18 @@ void main() {
       await box.clear();
     });
 
+    test('a box with a cache size evicts in batches', () async {
+      final box = collection.openBox<Map>('dogs', cacheSize: 10);
+      await box.put('hot', data);
+      for (var i = 0; i < 100; i++) {
+        await box.put('$i', data2);
+        await box.get('hot');
+        expect(box.cachedKeys.length, lessThanOrEqualTo(11));
+      }
+      expect(box.cachedKeys, [for (var i = 90; i < 100; i++) '$i', 'hot']);
+      await box.clear();
+    });
+
     test('Box.deleteAll', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('fluffy', data);

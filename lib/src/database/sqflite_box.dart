@@ -235,8 +235,14 @@ class Box<V> {
     _quickAccessCache.remove(key);
     _quickAccessCache[key] = value;
     final cacheSize = this.cacheSize;
-    if (cacheSize != null && _quickAccessCache.length > cacheSize) {
-      _quickAccessCache.remove(_quickAccessCache.keys.first);
+    if (cacheSize != null &&
+        _quickAccessCache.length > cacheSize + cacheSize ~/ 10) {
+      // Dropping in batches keeps eviction O(1) amortized; keys.first has to
+      // skip the deleted slots at the front of the map.
+      _quickAccessCache.keys
+          .take(_quickAccessCache.length - cacheSize)
+          .toList()
+          .forEach(_quickAccessCache.remove);
     }
   }
 
