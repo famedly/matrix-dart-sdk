@@ -2199,7 +2199,13 @@ class Room {
   Future<Event?> getEventById(String eventID) async {
     try {
       final dbEvent = await client.database.getEventById(eventID, this);
-      if (dbEvent != null) return dbEvent;
+      if (dbEvent != null) {
+        // The keys may have arrived after the event was stored.
+        if (dbEvent.type == EventTypes.Encrypted && client.encryptionEnabled) {
+          return await client.encryption?.decryptRoomEvent(dbEvent) ?? dbEvent;
+        }
+        return dbEvent;
+      }
       final matrixEvent = await client.getOneRoomEvent(id, eventID);
       final event = Event.fromMatrixEvent(matrixEvent, this);
       if (event.type == EventTypes.Encrypted && client.encryptionEnabled) {
