@@ -432,4 +432,6 @@ class DecryptException implements Exception {
       "The message isn't sent for this device";
   static const String unknownMessageType = 'Unknown message type';
   static const String decryptionFailed = 'Decryption failed';
+  static const String invalidSenderDeviceKeys =
+      "Message was decrypted but sender_device_keys don't match";
 }

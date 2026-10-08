@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import 'dart:convert';
+
 import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
@@ -99,6 +101,66 @@ void main() async {
       );
       expect(decryptedEvent.type, 'm.to_device');
       expect(decryptedEvent.content['hello'], 'superfoxies');
+    });
+
+    test('sender_device_keys (MSC4147)', () async {
+      payload = await otherClient.encryption!.encryptToDeviceMessage(
+        [device],
+        'm.to_device',
+        {},
+      );
+      final decryptedEvent = await client.encryption!.decryptToDeviceEvent(
+        ToDeviceEvent(
+          sender: otherClient.userID!,
+          type: EventTypes.Encrypted,
+          content: payload[client.userID][client.deviceID],
+        ),
+      );
+      expect(decryptedEvent.senderDeviceKeys?.userId, otherClient.userID);
+      expect(decryptedEvent.senderDeviceKeys?.deviceId, otherClient.deviceID);
+
+      // Device keys of another user or device must be discarded.
+      final session = otherClient
+          .encryption!
+          .olmManager
+          .olmSessions[device.curve25519Key]!
+          .first;
+      for (final senderDeviceKeys in [
+        {
+          ...otherClient.encryption!.olmManager.signedDeviceKeys(),
+          'user_id': client.userID,
+        },
+        client.encryption!.olmManager.signedDeviceKeys(),
+      ]) {
+        final encrypted = session.session!.encrypt(
+          json.encode({
+            'type': 'm.to_device',
+            'content': {},
+            'sender': otherClient.userID,
+            'keys': {'ed25519': otherClient.fingerprintKey},
+            'recipient': client.userID,
+            'recipient_keys': {'ed25519': client.fingerprintKey},
+            'sender_device_keys': senderDeviceKeys,
+          }),
+        );
+        final rejected = await client.encryption!.decryptToDeviceEvent(
+          ToDeviceEvent(
+            sender: otherClient.userID!,
+            type: EventTypes.Encrypted,
+            content: {
+              'algorithm': AlgorithmTypes.olmV1Curve25519AesSha2,
+              'sender_key': otherClient.identityKey,
+              'ciphertext': {
+                client.identityKey: {
+                  'type': encrypted.messageType,
+                  'body': encrypted.ciphertext,
+                },
+              },
+            },
+          ),
+        );
+        expect(rejected.type, EventTypes.Encrypted);
+      }
     });
 
     test('dispose client', () async {
