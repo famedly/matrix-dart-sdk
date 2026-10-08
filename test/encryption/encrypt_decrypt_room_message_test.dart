@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import 'dart:convert';
+
 import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
@@ -92,6 +94,52 @@ void main() {
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
       await client.encryption!.decryptRoomEvent(encryptedEvent, store: true);
+    });
+
+    test('getEventById decrypts events stored before the keys', () async {
+      final session = vod.GroupSession();
+      final sessionKey = session.sessionKey;
+      final event = Event(
+        type: EventTypes.Encrypted,
+        content: {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'ciphertext': session.encrypt(
+            json.encode({
+              'type': EventTypes.Message,
+              'content': {'msgtype': 'm.text', 'body': 'Late keys'},
+              'room_id': roomId,
+            }),
+          ),
+          'sender_key': client.identityKey,
+          'session_id': session.sessionId,
+        },
+        room: room,
+        originServerTs: now,
+        eventId: '\$late_keys',
+        senderId: '@alice:example.com',
+      );
+      await client.database.storeEventUpdate(
+        roomId,
+        event,
+        EventUpdateType.timeline,
+        client,
+      );
+      expect((await room.getEventById(event.eventId))?.type, event.type);
+
+      await client.encryption!.keyManager.setInboundGroupSession(
+        roomId,
+        session.sessionId,
+        client.identityKey,
+        {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': roomId,
+          'session_id': session.sessionId,
+          'session_key': sessionKey,
+        },
+      );
+      final decrypted = await room.getEventById(event.eventId);
+      expect(decrypted?.type, EventTypes.Message);
+      expect(decrypted?.body, 'Late keys');
     });
 
     test('dispose client', () async {
