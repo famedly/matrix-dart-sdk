@@ -378,7 +378,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> forgetRoom(String roomId) async {
+  Future<void> forgetRoom(String roomId) => transaction(() async {
     await _timelineFragmentsBox.delete(TupleKey(roomId, '').toString());
     for (final box in [
       _eventsBox,
@@ -391,7 +391,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     }
     await _readReceiptsBox.delete(roomId);
     await _roomsBox.delete(roomId);
-  }
+  });
 
   @override
   Future<Map<String, BasicEvent>> getAccountData() =>
@@ -889,17 +889,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> markInboundGroupSessionsAsNeedingUpload() async {
-    final keys = await _inboundGroupSessionsBox.getAllKeys();
-    for (final sessionId in keys) {
-      final raw = copyMap(await _inboundGroupSessionsBox.get(sessionId) ?? {});
-      if (raw.isEmpty) continue;
-      final roomId = raw.tryGet<String>('room_id');
-      if (roomId == null) continue;
-      await _inboundGroupSessionsUploadQueueBox.put(sessionId, roomId);
-    }
-    return;
-  }
+  Future<void> markInboundGroupSessionsAsNeedingUpload() =>
+      transaction(() async {
+        final sessions = await _inboundGroupSessionsBox.getAllValues();
+        for (final MapEntry(key: sessionId, value: raw) in sessions.entries) {
+          final roomId = copyMap(raw).tryGet<String>('room_id');
+          if (roomId == null) continue;
+          await _inboundGroupSessionsUploadQueueBox.put(sessionId, roomId);
+        }
+      });
 
   @override
   Future<void> removeEvent(String eventId, String roomId) async {
