@@ -294,6 +294,30 @@ void main() {
       await box.clear();
     });
 
+    test('a box with a cache size evicts the least recently used', () async {
+      final box = collection.openBox<Map>('dogs', cacheSize: 2);
+      await box.put('a', data);
+      await box.put('b', data);
+      await box.get('a'); // a is now more recent than b
+      await box.put('c', data2);
+      expect(box.cachedKeys, ['a', 'c']);
+      expect(await box.get('b'), data); // evicted, read from the store
+      await box.clear();
+    });
+
+    test('pending writes survive eviction', () async {
+      final box = collection.openBox<Map>('dogs', cacheSize: 1);
+      await collection.transaction(() async {
+        await box.put('a', data);
+        await box.put('b', data2);
+        expect(await box.get('a'), data);
+      });
+      box.clearQuickAccessCache();
+      expect(await box.get('a'), data);
+      expect(await box.get('b'), data2);
+      await box.clear();
+    });
+
     test('Box.deleteAll', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('fluffy', data);

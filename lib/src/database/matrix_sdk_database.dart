@@ -241,12 +241,17 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _accountDataBox = _collection.openBox<Map>(_accountDataBoxName);
     _roomsBox = _collection.openBox<Map>(_roomsBoxName);
     _preloadRoomStateBox = _collection.openBox(_preloadRoomStateBoxName);
-    _nonPreloadRoomStateBox = _collection.openBox(_nonPreloadRoomStateBoxName);
-    _roomMembersBox = _collection.openBox(_roomMembersBoxName);
+    // ponytail: fixed cache sizes, make them configurable if apps need it.
+    _nonPreloadRoomStateBox = _collection.openBox(
+      _nonPreloadRoomStateBoxName,
+      cacheSize: 1000,
+    );
+    _roomMembersBox = _collection.openBox(_roomMembersBoxName, cacheSize: 5000);
     _toDeviceQueueBox = _collection.openBox(_toDeviceQueueBoxName);
     _roomAccountDataBox = _collection.openBox(_roomAccountDataBoxName);
     _inboundGroupSessionsBox = _collection.openBox(
       _inboundGroupSessionsBoxName,
+      cacheSize: 500,
     );
     _inboundGroupSessionsUploadQueueBox = _collection.openBox(
       _inboundGroupSessionsUploadQueueBoxName,
@@ -257,11 +262,17 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _olmSessionsBox = _collection.openBox(_olmSessionsBoxName);
     _ssssCacheBox = _collection.openBox(_ssssCacheBoxName);
     _presencesBox = _collection.openBox(_presencesBoxName);
-    _timelineFragmentsBox = _collection.openBox(_timelineFragmentsBoxName);
-    _eventsBox = _collection.openBox(_eventsBoxName);
+    _timelineFragmentsBox = _collection.openBox(
+      _timelineFragmentsBoxName,
+      cacheSize: 100,
+    );
+    _eventsBox = _collection.openBox(_eventsBoxName, cacheSize: 1000);
     _seenDeviceIdsBox = _collection.openBox(_seenDeviceIdsBoxName);
     _seenDeviceKeysBox = _collection.openBox(_seenDeviceKeysBoxName);
-    _userProfilesBox = _collection.openBox(_userProfilesBoxName);
+    _userProfilesBox = _collection.openBox(
+      _userProfilesBoxName,
+      cacheSize: 1000,
+    );
     _readReceiptsBox = _collection.openBox(_readReceiptsBoxName);
     _deviceKeysListBox = _collection.openBox(_deviceKeysListBoxName);
     _lastSentOlmMessagesBox = _collection.openBox(_lastSentOlmMessagesBoxName);

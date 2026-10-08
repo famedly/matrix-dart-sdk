@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:meta/meta.dart';
 import 'package:sqflite_common/sqflite.dart';
 
 import 'zone_transaction_mixin.dart';
@@ -45,11 +46,11 @@ class BoxCollection with ZoneTransactionMixin {
 
   final _boxes = <Box>{};
 
-  Box<V> openBox<V>(String name) {
+  Box<V> openBox<V>(String name, {int? cacheSize}) {
     if (!boxNames.contains(name)) {
       throw ('Box with name $name is not in the known box names of this collection.');
     }
-    final box = Box<V>(name, this);
+    final box = Box<V>(name, this, cacheSize: cacheSize);
     _boxes.add(box);
     return box;
   }
@@ -115,6 +116,10 @@ class BoxCollection with ZoneTransactionMixin {
 class Box<V> {
   final String name;
   final BoxCollection boxCollection;
+
+  /// Maximum number of cached values, null for no limit.
+  final int? cacheSize;
+
   final Map<String, V?> _quickAccessCache = {};
 
   /// _quickAccessCachedKeys is only used to make sure that if you fetch all keys from a
@@ -139,7 +144,7 @@ class Box<V> {
     bool,
   };
 
-  Box(this.name, this.boxCollection) {
+  Box(this.name, this.boxCollection, {this.cacheSize}) {
     if (!allowedValueTypes.any((type) => V == type)) {
       throw Exception(
         'Illegal value type for Box: "$V". Must be one of $allowedValueTypes',
@@ -186,6 +191,27 @@ class Box<V> {
     }
   }
 
+  void _cache(String key, V? value) {
+    // Re-inserting moves the key to the end, the most recently used.
+    _quickAccessCache.remove(key);
+    _quickAccessCache[key] = value;
+    final cacheSize = this.cacheSize;
+    if (cacheSize != null && _quickAccessCache.length > cacheSize) {
+      _quickAccessCache.remove(_quickAccessCache.keys.first);
+    }
+  }
+
+  /// Reads a cached value, marking it as the most recently used.
+  V? _cacheHit(String key) {
+    if (cacheSize == null) return _quickAccessCache[key];
+    final value = _quickAccessCache.remove(key);
+    _quickAccessCache[key] = value;
+    return value;
+  }
+
+  @visibleForTesting
+  List<String> get cachedKeys => _quickAccessCache.keys.toList();
+
   void _addPending(String key, V? value) {
     _pending[key] = value;
     boxCollection._dirtyBoxes!.add(this);
@@ -211,8 +237,9 @@ class Box<V> {
     final executor = txn ?? boxCollection._db;
     final result = await executor.query(name, columns: ['k']);
     final keys = _withPending(result.map((row) => row['k'] as String));
-    // put and delete keep this set in sync with the pending writes.
-    _quickAccessCachedKeys = keys.toSet();
+    // put and delete keep this set in sync with the pending writes. A box
+    // with a cache size keeps none, the set would grow without bound.
+    if (cacheSize == null) _quickAccessCachedKeys = keys.toSet();
     return keys;
   }
 
@@ -266,7 +293,7 @@ class Box<V> {
   Future<V?> get(String key, [Transaction? txn]) async {
     if (_pending.containsKey(key)) return _pending[key];
     if (_pendingClear) return null;
-    if (_quickAccessCache.containsKey(key)) return _quickAccessCache[key];
+    if (_quickAccessCache.containsKey(key)) return _cacheHit(key);
     final executor = txn ?? boxCollection._db;
     final result = await executor.query(
       name,
@@ -277,7 +304,7 @@ class Box<V> {
     final value = result.isEmpty ? null : _fromString(result.single['v']);
     // A write sent meanwhile is newer than this answer.
     if (!_pendingClear && !_pending.containsKey(key)) {
-      _quickAccessCache[key] = value;
+      _cache(key, value);
     }
     return value;
   }
@@ -291,7 +318,7 @@ class Box<V> {
       } else if (_pendingClear) {
         values[key] = null;
       } else if (_quickAccessCache.containsKey(key)) {
-        values[key] = _quickAccessCache[key];
+        values[key] = _cacheHit(key);
       } else {
         missing.add(key);
       }
@@ -313,7 +340,7 @@ class Box<V> {
         // Misses are cached too, so that the next read needs no query. A
         // write sent meanwhile is newer than this answer.
         if (!_pendingClear && !_pending.containsKey(key)) {
-          _quickAccessCache[key] = found[key];
+          _cache(key, found[key]);
         }
       }
     }
@@ -329,7 +356,7 @@ class Box<V> {
         'v': _toString(val),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
-    _quickAccessCache[key] = val;
+    _cache(key, val);
     _quickAccessCachedKeys?.add(key);
   }
 
@@ -340,7 +367,7 @@ class Box<V> {
       await boxCollection._db.delete(name, where: 'k = ?', whereArgs: [key]);
     }
     // Set to null instead of remove() so that a later read needs no query.
-    _quickAccessCache[key] = null;
+    _cache(key, null);
     _quickAccessCachedKeys?.remove(key);
   }
 
@@ -361,7 +388,7 @@ class Box<V> {
       }
     }
     for (final key in keys) {
-      _quickAccessCache[key] = null;
+      _cache(key, null);
     }
     _quickAccessCachedKeys?.removeAll(keys);
   }
@@ -377,7 +404,7 @@ class Box<V> {
       _pendingClear = true;
       boxCollection._dirtyBoxes!.add(this);
       _quickAccessCache.clear();
-      _quickAccessCachedKeys = {};
+      if (cacheSize == null) _quickAccessCachedKeys = {};
     } else {
       await boxCollection._db.delete(name);
       clearQuickAccessCache();
