@@ -79,6 +79,9 @@ class BoxCollection with ZoneTransactionMixin {
   /// Boxes with writes of the running transaction, null outside of one.
   Set<Box>? _dirtyBoxes;
 
+  /// Writes from other zones while a transaction is open, also while it
+  /// commits, join it: they are committed with it, or dropped if it fails.
+  /// Otherwise its older writes of the same key could overtake them.
   Future<void> transaction(
     Future<void> Function() action, {
     List<String>? boxNames,
@@ -119,8 +122,16 @@ class BoxCollection with ZoneTransactionMixin {
         }.toJS;
         // The requests must be issued without awaiting in between, otherwise
         // IndexedDB commits the transaction early.
-        for (final box in boxes) {
-          box._flushPending(txn);
+        try {
+          for (final box in boxes) {
+            box._flushPending(txn);
+          }
+        } catch (_) {
+          // E.g. a value that cannot be cloned: the requests sent before it
+          // must not commit. The abort completes the completer with an error.
+          completer.future.ignore();
+          txn.abort();
+          rethrow;
         }
         await completer.future;
       }
@@ -174,11 +185,7 @@ class BoxCollection with ZoneTransactionMixin {
     return transactionCompleter.future;
   }
 
-  Future<void> close() async {
-    assert(_dirtyBoxes == null, 'Database closed while in transaction!');
-    // Note, zoneTransaction and dirtyBoxes are different kinds of transactions.
-    return zoneTransaction(() async => _db.close());
-  }
+  Future<void> close() => zoneTransaction(() async => _db.close());
 
   Future<void> deleteDatabase(String name, [dynamic factory]) async {
     await close();
@@ -475,6 +482,8 @@ class Box<V> {
       putCompleter.complete();
     }.toJS;
     await putCompleter.future;
+    // A transaction's write sent meanwhile is newer than this one.
+    if (_pendingClear || _pending.containsKey(key)) return;
     _cache(key, val);
     _quickAccessCachedKeys?.add(key);
     return;
@@ -502,9 +511,9 @@ class Box<V> {
       deleteCompleter.complete();
     }.toJS;
     await deleteCompleter.future;
-
-    // Set to null instead remove() so that inside of transactions null is
-    // returned.
+    // A transaction's write sent meanwhile is newer than this one.
+    if (_pendingClear || _pending.containsKey(key)) return;
+    // Set to null instead of remove() so that a later read needs no request.
     _cache(key, null);
     _quickAccessCachedKeys?.remove(key);
     return;
@@ -538,6 +547,8 @@ class Box<V> {
         deleteCompleter.complete();
       }.toJS;
       await deleteCompleter.future;
+      // A transaction's write sent meanwhile is newer than this one.
+      if (_pendingClear || _pending.containsKey(key)) continue;
       _cache(key, null);
       _quickAccessCachedKeys?.remove(key);
     }

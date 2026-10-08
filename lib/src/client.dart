@@ -2906,7 +2906,7 @@ class Client extends MatrixApi {
     EventUpdateType type, {
     bool store = true,
   }) async {
-    if (store) await database.prefetchEventUpdates(room.id, events);
+    if (store) await database.prefetchEventUpdates(room.id, events, type);
     // Calling events can be omitted if they are outdated from the same sync. So
     // we collect them first before we handle them.
     final callEvents = <Event>[];

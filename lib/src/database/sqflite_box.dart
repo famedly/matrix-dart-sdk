@@ -58,6 +58,9 @@ class BoxCollection with ZoneTransactionMixin {
   /// Boxes with writes of the running transaction, null outside of one.
   Set<Box>? _dirtyBoxes;
 
+  /// Writes from other zones while a transaction is open, also while it
+  /// commits, join it: they are committed with it, or dropped if it fails.
+  /// Otherwise its older writes of the same key could overtake them.
   Future<void> transaction(
     Future<void> Function() action, {
     List<String>? boxNames,
@@ -275,11 +278,10 @@ class Box<V> {
   Future<Map<String, V>> getAllValues([Transaction? txn]) async {
     final executor = txn ?? boxCollection._db;
     final values = <String, V>{};
-    if (!_pendingClear) {
-      for (final row in await executor.query(name)) {
-        values[row['k'] as String] = _fromString(row['v']) as V;
-      }
+    for (final row in await executor.query(name)) {
+      values[row['k'] as String] = _fromString(row['v']) as V;
     }
+    if (_pendingClear) values.clear();
     for (final MapEntry(:key, :value) in _pending.entries) {
       if (value == null) {
         values.remove(key);
@@ -355,6 +357,8 @@ class Box<V> {
         'k': key,
         'v': _toString(val),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
+      // A transaction's write sent meanwhile is newer than this one.
+      if (_pendingClear || _pending.containsKey(key)) return;
     }
     _cache(key, val);
     _quickAccessCachedKeys?.add(key);
@@ -365,6 +369,8 @@ class Box<V> {
       _addPending(key, null);
     } else {
       await boxCollection._db.delete(name, where: 'k = ?', whereArgs: [key]);
+      // A transaction's write sent meanwhile is newer than this one.
+      if (_pendingClear || _pending.containsKey(key)) return;
     }
     // Set to null instead of remove() so that a later read needs no query.
     _cache(key, null);
@@ -386,6 +392,11 @@ class Box<V> {
           whereArgs: chunk,
         );
       }
+      // A transaction's write sent meanwhile is newer than this one.
+      keys = [
+        for (final key in keys)
+          if (!_pendingClear && !_pending.containsKey(key)) key,
+      ];
     }
     for (final key in keys) {
       _cache(key, null);

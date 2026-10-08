@@ -1961,9 +1961,11 @@ class Room {
         [];
 
     if (cache) {
+      for (final user in users) {
+        setState(user); // at *least* cache this in-memory
+      }
       await client.database.transaction(() async {
         for (final user in users) {
-          setState(user); // at *least* cache this in-memory
           await client.database.storeEventUpdate(
             id,
             user,

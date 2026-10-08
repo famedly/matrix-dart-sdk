@@ -490,6 +490,12 @@ void main() {
       });
       test('markInboundGroupSessionsAsNeedingUpload', () async {
         await database.markInboundGroupSessionsAsNeedingUpload();
+        expect(
+          (await database.getInboundGroupSessionsToUpload()).map(
+            (s) => s.sessionId,
+          ),
+          contains('sessionId'),
+        );
       });
       test('updateInboundGroupSessionAllowedAtIndex', () async {
         await database.updateInboundGroupSessionAllowedAtIndex(
@@ -668,7 +674,9 @@ void main() {
           room: room,
         );
         // Must not throw and must leave the data readable as before.
-        await database.prefetchEventUpdates(room.id, [message]);
+        await database.prefetchEventUpdates(room.id, [
+          message,
+        ], EventUpdateType.timeline);
         await database.storeEventUpdate(
           room.id,
           message,

@@ -180,6 +180,29 @@ void main() {
       await expectLater(box.get('fluffy'), throwsA(anything));
     });
 
+    test('a transaction that fails to commit writes nothing', () async {
+      final box = collection.openBox<Map>('cats');
+      final dogs = collection.openBox<Map>('dogs');
+      await expectLater(
+        collection.transaction(() async {
+          await dogs.put('rex', data);
+          await box.put('fluffy', data);
+          // Neither JSON nor IndexedDB can encode it, the web's WeakMap inside
+          // fails the structured clone. A plain Object() would be cloned.
+          await box.put('broken', {'expando': Expando()});
+        }),
+        throwsA(anything),
+      );
+      expect(dogs.cachedKeys, isEmpty);
+      box.clearQuickAccessCache();
+      expect(await dogs.get('rex'), null);
+      expect(await box.get('fluffy'), null);
+      await box.put('loki', data2);
+      box.clearQuickAccessCache();
+      expect(await box.get('loki'), data2);
+      await box.clear();
+    });
+
     test('a transaction writes the last value of each key', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('gone', data);
@@ -234,6 +257,29 @@ void main() {
       await box.clear();
     });
 
+    test('reads after clear() in a transaction', () async {
+      // A box with a cache size keeps no key set, so the reads use the store.
+      final box = collection.openBox<Map>('dogs', cacheSize: 10);
+      await box.put('fluffy', data);
+      late Future<Map<String, Map>> olderValues;
+      await collection.transaction(() async {
+        // Sent before the clear, answered after it.
+        olderValues = Zone.root.run(box.getAllValues);
+        await box.clear();
+        await box.put('loki', data2);
+        expect(await box.get('fluffy'), null);
+        expect(await box.getAll(['fluffy', 'loki']), [null, data2]);
+        expect(await box.getAllKeys(), ['loki']);
+        expect(await box.getAllValues(), {'loki': data2});
+        expect(await box.getKeysWithPrefix('lo'), ['loki']);
+        expect(await box.getKeysWithPrefix('fl'), isEmpty);
+      });
+      expect(await olderValues, {'loki': data2});
+      box.clearQuickAccessCache();
+      expect(await box.getAllValues(), {'loki': data2});
+      await box.clear();
+    });
+
     test('writes during commit are kept in order', () async {
       final box = collection.openBox<Map>('cats');
       late Future<void> lateWrite;
@@ -247,6 +293,27 @@ void main() {
       await lateWrite;
       box.clearQuickAccessCache();
       expect(await box.get('fluffy'), data2);
+      await box.clear();
+    });
+
+    test('a direct write in flight does not shadow a newer one', () async {
+      final box = collection.openBox<Map>('cats');
+      final directWrites = Future.wait([
+        box.put('fluffy', data),
+        box.delete('loki'),
+        box.deleteAll(['gone']),
+      ]);
+      await collection.transaction(() async {
+        await box.put('fluffy', data2);
+        await box.put('loki', data2);
+        await box.put('gone', data2);
+      });
+      await directWrites;
+      expect(await box.getAll(['fluffy', 'loki', 'gone']), [
+        data2,
+        data2,
+        data2,
+      ]);
       await box.clear();
     });
 

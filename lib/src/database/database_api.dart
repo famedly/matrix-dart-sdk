@@ -80,6 +80,7 @@ abstract class DatabaseApi {
   Future<void> prefetchEventUpdates(
     String roomId,
     List<StrippedStateEvent> events,
+    EventUpdateType type,
   ) async {}
 
   Future<Event?> getEventById(String eventId, Room room);

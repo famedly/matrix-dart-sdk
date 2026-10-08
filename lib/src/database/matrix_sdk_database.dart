@@ -981,11 +981,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<void> prefetchEventUpdates(
     String roomId,
     List<StrippedStateEvent> events,
+    EventUpdateType type,
   ) async {
-    await _eventsBox.getAll([
-      for (final event in events)
-        if (event is MatrixEvent) TupleKey(roomId, event.eventId).toString(),
-    ]);
+    if (type == EventUpdateType.timeline || type == EventUpdateType.history) {
+      await _eventsBox.getAll([
+        for (final event in events)
+          if (event is MatrixEvent) TupleKey(roomId, event.eventId).toString(),
+      ]);
+    }
     await _userProfilesBox.getAll(
       {
         for (final event in events)
@@ -995,7 +998,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     await _roomMembersBox.getAll(
       {
         for (final event in events)
-          if (event.type == EventTypes.Message)
+          if (event.type == EventTypes.Message ||
+              event.type == EventTypes.Encrypted)
             TupleKey(roomId, event.senderId).toString(),
       }.toList(),
     );
