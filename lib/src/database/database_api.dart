@@ -75,6 +75,13 @@ abstract class DatabaseApi {
     Client client,
   );
 
+  /// Loads what handling these events of a sync will read, so that it is not
+  /// read event by event.
+  Future<void> prefetchEventUpdates(
+    String roomId,
+    List<StrippedStateEvent> events,
+  ) async {}
+
   Future<Event?> getEventById(String eventId, Room room);
 
   Future<void> forgetRoom(String roomId);

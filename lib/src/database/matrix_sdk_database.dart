@@ -978,6 +978,30 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
+  Future<void> prefetchEventUpdates(
+    String roomId,
+    List<StrippedStateEvent> events,
+  ) async {
+    await _eventsBox.getAll([
+      for (final event in events)
+        if (event is MatrixEvent) TupleKey(roomId, event.eventId).toString(),
+    ]);
+    await _userProfilesBox.getAll(
+      {
+        for (final event in events)
+          if (event.type == EventTypes.RoomMember) ?event.stateKey,
+      }.toList(),
+    );
+    await _roomMembersBox.getAll(
+      {
+        for (final event in events)
+          if (event.type == EventTypes.Message)
+            TupleKey(roomId, event.senderId).toString(),
+      }.toList(),
+    );
+  }
+
+  @override
   Future<void> storeEventUpdate(
     String roomId,
     StrippedStateEvent event,

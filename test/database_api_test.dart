@@ -656,6 +656,28 @@ void main() {
         );
         await database.forgetRoom(roomB.id);
       });
+      test('prefetchEventUpdates', () async {
+        final client = Client('testclient', database: database);
+        final room = Room(id: '!prefetch:x', client: client);
+        final message = Event(
+          type: EventTypes.Message,
+          content: {'msgtype': 'm.text', 'body': 'hi'},
+          senderId: '@bob:x',
+          eventId: '\$prefetched',
+          originServerTs: DateTime.now(),
+          room: room,
+        );
+        // Must not throw and must leave the data readable as before.
+        await database.prefetchEventUpdates(room.id, [message]);
+        await database.storeEventUpdate(
+          room.id,
+          message,
+          EventUpdateType.timeline,
+          client,
+        );
+        expect((await database.getEventById('\$prefetched', room))?.body, 'hi');
+        await database.forgetRoom(room.id);
+      });
       test('getUserDeviceKeys', () async {
         await database.getUserDeviceKeys(
           Client('testclient', database: await getMatrixSdkDatabase()),
