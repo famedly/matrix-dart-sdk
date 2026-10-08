@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:meta/meta.dart';
 import 'package:sqflite_common/sqflite.dart';
 
+import '../../matrix_api_lite/utils/logs.dart';
 import 'zone_transaction_mixin.dart';
 
 /// Key-Value store abstraction over Sqflite so that the sdk database can use
@@ -59,8 +60,8 @@ class BoxCollection with ZoneTransactionMixin {
   Set<Box>? _dirtyBoxes;
 
   /// Writes from other zones while a transaction is open, also while it
-  /// commits, join it: they are committed with it, or dropped if it fails.
-  /// Otherwise its older writes of the same key could overtake them.
+  /// commits, join it, so that its older writes of the same key cannot
+  /// overtake them. If it fails, they are still written.
   Future<void> transaction(
     Future<void> Function() action, {
     List<String>? boxNames,
@@ -69,22 +70,48 @@ class BoxCollection with ZoneTransactionMixin {
     // A nested transaction joins the outer one, so all writes stay in order.
     if (_dirtyBoxes != null) return action();
     final dirtyBoxes = _dirtyBoxes = {};
+    Future<void> commitBatch() async {
+      final batch = _db.batch();
+      for (final box in dirtyBoxes) {
+        box._flushPending(batch);
+      }
+      dirtyBoxes.clear();
+      await batch.commit(noResult: true);
+    }
+
+    // Writes from other zones may arrive while we commit. They get the next
+    // batch, so that no write is overtaken by an older one. The loop stays
+    // here: the last check must run in the same microtask as the finally.
     try {
       await action();
-      // Writes from other zones may arrive while we commit. They get the next
-      // batch, so that no write is overtaken by an older one.
       while (dirtyBoxes.isNotEmpty) {
-        final batch = _db.batch();
-        for (final box in dirtyBoxes) {
-          box._flushPending(batch);
-        }
-        dirtyBoxes.clear();
-        await batch.commit(noResult: true);
+        await commitBatch();
       }
     } catch (_) {
-      // Nothing of a failed transaction may stay visible.
+      // Nothing of a failed transaction may stay visible, but the writes from
+      // other zones that joined it are still written.
+      dirtyBoxes.clear();
       for (final box in _boxes) {
         box.clearQuickAccessCache();
+        box._pending
+          ..clear()
+          ..addAll(box._foreignPending);
+        box._pendingClear = box._foreignClear;
+        if (box._pending.isNotEmpty || box._pendingClear) dirtyBoxes.add(box);
+      }
+      try {
+        while (dirtyBoxes.isNotEmpty) {
+          await commitBatch();
+        }
+      } catch (e, s) {
+        for (final box in _boxes) {
+          box.clearQuickAccessCache();
+        }
+        Logs().e(
+          '[SqfliteBox] Lost writes from other zones of a failed transaction',
+          e,
+          s,
+        );
       }
       rethrow;
     } finally {
@@ -94,6 +121,8 @@ class BoxCollection with ZoneTransactionMixin {
       for (final box in _boxes) {
         box._pending.clear();
         box._pendingClear = false;
+        box._foreignPending.clear();
+        box._foreignClear = false;
       }
     }
   });
@@ -137,6 +166,13 @@ class Box<V> {
 
   /// Whether the running transaction cleared this box before [_pending].
   bool _pendingClear = false;
+
+  /// Writes from other zones during the running transaction, kept if it
+  /// fails. Null marks a deletion.
+  final Map<String, V?> _foreignPending = {};
+
+  /// Whether another zone cleared this box during the running transaction.
+  bool _foreignClear = false;
 
   static const Set<Type> allowedValueTypes = {
     List<dynamic>,
@@ -217,6 +253,7 @@ class Box<V> {
 
   void _addPending(String key, V? value) {
     _pending[key] = value;
+    if (!boxCollection.inTransactionZone) _foreignPending[key] = value;
     boxCollection._dirtyBoxes!.add(this);
   }
 
@@ -413,6 +450,10 @@ class Box<V> {
     if (boxCollection._dirtyBoxes != null) {
       _pending.clear();
       _pendingClear = true;
+      if (!boxCollection.inTransactionZone) {
+        _foreignPending.clear();
+        _foreignClear = true;
+      }
       boxCollection._dirtyBoxes!.add(this);
       _quickAccessCache.clear();
       if (cacheSize == null) _quickAccessCachedKeys = {};

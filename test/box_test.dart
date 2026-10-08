@@ -203,6 +203,96 @@ void main() {
       await box.clear();
     });
 
+    test('writes from other zones survive a failed transaction', () async {
+      final box = collection.openBox<Map>('cats');
+      await expectLater(
+        collection.transaction(() async {
+          await box.put('own', data);
+          await Zone.root.run(() => box.put('foreign', data2));
+          throw Exception('boom');
+        }),
+        throwsException,
+      );
+      box.clearQuickAccessCache();
+      expect(await box.get('own'), null);
+      expect(await box.get('foreign'), data2);
+      await box.clear();
+    });
+
+    test(
+      'a foreign write keeps its value when the failed transaction wrote the same key',
+      () async {
+        final box = collection.openBox<Map>('cats');
+        await expectLater(
+          collection.transaction(() async {
+            await box.put('k', data);
+            await Zone.root.run(() => box.put('k', data2));
+            await box.put('k', {'v': 3});
+            throw Exception('boom');
+          }),
+          throwsException,
+        );
+        box.clearQuickAccessCache();
+        expect(await box.get('k'), data2);
+        await box.clear();
+      },
+    );
+
+    test('writes from other zones survive a failing commit', () async {
+      final box = collection.openBox<Map>('cats');
+      await expectLater(
+        collection.transaction(() async {
+          await box.put('own', data);
+          await Zone.root.run(() => box.put('foreign', data2));
+          await box.put('broken', {'expando': Expando()});
+        }),
+        throwsA(anything),
+      );
+      box.clearQuickAccessCache();
+      expect(await box.get('own'), null);
+      expect(await box.get('broken'), null);
+      expect(await box.get('foreign'), data2);
+      await box.clear();
+    });
+
+    test('a foreign delete survives a failed transaction', () async {
+      final box = collection.openBox<Map>('cats');
+      await box.put('gone', data);
+      await expectLater(
+        collection.transaction(() async {
+          await Zone.root.run(() => box.delete('gone'));
+          throw Exception('boom');
+        }),
+        throwsException,
+      );
+      box.clearQuickAccessCache();
+      expect(await box.get('gone'), null);
+      await box.clear();
+    });
+
+    test('a write right after the last commit is not lost', () async {
+      final box = collection.openBox<Map>('cats');
+      // Each write lands a few microtasks later, so one of them hits the end
+      // of the transaction.
+      for (var hops = 0; hops < 8; hops++) {
+        late Future<void> write;
+        await collection.transaction(() async {
+          write = Zone.root.run(() async {
+            for (var i = 0; i < hops; i++) {
+              await null;
+            }
+            await box.put('cat$hops', data);
+          });
+        });
+        await write;
+      }
+      box.clearQuickAccessCache();
+      for (var hops = 0; hops < 8; hops++) {
+        expect(await box.get('cat$hops'), data);
+      }
+      await box.clear();
+    });
+
     test('a transaction writes the last value of each key', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('gone', data);
