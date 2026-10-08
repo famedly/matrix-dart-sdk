@@ -161,6 +161,36 @@ class Box<V> {
     return keys;
   }
 
+  /// Returns all keys starting with [prefix], using the primary key index.
+  Future<List<String>> getKeysWithPrefix(
+    String prefix, [
+    Transaction? txn,
+  ]) async {
+    final executor = txn ?? boxCollection._db;
+    final result = await executor.query(
+      name,
+      columns: ['k'],
+      where: 'k >= ? AND k < ?',
+      whereArgs: [prefix, _prefixEnd(prefix)],
+    );
+    return _withCachedChanges(result.map((row) => row['k'] as String), prefix);
+  }
+
+  /// The smallest key after all keys starting with [prefix].
+  static String _prefixEnd(String prefix) =>
+      prefix.substring(0, prefix.length - 1) +
+      String.fromCharCode(prefix.codeUnitAt(prefix.length - 1) + 1);
+
+  // Changes of a running transaction are only in the cache yet.
+  List<String> _withCachedChanges(Iterable<String> keys, String prefix) => {
+    ...keys.where(
+      (key) =>
+          _quickAccessCache[key] != null || !_quickAccessCache.containsKey(key),
+    ),
+    for (final entry in _quickAccessCache.entries)
+      if (entry.value != null && entry.key.startsWith(prefix)) entry.key,
+  }.toList();
+
   Future<Map<String, V>> getAllValues([Transaction? txn]) async {
     final executor = txn ?? boxCollection._db;
 

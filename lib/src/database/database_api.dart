@@ -137,6 +137,10 @@ abstract class DatabaseApi {
 
   Future<List<StoredInboundGroupSession>> getAllInboundGroupSessions();
 
+  Future<List<StoredInboundGroupSession>> getInboundGroupSessionsByRoom(
+    String roomId,
+  );
+
   Future<StoredInboundGroupSession?> getInboundGroupSession(
     String roomId,
     String sessionId,

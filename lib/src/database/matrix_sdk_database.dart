@@ -34,7 +34,7 @@ import 'sqflite_box.dart' if (dart.library.js_interop) 'indexeddb_box.dart';
 /// Learn more at:
 /// https://github.com/famedly/matrix-dart-sdk/issues/1642#issuecomment-1865827227
 class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
-  static const int version = 12;
+  static const int version = 13;
   final String name;
 
   late BoxCollection _collection;
@@ -60,6 +60,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   late Box<Map> _roomAccountDataBox;
   late Box<Map> _inboundGroupSessionsBox;
   late Box<String> _inboundGroupSessionsUploadQueueBox;
+
+  /// Key is a tuple as TupleKey(roomId, sessionId) to the sessionId, so that
+  /// the sessions of one room can be found without reading all of them.
+  late Box<String> _inboundGroupSessionsByRoomBox;
   late Box<Map> _outboundGroupSessionsBox;
   late Box<Map> _olmSessionsBox;
   late Box<Map> _ssssCacheBox;
@@ -118,6 +122,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   static const String _inboundGroupSessionsUploadQueueBoxName =
       'box_inbound_group_sessions_upload_queue';
+
+  static const String _inboundGroupSessionsByRoomBoxName =
+      'box_inbound_group_sessions_by_room';
 
   static const String _outboundGroupSessionsBoxName =
       'box_outbound_group_session';
@@ -216,6 +223,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         _roomAccountDataBoxName,
         _inboundGroupSessionsBoxName,
         _inboundGroupSessionsUploadQueueBoxName,
+        _inboundGroupSessionsByRoomBoxName,
         _outboundGroupSessionsBoxName,
         _olmSessionsBoxName,
         _legacyUserDeviceKeysBoxName,
@@ -250,6 +258,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     );
     _inboundGroupSessionsUploadQueueBox = _collection.openBox(
       _inboundGroupSessionsUploadQueueBoxName,
+    );
+    _inboundGroupSessionsByRoomBox = _collection.openBox(
+      _inboundGroupSessionsByRoomBoxName,
     );
     _outboundGroupSessionsBox = _collection.openBox(
       _outboundGroupSessionsBoxName,
@@ -310,8 +321,37 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           await storeDeviceKeysList(entry.value);
         }
       });
+    }
+
+    if (currentVersion < 13) {
+      // Index the inbound group sessions by room. In chunks, as big accounts
+      // have more sessions than fit into memory at once.
+      final sessionIds = await _inboundGroupSessionsBox.getAllKeys();
+      const chunkSize = 500;
+      for (var i = 0; i < sessionIds.length; i += chunkSize) {
+        final chunk = sessionIds.sublist(
+          i,
+          min(i + chunkSize, sessionIds.length),
+        );
+        final sessions = await _inboundGroupSessionsBox.getAll(chunk);
+        await transaction(() async {
+          for (final raw in sessions) {
+            final roomId = raw?['room_id'];
+            final sessionId = raw?['session_id'];
+            if (roomId is! String || sessionId is! String) continue;
+            await _inboundGroupSessionsByRoomBox.put(
+              TupleKey(roomId, sessionId).toString(),
+              sessionId,
+            );
+          }
+        });
+        _inboundGroupSessionsBox.clearQuickAccessCache();
+      }
+    }
+
+    if (currentVersion >= 11) {
       await _clientBox.put('version', version.toString());
-      if (version == 12 && currentVersion == 11) return;
+      return;
     }
 
     // The default version upgrade:
@@ -331,6 +371,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _roomAccountDataBox.clearQuickAccessCache();
     _inboundGroupSessionsBox.clearQuickAccessCache();
     _inboundGroupSessionsUploadQueueBox.clearQuickAccessCache();
+    _inboundGroupSessionsByRoomBox.clearQuickAccessCache();
     _outboundGroupSessionsBox.clearQuickAccessCache();
     _olmSessionsBox.clearQuickAccessCache();
     _ssssCacheBox.clearQuickAccessCache();
@@ -1156,6 +1197,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       senderClaimedKeys: senderClaimedKey,
     ).toJson();
     await _inboundGroupSessionsBox.put(sessionId, json);
+    await _inboundGroupSessionsByRoomBox.put(
+      TupleKey(roomId, sessionId).toString(),
+      sessionId,
+    );
     // Mark this session as needing upload too
     await _inboundGroupSessionsUploadQueueBox.put(sessionId, roomId);
     return;
@@ -1399,6 +1444,22 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     json['indexes'] = indexes;
     await _inboundGroupSessionsBox.put(sessionId, json);
     return;
+  }
+
+  @override
+  Future<List<StoredInboundGroupSession>> getInboundGroupSessionsByRoom(
+    String roomId,
+  ) async {
+    final prefix = '${TupleKey(roomId)}|';
+    final sessionIds = (await _inboundGroupSessionsByRoomBox.getKeysWithPrefix(
+      prefix,
+    )).map((key) => key.substring(prefix.length)).toList();
+    final sessions = await _inboundGroupSessionsBox.getAll(sessionIds);
+    return [
+      for (final raw in sessions)
+        if (raw != null && raw['room_id'] == roomId)
+          StoredInboundGroupSession.fromJson(copyMap(raw)),
+    ];
   }
 
   @override
