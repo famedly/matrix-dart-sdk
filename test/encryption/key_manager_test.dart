@@ -463,7 +463,9 @@ void main() {
         1,
       );
 
-      // not set one with a higher first known index
+      // not set one with a higher first known index, even if only the
+      // database has the better one (e.g. after a restart)
+      client.encryption!.keyManager.clearInboundGroupSessions();
       sessionPayload = <String, dynamic>{
         'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': roomId,

@@ -36,6 +36,18 @@ class MockMutatingGroupCallSession extends GroupCallSession {
   }
 }
 
+class ParticipantsAtJoinBackend extends MeshBackend {
+  List<CallParticipant>? participantsAtJoin;
+
+  @override
+  Future<void> onNewParticipant(
+    GroupCallSession groupCall,
+    List<CallParticipant> anyJoined,
+  ) async {
+    participantsAtJoin = groupCall.participants;
+  }
+}
+
 void main() {
   late Client matrix;
   late Room room;
@@ -1084,6 +1096,64 @@ void main() {
               (p) => p.userId == '@remoteuser:example.com',
             ),
             isTrue,
+          );
+        },
+      );
+
+      test(
+        'onNewParticipant already sees the joiners among the participants',
+        () async {
+          final backend = ParticipantsAtJoinBackend();
+          final groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            backend,
+            'm.call',
+            'm.room',
+            'test_joiner_keys',
+          );
+          await backend.initLocalStream(groupCall);
+          groupCall.setState(GroupCallState.entered);
+
+          for (final (userId, deviceId) in [
+            (matrix.userID!, matrix.deviceID!),
+            ('@joiner:example.com', 'JOINER_DEVICE'),
+          ]) {
+            room.setState(
+              Event(
+                room: room,
+                eventId: 'mem_$deviceId',
+                originServerTs: DateTime.now(),
+                type: EventTypes.GroupCallMember,
+                content: {
+                  'memberships': [
+                    CallMembership(
+                      userId: userId,
+                      roomId: room.id,
+                      callId: 'test_joiner_keys',
+                      application: 'm.call',
+                      scope: 'm.room',
+                      backend: MeshBackend(),
+                      deviceId: deviceId,
+                      expiresTs: DateTime.now()
+                          .add(Duration(hours: 1))
+                          .millisecondsSinceEpoch,
+                      membershipId: 'session_$deviceId',
+                      voip: voip,
+                    ).toJson(),
+                  ],
+                },
+                senderId: userId,
+                stateKey: userId,
+              ),
+            );
+          }
+
+          await groupCall.onMemberStateChanged();
+
+          expect(
+            backend.participantsAtJoin?.map((p) => p.deviceId),
+            contains('JOINER_DEVICE'),
           );
         },
       );

@@ -94,7 +94,7 @@ class KeyManager {
         senderClaimedKeys_['ed25519'] = device.ed25519Key!;
       }
     }
-    final oldSession = getInboundGroupSession(roomId, sessionId);
+    final oldSession = await loadInboundGroupSession(roomId, sessionId);
     if (content['algorithm'] != AlgorithmTypes.megolmV1AesSha2) {
       return;
     }
@@ -287,7 +287,8 @@ class KeyManager {
         dbSess.sessionId != sessionId) {
       return null;
     }
-    return roomInboundGroupSessions[sessionId] = dbSess;
+    // A session set during the await is newer than the database row.
+    return roomInboundGroupSessions[sessionId] ??= dbSess;
   }
 
   Map<String, Map<String, bool>> _getDeviceKeyIdMap(
@@ -416,7 +417,7 @@ class KeyManager {
 
           // check if any new devices need keys
           final newDevices = newDeviceIds.difference(oldDeviceIds);
-          if (newDeviceIds.isNotEmpty) {
+          if (newDevices.isNotEmpty) {
             devicesToReceive.addAll(
               newDeviceKeys.where(
                 (d) => d.userId == userId && newDevices.contains(d.deviceId),

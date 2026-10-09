@@ -893,13 +893,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     return 0;
   }
 
+  int _toDeviceShift = 0;
+
   @override
   Future<int> insertIntoToDeviceQueue(
     String type,
     String txnId,
     String content,
   ) async {
-    final id = DateTime.now().millisecondsSinceEpoch;
+    final id = DateTime.now().millisecondsSinceEpoch + (_toDeviceShift++);
     await _toDeviceQueueBox.put(id.toString(), {
       'type': type,
       'txn_id': txnId,
@@ -1087,6 +1089,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         // Status changes from 1 -> 2? Make sure event is correctly sorted.
         eventIds.remove(eventId);
         eventIds.insert(0, eventId);
+        await _timelineFragmentsBox.put(key, eventIds);
       }
 
       // If event comes from server timeline, remove sending events with this ID

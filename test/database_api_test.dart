@@ -61,6 +61,19 @@ void main() {
         final toDeviceQueue = await database.getToDeviceEventQueue();
         expect(toDeviceQueue.isEmpty, true);
       });
+      test('insertIntoToDeviceQueue twice in the same millisecond', () async {
+        // Both ids are computed synchronously before the first await.
+        final ids = await Future.wait([
+          database.insertIntoToDeviceQueue('m.test', 'txnId1', '{}'),
+          database.insertIntoToDeviceQueue('m.test', 'txnId2', '{}'),
+        ]);
+        expect(ids.toSet().length, 2);
+        final toDeviceQueue = await database.getToDeviceEventQueue();
+        expect(toDeviceQueue.map((e) => e.txnId).toSet(), {'txnId1', 'txnId2'});
+        for (final id in ids) {
+          await database.deleteFromToDeviceQueue(id);
+        }
+      });
       test('storeFile and deleteFile', () async {
         await database.storeFile(
           Uri.parse('mxc://test'),
@@ -255,6 +268,8 @@ void main() {
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             'event_id': '\$event:example.com',
             'sender': '@bob:example.org',
+            // Synced later in getEventList.
+            'unsigned': {messageSendingStatusKey: EventStatus.sent.intValue},
           }),
           EventUpdateType.timeline,
           Client('testclient', database: await getMatrixSdkDatabase()),
@@ -386,16 +401,31 @@ void main() {
         expect(event?.type, EventTypes.Message);
       });
       test('getEventList', () async {
-        final events = await database.getEventList(
-          Room(
-            id: '!testroom:example.com',
-            client: Client(
-              'testclient',
-              database: await getMatrixSdkDatabase(),
-            ),
-          ),
+        final room = Room(
+          id: '!testroom:example.com',
+          client: Client('testclient', database: await getMatrixSdkDatabase()),
         );
-        expect(events.single.type, EventTypes.Message);
+        // A newer event arrives, then the sent event comes down the sync and
+        // must move to the front.
+        for (final eventId in ['\$other:example.com', '\$event:example.com']) {
+          await database.storeEventUpdate(
+            room.id,
+            MatrixEvent(
+              type: EventTypes.Message,
+              content: {},
+              senderId: '@bob:example.org',
+              eventId: eventId,
+              originServerTs: DateTime.now(),
+            ),
+            EventUpdateType.timeline,
+            room.client,
+          );
+        }
+        final events = await database.getEventList(room);
+        expect(events.map((e) => e.eventId), [
+          '\$event:example.com',
+          '\$other:example.com',
+        ]);
       });
       test('getUser', () async {
         final user = await database.getUser(

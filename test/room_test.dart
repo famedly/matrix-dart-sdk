@@ -4,7 +4,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
@@ -881,6 +880,32 @@ void main() {
       await room.invite('Testname');
     });
 
+    test('join and leave wait for sync', () async {
+      final room = Room(id: '!localpart:example.com', client: matrix);
+      Future<void> expectWaitsForSync(
+        Future<void> action,
+        RoomsUpdate rooms,
+      ) async {
+        var done = false;
+        unawaited(action.then((_) => done = true));
+        await Future.delayed(const Duration(milliseconds: 100));
+        expect(done, isFalse);
+        await matrix.handleSync(SyncUpdate(nextBatch: '', rooms: rooms));
+        await Future.delayed(Duration.zero);
+        matrix.onSyncStatus.add(const SyncStatusUpdate(SyncStatus.finished));
+        await action.timeout(const Duration(seconds: 1));
+      }
+
+      await expectWaitsForSync(
+        room.leave(waitForSync: true),
+        RoomsUpdate(leave: {room.id: LeftRoomUpdate()}),
+      );
+      await expectWaitsForSync(
+        room.join(waitForSync: true),
+        RoomsUpdate(join: {room.id: JoinedRoomUpdate()}),
+      );
+    });
+
     test('setPower', () async {
       final powerLevelMap = room
           .getState(EventTypes.RoomPowerLevels, '')!
@@ -1581,10 +1606,12 @@ void main() {
 
       const body = 'Middle of the ocean';
       const geoUri = 'geo:0.0,0.0';
+      final ts = DateTime.now();
       final dynamic resp = await room.sendLocation(
         body,
         geoUri,
         txid: 'testtxid',
+        ts: ts,
       );
       expect(resp?.startsWith('\$event'), true);
 
@@ -1596,6 +1623,9 @@ void main() {
         'msgtype': 'm.location',
         'body': body,
         'geo_uri': geoUri,
+        'org.matrix.msc3488.location': {'uri': 'geo:0.0,0.0'},
+        'org.matrix.msc3488.asset': {'type': 'm.self'},
+        'org.matrix.msc3488.ts': ts.millisecondsSinceEpoch,
       });
     });
 
@@ -2211,8 +2241,9 @@ void main() {
       try {
         await room.sendTextEvent(
           txid: 'event_too_large',
-          // data just bigger than maxBodySize
-          base64Encode(List<int>.generate(60001, (i) => Random().nextInt(256))),
+          // data just bigger than maxBodySize. Fixed, so it never starts with
+          // `/` (a command, nothing sent); spaces keep markdown parsing fast.
+          'x ' * 30001,
         );
       } catch (e) {
         expect(e.runtimeType, EventTooLarge);
