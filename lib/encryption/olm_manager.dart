@@ -261,13 +261,17 @@ class OlmManager {
       if (updateDatabase) {
         await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
       }
-      final uploaded = response['signed_curve25519'];
-      if (uploadedOneTimeKeysCount != null &&
-          uploaded != uploadedOneTimeKeysCount) {
+      // The server counts all unclaimed keys, so claims racing this upload
+      // lower it. A higher count means leftovers we hold no private half for,
+      // e.g. from an earlier account on this device ID. Our keys are accepted
+      // either way, and failing would not remove the leftovers.
+      final serverCount = response['signed_curve25519'] ?? 0;
+      if (oldKeyCount != null &&
+          uploadedOneTimeKeysCount != null &&
+          serverCount > oldKeyCount + uploadedOneTimeKeysCount) {
         Logs().w(
-          'Key upload accepted $uploaded of $uploadedOneTimeKeysCount one time keys',
+          'Server holds $serverCount one time keys, expected at most ${oldKeyCount + uploadedOneTimeKeysCount}',
         );
-        return false;
       }
       return true;
     } on MatrixException catch (exception) {
