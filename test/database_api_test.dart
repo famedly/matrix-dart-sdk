@@ -268,6 +268,8 @@ void main() {
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             'event_id': '\$event:example.com',
             'sender': '@bob:example.org',
+            // Synced later in getEventList.
+            'unsigned': {messageSendingStatusKey: EventStatus.sent.intValue},
           }),
           EventUpdateType.timeline,
           Client('testclient', database: await getMatrixSdkDatabase()),
@@ -385,46 +387,6 @@ void main() {
 
         expect(room?.name, 'update3');
       });
-      test('storeEventUpdate re-sorts a sent event once synced', () async {
-        const roomid = '!sentthensynced:example.com';
-        final client = Client(
-          'testclient',
-          database: await getMatrixSdkDatabase(),
-        );
-        MatrixEvent message(String eventId, EventStatus status) =>
-            MatrixEvent.fromJson({
-              'type': EventTypes.Message,
-              'content': {'body': eventId, 'msgtype': 'm.text'},
-              'event_id': eventId,
-              'sender': '@bob:example.org',
-              'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-              'unsigned': {messageSendingStatusKey: status.intValue},
-            });
-
-        for (final (eventId, status) in [
-          ('\$a:example.com', EventStatus.sent),
-          ('\$b:example.com', EventStatus.synced),
-          ('\$a:example.com', EventStatus.synced),
-        ]) {
-          await database.storeEventUpdate(
-            roomid,
-            message(eventId, status),
-            EventUpdateType.timeline,
-            client,
-          );
-        }
-
-        final events = await database.getEventList(
-          Room(id: roomid, client: client),
-        );
-        expect(events.map((e) => e.eventId), [
-          '\$a:example.com',
-          '\$b:example.com',
-        ]);
-        expect(events.first.status, EventStatus.synced);
-
-        await database.forgetRoom(roomid);
-      });
       test('getEventById', () async {
         final event = await database.getEventById(
           '\$event:example.com',
@@ -439,16 +401,31 @@ void main() {
         expect(event?.type, EventTypes.Message);
       });
       test('getEventList', () async {
-        final events = await database.getEventList(
-          Room(
-            id: '!testroom:example.com',
-            client: Client(
-              'testclient',
-              database: await getMatrixSdkDatabase(),
-            ),
-          ),
+        final room = Room(
+          id: '!testroom:example.com',
+          client: Client('testclient', database: await getMatrixSdkDatabase()),
         );
-        expect(events.single.type, EventTypes.Message);
+        // A newer event arrives, then the sent event comes down the sync and
+        // must move to the front.
+        for (final eventId in ['\$other:example.com', '\$event:example.com']) {
+          await database.storeEventUpdate(
+            room.id,
+            MatrixEvent(
+              type: EventTypes.Message,
+              content: {},
+              senderId: '@bob:example.org',
+              eventId: eventId,
+              originServerTs: DateTime.now(),
+            ),
+            EventUpdateType.timeline,
+            room.client,
+          );
+        }
+        final events = await database.getEventList(room);
+        expect(events.map((e) => e.eventId), [
+          '\$event:example.com',
+          '\$other:example.com',
+        ]);
       });
       test('getUser', () async {
         final user = await database.getUser(
