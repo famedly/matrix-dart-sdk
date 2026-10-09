@@ -2244,27 +2244,12 @@ class Room {
   /// For room version 12 and above the room creator always has maximum
   /// power level.
   PowerLevel getPowerLevelByUserId(String userId) {
-    // Room creator has maximum power level:
-    if (creatorUserIds.contains(userId) &&
-        !((int.tryParse(roomVersion ?? '') ?? 0) < 12)) {
-      return PowerLevel.owner;
-    }
-
-    final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
-
-    final userSpecificPowerLevel = powerLevelMap
-        ?.tryGetMap<String, Object?>('users')
-        ?.tryGet<int>(userId);
-
-    final defaultUserPowerLevel = powerLevelMap?.tryGet<int>('users_default');
-
-    final fallbackPowerLevel =
-        getState(EventTypes.RoomCreate)?.senderId == userId
-        ? PowerLevel.defaultAdminLevel
-        : PowerLevel.defaultUserLevel;
-
-    return PowerLevel(
-      userSpecificPowerLevel ?? defaultUserPowerLevel ?? fallbackPowerLevel,
+    final createEvent = getState(EventTypes.RoomCreate);
+    return PowerLevel.forUser(
+      userId,
+      powerLevelsContent: getState(EventTypes.RoomPowerLevels)?.content,
+      createSender: createEvent?.senderId,
+      createContent: createEvent?.content,
     );
   }
 
