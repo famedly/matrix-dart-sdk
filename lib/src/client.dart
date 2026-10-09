@@ -1924,8 +1924,8 @@ class Client extends MatrixApi {
         roomId,
         eventId,
       ).timeout(timeoutForServerRequests);
-    } on MatrixException catch (_) {
-      // No access to the MatrixEvent. Search in /notifications
+    } on Exception catch (_) {
+      // Fall back to /notifications if the event can't be fetched directly.
       await ensureNotSoftLoggedOut();
       final notificationsResponse = await getNotifications();
       matrixEvent ??= notificationsResponse.notifications
