@@ -1963,13 +1963,17 @@ class Room {
     if (cache) {
       for (final user in users) {
         setState(user); // at *least* cache this in-memory
-        await client.database.storeEventUpdate(
-          id,
-          user,
-          EventUpdateType.state,
-          client,
-        );
       }
+      await client.database.transaction(() async {
+        for (final user in users) {
+          await client.database.storeEventUpdate(
+            id,
+            user,
+            EventUpdateType.state,
+            client,
+          );
+        }
+      });
     }
 
     users.removeWhere((u) => !membershipFilter.contains(u.membership));

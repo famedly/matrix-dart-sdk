@@ -674,40 +674,49 @@ class KeyManager {
     }
     for (final roomEntry in keys.rooms.entries) {
       final roomId = roomEntry.key;
-      for (final sessionEntry in roomEntry.value.sessions.entries) {
-        final sessionId = sessionEntry.key;
-        final session = sessionEntry.value;
-        final sessionData = session.sessionData;
-        Map<String, Object?>? decrypted;
-        try {
-          decrypted = json.decode(
-            decryption.decrypt(
-              vod.PkMessage.fromBase64(
-                ciphertext: sessionData['ciphertext'] as String,
-                mac: sessionData['mac'] as String,
-                ephemeralKey: sessionData['ephemeral'] as String,
-              ),
-            ),
-          );
-        } catch (e, s) {
-          Logs().e('[Vodozemac] Error decrypting room key', e, s);
-        }
-        final senderKey = decrypted?.tryGet<String>('sender_key');
-        if (decrypted != null && senderKey != null) {
-          decrypted['session_id'] = sessionId;
-          decrypted['room_id'] = roomId;
-          await setInboundGroupSession(
-            roomId,
-            sessionId,
-            senderKey,
-            decrypted,
-            forwarded: true,
-            senderClaimedKeys:
-                decrypted.tryGetMap<String, String>('sender_claimed_keys') ??
-                <String, String>{},
-            uploaded: true,
-          );
-        }
+      final sessions = roomEntry.value.sessions.entries.toList();
+      // Chunks keep the lock short, so that the sync is not blocked for the
+      // whole restore.
+      for (var i = 0; i < sessions.length; i += 500) {
+        await client.database.transaction(() async {
+          for (final sessionEntry in sessions.skip(i).take(500)) {
+            final sessionId = sessionEntry.key;
+            final session = sessionEntry.value;
+            final sessionData = session.sessionData;
+            Map<String, Object?>? decrypted;
+            try {
+              decrypted = json.decode(
+                decryption.decrypt(
+                  vod.PkMessage.fromBase64(
+                    ciphertext: sessionData['ciphertext'] as String,
+                    mac: sessionData['mac'] as String,
+                    ephemeralKey: sessionData['ephemeral'] as String,
+                  ),
+                ),
+              );
+            } catch (e, s) {
+              Logs().e('[Vodozemac] Error decrypting room key', e, s);
+            }
+            final senderKey = decrypted?.tryGet<String>('sender_key');
+            if (decrypted != null && senderKey != null) {
+              decrypted['session_id'] = sessionId;
+              decrypted['room_id'] = roomId;
+              await setInboundGroupSession(
+                roomId,
+                sessionId,
+                senderKey,
+                decrypted,
+                forwarded: true,
+                senderClaimedKeys:
+                    decrypted.tryGetMap<String, String>(
+                      'sender_claimed_keys',
+                    ) ??
+                    <String, String>{},
+                uploaded: true,
+              );
+            }
+          }
+        });
       }
     }
   }

@@ -12,21 +12,17 @@ mixin ZoneTransactionMixin {
   Completer<void>? _transactionLock;
   final _transactionZones = <Zone>{};
 
-  Future<void> zoneTransaction(Future<void> Function() action) async {
-    // first we try to determine if we are inside of a transaction currently
-    var isInTransaction = false;
-    Zone? zone = Zone.current;
-    // for that we keep on iterating to the parent zone until there is either no zone anymore
-    // or we have found a zone inside of _transactionZones.
-    while (zone != null) {
-      if (_transactionZones.contains(zone)) {
-        isInTransaction = true;
-        break;
-      }
-      zone = zone.parent;
+  /// Whether the current zone or one of its parents runs a transaction.
+  bool get inTransactionZone {
+    for (Zone? zone = Zone.current; zone != null; zone = zone.parent) {
+      if (_transactionZones.contains(zone)) return true;
     }
+    return false;
+  }
+
+  Future<void> zoneTransaction(Future<void> Function() action) async {
     // if we are inside a transaction....just run the action
-    if (isInTransaction) {
+    if (inTransactionZone) {
       return await action();
     }
     // if we are *not* in a transaction, time to wait for the lock!

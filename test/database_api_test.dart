@@ -490,6 +490,12 @@ void main() {
       });
       test('markInboundGroupSessionsAsNeedingUpload', () async {
         await database.markInboundGroupSessionsAsNeedingUpload();
+        expect(
+          (await database.getInboundGroupSessionsToUpload()).map(
+            (s) => s.sessionId,
+          ),
+          contains('sessionId'),
+        );
       });
       test('updateInboundGroupSessionAllowedAtIndex', () async {
         await database.updateInboundGroupSessionAllowedAtIndex(
@@ -599,6 +605,86 @@ void main() {
           ),
         );
         expect(events.isEmpty, true);
+      });
+      test('room scoped queries only touch their own room', () async {
+        final client = Client('testclient', database: database);
+        final roomA = Room(id: '!a:x', client: client);
+        final roomB = Room(id: '!a:xy', client: client);
+        for (final room in [roomA, roomB]) {
+          await database.storeEventUpdate(
+            room.id,
+            Event(
+              type: EventTypes.RoomMember,
+              content: {'membership': 'join'},
+              senderId: '@alice:x',
+              stateKey: '@alice:x',
+              eventId: '\$member${room.id}',
+              originServerTs: DateTime.now(),
+              room: room,
+            ),
+            EventUpdateType.state,
+            client,
+          );
+          await database.storeEventUpdate(
+            room.id,
+            Event(
+              type: 'com.example.unimportant',
+              content: {'room': room.id},
+              senderId: '@alice:x',
+              stateKey: '',
+              eventId: '\$state${room.id}',
+              originServerTs: DateTime.now(),
+              room: room,
+            ),
+            EventUpdateType.state,
+            client,
+          );
+        }
+        expect((await database.getUsers(roomA)).map((u) => u.id), ['@alice:x']);
+        expect(
+          (await database.getUnimportantRoomEventStatesForRoom(
+            [],
+            roomA,
+          )).map((e) => e.content['room']),
+          ['!a:x'],
+        );
+
+        await database.forgetRoom(roomA.id);
+        expect(await database.getUsers(roomA), isEmpty);
+        expect(
+          await database.getUnimportantRoomEventStatesForRoom([], roomA),
+          isEmpty,
+        );
+        expect((await database.getUsers(roomB)).map((u) => u.id), ['@alice:x']);
+        expect(
+          await database.getUnimportantRoomEventStatesForRoom([], roomB),
+          hasLength(1),
+        );
+        await database.forgetRoom(roomB.id);
+      });
+      test('prefetchEventUpdates', () async {
+        final client = Client('testclient', database: database);
+        final room = Room(id: '!prefetch:x', client: client);
+        final message = Event(
+          type: EventTypes.Message,
+          content: {'msgtype': 'm.text', 'body': 'hi'},
+          senderId: '@bob:x',
+          eventId: '\$prefetched',
+          originServerTs: DateTime.now(),
+          room: room,
+        );
+        // Must not throw and must leave the data readable as before.
+        await database.prefetchEventUpdates(room.id, [
+          message,
+        ], EventUpdateType.timeline);
+        await database.storeEventUpdate(
+          room.id,
+          message,
+          EventUpdateType.timeline,
+          client,
+        );
+        expect((await database.getEventById('\$prefetched', room))?.body, 'hi');
+        await database.forgetRoom(room.id);
       });
       test('getUserDeviceKeys', () async {
         await database.getUserDeviceKeys(

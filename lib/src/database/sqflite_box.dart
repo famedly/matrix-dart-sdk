@@ -4,9 +4,12 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:meta/meta.dart';
 import 'package:sqflite_common/sqflite.dart';
 
+import '../../matrix_api_lite/utils/logs.dart';
 import 'zone_transaction_mixin.dart';
 
 /// Key-Value store abstraction over Sqflite so that the sdk database can use
@@ -44,38 +47,83 @@ class BoxCollection with ZoneTransactionMixin {
 
   final _boxes = <Box>{};
 
-  Box<V> openBox<V>(String name) {
+  Box<V> openBox<V>(String name, {int? cacheSize}) {
     if (!boxNames.contains(name)) {
       throw ('Box with name $name is not in the known box names of this collection.');
     }
-    final box = Box<V>(name, this);
+    final box = Box<V>(name, this, cacheSize: cacheSize);
     _boxes.add(box);
     return box;
   }
 
-  Batch? _activeBatch;
+  /// Boxes with writes of the running transaction, null outside of one.
+  Set<Box>? _dirtyBoxes;
 
+  /// Writes from other zones while a transaction is open, also while it
+  /// commits, join it, so that its older writes of the same key cannot
+  /// overtake them. If it fails, they are still written.
   Future<void> transaction(
     Future<void> Function() action, {
     List<String>? boxNames,
     bool readOnly = false,
   }) => zoneTransaction(() async {
     // A nested transaction joins the outer one, so all writes stay in order.
-    if (_activeBatch != null) return action();
-    final batch = _activeBatch = _db.batch();
-    try {
-      try {
-        await action();
-      } finally {
-        _activeBatch = null;
+    if (_dirtyBoxes != null) return action();
+    final dirtyBoxes = _dirtyBoxes = {};
+    Future<void> commitBatch() async {
+      final batch = _db.batch();
+      for (final box in dirtyBoxes) {
+        box._flushPending(batch);
       }
+      dirtyBoxes.clear();
       await batch.commit(noResult: true);
+    }
+
+    // Writes from other zones may arrive while we commit. They get the next
+    // batch, so that no write is overtaken by an older one. The loop stays
+    // here: the last check must run in the same microtask as the finally.
+    try {
+      await action();
+      while (dirtyBoxes.isNotEmpty) {
+        await commitBatch();
+      }
     } catch (_) {
-      // Nothing of a failed transaction may stay visible in the caches.
+      // Nothing of a failed transaction may stay visible, but the writes from
+      // other zones that joined it are still written.
+      dirtyBoxes.clear();
       for (final box in _boxes) {
         box.clearQuickAccessCache();
+        box._pending
+          ..clear()
+          ..addAll(box._foreignPending);
+        box._pendingClear = box._foreignClear;
+        if (box._pending.isNotEmpty || box._pendingClear) dirtyBoxes.add(box);
+      }
+      try {
+        while (dirtyBoxes.isNotEmpty) {
+          await commitBatch();
+        }
+      } catch (e, s) {
+        for (final box in _boxes) {
+          box.clearQuickAccessCache();
+        }
+        Logs().e(
+          '[SqfliteBox] Lost writes from other zones of a failed transaction',
+          e,
+          s,
+        );
       }
       rethrow;
+    } finally {
+      _dirtyBoxes = null;
+      // Dropped only now: a read sent before a commit merges the pending
+      // writes after the store answered, which is before the commit ends.
+      for (final box in _boxes) {
+        box._pending.clear();
+        box._pendingClear = false;
+        box._foreignPending.clear();
+        box._foreignClear = false;
+      }
     }
   });
 
@@ -100,6 +148,10 @@ class BoxCollection with ZoneTransactionMixin {
 class Box<V> {
   final String name;
   final BoxCollection boxCollection;
+
+  /// Maximum number of cached values, null for no limit.
+  final int? cacheSize;
+
   final Map<String, V?> _quickAccessCache = {};
 
   /// _quickAccessCachedKeys is only used to make sure that if you fetch all keys from a
@@ -108,6 +160,19 @@ class Box<V> {
   /// Once the keys are cached, they need to be updated when changed in put and
   /// delete* so that the cache does not become outdated.
   Set<String>? _quickAccessCachedKeys;
+
+  /// Uncommitted writes of the running transaction, null marks a deletion.
+  final Map<String, V?> _pending = {};
+
+  /// Whether the running transaction cleared this box before [_pending].
+  bool _pendingClear = false;
+
+  /// Writes from other zones during the running transaction, kept if it
+  /// fails. Null marks a deletion.
+  final Map<String, V?> _foreignPending = {};
+
+  /// Whether another zone cleared this box during the running transaction.
+  bool _foreignClear = false;
 
   static const Set<Type> allowedValueTypes = {
     List<dynamic>,
@@ -118,7 +183,7 @@ class Box<V> {
     bool,
   };
 
-  Box(this.name, this.boxCollection) {
+  Box(this.name, this.boxCollection, {this.cacheSize}) {
     if (!allowedValueTypes.any((type) => V == type)) {
       throw Exception(
         'Illegal value type for Box: "$V". Must be one of $allowedValueTypes',
@@ -165,139 +230,221 @@ class Box<V> {
     }
   }
 
+  void _cache(String key, V? value) {
+    // Re-inserting moves the key to the end, the most recently used.
+    _quickAccessCache.remove(key);
+    _quickAccessCache[key] = value;
+    final cacheSize = this.cacheSize;
+    if (cacheSize != null &&
+        _quickAccessCache.length > cacheSize + cacheSize ~/ 10) {
+      // Dropping in batches keeps eviction O(1) amortized; keys.first has to
+      // skip the deleted slots at the front of the map.
+      _quickAccessCache.keys
+          .take(_quickAccessCache.length - cacheSize)
+          .toList()
+          .forEach(_quickAccessCache.remove);
+    }
+  }
+
+  /// Reads a cached value, marking it as the most recently used.
+  V? _cacheHit(String key) {
+    if (cacheSize == null) return _quickAccessCache[key];
+    final value = _quickAccessCache.remove(key);
+    _quickAccessCache[key] = value;
+    return value;
+  }
+
+  @visibleForTesting
+  List<String> get cachedKeys => _quickAccessCache.keys.toList();
+
+  void _addPending(String key, V? value) {
+    _pending[key] = value;
+    if (!boxCollection.inTransactionZone) _foreignPending[key] = value;
+    boxCollection._dirtyBoxes!.add(this);
+  }
+
+  void _flushPending(Batch batch) {
+    if (_pendingClear) batch.delete(name);
+    for (final MapEntry(:key, :value) in _pending.entries) {
+      if (value == null) {
+        batch.delete(name, where: 'k = ?', whereArgs: [key]);
+      } else {
+        batch.insert(name, {
+          'k': key,
+          'v': _toString(value),
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    }
+  }
+
   Future<List<String>> getAllKeys([Transaction? txn]) async {
-    if (_quickAccessCachedKeys != null) return _quickAccessCachedKeys!.toList();
-
+    final cachedKeys = _quickAccessCachedKeys;
+    if (cachedKeys != null) return cachedKeys.toList();
     final executor = txn ?? boxCollection._db;
-
     final result = await executor.query(name, columns: ['k']);
-    final keys = result.map((row) => row['k'] as String).toList();
-
-    _quickAccessCachedKeys = keys.toSet();
+    final keys = _withPending(result.map((row) => row['k'] as String));
+    // put and delete keep this set in sync with the pending writes. A box
+    // with a cache size keeps none, the set would grow without bound.
+    if (cacheSize == null) _quickAccessCachedKeys = keys.toSet();
     return keys;
   }
 
+  /// Returns all keys starting with [prefix], using the primary key index.
+  Future<List<String>> getKeysWithPrefix(
+    String prefix, [
+    Transaction? txn,
+  ]) async {
+    final executor = txn ?? boxCollection._db;
+    final result = await executor.query(
+      name,
+      columns: ['k'],
+      where: 'k >= ? AND k < ?',
+      whereArgs: [prefix, _prefixEnd(prefix)],
+    );
+    return _withPending(result.map((row) => row['k'] as String), prefix);
+  }
+
+  /// The smallest key after all keys starting with [prefix].
+  static String _prefixEnd(String prefix) =>
+      prefix.substring(0, prefix.length - 1) +
+      String.fromCharCode(prefix.codeUnitAt(prefix.length - 1) + 1);
+
+  /// Applies the pending writes to keys read from the store.
+  List<String> _withPending(Iterable<String> storeKeys, [String prefix = '']) =>
+      {
+        if (!_pendingClear)
+          ...storeKeys.where((key) => !_pending.containsKey(key)),
+        for (final MapEntry(:key, :value) in _pending.entries)
+          if (value != null && key.startsWith(prefix)) key,
+      }.toList();
+
   Future<Map<String, V>> getAllValues([Transaction? txn]) async {
     final executor = txn ?? boxCollection._db;
-
-    final result = await executor.query(name);
-    return Map.fromEntries(
-      result.map(
-        (row) => MapEntry(row['k'] as String, _fromString(row['v']) as V),
-      ),
-    );
+    final values = <String, V>{};
+    for (final row in await executor.query(name)) {
+      values[row['k'] as String] = _fromString(row['v']) as V;
+    }
+    if (_pendingClear) values.clear();
+    for (final MapEntry(:key, :value) in _pending.entries) {
+      if (value == null) {
+        values.remove(key);
+      } else {
+        values[key] = value;
+      }
+    }
+    return values;
   }
 
   Future<V?> get(String key, [Transaction? txn]) async {
-    if (_quickAccessCache.containsKey(key)) return _quickAccessCache[key];
-
+    if (_pending.containsKey(key)) return _pending[key];
+    if (_pendingClear) return null;
+    if (_quickAccessCache.containsKey(key)) return _cacheHit(key);
     final executor = txn ?? boxCollection._db;
-
     final result = await executor.query(
       name,
       columns: ['v'],
       where: 'k = ?',
       whereArgs: [key],
     );
-
     final value = result.isEmpty ? null : _fromString(result.single['v']);
-    _quickAccessCache[key] = value;
+    // A write sent meanwhile is newer than this answer.
+    if (!_pendingClear && !_pending.containsKey(key)) {
+      _cache(key, value);
+    }
     return value;
   }
 
   Future<List<V?>> getAll(List<String> keys, [Transaction? txn]) async {
-    if (!keys.any((key) => !_quickAccessCache.containsKey(key))) {
-      return keys.map((key) => _quickAccessCache[key]).toList();
+    final values = <String, V?>{};
+    final missing = <String>[];
+    for (final key in keys) {
+      if (_pending.containsKey(key)) {
+        values[key] = _pending[key];
+      } else if (_pendingClear) {
+        values[key] = null;
+      } else if (_quickAccessCache.containsKey(key)) {
+        values[key] = _cacheHit(key);
+      } else {
+        missing.add(key);
+      }
     }
-
-    // The SQL operation might fail with more than 1000 keys. We define some
-    // buffer here and half the amount of keys recursively for this situation.
-    const getAllMax = 800;
-    if (keys.length > getAllMax) {
-      final half = keys.length ~/ 2;
-      return [
-        ...(await getAll(keys.sublist(0, half))),
-        ...(await getAll(keys.sublist(half))),
-      ];
-    }
-
     final executor = txn ?? boxCollection._db;
-
-    final list = <V?>[];
-
-    final result = await executor.query(
-      name,
-      where: 'k IN (${keys.map((_) => '?').join(',')})',
-      whereArgs: keys,
-    );
-    final resultMap = Map<String, V?>.fromEntries(
-      result.map((row) => MapEntry(row['k'] as String, _fromString(row['v']))),
-    );
-
-    // We want to make sure that they values are returnd in the exact same
-    // order than the given keys. That's why we do this instead of just return
-    // `resultMap.values`.
-    list.addAll(keys.map((key) => resultMap[key]));
-
-    _quickAccessCache.addAll(resultMap);
-
-    return list;
+    // Older SQLite builds allow only 999 variables per statement.
+    for (var i = 0; i < missing.length; i += 800) {
+      final chunk = missing.sublist(i, min(i + 800, missing.length));
+      final result = await executor.query(
+        name,
+        where: 'k IN (${chunk.map((_) => '?').join(',')})',
+        whereArgs: chunk,
+      );
+      final found = {
+        for (final row in result) row['k'] as String: _fromString(row['v']),
+      };
+      for (final key in chunk) {
+        values[key] = found[key];
+        // Misses are cached too, so that the next read needs no query. A
+        // write sent meanwhile is newer than this answer.
+        if (!_pendingClear && !_pending.containsKey(key)) {
+          _cache(key, found[key]);
+        }
+      }
+    }
+    return [for (final key in keys) values[key]];
   }
 
   Future<void> put(String key, V val) async {
-    final txn = boxCollection._activeBatch;
-
-    final params = {'k': key, 'v': _toString(val)};
-    if (txn == null) {
-      await boxCollection._db.insert(
-        name,
-        params,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+    if (boxCollection._dirtyBoxes != null) {
+      _addPending(key, val);
     } else {
-      txn.insert(name, params, conflictAlgorithm: ConflictAlgorithm.replace);
+      await boxCollection._db.insert(name, {
+        'k': key,
+        'v': _toString(val),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      // A transaction's write sent meanwhile is newer than this one.
+      if (_pendingClear || _pending.containsKey(key)) return;
     }
-
-    _quickAccessCache[key] = val;
+    _cache(key, val);
     _quickAccessCachedKeys?.add(key);
-    return;
   }
 
-  Future<void> delete(String key, [Batch? txn]) async {
-    txn ??= boxCollection._activeBatch;
-
-    if (txn == null) {
+  Future<void> delete(String key) async {
+    if (boxCollection._dirtyBoxes != null) {
+      _addPending(key, null);
+    } else {
       await boxCollection._db.delete(name, where: 'k = ?', whereArgs: [key]);
-    } else {
-      txn.delete(name, where: 'k = ?', whereArgs: [key]);
+      // A transaction's write sent meanwhile is newer than this one.
+      if (_pendingClear || _pending.containsKey(key)) return;
     }
-
-    // Set to null instead remove() so that inside of transactions null is
-    // returned.
-    _quickAccessCache[key] = null;
+    // Set to null instead of remove() so that a later read needs no query.
+    _cache(key, null);
     _quickAccessCachedKeys?.remove(key);
-    return;
   }
 
-  Future<void> deleteAll(List<String> keys, [Batch? txn]) async {
-    txn ??= boxCollection._activeBatch;
-
-    final placeholder = keys.map((_) => '?').join(',');
-    if (txn == null) {
-      await boxCollection._db.delete(
-        name,
-        where: 'k IN ($placeholder)',
-        whereArgs: keys,
-      );
+  Future<void> deleteAll(List<String> keys) async {
+    if (boxCollection._dirtyBoxes != null) {
+      for (final key in keys) {
+        _addPending(key, null);
+      }
     } else {
-      txn.delete(name, where: 'k IN ($placeholder)', whereArgs: keys);
+      // Older SQLite builds allow only 999 variables per statement.
+      for (var i = 0; i < keys.length; i += 500) {
+        final chunk = keys.sublist(i, min(i + 500, keys.length));
+        await boxCollection._db.delete(
+          name,
+          where: 'k IN (${chunk.map((_) => '?').join(',')})',
+          whereArgs: chunk,
+        );
+      }
+      // A transaction's write sent meanwhile is newer than this one.
+      keys = [
+        for (final key in keys)
+          if (!_pendingClear && !_pending.containsKey(key)) key,
+      ];
     }
-
     for (final key in keys) {
-      _quickAccessCache[key] = null;
-      _quickAccessCachedKeys?.removeAll(keys);
+      _cache(key, null);
     }
-    return;
+    _quickAccessCachedKeys?.removeAll(keys);
   }
 
   void clearQuickAccessCache() {
@@ -305,15 +452,20 @@ class Box<V> {
     _quickAccessCachedKeys = null;
   }
 
-  Future<void> clear([Batch? txn]) async {
-    txn ??= boxCollection._activeBatch;
-
-    if (txn == null) {
-      await boxCollection._db.delete(name);
+  Future<void> clear() async {
+    if (boxCollection._dirtyBoxes != null) {
+      _pending.clear();
+      _pendingClear = true;
+      if (!boxCollection.inTransactionZone) {
+        _foreignPending.clear();
+        _foreignClear = true;
+      }
+      boxCollection._dirtyBoxes!.add(this);
+      _quickAccessCache.clear();
+      if (cacheSize == null) _quickAccessCachedKeys = {};
     } else {
-      txn.delete(name);
+      await boxCollection._db.delete(name);
+      clearQuickAccessCache();
     }
-
-    clearQuickAccessCache();
   }
 }

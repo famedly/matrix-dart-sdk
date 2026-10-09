@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:js_interop';
 
+import 'package:meta/meta.dart';
 import 'package:web/web.dart';
 
 import '../../matrix_api_lite/utils/logs.dart';
@@ -32,6 +33,8 @@ class BoxCollection with ZoneTransactionMixin {
     final request = idbFactory.open(name, version);
 
     request.onerror = (Event event) {
+      // An aborted upgrade also fails the open request after db.onerror.
+      if (dbOpenCompleter.isCompleted) return;
       Logs().e('[IndexedDBBox] Error loading database - ${request.error}');
       dbOpenCompleter.completeError(
         'Error loading database - ${request.error}',
@@ -42,6 +45,8 @@ class BoxCollection with ZoneTransactionMixin {
       final db = (event.target! as IDBOpenDBRequest).result as IDBDatabase;
 
       db.onerror = (Event event) {
+        // This db stays the collection's, so later errors bubble here too.
+        if (dbOpenCompleter.isCompleted) return;
         Logs().e('[IndexedDBBox] [onupgradeneeded] Error loading database');
         dbOpenCompleter.completeError(
           'Error loading database onupgradeneeded.',
@@ -66,77 +71,116 @@ class BoxCollection with ZoneTransactionMixin {
 
   final _boxes = <Box>{};
 
-  Box<V> openBox<V>(String name) {
+  Box<V> openBox<V>(String name, {int? cacheSize}) {
     if (!boxNames.contains(name)) {
       throw ('Box with name $name is not in the known box names of this collection.');
     }
-    final box = Box<V>(name, this);
+    final box = Box<V>(name, this, cacheSize: cacheSize);
     _boxes.add(box);
     return box;
   }
 
-  List<Future<void> Function(IDBTransaction txn)>? _txnCache;
+  /// Boxes with writes of the running transaction, null outside of one.
+  Set<Box>? _dirtyBoxes;
 
+  /// Writes from other zones while a transaction is open, also while it
+  /// commits, join it, so that its older writes of the same key cannot
+  /// overtake them. If it fails, they are still written.
   Future<void> transaction(
     Future<void> Function() action, {
     List<String>? boxNames,
     bool readOnly = false,
   }) => zoneTransaction(() async {
     // A nested transaction joins the outer one, so all writes stay in order.
-    if (_txnCache != null) return action();
-    final txnCache = _txnCache = [];
-    try {
-      try {
-        await action();
-      } finally {
-        _txnCache = null;
-      }
-      final cache = List<Future<void> Function(IDBTransaction txn)>.from(
-        txnCache,
-      );
-      if (cache.isEmpty) return;
-
-      final transactionCompleter = Completer<void>();
+    if (_dirtyBoxes != null) return action();
+    final dirtyBoxes = _dirtyBoxes = {};
+    Future<void> commitBatch() async {
+      final boxes = dirtyBoxes.toList();
+      dirtyBoxes.clear();
+      final completer = Completer<void>();
       final txn = _db.transaction(
-        boxNames?.jsify() ?? _db.objectStoreNames,
-        readOnly ? 'readonly' : 'readwrite',
+        [for (final box in boxes) box.name].jsify()!,
+        'readwrite',
       );
-      for (final fun in cache) {
-        // The IDB methods return a Future in Dart but must not be awaited in
-        // order to have an actual transaction. They must only be performed and
-        // then the transaction object must call `txn.completed;` which then
-        // returns the actual future.
-        // https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction
-        unawaited(fun(txn));
-      }
-
-      // A failing request fires error and then abort, possibly several times.
       txn.onerror = (Event event) {
-        if (transactionCompleter.isCompleted) return;
         Logs().e('[IndexedDBBox] [transaction] Error - ${txn.error}');
-        transactionCompleter.completeError(
+        if (completer.isCompleted) return;
+        completer.completeError(
           'Transaction not completed due to an error - ${txn.error}'.toJS,
         );
       }.toJS;
-      // An abort at commit (e.g. quota exceeded) fires no error event.
+      // An abort, e.g. on a full disk, does not always fire an error event.
       txn.onabort = (Event event) {
-        if (transactionCompleter.isCompleted) return;
+        if (completer.isCompleted) return;
         Logs().e('[IndexedDBBox] [transaction] Aborted - ${txn.error}');
-        transactionCompleter.completeError(
-          'Transaction aborted - ${txn.error}'.toJS,
+        completer.completeError(
+          'Transaction not completed due to an abort - ${txn.error}'.toJS,
         );
       }.toJS;
-
       txn.oncomplete = (Event event) {
-        transactionCompleter.complete();
+        completer.complete();
       }.toJS;
-      await transactionCompleter.future;
+      // The requests must be issued without awaiting in between, otherwise
+      // IndexedDB commits the transaction early.
+      try {
+        for (final box in boxes) {
+          box._flushPending(txn);
+        }
+      } catch (_) {
+        // E.g. a value that cannot be cloned: the requests sent before it
+        // must not commit. The abort completes the completer with an error.
+        completer.future.ignore();
+        txn.abort();
+        rethrow;
+      }
+      await completer.future;
+    }
+
+    // Writes from other zones may arrive while we commit. They get the next
+    // transaction, so that no write is overtaken by an older one. The loop
+    // stays here: the last check must run in the same microtask as the finally.
+    try {
+      await action();
+      while (dirtyBoxes.isNotEmpty) {
+        await commitBatch();
+      }
     } catch (_) {
-      // Nothing of a failed transaction may stay visible in the caches.
+      // Nothing of a failed transaction may stay visible, but the writes from
+      // other zones that joined it are still written.
+      dirtyBoxes.clear();
       for (final box in _boxes) {
         box.clearQuickAccessCache();
+        box._pending
+          ..clear()
+          ..addAll(box._foreignPending);
+        box._pendingClear = box._foreignClear;
+        if (box._pending.isNotEmpty || box._pendingClear) dirtyBoxes.add(box);
+      }
+      try {
+        while (dirtyBoxes.isNotEmpty) {
+          await commitBatch();
+        }
+      } catch (e, s) {
+        for (final box in _boxes) {
+          box.clearQuickAccessCache();
+        }
+        Logs().e(
+          '[IndexedDBBox] Lost writes from other zones of a failed transaction',
+          e,
+          s,
+        );
       }
       rethrow;
+    } finally {
+      _dirtyBoxes = null;
+      // Dropped only now: a read sent before a commit merges the pending
+      // writes after the store answered, which is before the commit ends.
+      for (final box in _boxes) {
+        box._pending.clear();
+        box._pendingClear = false;
+        box._foreignPending.clear();
+        box._foreignClear = false;
+      }
     }
   });
 
@@ -173,11 +217,7 @@ class BoxCollection with ZoneTransactionMixin {
     return transactionCompleter.future;
   }
 
-  Future<void> close() async {
-    assert(_txnCache == null, 'Database closed while in transaction!');
-    // Note, zoneTransaction and txnCache are different kinds of transactions.
-    return zoneTransaction(() async => _db.close());
-  }
+  Future<void> close() => zoneTransaction(() async => _db.close());
 
   Future<void> deleteDatabase(String name, [dynamic factory]) async {
     await close();
@@ -201,6 +241,10 @@ class BoxCollection with ZoneTransactionMixin {
 class Box<V> {
   final String name;
   final BoxCollection boxCollection;
+
+  /// Maximum number of cached values, null for no limit.
+  final int? cacheSize;
+
   final Map<String, V?> _quickAccessCache = {};
 
   /// _quickAccessCachedKeys is only used to make sure that if you fetch all keys from a
@@ -210,13 +254,74 @@ class Box<V> {
   /// delete* so that the cache does not become outdated.
   Set<String>? _quickAccessCachedKeys;
 
-  Box(this.name, this.boxCollection);
+  /// Uncommitted writes of the running transaction, null marks a deletion.
+  final Map<String, V?> _pending = {};
+
+  /// Whether the running transaction cleared this box before [_pending].
+  bool _pendingClear = false;
+
+  /// Writes from other zones during the running transaction, kept if it
+  /// fails. Null marks a deletion.
+  final Map<String, V?> _foreignPending = {};
+
+  /// Whether another zone cleared this box during the running transaction.
+  bool _foreignClear = false;
+
+  Box(this.name, this.boxCollection, {this.cacheSize});
+
+  void _cache(String key, V? value) {
+    // Re-inserting moves the key to the end, the most recently used.
+    _quickAccessCache.remove(key);
+    _quickAccessCache[key] = value;
+    final cacheSize = this.cacheSize;
+    if (cacheSize != null &&
+        _quickAccessCache.length > cacheSize + cacheSize ~/ 10) {
+      // Dropping in batches keeps eviction O(1) amortized; keys.first has to
+      // skip the deleted slots at the front of the map.
+      _quickAccessCache.keys
+          .take(_quickAccessCache.length - cacheSize)
+          .toList()
+          .forEach(_quickAccessCache.remove);
+    }
+  }
+
+  /// Reads a cached value, marking it as the most recently used.
+  V? _cacheHit(String key) {
+    if (cacheSize == null) return _quickAccessCache[key];
+    final value = _quickAccessCache.remove(key);
+    _quickAccessCache[key] = value;
+    return value;
+  }
+
+  @visibleForTesting
+  List<String> get cachedKeys => _quickAccessCache.keys.toList();
+
+  void _addPending(String key, V? value) {
+    _pending[key] = value;
+    if (!boxCollection.inTransactionZone) _foreignPending[key] = value;
+    boxCollection._dirtyBoxes!.add(this);
+  }
+
+  void _flushPending(IDBTransaction txn) {
+    final store = txn.objectStore(name);
+    if (_pendingClear) store.clear();
+    for (final MapEntry(:key, :value) in _pending.entries) {
+      if (value == null) {
+        store.delete(key.toJS);
+      } else {
+        store.put(value.jsify(), key.toJS);
+      }
+    }
+  }
 
   Future<List<String>> getAllKeys([IDBTransaction? txn]) async {
-    if (_quickAccessCachedKeys != null) return _quickAccessCachedKeys!.toList();
+    final cachedKeys = _quickAccessCachedKeys;
+    if (cachedKeys != null) return cachedKeys.toList();
     txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
-    final keys = await _getAllKeysFromStore(txn);
-    _quickAccessCachedKeys = keys.toSet();
+    final keys = _withPending(await _getAllKeysFromStore(txn));
+    // put and delete keep this set in sync with the pending writes. A box
+    // with a cache size keeps none, the set would grow without bound.
+    if (cacheSize == null) _quickAccessCachedKeys = keys.toSet();
     return keys;
   }
 
@@ -243,6 +348,49 @@ class Box<V> {
     return (request.result?.dartify() as List?)?.cast<String>() ?? [];
   }
 
+  /// Returns all keys starting with [prefix], using the key order of the
+  /// object store.
+  Future<List<String>> getKeysWithPrefix(
+    String prefix, [
+    IDBTransaction? txn,
+  ]) async {
+    txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
+    final request = txn
+        .objectStore(name)
+        .getAllKeys(
+          IDBKeyRange.bound(prefix.toJS, _prefixEnd(prefix).toJS, false, true),
+        );
+    final completer = Completer();
+    request.onerror = (Event event) {
+      Logs().e('[IndexedDBBox] [getKeysWithPrefix] Error - ${request.error}');
+      completer.completeError(
+        '[IndexedDBBox] [getKeysWithPrefix] Error - ${request.error}'.toJS,
+      );
+    }.toJS;
+    request.onsuccess = (Event event) {
+      completer.complete();
+    }.toJS;
+    await completer.future;
+    return _withPending(
+      (request.result?.dartify() as List?)?.cast<String>() ?? [],
+      prefix,
+    );
+  }
+
+  /// The smallest key after all keys starting with [prefix].
+  static String _prefixEnd(String prefix) =>
+      prefix.substring(0, prefix.length - 1) +
+      String.fromCharCode(prefix.codeUnitAt(prefix.length - 1) + 1);
+
+  /// Applies the pending writes to keys read from the store.
+  List<String> _withPending(Iterable<String> storeKeys, [String prefix = '']) =>
+      {
+        if (!_pendingClear)
+          ...storeKeys.where((key) => !_pending.containsKey(key)),
+        for (final MapEntry(:key, :value) in _pending.entries)
+          if (value != null && key.startsWith(prefix)) key,
+      }.toList();
+
   Future<Map<String, V>> getAllValues([IDBTransaction? txn]) async {
     txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
     final store = txn.objectStore(name);
@@ -252,7 +400,6 @@ class Box<V> {
     /// only returns the values as a list.
     /// And using the [IDBObjectStore.openCursor()] method is not working as expected.
     final keys = await _getAllKeysFromStore(txn);
-    _quickAccessCachedKeys = keys.toSet();
 
     final getAllValuesCompleter = Completer();
     final getAllValuesRequest = store.getAll();
@@ -273,11 +420,21 @@ class Box<V> {
       getAllValuesCompleter.complete();
     }.toJS;
     await getAllValuesCompleter.future;
+    if (_pendingClear) map.clear();
+    for (final MapEntry(:key, :value) in _pending.entries) {
+      if (value == null) {
+        map.remove(key);
+      } else {
+        map[key] = value;
+      }
+    }
     return map;
   }
 
   Future<V?> get(String key, [IDBTransaction? txn]) async {
-    if (_quickAccessCache.containsKey(key)) return _quickAccessCache[key];
+    if (_pending.containsKey(key)) return _pending[key];
+    if (_pendingClear) return null;
+    if (_quickAccessCache.containsKey(key)) return _cacheHit(key);
     txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
     final store = txn.objectStore(name);
     final getObjectRequest = store.get(key.toJS);
@@ -292,18 +449,33 @@ class Box<V> {
       getObjectCompleter.complete();
     }.toJS;
     await getObjectCompleter.future;
-    _quickAccessCache[key] = _fromValue(getObjectRequest.result?.dartify());
-    return _quickAccessCache[key];
+    final value = _fromValue(getObjectRequest.result?.dartify());
+    // A write sent meanwhile is newer than this answer.
+    if (!_pendingClear && !_pending.containsKey(key)) {
+      _cache(key, value);
+    }
+    return value;
   }
 
   Future<List<V?>> getAll(List<String> keys, [IDBTransaction? txn]) async {
-    if (keys.every(_quickAccessCache.containsKey)) {
-      return keys.map((key) => _quickAccessCache[key]).toList();
+    final values = <String, V?>{};
+    final missing = <String>[];
+    for (final key in keys) {
+      if (_pending.containsKey(key)) {
+        values[key] = _pending[key];
+      } else if (_pendingClear) {
+        values[key] = null;
+      } else if (_quickAccessCache.containsKey(key)) {
+        values[key] = _cacheHit(key);
+      } else {
+        missing.add(key);
+      }
     }
+    if (missing.isEmpty) return [for (final key in keys) values[key]];
     txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
     final store = txn.objectStore(name);
-    final list = await Future.wait(
-      keys.map((key) async {
+    final found = await Future.wait(
+      missing.map((key) async {
         final getObjectRequest = store.get(key.toJS);
         final getObjectCompleter = Completer();
         getObjectRequest.onerror = (Event event) {
@@ -322,21 +494,27 @@ class Box<V> {
         return _fromValue(getObjectRequest.result?.dartify());
       }),
     );
-    for (var i = 0; i < keys.length; i++) {
-      _quickAccessCache[keys[i]] = list[i];
+    for (var i = 0; i < missing.length; i++) {
+      final key = missing[i];
+      values[key] = found[i];
+      // Misses are cached too, so that the next read needs no request. A
+      // write sent meanwhile is newer than this answer.
+      if (!_pendingClear && !_pending.containsKey(key)) {
+        _cache(key, found[i]);
+      }
     }
-    return list;
+    return [for (final key in keys) values[key]];
   }
 
-  Future<void> put(String key, V val, [IDBTransaction? txn]) async {
-    if (boxCollection._txnCache != null) {
-      boxCollection._txnCache!.add((txn) => put(key, val, txn));
-      _quickAccessCache[key] = val;
+  Future<void> put(String key, V val) async {
+    if (boxCollection._dirtyBoxes != null) {
+      _addPending(key, val);
+      _cache(key, val);
       _quickAccessCachedKeys?.add(key);
       return;
     }
 
-    txn ??= boxCollection._db.transaction(name.toJS, 'readwrite');
+    final txn = boxCollection._db.transaction(name.toJS, 'readwrite');
     final store = txn.objectStore(name);
     final putRequest = store.put(val.jsify(), key.toJS);
     final putCompleter = Completer();
@@ -350,20 +528,22 @@ class Box<V> {
       putCompleter.complete();
     }.toJS;
     await putCompleter.future;
-    _quickAccessCache[key] = val;
+    // A transaction's write sent meanwhile is newer than this one.
+    if (_pendingClear || _pending.containsKey(key)) return;
+    _cache(key, val);
     _quickAccessCachedKeys?.add(key);
     return;
   }
 
-  Future<void> delete(String key, [IDBTransaction? txn]) async {
-    if (boxCollection._txnCache != null) {
-      boxCollection._txnCache!.add((txn) => delete(key, txn));
-      _quickAccessCache[key] = null;
+  Future<void> delete(String key) async {
+    if (boxCollection._dirtyBoxes != null) {
+      _addPending(key, null);
+      _cache(key, null);
       _quickAccessCachedKeys?.remove(key);
       return;
     }
 
-    txn ??= boxCollection._db.transaction(name.toJS, 'readwrite');
+    final txn = boxCollection._db.transaction(name.toJS, 'readwrite');
     final store = txn.objectStore(name);
     final deleteRequest = store.delete(key.toJS);
     final deleteCompleter = Completer();
@@ -377,25 +557,25 @@ class Box<V> {
       deleteCompleter.complete();
     }.toJS;
     await deleteCompleter.future;
-
-    // Set to null instead remove() so that inside of transactions null is
-    // returned.
-    _quickAccessCache[key] = null;
+    // A transaction's write sent meanwhile is newer than this one.
+    if (_pendingClear || _pending.containsKey(key)) return;
+    // Set to null instead of remove() so that a later read needs no request.
+    _cache(key, null);
     _quickAccessCachedKeys?.remove(key);
     return;
   }
 
-  Future<void> deleteAll(List<String> keys, [IDBTransaction? txn]) async {
-    if (boxCollection._txnCache != null) {
-      boxCollection._txnCache!.add((txn) => deleteAll(keys, txn));
+  Future<void> deleteAll(List<String> keys) async {
+    if (boxCollection._dirtyBoxes != null) {
       for (final key in keys) {
-        _quickAccessCache[key] = null;
+        _addPending(key, null);
+        _cache(key, null);
       }
       _quickAccessCachedKeys?.removeAll(keys);
       return;
     }
 
-    txn ??= boxCollection._db.transaction(name.toJS, 'readwrite');
+    final txn = boxCollection._db.transaction(name.toJS, 'readwrite');
     final store = txn.objectStore(name);
     for (final key in keys) {
       final deleteRequest = store.delete(key.toJS);
@@ -413,7 +593,9 @@ class Box<V> {
         deleteCompleter.complete();
       }.toJS;
       await deleteCompleter.future;
-      _quickAccessCache[key] = null;
+      // A transaction's write sent meanwhile is newer than this one.
+      if (_pendingClear || _pending.containsKey(key)) continue;
+      _cache(key, null);
       _quickAccessCachedKeys?.remove(key);
     }
     return;
@@ -424,11 +606,19 @@ class Box<V> {
     _quickAccessCachedKeys = null;
   }
 
-  Future<void> clear([IDBTransaction? txn]) async {
-    if (boxCollection._txnCache != null) {
-      boxCollection._txnCache!.add(clear);
+  Future<void> clear() async {
+    if (boxCollection._dirtyBoxes != null) {
+      _pending.clear();
+      _pendingClear = true;
+      if (!boxCollection.inTransactionZone) {
+        _foreignPending.clear();
+        _foreignClear = true;
+      }
+      boxCollection._dirtyBoxes!.add(this);
+      _quickAccessCache.clear();
+      if (cacheSize == null) _quickAccessCachedKeys = {};
     } else {
-      txn ??= boxCollection._db.transaction(name.toJS, 'readwrite');
+      final txn = boxCollection._db.transaction(name.toJS, 'readwrite');
       final store = txn.objectStore(name);
       final clearRequest = store.clear();
       final clearCompleter = Completer();
@@ -442,8 +632,8 @@ class Box<V> {
         clearCompleter.complete();
       }.toJS;
       await clearCompleter.future;
+      clearQuickAccessCache();
     }
-    clearQuickAccessCache();
   }
 
   V? _fromValue(Object? value) {
