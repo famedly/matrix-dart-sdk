@@ -9,9 +9,44 @@ import 'package:test/test.dart';
 
 import 'fake_client.dart';
 
+// The iOS NSE evaluates through PushruleEvaluator.evaluateJson; it must
+// agree with the Event based path.
+void _expectJsonPathAgrees(
+  PushRuleSet ruleset,
+  Event event,
+  EvaluatedPushRuleAction expected,
+) {
+  final room = event.room;
+  final actual =
+      jsonDecode(
+            PushruleEvaluator.evaluateJson(
+              jsonEncode({
+                'rules': ruleset.toJson(),
+                'event': event.toJson(),
+                'roomId': room.id,
+                'memberCount': room.getParticipants([Membership.join]).length,
+                'displayName': room
+                    .unsafeGetUserFromMemoryOrFallback(room.client.userID!)
+                    .displayName,
+                'powerLevels': room
+                    .getState(EventTypes.RoomPowerLevels)
+                    ?.toJson(),
+                'createEvent': room.getState(EventTypes.RoomCreate)?.toJson(),
+              }),
+            ),
+          )
+          as Map<String, Object?>;
+  expect(actual, {
+    'notify': expected.notify,
+    'highlight': expected.highlight,
+    'sound': expected.sound,
+  });
+}
+
 void _testMatch(PushRuleSet ruleset, Event event) {
   final evaluator = PushruleEvaluator.fromRuleset(ruleset);
   final actions = evaluator.match(event);
+  _expectJsonPathAgrees(ruleset, event, actions);
   expect(actions.notify, true);
   expect(actions.highlight, true);
   expect(actions.sound, 'goose.wav');
@@ -20,6 +55,7 @@ void _testMatch(PushRuleSet ruleset, Event event) {
 void _testNotMatch(PushRuleSet ruleset, Event event) {
   final evaluator = PushruleEvaluator.fromRuleset(ruleset);
   final actions = evaluator.match(event);
+  _expectJsonPathAgrees(ruleset, event, actions);
   expect(actions.notify, false);
   expect(actions.highlight, false);
   expect(actions.sound, null);
@@ -858,5 +894,258 @@ void main() {
       expect(actions.notify, true, reason: 'user mention should match');
       expect(actions.highlight, true);
     });
+  });
+
+  group('evaluateJson', () {
+    const roomId = '!testroom:example.abc';
+    const senderId = '@alice:server.abc';
+    Map<String, Object?> input(
+      Object? rules, {
+      String? roomId,
+      Map<String, Object?>? powerLevels,
+      Map<String, Object?>? createEvent,
+    }) => {
+      'rules': rules,
+      'event': {
+        'type': 'm.room.message',
+        'sender': senderId,
+        'content': {'body': 'hello'},
+      },
+      'roomId': roomId,
+      'memberCount': 1,
+      'powerLevels': powerLevels,
+      'createEvent': ?createEvent,
+    };
+    Map<String, Object?> run(Map<String, Object?> i) =>
+        jsonDecode(PushruleEvaluator.evaluateJson(jsonEncode(i)))
+            as Map<String, Object?>;
+    Map<String, Object?> rule(
+      String id, [
+      List<Object?>? conditions,
+      List<Object?>? actions,
+    ]) => {
+      'rule_id': id,
+      'default': false,
+      'enabled': true,
+      'actions': actions ?? ['notify'],
+      'conditions': ?conditions,
+    };
+
+    test('roomId fills in a missing room_id', () {
+      final rules = {
+        'room': [rule(roomId)],
+      };
+      expect(run(input(rules))['notify'], false);
+      expect(run(input(rules, roomId: roomId))['notify'], true);
+    });
+
+    test('required notification level defaults to 50', () {
+      final rules = {
+        'override': [
+          rule('my.rule', [
+            {'kind': 'sender_notification_permission', 'key': 'broom'},
+          ]),
+        ],
+      };
+      Map<String, Object?> levels(int level) => {
+        'users': {senderId: level},
+      };
+      expect(run(input(rules, powerLevels: levels(20)))['notify'], false);
+      expect(run(input(rules, powerLevels: levels(50)))['notify'], true);
+    });
+
+    // evaluateJson re-implements Room.canSendNotification without a Room; this
+    // fails if the two drift apart. Expected values are pinned so a wrong
+    // Room result fails separately from the JSON path.
+    test('sender notification permission agrees with Room', () async {
+      final client = await getClient();
+      final rules = {
+        'override': [
+          rule('my.rule', [
+            {'kind': 'sender_notification_permission', 'key': 'room'},
+          ]),
+        ],
+      };
+      final cases = <_NotificationCase>[
+        _NotificationCase('no power levels and no create event', notify: false),
+        _NotificationCase(
+          'empty power levels and no create event',
+          powerLevels: {},
+          notify: false,
+        ),
+        _NotificationCase(
+          'users 49',
+          powerLevels: {
+            'users': {senderId: 49},
+          },
+          notify: false,
+        ),
+        _NotificationCase(
+          'users 50',
+          powerLevels: {
+            'users': {senderId: 50},
+          },
+          notify: true,
+        ),
+        _NotificationCase(
+          'users_default 50',
+          powerLevels: {'users_default': 50},
+          notify: true,
+        ),
+        _NotificationCase(
+          'users_default 10 and notifications.room 10',
+          powerLevels: {
+            'users_default': 10,
+            'notifications': {'room': 10},
+          },
+          notify: true,
+        ),
+        _NotificationCase(
+          'users 5 and notifications.room 100',
+          powerLevels: {
+            'users': {senderId: 5},
+            'notifications': {'room': 100},
+          },
+          notify: false,
+        ),
+        _NotificationCase(
+          'no power levels, sender is the create sender',
+          createSender: senderId,
+          notify: true,
+        ),
+        _NotificationCase(
+          'no power levels, sender is not the create sender',
+          createSender: '@founder:server.abc',
+          notify: false,
+        ),
+        _NotificationCase(
+          'power levels without users, sender is the create sender',
+          powerLevels: {},
+          createSender: senderId,
+          notify: true,
+        ),
+        _NotificationCase(
+          'v12 create sender overridden to 0',
+          powerLevels: {
+            'users': {senderId: 0},
+          },
+          createSender: senderId,
+          roomVersion: '12',
+          notify: true,
+        ),
+        _NotificationCase(
+          'v12 additional creator overridden to 0',
+          powerLevels: {
+            'users': {senderId: 0},
+          },
+          createSender: '@founder:server.abc',
+          roomVersion: '12',
+          additionalCreators: [senderId],
+          notify: true,
+        ),
+        _NotificationCase(
+          'v11 create sender overridden to 0',
+          powerLevels: {
+            'users': {senderId: 0},
+          },
+          createSender: senderId,
+          roomVersion: '11',
+          notify: false,
+        ),
+        _NotificationCase(
+          'missing room version, power levels without users, create sender',
+          powerLevels: {},
+          createSender: senderId,
+          notify: true,
+        ),
+        _NotificationCase(
+          'unparsable room version, create sender overridden to 0',
+          powerLevels: {
+            'users': {senderId: 0},
+          },
+          createSender: senderId,
+          roomVersion: 'org.example.custom',
+          notify: false,
+        ),
+      ];
+      for (var i = 0; i < cases.length; i++) {
+        final c = cases[i];
+        final room = Room(id: '!pl$i:x', client: client);
+        if (c.powerLevels != null) {
+          room.states[EventTypes.RoomPowerLevels] = {
+            '': Event.fromJson({
+              'type': EventTypes.RoomPowerLevels,
+              'sender': senderId,
+              'state_key': '',
+              'content': c.powerLevels,
+              'room_id': room.id,
+              'origin_server_ts': 5,
+              'event_id': r'$pl',
+            }, room),
+          };
+        }
+        Map<String, Object?>? createJson;
+        final createSender = c.createSender;
+        if (createSender != null) {
+          final create = Event.fromJson({
+            'type': EventTypes.RoomCreate,
+            'sender': createSender,
+            'state_key': '',
+            'content': {
+              if (c.roomVersion != null) 'room_version': c.roomVersion,
+              if (c.additionalCreators != null)
+                'additional_creators': c.additionalCreators,
+            },
+            'room_id': room.id,
+            'origin_server_ts': 5,
+            'event_id': r'$create',
+          }, room);
+          room.states[EventTypes.RoomCreate] = {'': create};
+          createJson = Map<String, Object?>.from(create.toJson());
+        }
+        expect(
+          room.canSendNotification(senderId),
+          c.notify,
+          reason: '${c.name} room',
+        );
+        expect(
+          run(
+            input(rules, powerLevels: c.powerLevels, createEvent: createJson),
+          )['notify'],
+          c.notify,
+          reason: '${c.name} json',
+        );
+      }
+    });
+
+    test('falls back to an empty ruleset when rules do not parse', () {
+      expect(run(input('nope')), {
+        'notify': false,
+        'highlight': false,
+        'sound': null,
+      });
+    });
+
+    test('returns an error object when required fields are missing', () {
+      expect(run({'rules': {}}), contains('error'));
+    });
+  });
+}
+
+class _NotificationCase {
+  final String name;
+  final Map<String, Object?>? powerLevels;
+  final String? createSender;
+  final String? roomVersion;
+  final List<String>? additionalCreators;
+  final bool notify;
+
+  _NotificationCase(
+    this.name, {
+    this.powerLevels,
+    this.createSender,
+    this.roomVersion,
+    this.additionalCreators,
+    required this.notify,
   });
 }

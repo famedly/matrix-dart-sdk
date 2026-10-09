@@ -21,6 +21,20 @@ flutter pub add matrix
 flutter pub add flutter_vodozemac
 ```
 
+## Push rules evaluation in iOS
+
+Build a JS file and call it from JavaScriptCore in a Notification Service Extension. Entry file:
+
+```dart
+export 'package:matrix/pushrule_evaluator_js.dart' show main;
+```
+
+```sh
+dart compile js -O2 --no-source-maps -o build/pushrule_evaluator.js entry.dart
+```
+
+That file defines `matrixEvaluatePushRules(jsonString) -> jsonString`. Input and output are documented on `PushruleEvaluator.evaluateJson`.
+
 ## Get started
 
 See the API documentation for details:
