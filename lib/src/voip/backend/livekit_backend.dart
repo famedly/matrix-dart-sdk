@@ -89,7 +89,7 @@ class LiveKitBackend extends CallBackend {
 
     final key = secureRandomBytes(32);
     final keyIndex = _getNewEncryptionKeyIndex(groupCall.voip.keyRingSize);
-    Logs().i('[VOIP E2EE] Generated new key $key at index $keyIndex');
+    Logs().i('[VOIP E2EE] Generated new key at index $keyIndex');
 
     await _setEncryptionKey(
       groupCall,
@@ -212,14 +212,14 @@ class LiveKitBackend extends CallBackend {
 
     if (!setKey) {
       Logs().i(
-        '[VOIP E2EE] sent ratchetd key $encryptionKeyBin but not setting',
+        '[VOIP E2EE] sent ratchetd key idx $encryptionKeyIndex but not setting',
       );
       return;
     }
 
     if (delayBeforeUsingKeyOurself) {
       Logs().d(
-        '[VOIP E2EE] starting delayed set for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin, current idx $currentLocalKeyIndex key ${encryptionKeys[currentLocalKeyIndex]}',
+        '[VOIP E2EE] starting delayed set for ${participant.id} idx $encryptionKeyIndex, current idx $currentLocalKeyIndex',
       );
       // now wait for the key to propogate and then set it, hopefully users can
       // stil decrypt everything
@@ -227,7 +227,7 @@ class LiveKitBackend extends CallBackend {
         groupCall.voip.timeouts!.useKeyDelay,
         () async {
           Logs().i(
-            '[VOIP E2EE] delayed setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
+            '[VOIP E2EE] delayed setting key changed event for ${participant.id} idx $encryptionKeyIndex',
           );
           await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
             participant,
@@ -242,7 +242,7 @@ class LiveKitBackend extends CallBackend {
       _setNewKeyTimeouts.add(useKeyTimeout);
     } else {
       Logs().i(
-        '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin',
+        '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex',
       );
       await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
         participant,
@@ -310,7 +310,7 @@ class LiveKitBackend extends CallBackend {
   ) async {
     if (remoteParticipants.isEmpty) return;
     Logs().v(
-      '[VOIP E2EE] _sendToDeviceEvent: sending $data to ${remoteParticipants.map((e) => e.id)} ',
+      '[VOIP E2EE] _sendToDeviceEvent: sending $eventType to ${remoteParticipants.map((e) => e.id)} ',
     );
     final txid =
         VoIP.customTxid ?? groupCall.client.generateUniqueTransactionId();
@@ -420,7 +420,7 @@ class LiveKitBackend extends CallBackend {
       return;
     } else {
       Logs().i(
-        '[VOIP E2EE]: onCallEncryption, got keys from ${p.id} ${keyContent.toJson()}',
+        '[VOIP E2EE]: onCallEncryption, got keys from ${p.id} for callId=$callId',
       );
     }
 
