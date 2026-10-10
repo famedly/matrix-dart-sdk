@@ -379,10 +379,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           }
         });
         _inboundGroupSessionsBox.clearQuickAccessCache();
+        _inboundGroupSessionsByRoomBox.clearQuickAccessCache();
       }
     }
 
-    if (currentVersion >= 11) {
+    // A newer version may have stored data we can not read.
+    if (currentVersion >= 11 && currentVersion < version) {
       await _clientBox.put('version', version.toString());
       return;
     }

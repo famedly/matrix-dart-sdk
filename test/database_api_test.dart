@@ -971,6 +971,32 @@ void main() {
 
         await database.close();
       });
+      test('Downgrade from a newer version clears the cache', () async {
+        final sqliteDb = await databaseFactoryFfi.openDatabase(
+          ':memory:',
+          options: OpenDatabaseOptions(singleInstance: false),
+        );
+        for (final name in {'box_client', 'box_rooms'}) {
+          await sqliteDb.execute(
+            'CREATE TABLE IF NOT EXISTS $name (k TEXT PRIMARY KEY NOT NULL, v TEXT)',
+          );
+        }
+        await sqliteDb.insert('box_client', {
+          'k': 'version',
+          'v': '${MatrixSdkDatabase.version + 1}',
+        });
+        await sqliteDb.insert('box_rooms', {
+          'k': '!room:example.com',
+          'v': jsonEncode({'id': '!room:example.com', 'membership': 'join'}),
+        });
+        final database = await MatrixSdkDatabase.init(
+          'unit_test.${DateTime.now().millisecondsSinceEpoch}',
+          database: sqliteDb,
+          sqfliteFactory: databaseFactoryFfi,
+        );
+        expect(await sqliteDb.query('box_rooms'), isEmpty);
+        await database.close();
+      });
       test('exportDump and importDump keep room key bundle data', () async {
         const roomId = '!room:example.com';
         const senderId = '@alice:example.com';
