@@ -1570,8 +1570,35 @@ class Room {
   }
 
   /// Call the Matrix API to invite a user to this room.
-  Future<void> invite(String userID, {String? reason}) =>
-      client.inviteUser(id, userID, reason: reason);
+  Future<void> invite(
+    String userID, {
+    String? reason,
+
+    /// Set to true to wait for the invite to appear in sync. Useful to be
+    /// sure that device keys are updated when sending a message right after.
+    /// Defaults to true if the room is encrypted.
+    bool? waitForSync,
+  }) async {
+    final existingUser = await requestUser(userID, requestProfile: false);
+    if (existingUser?.membership case Membership.join || Membership.invite) {
+      Logs().d('Skip invite a user who is already participating.');
+      return;
+    }
+    waitForSync ??= encrypted;
+    final roomStateUpdateFuture = !waitForSync
+        ? null
+        : client.onSync.stream.firstWhere((syncUpdate) {
+            final joinedRoom = syncUpdate.rooms?.join?[id];
+            if (joinedRoom == null) return false;
+            return [...?joinedRoom.timeline?.events, ...?joinedRoom.state].any(
+              (event) =>
+                  event.type == EventTypes.RoomMember &&
+                  event.stateKey == userID,
+            );
+          });
+    await client.inviteUser(id, userID, reason: reason);
+    await roomStateUpdateFuture;
+  }
 
   /// Request more previous events from the server. [historyCount] defines how many events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
