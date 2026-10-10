@@ -77,12 +77,14 @@ class BoxCollection with ZoneTransactionMixin {
 
   List<Future<void> Function(IDBTransaction txn)>? _txnCache;
 
+  /// A nested transaction joins the outer one, so all writes stay in order:
+  /// they commit or fail with the outer one, the nested [boxNames] and
+  /// [readOnly] are ignored, and catching a nested error does not undo them.
   Future<void> transaction(
     Future<void> Function() action, {
     List<String>? boxNames,
     bool readOnly = false,
   }) => zoneTransaction(() async {
-    // A nested transaction joins the outer one, so all writes stay in order.
     if (_txnCache != null) return action();
     final txnCache = _txnCache = [];
     try {

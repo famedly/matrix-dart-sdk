@@ -55,12 +55,14 @@ class BoxCollection with ZoneTransactionMixin {
 
   Batch? _activeBatch;
 
+  /// A nested transaction joins the outer one, so all writes stay in order:
+  /// they commit or fail with the outer one, and catching a nested error does
+  /// not undo them. [boxNames] and [readOnly] are ignored.
   Future<void> transaction(
     Future<void> Function() action, {
     List<String>? boxNames,
     bool readOnly = false,
   }) => zoneTransaction(() async {
-    // A nested transaction joins the outer one, so all writes stay in order.
     if (_activeBatch != null) return action();
     final batch = _activeBatch = _db.batch();
     try {
