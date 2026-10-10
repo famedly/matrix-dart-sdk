@@ -175,20 +175,19 @@ void main() {
       test('getClient', () async {
         await database.getClient('name');
       });
-      test('insertClient', () async {
+      test('storeClient', () async {
         final now = DateTime.now();
-        await database.insertClient(
-          'name',
-          'homeserverUrl',
-          'token',
-          now,
-          'refresh_token',
-          'userId',
-          'deviceId',
-          'deviceName',
-          'prevBatch',
-          'olmAccount',
-          'abcd1234',
+        await database.storeClient(
+          homeserverUrl: 'homeserverUrl',
+          token: 'token',
+          tokenExpiresAt: now,
+          refreshToken: 'refresh_token',
+          userId: 'userId',
+          deviceId: 'deviceId',
+          deviceName: 'deviceName',
+          prevBatch: 'prevBatch',
+          olmAccount: 'olmAccount',
+          oidcClientId: 'abcd1234',
         );
 
         final client = await database.getClient('name');
@@ -197,22 +196,21 @@ void main() {
           client?['token_expires_at'],
           now.millisecondsSinceEpoch.toString(),
         );
-      });
-      test('updateClient', () async {
-        await database.updateClient(
-          'homeserverUrl',
-          'token_different',
-          DateTime.now(),
-          'refresh_token',
-          'userId',
-          'deviceId',
-          'deviceName',
-          'prevBatch',
-          'olmAccount',
-          'abcd1234',
+
+        await database.storeClient(
+          homeserverUrl: 'homeserverUrl',
+          token: 'token_different',
+          tokenExpiresAt: DateTime.now(),
+          refreshToken: 'refresh_token',
+          userId: 'userId',
+          deviceId: 'deviceId',
+          deviceName: 'deviceName',
+          prevBatch: 'prevBatch',
+          olmAccount: 'olmAccount',
+          oidcClientId: 'abcd1234',
         );
-        final client = await database.getClient('name');
-        expect(client?['token'], 'token_different');
+        final updatedClient = await database.getClient('name');
+        expect(updatedClient?['token'], 'token_different');
       });
       test('updateClientKeys', () async {
         await database.updateClientKeys('olmAccount2');

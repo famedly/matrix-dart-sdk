@@ -833,19 +833,18 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<int> insertClient(
-    String name,
-    String homeserverUrl,
-    String token,
+  Future<void> storeClient({
+    required String homeserverUrl,
+    required String token,
     DateTime? tokenExpiresAt,
     String? refreshToken,
-    String userId,
+    required String userId,
     String? deviceId,
     String? deviceName,
     String? prevBatch,
     String? olmAccount,
     String? oidcClientId,
-  ) async {
+  }) async {
     await transaction(() async {
       await _clientBox.put('homeserver_url', homeserverUrl);
       await _clientBox.put('token', token);
@@ -888,9 +887,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       } else {
         await _clientBox.put('olm_account', olmAccount);
       }
-      await _clientBox.delete('sync_filter_id');
     });
-    return 0;
+    return;
   }
 
   int _toDeviceShift = 0;
@@ -1298,65 +1296,6 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   @override
   Future<void> transaction(Future<void> Function() action) =>
       _collection.transaction(action);
-
-  @override
-  Future<void> updateClient(
-    String homeserverUrl,
-    String token,
-    DateTime? tokenExpiresAt,
-    String? refreshToken,
-    String userId,
-    String? deviceId,
-    String? deviceName,
-    String? prevBatch,
-    String? olmAccount,
-    String? oidcClientId,
-  ) async {
-    await transaction(() async {
-      await _clientBox.put('homeserver_url', homeserverUrl);
-      await _clientBox.put('token', token);
-      if (tokenExpiresAt == null) {
-        await _clientBox.delete('token_expires_at');
-      } else {
-        await _clientBox.put(
-          'token_expires_at',
-          tokenExpiresAt.millisecondsSinceEpoch.toString(),
-        );
-      }
-      if (refreshToken == null) {
-        await _clientBox.delete('refresh_token');
-      } else {
-        await _clientBox.put('refresh_token', refreshToken);
-      }
-      if (oidcClientId == null) {
-        await _clientBox.delete('oidc_client_id');
-      } else {
-        await _clientBox.put('oidc_client_id', oidcClientId);
-      }
-      await _clientBox.put('user_id', userId);
-      if (deviceId == null) {
-        await _clientBox.delete('device_id');
-      } else {
-        await _clientBox.put('device_id', deviceId);
-      }
-      if (deviceName == null) {
-        await _clientBox.delete('device_name');
-      } else {
-        await _clientBox.put('device_name', deviceName);
-      }
-      if (prevBatch == null) {
-        await _clientBox.delete('prev_batch');
-      } else {
-        await _clientBox.put('prev_batch', prevBatch);
-      }
-      if (olmAccount == null) {
-        await _clientBox.delete('olm_account');
-      } else {
-        await _clientBox.put('olm_account', olmAccount);
-      }
-    });
-    return;
-  }
 
   @override
   Future<void> updateClientKeys(String olmAccount) async {
