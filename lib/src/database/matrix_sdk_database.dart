@@ -34,7 +34,7 @@ import 'sqflite_box.dart' if (dart.library.js_interop) 'indexeddb_box.dart';
 /// Learn more at:
 /// https://github.com/famedly/matrix-dart-sdk/issues/1642#issuecomment-1865827227
 class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
-  static const int version = 12;
+  static const int version = 13;
   final String name;
 
   late BoxCollection _collection;
@@ -60,6 +60,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   late Box<Map> _roomAccountDataBox;
   late Box<Map> _inboundGroupSessionsBox;
   late Box<String> _inboundGroupSessionsUploadQueueBox;
+
+  /// Key is a tuple as TupleKey(roomId, sessionId) to the sessionId, so that
+  /// the sessions of one room can be found without reading all of them.
+  late Box<String> _inboundGroupSessionsByRoomBox;
   late Box<Map> _outboundGroupSessionsBox;
   late Box<Map> _olmSessionsBox;
   late Box<Map> _ssssCacheBox;
@@ -85,6 +89,14 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   /// Is a Tuple(userId, deviceId) to the last sent message as a json map:
   late Box<String> _lastSentOlmMessagesBox;
+
+  /// Key is a tuple as TupleKey(roomId, senderId) to the received but not yet
+  /// imported key bundle (MSC4268).
+  late Box<Map> _roomKeyBundlesBox;
+
+  /// Key is the roomId to the inviter and time of an accepted invite, whose
+  /// key bundle we still want to import (MSC4268).
+  late Box<Map> _pendingRoomKeyBundlesBox;
 
   @override
   final int maxFileSize;
@@ -119,6 +131,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   static const String _inboundGroupSessionsUploadQueueBoxName =
       'box_inbound_group_sessions_upload_queue';
 
+  static const String _inboundGroupSessionsByRoomBoxName =
+      'box_inbound_group_sessions_by_room';
+
   static const String _outboundGroupSessionsBoxName =
       'box_outbound_group_session';
 
@@ -152,6 +167,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   static const String _lastSentOlmMessagesBoxName =
       'box_last_sent_olm_messages';
+
+  static const String _roomKeyBundlesBoxName = 'box_room_key_bundles';
+
+  static const String _pendingRoomKeyBundlesBoxName =
+      'box_pending_room_key_bundles';
 
   Database? database;
 
@@ -216,6 +236,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         _roomAccountDataBoxName,
         _inboundGroupSessionsBoxName,
         _inboundGroupSessionsUploadQueueBoxName,
+        _inboundGroupSessionsByRoomBoxName,
         _outboundGroupSessionsBoxName,
         _olmSessionsBoxName,
         _legacyUserDeviceKeysBoxName,
@@ -231,6 +252,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         _readReceiptsBoxName,
         _deviceKeysListBoxName,
         _lastSentOlmMessagesBoxName,
+        _roomKeyBundlesBoxName,
+        _pendingRoomKeyBundlesBoxName,
       },
       sqfliteDatabase: database,
       sqfliteFactory: sqfliteFactory,
@@ -251,6 +274,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _inboundGroupSessionsUploadQueueBox = _collection.openBox(
       _inboundGroupSessionsUploadQueueBoxName,
     );
+    _inboundGroupSessionsByRoomBox = _collection.openBox(
+      _inboundGroupSessionsByRoomBoxName,
+    );
     _outboundGroupSessionsBox = _collection.openBox(
       _outboundGroupSessionsBoxName,
     );
@@ -265,6 +291,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _readReceiptsBox = _collection.openBox(_readReceiptsBoxName);
     _deviceKeysListBox = _collection.openBox(_deviceKeysListBoxName);
     _lastSentOlmMessagesBox = _collection.openBox(_lastSentOlmMessagesBoxName);
+    _roomKeyBundlesBox = _collection.openBox(_roomKeyBundlesBoxName);
+    _pendingRoomKeyBundlesBox = _collection.openBox(
+      _pendingRoomKeyBundlesBoxName,
+    );
 
     // Check version and check if we need a migration
     final currentVersion = int.tryParse(await _clientBox.get('version') ?? '');
@@ -310,8 +340,51 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           await storeDeviceKeysList(entry.value);
         }
       });
+    }
+
+    if (currentVersion < 13) {
+      // The history visibility became an important state for MSC4268.
+      await transaction(() async {
+        final keys = await _nonPreloadRoomStateBox.getAllKeys();
+        for (final key in keys) {
+          if (TupleKey.fromString(key).parts.elementAtOrNull(1) !=
+              EventTypes.HistoryVisibility) {
+            continue;
+          }
+          final state = await _nonPreloadRoomStateBox.get(key);
+          if (state != null) await _preloadRoomStateBox.put(key, state);
+          await _nonPreloadRoomStateBox.delete(key);
+        }
+      });
+
+      // Index the inbound group sessions by room. In chunks, as big accounts
+      // have more sessions than fit into memory at once.
+      final sessionIds = await _inboundGroupSessionsBox.getAllKeys();
+      const chunkSize = 500;
+      for (var i = 0; i < sessionIds.length; i += chunkSize) {
+        final chunk = sessionIds.sublist(
+          i,
+          min(i + chunkSize, sessionIds.length),
+        );
+        final sessions = await _inboundGroupSessionsBox.getAll(chunk);
+        await transaction(() async {
+          for (final raw in sessions) {
+            final roomId = raw?['room_id'];
+            final sessionId = raw?['session_id'];
+            if (roomId is! String || sessionId is! String) continue;
+            await _inboundGroupSessionsByRoomBox.put(
+              TupleKey(roomId, sessionId).toString(),
+              sessionId,
+            );
+          }
+        });
+        _inboundGroupSessionsBox.clearQuickAccessCache();
+      }
+    }
+
+    if (currentVersion >= 11) {
       await _clientBox.put('version', version.toString());
-      if (version == 12 && currentVersion == 11) return;
+      return;
     }
 
     // The default version upgrade:
@@ -331,6 +404,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _roomAccountDataBox.clearQuickAccessCache();
     _inboundGroupSessionsBox.clearQuickAccessCache();
     _inboundGroupSessionsUploadQueueBox.clearQuickAccessCache();
+    _inboundGroupSessionsByRoomBox.clearQuickAccessCache();
     _outboundGroupSessionsBox.clearQuickAccessCache();
     _olmSessionsBox.clearQuickAccessCache();
     _ssssCacheBox.clearQuickAccessCache();
@@ -343,6 +417,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _readReceiptsBox.clearQuickAccessCache();
     _deviceKeysListBox.clearQuickAccessCache();
     _lastSentOlmMessagesBox.clearQuickAccessCache();
+    _roomKeyBundlesBox.clearQuickAccessCache();
+    _pendingRoomKeyBundlesBox.clearQuickAccessCache();
 
     await _collection.clear();
   }
@@ -958,6 +1034,47 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
+  Future<void> storeRoomKeyBundle(
+    String roomId,
+    String senderId,
+    Map<String, Object?> bundleInfo,
+  ) => _roomKeyBundlesBox.put(
+    TupleKey(roomId, senderId).toString(),
+    copyMap(bundleInfo),
+  );
+
+  @override
+  Future<Map<String, Object?>?> getRoomKeyBundle(
+    String roomId,
+    String senderId,
+  ) async {
+    final raw = await _roomKeyBundlesBox.get(
+      TupleKey(roomId, senderId).toString(),
+    );
+    return raw == null ? null : copyMap(raw);
+  }
+
+  @override
+  Future<void> removeRoomKeyBundle(String roomId, String senderId) =>
+      _roomKeyBundlesBox.delete(TupleKey(roomId, senderId).toString());
+
+  @override
+  Future<void> storePendingRoomKeyBundle(
+    String roomId,
+    Map<String, Object?> details,
+  ) => _pendingRoomKeyBundlesBox.put(roomId, copyMap(details));
+
+  @override
+  Future<Map<String, Map<String, Object?>>> getPendingRoomKeyBundles() async {
+    final raw = await _pendingRoomKeyBundlesBox.getAllValues();
+    return raw.map((roomId, details) => MapEntry(roomId, copyMap(details)));
+  }
+
+  @override
+  Future<void> removePendingRoomKeyBundle(String roomId) =>
+      _pendingRoomKeyBundlesBox.delete(roomId);
+
+  @override
   Future<void> setLastSentMessageUserDeviceKey(
     String lastSentMessage,
     String userId,
@@ -1157,6 +1274,10 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       senderClaimedKeys: senderClaimedKey,
     ).toJson();
     await _inboundGroupSessionsBox.put(sessionId, json);
+    await _inboundGroupSessionsByRoomBox.put(
+      TupleKey(roomId, sessionId).toString(),
+      sessionId,
+    );
     // Mark this session as needing upload too
     await _inboundGroupSessionsUploadQueueBox.put(sessionId, roomId);
     return;
@@ -1400,6 +1521,22 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     json['indexes'] = indexes;
     await _inboundGroupSessionsBox.put(sessionId, json);
     return;
+  }
+
+  @override
+  Future<List<StoredInboundGroupSession>> getInboundGroupSessionsByRoom(
+    String roomId,
+  ) async {
+    final prefix = '${TupleKey(roomId)}|';
+    final sessionIds = (await _inboundGroupSessionsByRoomBox.getKeysWithPrefix(
+      prefix,
+    )).map((key) => key.substring(prefix.length)).toList();
+    final sessions = await _inboundGroupSessionsBox.getAll(sessionIds);
+    return [
+      for (final raw in sessions)
+        if (raw != null && raw['room_id'] == roomId)
+          StoredInboundGroupSession.fromJson(copyMap(raw)),
+    ];
   }
 
   @override

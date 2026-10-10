@@ -1123,18 +1123,8 @@ class Room {
       if (encryptedFile == null) 'url': uploadResp.toString(),
       if (encryptedFile != null)
         'file': {
-          'url': uploadResp.toString(),
+          ...encryptedFile.toJson(uploadResp),
           'mimetype': file.mimeType,
-          'v': 'v2',
-          'key': {
-            'alg': 'A256CTR',
-            'ext': true,
-            'k': encryptedFile.k,
-            'key_ops': ['encrypt', 'decrypt'],
-            'kty': 'oct',
-          },
-          'iv': encryptedFile.iv,
-          'hashes': {'sha256': encryptedFile.sha256},
         },
       'info': {
         ...file.info,
@@ -1142,18 +1132,8 @@ class Room {
           'thumbnail_url': thumbnailUploadResp.toString(),
         if (thumbnail != null && encryptedThumbnail != null)
           'thumbnail_file': {
-            'url': thumbnailUploadResp.toString(),
+            ...encryptedThumbnail.toJson(thumbnailUploadResp!),
             'mimetype': thumbnail.mimeType,
-            'v': 'v2',
-            'key': {
-              'alg': 'A256CTR',
-              'ext': true,
-              'k': encryptedThumbnail.k,
-              'key_ops': ['encrypt', 'decrypt'],
-              'kty': 'oct',
-            },
-            'iv': encryptedThumbnail.iv,
-            'hashes': {'sha256': encryptedThumbnail.sha256},
           },
         if (thumbnail != null) 'thumbnail_info': thumbnail.info,
         if (thumbnail?.blurhash != null &&
@@ -2689,6 +2669,14 @@ class Room {
       (element) => element.text == historyVisibilityString,
     );
   }
+
+  /// Whether users invited later can read the history, so encrypted messages
+  /// sent now may be shared with them on invite (MSC4268). Without a history
+  /// visibility event the spec defaults to `shared`.
+  bool get isHistoryShared => {
+    HistoryVisibility.shared,
+    HistoryVisibility.worldReadable,
+  }.contains(historyVisibility ?? HistoryVisibility.shared);
 
   /// Changes the history visibility. You should check first if the user is able to change it.
   Future<void> setHistoryVisibility(HistoryVisibility historyVisibility) async {

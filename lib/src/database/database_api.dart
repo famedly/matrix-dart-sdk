@@ -137,6 +137,10 @@ abstract class DatabaseApi {
 
   Future<List<StoredInboundGroupSession>> getAllInboundGroupSessions();
 
+  Future<List<StoredInboundGroupSession>> getInboundGroupSessionsByRoom(
+    String roomId,
+  );
+
   Future<StoredInboundGroupSession?> getInboundGroupSession(
     String roomId,
     String sessionId,
@@ -192,6 +196,34 @@ abstract class DatabaseApi {
   );
 
   Future clearSSSSCache();
+
+  /// Stores the details of a key bundle [senderId] sent us for [roomId]
+  /// (MSC4268).
+  Future<void> storeRoomKeyBundle(
+    String roomId,
+    String senderId,
+    Map<String, Object?> bundleInfo,
+  );
+
+  Future<Map<String, Object?>?> getRoomKeyBundle(
+    String roomId,
+    String senderId,
+  );
+
+  Future<void> removeRoomKeyBundle(String roomId, String senderId);
+
+  /// Stores who invited us to [roomId] and when we accepted the invite, so
+  /// that we can import their key bundle later (MSC4268).
+  Future<void> storePendingRoomKeyBundle(
+    String roomId,
+    Map<String, Object?> details,
+  );
+
+  /// Returns a map of room IDs to the details stored with
+  /// [storePendingRoomKeyBundle].
+  Future<Map<String, Map<String, Object?>>> getPendingRoomKeyBundles();
+
+  Future<void> removePendingRoomKeyBundle(String roomId);
 
   Future storeSSSSCache(
     String type,

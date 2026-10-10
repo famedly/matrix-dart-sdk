@@ -604,6 +604,13 @@ class DeviceKeys extends SignableKey {
   @override
   bool get blocked => super.blocked || !selfSigned;
 
+  /// Whether the self-signing key of the owner signed this device, no matter
+  /// if anyone verified the owner.
+  bool get crossSignedByOwner => hasValidSignatureChain(
+    verifiedByTheirMasterKey: true,
+    onlyValidateUserIds: {userId},
+  );
+
   bool get isValid =>
       deviceId != null &&
       keys.isNotEmpty &&

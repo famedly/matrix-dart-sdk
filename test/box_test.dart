@@ -76,6 +76,40 @@ void main() {
       },
     );
 
+    test('Box.getKeysWithPrefix', () async {
+      final box = collection.openBox<Map>('cats');
+      await box.put('!a:x|1', data);
+      await box.put('!a:x|2', data);
+      // Same prefix without the separator and a key sorting right after it.
+      await box.put('!a:xy|3', data);
+      await box.put('!a:x}', data);
+      await box.put('!b:x|4', data2);
+      expect((await box.getKeysWithPrefix('!a:x|'))..sort(), [
+        '!a:x|1',
+        '!a:x|2',
+      ]);
+      await box.clear();
+    });
+
+    test('Box.getKeysWithPrefix in transaction', () async {
+      final box = collection.openBox<Map>('cats');
+      await box.put('!a:x|1', data);
+      await box.put('!a:x|2', data);
+      await collection.transaction(() async {
+        await box.put('!a:x|3', data);
+        await box.delete('!a:x|1');
+        expect((await box.getKeysWithPrefix('!a:x|'))..sort(), [
+          '!a:x|2',
+          '!a:x|3',
+        ]);
+      });
+      expect((await box.getKeysWithPrefix('!a:x|'))..sort(), [
+        '!a:x|2',
+        '!a:x|3',
+      ]);
+      await box.clear();
+    });
+
     test('Box.delete', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('fluffy', data);

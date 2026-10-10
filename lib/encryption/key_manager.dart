@@ -82,7 +82,13 @@ class KeyManager {
     Map<String, String>? senderClaimedKeys,
     bool uploaded = false,
     Map<String, Map<String, int>>? allowedAtIndex,
+
+    /// The user who shared this session with us in a key bundle (MSC4268).
+    String? sharedBy,
   }) async {
+    // Only we set who shared a session, never the content we received.
+    content = {...content}..remove(SessionKey.sharedByKey);
+    if (sharedBy != null) content[SessionKey.sharedByKey] = sharedBy;
     final senderClaimedKeys_ = senderClaimedKeys ?? <String, String>{};
     final allowedAtIndex_ = allowedAtIndex ?? <String, Map<String, int>>{};
     final userId = client.userID;
@@ -351,6 +357,10 @@ class KeyManager {
       Logs().w('No inbound megolm session found for outbound session!');
       assert(inboundSess != null);
       wipe = true;
+    } else if (inboundSess.sharedHistory != room.isHistoryShared) {
+      // The history visibility changed in a way that affects whether this
+      // session may be shared with invited users later (MSC4268).
+      wipe = true;
     }
 
     if (!wipe) {
@@ -438,13 +448,14 @@ class KeyManager {
           'room_id': room.id,
           'session_id': sess.outboundGroupSession!.sessionId,
           'session_key': sess.outboundGroupSession!.sessionKey,
+          ...SessionKey.sharedHistoryContent(inboundSess!.sharedHistory),
         };
         try {
           devicesToReceive.removeWhere((k) => !k.encryptToDevice);
           if (devicesToReceive.isNotEmpty) {
             // update allowedAtIndex
             for (final device in devicesToReceive) {
-              inboundSess!.allowedAtIndex[device.userId] ??= <String, int>{};
+              inboundSess.allowedAtIndex[device.userId] ??= <String, int>{};
               if (!inboundSess.allowedAtIndex[device.userId]!.containsKey(
                     device.curve25519Key,
                   ) ||
@@ -457,7 +468,7 @@ class KeyManager {
               }
             }
             await client.database.updateInboundGroupSessionAllowedAtIndex(
-              json.encode(inboundSess!.allowedAtIndex),
+              json.encode(inboundSess.allowedAtIndex),
               room.id,
               sess.outboundGroupSession!.sessionId,
             );
@@ -561,6 +572,7 @@ class KeyManager {
       'room_id': room.id,
       'session_id': outboundGroupSession.sessionId,
       'session_key': outboundGroupSession.sessionKey,
+      ...SessionKey.sharedHistoryContent(room.isHistoryShared),
     };
     final allowedAtIndex = <String, Map<String, int>>{};
     for (final device in deviceKeys) {
@@ -949,6 +961,10 @@ class KeyManager {
 
   /// Handle an incoming to_device event that is related to key sharing
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
+    if (event.type == EventTypes.RoomKeyBundle ||
+        event.type == EventTypes.RoomKeyBundleUnstable) {
+      return _handleRoomKeyBundle(event);
+    }
     if (event.type == EventTypes.RoomKeyRequest) {
       if (event.content['request_id'] is! String) {
         return; // invalid event
@@ -1101,6 +1117,10 @@ class KeyManager {
         Logs().w('sender_claimed_ed255519_key has wrong type');
         return; // wrong type
       }
+      // Only the creator of a session can mark it as shareable (MSC4268).
+      for (final key in SessionKey.sharedHistoryKeys) {
+        event.content.remove(key);
+      }
       // TODO: verify that the keys work to decrypt a message
       // alright, all checks out, let's go ahead and store this session
       await setInboundGroupSession(
@@ -1170,6 +1190,307 @@ class KeyManager {
         forwarded: false,
       );
     }
+  }
+
+  /// Builds a key bundle (MSC4268) of all sessions we know in this room.
+  /// Sessions which are not marked as shareable are only listed as withheld.
+  Future<Map<String, Object?>> buildRoomKeyBundle(String roomId) async {
+    final dbSessions = await client.database.getInboundGroupSessionsByRoom(
+      roomId,
+    );
+    final roomKeys = <Map<String, Object?>>[];
+    final withheld = <Map<String, Object?>>[];
+    for (final dbSession in dbSessions) {
+      final SessionKey session;
+      try {
+        session = SessionKey.fromDb(dbSession, client.userID!);
+      } catch (e, s) {
+        Logs().w('[KeyManager] Skipping broken session in key bundle', e, s);
+        continue;
+      }
+      final inboundGroupSession = session.inboundGroupSession;
+      if (inboundGroupSession == null) continue;
+      if (!session.sharedHistory) {
+        withheld.add({
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'code': 'm.history_not_shared',
+          'reason': 'History not shared',
+          'room_id': roomId,
+          'sender_key': session.senderKey,
+          'session_id': session.sessionId,
+        });
+        continue;
+      }
+      roomKeys.add({
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
+        'room_id': roomId,
+        'sender_key': session.senderKey,
+        'sender_claimed_keys': {
+          // Our own sessions may lack the claimed keys if our device was not
+          // in the device keys list yet when we created them.
+          if (session.senderKey == encryption.identityKey)
+            'ed25519': encryption.fingerprintKey!,
+          ...session.senderClaimedKeys,
+        },
+        'session_id': session.sessionId,
+        'session_key': inboundGroupSession.exportAtFirstKnownIndex(),
+      });
+    }
+    return {'room_keys': roomKeys, 'withheld': withheld};
+  }
+
+  /// Shares the keys of all shareable sessions in this room with the devices
+  /// of [userId] which are cross-signed by their owner (MSC4268). Call this
+  /// before inviting the user. `Client.inviteUser()` does this automatically
+  /// if `Client.shareHistoryOnInvite` is enabled. Returns whether it was sent.
+  Future<bool> shareRoomKeyBundle(Room room, String userId) async {
+    if (!room.isHistoryShared) {
+      Logs().v('[KeyManager] Not sharing history as it is not shared');
+      return false;
+    }
+    await client.userDeviceKeysLoading;
+    // Recipients reject bundles from devices their owner did not cross-sign.
+    final ownDevice =
+        client.userDeviceKeys[client.userID]?.deviceKeys[client.deviceID];
+    if (ownDevice == null || !ownDevice.crossSignedByOwner) {
+      Logs().w(
+        '[KeyManager] Not sharing history from a not cross-signed device',
+      );
+      return false;
+    }
+
+    // The bundle must not go to devices an attacker added to the account.
+    await client.updateUserDeviceKeys(additionalUsers: {userId});
+    final devices =
+        client.userDeviceKeys[userId]?.deviceKeys.values
+            .where(
+              (device) =>
+                  // Respects blocked devices and Client.shareKeysWith.
+                  device.encryptToDevice && device.crossSignedByOwner,
+            )
+            .toList() ??
+        [];
+    if (devices.isEmpty) {
+      Logs().i('[KeyManager] $userId has no cross-signed devices for history');
+      return false;
+    }
+
+    if (await isCached()) {
+      try {
+        await loadAllKeysFromRoom(room.id);
+      } catch (e, s) {
+        Logs().w('[KeyManager] Unable to load room keys from backup', e, s);
+      }
+    }
+
+    final bundle = await buildRoomKeyBundle(room.id);
+    final roomKeys = bundle['room_keys'] as List;
+    if (roomKeys.isEmpty && (bundle['withheld'] as List).isEmpty) return false;
+    final encryptedFile = await encryptFile(utf8.encode(json.encode(bundle)));
+    final uri = await client.uploadContent(
+      encryptedFile.data,
+      filename: 'room_key_bundle',
+      contentType: 'application/octet-stream',
+    );
+    Logs().i(
+      '[KeyManager] Sharing ${roomKeys.length} room keys of ${room.id} with ${devices.length} devices of $userId',
+    );
+    await client.sendToDeviceEncrypted(devices, EventTypes.RoomKeyBundle, {
+      'room_id': room.id,
+      'file': encryptedFile.toJson(uri),
+    });
+    return true;
+  }
+
+  /// Remembers that we accepted an invite from [inviterId] on this device, so
+  /// that we import the key bundle they sent us (MSC4268).
+  Future<void> onInviteAccepted(String roomId, String inviterId) async {
+    await client.database.storePendingRoomKeyBundle(roomId, {
+      'inviter': inviterId,
+      'invite_accepted_at': DateTime.now().millisecondsSinceEpoch,
+    });
+    runInRoot(() => importPendingRoomKeyBundle(roomId));
+  }
+
+  /// Imports the key bundles of all rooms where we recently accepted an
+  /// invite. Bundles may arrive late or the import may have been interrupted.
+  Future<void> importPendingRoomKeyBundles() async {
+    final pending = await client.database.getPendingRoomKeyBundles();
+    for (final roomId in pending.keys) {
+      await importPendingRoomKeyBundle(roomId);
+    }
+  }
+
+  final _roomKeyBundleImports = <String, Future<void>>{};
+
+  /// Downloads and imports the key bundle the inviter sent us for this room,
+  /// if we accepted their invite on this device within the last day.
+  Future<void> importPendingRoomKeyBundle(String roomId) async {
+    // Runs after an import which is still running, as that one may have read
+    // the database before the invite was accepted or the bundle arrived.
+    final previous = _roomKeyBundleImports[roomId];
+    final done = Completer<void>();
+    _roomKeyBundleImports[roomId] = done.future;
+    try {
+      await previous;
+      await _importPendingRoomKeyBundle(roomId);
+    } finally {
+      done.complete();
+      if (_roomKeyBundleImports[roomId] == done.future) {
+        _roomKeyBundleImports.remove(roomId);
+      }
+    }
+  }
+
+  Future<void> _importPendingRoomKeyBundle(String roomId) async {
+    // An unknown room means that we left it, so the rooms must be loaded.
+    await client.roomsLoading;
+    final database = client.database;
+    final pending = (await database.getPendingRoomKeyBundles())[roomId];
+    if (pending == null) return;
+    final inviter = pending.tryGet<String>('inviter');
+    final acceptedAt = pending.tryGet<int>('invite_accepted_at');
+    final membership = client.getRoomById(roomId)?.membership;
+    if (inviter == null ||
+        acceptedAt == null ||
+        DateTime.now()
+            .subtract(const Duration(days: 1))
+            .isAfter(DateTime.fromMillisecondsSinceEpoch(acceptedAt)) ||
+        // While the join is not synced yet, the room is still invited.
+        (membership != Membership.join && membership != Membership.invite)) {
+      await database.removePendingRoomKeyBundle(roomId);
+      return;
+    }
+    final bundleInfo = await database.getRoomKeyBundle(roomId, inviter);
+    if (bundleInfo == null) return; // Not received yet.
+
+    try {
+      await _importRoomKeyBundle(roomId, inviter, bundleInfo);
+    } on MatrixException catch (e) {
+      if (e.error != MatrixError.M_NOT_FOUND) rethrow;
+      Logs().w('[KeyManager] Key bundle for $roomId has expired', e);
+    }
+    await database.removePendingRoomKeyBundle(roomId);
+    await database.removeRoomKeyBundle(roomId, inviter);
+  }
+
+  Future<void> _importRoomKeyBundle(
+    String roomId,
+    String inviter,
+    Map<String, Object?> bundleInfo,
+  ) async {
+    // The bundle is worth as much as the trust in the device which sent it,
+    // so it must be cross-signed by the inviter.
+    await client.updateUserDeviceKeys(additionalUsers: {inviter});
+    final device = client.userDeviceKeys[inviter]?.deviceKeys.values
+        .firstWhereOrNull(
+          (d) => d.curve25519Key == bundleInfo.tryGet<String>('sender_key'),
+        );
+    if (device == null || device.blocked || !device.crossSignedByOwner) {
+      Logs().w(
+        '[KeyManager] Ignoring key bundle for $roomId from untrusted device of $inviter',
+      );
+      return;
+    }
+
+    final file = bundleInfo.tryGetMap<String, Object?>('file');
+    final url = file?.tryGet<String>('url');
+    final k = file?.tryGetMap<String, Object?>('key')?.tryGet<String>('k');
+    final iv = file?.tryGet<String>('iv');
+    final sha256 = file
+        ?.tryGetMap<String, Object?>('hashes')
+        ?.tryGet<String>('sha256');
+    final mxc = url == null ? null : Uri.tryParse(url);
+    if (mxc == null ||
+        !mxc.isScheme('mxc') ||
+        k == null ||
+        iv == null ||
+        sha256 == null) {
+      Logs().w('[KeyManager] Ignoring malformed key bundle for $roomId');
+      return;
+    }
+
+    final response = await client.getContent(
+      mxc.authority,
+      mxc.path.substring(1),
+    );
+    final decrypted = await client.nativeImplementations.decryptFile(
+      EncryptedFile(data: response.data, k: k, iv: iv, sha256: sha256),
+    );
+    final Object? bundle;
+    try {
+      bundle = decrypted == null ? null : json.decode(utf8.decode(decrypted));
+    } on FormatException catch (e) {
+      Logs().w('[KeyManager] Unable to parse key bundle for $roomId', e);
+      return;
+    }
+    final roomKeys = bundle is Map<String, Object?>
+        ? bundle.tryGetList<Map<String, Object?>>('room_keys')
+        : null;
+    if (roomKeys == null) {
+      Logs().w('[KeyManager] Unable to decrypt key bundle for $roomId');
+      return;
+    }
+
+    var imported = 0;
+    for (final key in roomKeys) {
+      final sessionId = key.tryGet<String>('session_id');
+      final senderKey = key.tryGet<String>('sender_key');
+      final sessionKey = key.tryGet<String>('session_key');
+      // Keys for other rooms must be ignored.
+      if (key['room_id'] != roomId ||
+          key['algorithm'] != AlgorithmTypes.megolmV1AesSha2 ||
+          sessionId == null ||
+          senderKey == null ||
+          sessionKey == null) {
+        continue;
+      }
+      await setInboundGroupSession(
+        roomId,
+        sessionId,
+        senderKey,
+        {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': roomId,
+          'session_id': sessionId,
+          'session_key': sessionKey,
+          // Keys from a bundle are shareable again by definition.
+          ...SessionKey.sharedHistoryContent(true),
+        },
+        forwarded: true,
+        senderClaimedKeys: key.tryGetMap<String, String>('sender_claimed_keys'),
+        sharedBy: inviter,
+      );
+      imported++;
+    }
+    Logs().i(
+      '[KeyManager] Imported $imported room keys for $roomId shared by $inviter',
+    );
+  }
+
+  Future<void> _handleRoomKeyBundle(ToDeviceEvent event) async {
+    final senderKey = event.encryptedContent?.tryGet<String>('sender_key');
+    final roomId = event.content.tryGet<String>('room_id');
+    final file = event.content.tryGetMap<String, Object?>('file');
+    if (senderKey == null || event.senderDeviceKeys == null) {
+      Logs().w('[KeyManager] Ignoring key bundle without sender device keys');
+      return;
+    }
+    if (roomId == null || file == null) {
+      Logs().w('[KeyManager] Ignoring malformed key bundle');
+      return;
+    }
+    Logs().i(
+      '[KeyManager] Received key bundle for $roomId from ${event.sender}',
+    );
+    // Only the details are stored. We download the bundle only once we
+    // accepted an invite from this sender, so nobody can make us download
+    // large amounts of data.
+    await client.database.storeRoomKeyBundle(roomId, event.sender, {
+      'sender_key': senderKey,
+      'file': file,
+    });
+    await importPendingRoomKeyBundle(roomId);
   }
 
   StreamSubscription<SyncUpdate>? _uploadKeysOnSync;
@@ -1280,6 +1601,7 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
         'sender_key': sess.senderKey,
         'sender_claimed_keys': sess.senderClaimedKeys,
         'session_key': sess.inboundGroupSession!.exportAtFirstKnownIndex(),
+        ...SessionKey.sharedHistoryContent(sess.sharedHistory),
       };
       // encrypt the content
       final encrypted = enc.encrypt(json.encode(payload));

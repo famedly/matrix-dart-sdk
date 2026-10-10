@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:test/test.dart';
@@ -469,6 +470,37 @@ void main() {
         );
         expect(event, null);
       });
+      test('room key bundles', () async {
+        const roomId = '!room:example.com';
+        const senderId = '@alice:example.com';
+        expect(await database.getRoomKeyBundle(roomId, senderId), null);
+        await database.storeRoomKeyBundle(roomId, senderId, {
+          'sender_key': 'abc',
+          'file': {'url': 'mxc://example.com/abc'},
+        });
+        expect(await database.getRoomKeyBundle(roomId, senderId), {
+          'sender_key': 'abc',
+          'file': {'url': 'mxc://example.com/abc'},
+        });
+        expect(
+          await database.getRoomKeyBundle(roomId, '@bob:example.com'),
+          null,
+        );
+        await database.removeRoomKeyBundle(roomId, senderId);
+        expect(await database.getRoomKeyBundle(roomId, senderId), null);
+      });
+      test('pending room key bundles', () async {
+        const roomId = '!room:example.com';
+        await database.storePendingRoomKeyBundle(roomId, {
+          'inviter': '@alice:example.com',
+          'invite_accepted_at': 1234,
+        });
+        expect(await database.getPendingRoomKeyBundles(), {
+          roomId: {'inviter': '@alice:example.com', 'invite_accepted_at': 1234},
+        });
+        await database.removePendingRoomKeyBundle(roomId);
+        expect(await database.getPendingRoomKeyBundles(), isEmpty);
+      });
       test('getAllInboundGroupSessions', () async {
         final result = await database.getAllInboundGroupSessions();
         expect(result.isEmpty, true);
@@ -521,6 +553,39 @@ void main() {
           '!testroom:example.com',
           'sessionId',
         );
+      });
+      test('getInboundGroupSessionsByRoom', () async {
+        Future<void> store(String roomId, String sessionId) =>
+            database.storeInboundGroupSession(
+              roomId,
+              sessionId,
+              'pickle',
+              '{}',
+              '{}',
+              '{}',
+              'senderKey',
+              '{}',
+            );
+        await store('!a:example.com', 'sessionA1');
+        await store('!a:example.com', 'sessionA2');
+        await store('!a:example.comm', 'sessionAA');
+        await store('!b:example.com', 'sessionB');
+        Future<Set<String>> sessionIds(String roomId) async =>
+            (await database.getInboundGroupSessionsByRoom(
+              roomId,
+            )).map((session) => session.sessionId).toSet();
+        expect(await sessionIds('!a:example.com'), {'sessionA1', 'sessionA2'});
+        expect(await sessionIds('!b:example.com'), {'sessionB'});
+        expect(await sessionIds('!c:example.com'), isEmpty);
+
+        await database.transaction(() async {
+          await store('!a:example.com', 'sessionA3');
+          expect(await sessionIds('!a:example.com'), {
+            'sessionA1',
+            'sessionA2',
+            'sessionA3',
+          });
+        });
       });
       test('getSSSSCache', () async {
         final cache = await database.getSSSSCache('type');
@@ -829,14 +894,92 @@ void main() {
         expect(crossSigningKey?.usage, ['master']);
         expect(crossSigningKey?.ed25519Key, publicKey);
 
-        // Check if version is now 12:
+        // Check if version is now the current one:
         final version = await database.database!.query(
           'box_client',
           columns: ['v'],
           where: 'k = ?',
           whereArgs: ['version'],
         );
-        expect(version.first['v'], '12');
+        expect(version.first['v'], MatrixSdkDatabase.version.toString());
+
+        await database.close();
+      });
+      test('Migrate from version 12', () async {
+        final sqliteDb = await databaseFactoryFfi.openDatabase(
+          ':memory:',
+          options: OpenDatabaseOptions(singleInstance: false),
+        );
+        for (final name in {
+          'box_client',
+          'box_rooms',
+          'box_preload_room_states',
+          'box_non_preload_room_states',
+          'box_inbound_group_session',
+        }) {
+          sqliteDb.execute(
+            'CREATE TABLE IF NOT EXISTS $name (k TEXT PRIMARY KEY NOT NULL, v TEXT)',
+          );
+        }
+        await sqliteDb.insert('box_client', {'k': 'version', 'v': '12'});
+        await sqliteDb.insert('box_rooms', {
+          'k': '!room:example.com',
+          'v': jsonEncode({'id': '!room:example.com', 'membership': 'join'}),
+        });
+        final historyVisibilityKey = TupleKey(
+          '!room:example.com',
+          EventTypes.HistoryVisibility,
+          '',
+        ).toString();
+        await sqliteDb.insert('box_non_preload_room_states', {
+          'k': historyVisibilityKey,
+          'v': jsonEncode({'type': EventTypes.HistoryVisibility}),
+        });
+        // More sessions than fit into one chunk of the migration.
+        for (var i = 0; i < 1200; i++) {
+          await sqliteDb.insert('box_inbound_group_session', {
+            'k': 'session$i',
+            'v': jsonEncode(
+              StoredInboundGroupSession(
+                roomId: '!room${i % 3}:example.com',
+                sessionId: 'session$i',
+                pickle: 'pickle',
+                content: '{}',
+                indexes: '{}',
+                allowedAtIndex: '{}',
+                senderKey: 'senderKey',
+                senderClaimedKeys: '{}',
+              ).toJson(),
+            ),
+          });
+        }
+
+        final database = await MatrixSdkDatabase.init(
+          'unit_test.${DateTime.now().millisecondsSinceEpoch}',
+          database: sqliteDb,
+          sqfliteFactory: databaseFactoryFfi,
+        );
+
+        // The cache is kept.
+        expect(await sqliteDb.query('box_rooms'), hasLength(1));
+        // Existing sessions are indexed by room.
+        expect(
+          await database.getInboundGroupSessionsByRoom('!room1:example.com'),
+          hasLength(400),
+        );
+        // The history visibility is an important state now.
+        expect(await sqliteDb.query('box_non_preload_room_states'), isEmpty);
+        expect(
+          (await sqliteDb.query('box_preload_room_states')).single['k'],
+          historyVisibilityKey,
+        );
+        final version = await sqliteDb.query(
+          'box_client',
+          columns: ['v'],
+          where: 'k = ?',
+          whereArgs: ['version'],
+        );
+        expect(version.first['v'], MatrixSdkDatabase.version.toString());
 
         await database.close();
       });
