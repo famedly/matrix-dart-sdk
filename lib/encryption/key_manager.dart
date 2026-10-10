@@ -1296,10 +1296,19 @@ class KeyManager {
     Logs().i(
       '[KeyManager] Sharing ${roomKeys.length} room keys of ${room.id} with ${devices.length} devices of $userId',
     );
-    await client.sendToDeviceEncrypted(devices, EventTypes.RoomKeyBundle, {
-      'room_id': room.id,
-      'file': encryptedFile.toJson(uri),
-    });
+    final content = {'room_id': room.id, 'file': encryptedFile.toJson(uri)};
+    await client.sendToDeviceEncrypted(
+      devices,
+      EventTypes.RoomKeyBundle,
+      content,
+    );
+    // ponytail: matrix-rust-sdk before 0.17 only reads the unstable type, drop
+    // this once those clients are gone. Receivers of both import only once.
+    await client.sendToDeviceEncrypted(
+      devices,
+      EventTypes.RoomKeyBundleUnstable,
+      content,
+    );
     return true;
   }
 

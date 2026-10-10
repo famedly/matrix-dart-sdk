@@ -482,23 +482,33 @@ void main() {
       final upload = actions.indexWhere(
         (action) => action.startsWith('/media/v3/upload'),
       );
-      final sendToDevice = actions.indexWhere(
-        (action) =>
-            action.startsWith('/client/v3/sendToDevice/m.room.encrypted/'),
-      );
+      // Once under the stable and once under the unstable type.
+      final sendToDevice = [
+        for (final (i, action) in actions.indexed)
+          if (action.startsWith('/client/v3/sendToDevice/m.room.encrypted/')) i,
+      ];
       final invite = actions.indexWhere((action) => action.endsWith('/invite'));
       expect(upload, isNot(-1));
-      expect(sendToDevice, greaterThan(upload));
-      expect(invite, greaterThan(sendToDevice));
+      expect(sendToDevice, hasLength(2));
+      expect(sendToDevice.first, greaterThan(upload));
+      expect(invite, greaterThan(sendToDevice.last));
 
-      final body = json.decode(
-        FakeMatrixApi.calledEndpoints[actions[sendToDevice]]!.single,
+      final toDevice = [
+        for (final i in sendToDevice)
+          (json.decode(FakeMatrixApi.calledEndpoints[actions[i]]!.single)
+                  as Map)['messages']
+              as Map<String, Object?>,
+      ];
+      for (final messages in toDevice) {
+        // OTHERDEVICE is cross-signed but has no one-time keys.
+        expect(messages.keys, [bobId]);
+        expect((messages[bobId] as Map).keys, ['GHTYAJCE']);
+      }
+
+      final received = <String>[];
+      final subscription = bob.onToDeviceEvent.stream.listen(
+        (event) => received.add(event.type),
       );
-      final messages = body['messages'] as Map<String, Object?>;
-      // OTHERDEVICE is cross-signed but has no one-time keys.
-      expect(messages.keys, [bobId]);
-      expect((messages[bobId] as Map).keys, ['GHTYAJCE']);
-
       await bob.handleSync(
         SyncUpdate(
           nextBatch: '',
@@ -523,14 +533,20 @@ void main() {
             },
           ),
           toDevice: [
-            BasicEventWithSender(
-              type: EventTypes.Encrypted,
-              content: (messages[bobId] as Map)['GHTYAJCE'],
-              senderId: aliceId,
-            ),
+            for (final messages in toDevice)
+              BasicEventWithSender(
+                type: EventTypes.Encrypted,
+                content: (messages[bobId] as Map)['GHTYAJCE'],
+                senderId: aliceId,
+              ),
           ],
         ),
       );
+      await subscription.cancel();
+      expect(received, [
+        EventTypes.RoomKeyBundle,
+        EventTypes.RoomKeyBundleUnstable,
+      ]);
     });
 
     test('the bundle is not imported before accepting the invite', () async {
