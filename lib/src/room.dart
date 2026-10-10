@@ -600,7 +600,16 @@ class Room {
     if (lastEvent.senderId == client.userID) return false;
 
     // Get the timestamp of read marker and compare
-    final readAtMilliseconds = receiptState.global.latestOwnReceipt?.ts ?? 0;
+    final threadReceipts = switch (lastEvent.relationshipType) {
+      null => receiptState.mainThread,
+      RelationshipTypes.thread =>
+        receiptState.byThread[lastEvent.relationshipEventId],
+      _ => null,
+    };
+    final readAtMilliseconds = max(
+      receiptState.global.latestOwnReceipt?.ts ?? 0,
+      threadReceipts?.latestOwnReceipt?.ts ?? 0,
+    );
     return readAtMilliseconds < lastEvent.originServerTs.millisecondsSinceEpoch;
   }
 
