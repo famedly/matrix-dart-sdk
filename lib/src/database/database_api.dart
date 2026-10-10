@@ -223,6 +223,10 @@ abstract class DatabaseApi {
   /// [storePendingRoomKeyBundle].
   Future<Map<String, Map<String, Object?>>> getPendingRoomKeyBundles();
 
+  /// Like [getPendingRoomKeyBundles] for one room, but also sees what a
+  /// running transaction stored.
+  Future<Map<String, Object?>?> getPendingRoomKeyBundle(String roomId);
+
   Future<void> removePendingRoomKeyBundle(String roomId);
 
   Future storeSSSSCache(

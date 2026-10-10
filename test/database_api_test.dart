@@ -481,8 +481,13 @@ void main() {
         expect(await database.getPendingRoomKeyBundles(), {
           roomId: {'inviter': '@alice:example.com', 'invite_accepted_at': 1234},
         });
+        expect(await database.getPendingRoomKeyBundle(roomId), {
+          'inviter': '@alice:example.com',
+          'invite_accepted_at': 1234,
+        });
         await database.removePendingRoomKeyBundle(roomId);
         expect(await database.getPendingRoomKeyBundles(), isEmpty);
+        expect(await database.getPendingRoomKeyBundle(roomId), null);
       });
       test('getAllInboundGroupSessions', () async {
         final result = await database.getAllInboundGroupSessions();

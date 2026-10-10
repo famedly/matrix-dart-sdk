@@ -1345,7 +1345,7 @@ class KeyManager {
     // An unknown room means that we left it, so the rooms must be loaded.
     await client.roomsLoading;
     final database = client.database;
-    final pending = (await database.getPendingRoomKeyBundles())[roomId];
+    final pending = await database.getPendingRoomKeyBundle(roomId);
     if (pending == null) return;
     final inviter = pending.tryGet<String>('inviter');
     final acceptedAt = pending.tryGet<int>('invite_accepted_at');

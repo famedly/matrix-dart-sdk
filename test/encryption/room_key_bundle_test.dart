@@ -720,6 +720,15 @@ void main() {
         expect(await bob.database.getPendingRoomKeyBundles(), isEmpty);
       });
 
+      test('sees an invite accepted during a running sync', () async {
+        late String sessionId;
+        await bob.database.transaction(() async {
+          sessionId = await prepareBundle();
+          await bob.encryption!.keyManager.importPendingRoomKeyBundle(roomId);
+        });
+        expect(getSession(sessionId)?.sharedBy, aliceId);
+      });
+
       test('downloads a bundle only once for parallel imports', () async {
         final sessionId = await prepareBundle();
         FakeMatrixApi.currentApi = bobApi;

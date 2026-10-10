@@ -1071,6 +1071,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
+  Future<Map<String, Object?>?> getPendingRoomKeyBundle(String roomId) async {
+    final raw = await _pendingRoomKeyBundlesBox.get(roomId);
+    return raw == null ? null : copyMap(raw);
+  }
+
+  @override
   Future<void> removePendingRoomKeyBundle(String roomId) =>
       _pendingRoomKeyBundlesBox.delete(roomId);
 
