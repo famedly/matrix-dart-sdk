@@ -90,7 +90,12 @@ class Encryption {
   }
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
-    if (event.type == EventTypes.RoomKey) {
+    if ([
+      EventTypes.RoomKey,
+      // Must be stored before the sync advances, nobody sends it again.
+      EventTypes.RoomKeyBundle,
+      EventTypes.RoomKeyBundleUnstable,
+    ].contains(event.type)) {
       // a new room key. We need to handle this asap, before other
       // events in /sync are handled
       await keyManager.handleToDeviceEvent(event);
@@ -98,8 +103,6 @@ class Encryption {
     if ([
       EventTypes.RoomKeyRequest,
       EventTypes.ForwardedRoomKey,
-      EventTypes.RoomKeyBundle,
-      EventTypes.RoomKeyBundleUnstable,
     ].contains(event.type)) {
       // "just" room key request things. We don't need these asap, so we handle
       // them in the background

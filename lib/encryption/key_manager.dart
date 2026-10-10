@@ -1489,7 +1489,8 @@ class KeyManager {
       'sender_key': senderKey,
       'file': file,
     });
-    await importPendingRoomKeyBundle(roomId);
+    // The download must not block the sync.
+    runInRoot(() => importPendingRoomKeyBundle(roomId));
   }
 
   StreamSubscription<SyncUpdate>? _uploadKeysOnSync;

@@ -525,10 +525,9 @@ void main() {
     });
 
     test('the bundle is not imported before accepting the invite', () async {
-      final bundleInfo = await waitFor(
-        () => bob.database.getRoomKeyBundle(roomId, aliceId),
-      );
-      expect(bundleInfo['sender_key'], alice.identityKey);
+      // Stored by the sync itself, as nobody sends it again.
+      final bundleInfo = await bob.database.getRoomKeyBundle(roomId, aliceId);
+      expect(bundleInfo?['sender_key'], alice.identityKey);
       expect(
         bob.encryption!.keyManager.getInboundGroupSession(
           roomId,
