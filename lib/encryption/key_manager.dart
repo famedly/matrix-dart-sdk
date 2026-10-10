@@ -1316,7 +1316,11 @@ class KeyManager {
   Future<void> importPendingRoomKeyBundles() async {
     final pending = await client.database.getPendingRoomKeyBundles();
     for (final roomId in pending.keys) {
-      await importPendingRoomKeyBundle(roomId);
+      try {
+        await importPendingRoomKeyBundle(roomId);
+      } catch (e, s) {
+        Logs().w('[KeyManager] Unable to import key bundle for $roomId', e, s);
+      }
     }
   }
 
@@ -1358,22 +1362,21 @@ class KeyManager {
         // While the join is not synced yet, the room is still invited.
         (membership != Membership.join && membership != Membership.invite)) {
       await database.removePendingRoomKeyBundle(roomId);
+      if (inviter != null) await database.removeRoomKeyBundle(roomId, inviter);
       return;
     }
     final bundleInfo = await database.getRoomKeyBundle(roomId, inviter);
     if (bundleInfo == null) return; // Not received yet.
 
-    try {
-      await _importRoomKeyBundle(roomId, inviter, bundleInfo);
-    } on MatrixException catch (e) {
-      if (e.error != MatrixError.M_NOT_FOUND) rethrow;
-      Logs().w('[KeyManager] Key bundle for $roomId has expired', e);
-    }
+    // Kept for the next try until the day is over, as the device of the
+    // inviter may be unknown yet or the download may fail.
+    if (!await _importRoomKeyBundle(roomId, inviter, bundleInfo)) return;
     await database.removePendingRoomKeyBundle(roomId);
     await database.removeRoomKeyBundle(roomId, inviter);
   }
 
-  Future<void> _importRoomKeyBundle(
+  /// Returns whether the bundle got imported.
+  Future<bool> _importRoomKeyBundle(
     String roomId,
     String inviter,
     Map<String, Object?> bundleInfo,
@@ -1389,7 +1392,7 @@ class KeyManager {
       Logs().w(
         '[KeyManager] Ignoring key bundle for $roomId from untrusted device of $inviter',
       );
-      return;
+      return false;
     }
 
     final file = bundleInfo.tryGetMap<String, Object?>('file');
@@ -1402,11 +1405,12 @@ class KeyManager {
     final mxc = url == null ? null : Uri.tryParse(url);
     if (mxc == null ||
         !mxc.isScheme('mxc') ||
+        mxc.path.length < 2 ||
         k == null ||
         iv == null ||
         sha256 == null) {
       Logs().w('[KeyManager] Ignoring malformed key bundle for $roomId');
-      return;
+      return false;
     }
 
     final response = await client.getContent(
@@ -1421,14 +1425,14 @@ class KeyManager {
       bundle = decrypted == null ? null : json.decode(utf8.decode(decrypted));
     } on FormatException catch (e) {
       Logs().w('[KeyManager] Unable to parse key bundle for $roomId', e);
-      return;
+      return false;
     }
     final roomKeys = bundle is Map<String, Object?>
         ? bundle.tryGetList<Map<String, Object?>>('room_keys')
         : null;
     if (roomKeys == null) {
       Logs().w('[KeyManager] Unable to decrypt key bundle for $roomId');
-      return;
+      return false;
     }
 
     var imported = 0;
@@ -1465,6 +1469,7 @@ class KeyManager {
     Logs().i(
       '[KeyManager] Imported $imported room keys for $roomId shared by $inviter',
     );
+    return true;
   }
 
   Future<void> _handleRoomKeyBundle(ToDeviceEvent event) async {

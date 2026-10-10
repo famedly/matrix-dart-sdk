@@ -792,9 +792,16 @@ void main() {
         );
         expect(getSession(sessionId), null);
         expect(await bob.database.getPendingRoomKeyBundles(), isEmpty);
+        expect(await bob.database.getRoomKeyBundle(roomId, aliceId), null);
       });
 
-      test('ignores bundles from devices which are not cross-signed', () async {
+      // Until the invite is a day old, the device may get known or signed.
+      Future<void> expectKept(String sender) async {
+        expect((await bob.database.getPendingRoomKeyBundles()).keys, {roomId});
+        expect(await bob.database.getRoomKeyBundle(roomId, sender), isNotNull);
+      }
+
+      test('keeps bundles from devices which are not cross-signed', () async {
         const otherTest = '@othertest:fakeServer.notExisting';
         await bob.updateUserDeviceKeys(additionalUsers: {otherTest});
         final sessionId = await importBundle(
@@ -806,16 +813,48 @@ void main() {
               .curve25519Key,
         );
         expect(getSession(sessionId), null);
-        expect(await bob.database.getPendingRoomKeyBundles(), isEmpty);
-        expect(await bob.database.getRoomKeyBundle(roomId, otherTest), null);
+        await expectKept(otherTest);
+        await bob.database.removeRoomKeyBundle(roomId, otherTest);
       });
 
-      test('gives up on expired bundles', () async {
+      test('keeps bundles from unknown devices', () async {
+        final sessionId = await importBundle(senderKey: 'unknown');
+        expect(getSession(sessionId), null);
+        await expectKept(aliceId);
+      });
+
+      test('keeps bundles which fail to download', () async {
         await prepareBundle();
         FakeMatrixApi.media.clear();
-        await bob.encryption!.keyManager.importPendingRoomKeyBundle(roomId);
-        expect(await bob.database.getPendingRoomKeyBundles(), isEmpty);
-        expect(await bob.database.getRoomKeyBundle(roomId, aliceId), null);
+        await expectLater(
+          bob.encryption!.keyManager.importPendingRoomKeyBundle(roomId),
+          throwsA(isA<MatrixException>()),
+        );
+        await expectKept(aliceId);
+      });
+
+      test('a failing room does not stop the others', () async {
+        const failingRoomId = '!failing:fakeServer.notExisting';
+        await bob.handleSync(
+          SyncUpdate(
+            nextBatch: '',
+            rooms: RoomsUpdate(join: {failingRoomId: JoinedRoomUpdate()}),
+          ),
+        );
+        await bob.database.storePendingRoomKeyBundle(failingRoomId, {
+          'inviter': aliceId,
+          'invite_accepted_at': DateTime.now().millisecondsSinceEpoch,
+        });
+        await bob.database.storeRoomKeyBundle(failingRoomId, aliceId, {
+          'sender_key': alice.identityKey,
+          'file': (await encryptFile(
+            utf8.encode('{}'),
+          )).toJson(Uri.parse('mxc://fakeserver.notexisting/missing')),
+        });
+        final sessionId = await importBundle();
+        expect(getSession(sessionId)?.sharedBy, aliceId);
+        await bob.database.removePendingRoomKeyBundle(failingRoomId);
+        await bob.database.removeRoomKeyBundle(failingRoomId, aliceId);
       });
     });
 
