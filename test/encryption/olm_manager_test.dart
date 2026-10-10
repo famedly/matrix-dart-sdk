@@ -4,7 +4,9 @@
 
 import 'dart:convert';
 
+import 'package:matrix/encryption.dart';
 import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
+import 'package:matrix/encryption/utils/pickle_key.dart';
 import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
@@ -67,6 +69,63 @@ void main() {
       );
       expect(sent['one_time_keys'].keys.length, 13);
       expect(sent['fallback_keys'].keys.length, 0);
+    });
+
+    /// Makes the server count [delta] more or fewer OTKs than were uploaded.
+    void fakeUploadCount(int delta) {
+      final api = FakeMatrixApi.currentApi!.api['POST']!;
+      final upload = api['/client/v3/keys/upload'];
+      addTearDown(() => api['/client/v3/keys/upload'] = upload);
+      api['/client/v3/keys/upload'] = (req) => {
+        'one_time_key_counts': {
+          'signed_curve25519': json.decode(req)['one_time_keys'].length + delta,
+        },
+      };
+    }
+
+    test('new account survives keys claimed during its upload', () async {
+      // Another device claims a key before the server counts them.
+      fakeUploadCount(-1);
+      FakeMatrixApi.calledEndpoints.clear();
+      final encryption = Encryption(client: client);
+      addTearDown(encryption.dispose);
+      await encryption.olmManager.init(
+        olmAccount: null,
+        deviceId: client.deviceID,
+      );
+      final sent = json.decode(
+        FakeMatrixApi.calledEndpoints['/client/v3/keys/upload']!.first,
+      );
+      final String claimedKey = sent['one_time_keys'].values.first['key'];
+
+      // Client.init stores this pickle, the claimer's session must work on it.
+      final account = vod.Account.fromPickleEncrypted(
+        pickle: encryption.olmManager.pickledOlmAccount!,
+        pickleKey: client.userID!.toPickleKey(),
+      );
+      expect(account.oneTimeKeys, isEmpty);
+      final claimer = vod.Account();
+      final preKeyMessage = claimer
+          .createOutboundSession(
+            identityKey: account.identityKeys.curve25519,
+            oneTimeKey: vod.Curve25519PublicKey.fromBase64(claimedKey),
+          )
+          .encrypt('hi');
+      final inbound = account.createInboundSession(
+        theirIdentityKey: claimer.identityKeys.curve25519,
+        preKeyMessageBase64: preKeyMessage.ciphertext,
+      );
+      expect(inbound.plaintext, 'hi');
+    });
+
+    test('new account survives leftover keys on its device ID', () async {
+      fakeUploadCount(1);
+      final encryption = Encryption(client: client);
+      addTearDown(encryption.dispose);
+      await expectLater(
+        encryption.olmManager.init(olmAccount: null, deviceId: client.deviceID),
+        completes,
+      );
     });
 
     test('handleDeviceOneTimeKeysCount', () async {
