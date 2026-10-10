@@ -97,6 +97,53 @@ void main() {
       await box.clear();
     });
 
+    test('nested transaction keeps the order of writes', () async {
+      final box = collection.openBox<Map>('cats');
+      await collection.transaction(() async {
+        await box.put('fluffy', data);
+        await collection.transaction(() async {
+          await box.put('loki', data2);
+        });
+        await box.put('fluffy', data2);
+      });
+      box.clearQuickAccessCache();
+      expect(await box.get('fluffy'), data2);
+      expect(await box.get('loki'), data2);
+      await box.clear();
+    });
+
+    test(
+      'a failed transaction writes nothing and does not swallow later writes',
+      () async {
+        final box = collection.openBox<Map>('cats');
+        await expectLater(
+          collection.transaction(() async {
+            await box.put('fluffy', data);
+            throw Exception('boom');
+          }),
+          throwsException,
+        );
+        expect(await box.get('fluffy'), null);
+        await box.put('loki', data2);
+        box.clearQuickAccessCache();
+        expect(await box.get('loki'), data2);
+        expect(await box.get('fluffy'), null);
+        await box.clear();
+      },
+    );
+
+    test('a transaction failing at commit clears the caches', () async {
+      final box = collection.openBox<Map>('cats');
+      await collection.close();
+      // Committing to a closed database throws, so only a stale cache could
+      // still answer the read.
+      await expectLater(
+        collection.transaction(() => box.put('fluffy', data)),
+        throwsA(anything),
+      );
+      await expectLater(box.get('fluffy'), throwsA(anything));
+    });
+
     test('Box.deleteAll', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('fluffy', data);

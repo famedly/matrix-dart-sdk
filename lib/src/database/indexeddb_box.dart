@@ -64,11 +64,15 @@ class BoxCollection with ZoneTransactionMixin {
     return dbOpenCompleter.future;
   }
 
+  final _boxes = <Box>{};
+
   Box<V> openBox<V>(String name) {
     if (!boxNames.contains(name)) {
       throw ('Box with name $name is not in the known box names of this collection.');
     }
-    return Box<V>(name, this);
+    final box = Box<V>(name, this);
+    _boxes.add(box);
+    return box;
   }
 
   List<Future<void> Function(IDBTransaction txn)>? _txnCache;
@@ -78,39 +82,62 @@ class BoxCollection with ZoneTransactionMixin {
     List<String>? boxNames,
     bool readOnly = false,
   }) => zoneTransaction(() async {
+    // A nested transaction joins the outer one, so all writes stay in order.
+    if (_txnCache != null) return action();
     final txnCache = _txnCache = [];
-    await action();
-    final cache = List<Future<void> Function(IDBTransaction txn)>.from(
-      txnCache,
-    );
-    _txnCache = null;
-    if (cache.isEmpty) return;
-
-    final transactionCompleter = Completer<void>();
-    final txn = _db.transaction(
-      boxNames?.jsify() ?? _db.objectStoreNames,
-      readOnly ? 'readonly' : 'readwrite',
-    );
-    for (final fun in cache) {
-      // The IDB methods return a Future in Dart but must not be awaited in
-      // order to have an actual transaction. They must only be performed and
-      // then the transaction object must call `txn.completed;` which then
-      // returns the actual future.
-      // https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction
-      unawaited(fun(txn));
-    }
-
-    txn.onerror = (Event event) {
-      Logs().e('[IndexedDBBox] [transaction] Error - ${txn.error}');
-      transactionCompleter.completeError(
-        'Transaction not completed due to an error - ${txn.error}'.toJS,
+    try {
+      try {
+        await action();
+      } finally {
+        _txnCache = null;
+      }
+      final cache = List<Future<void> Function(IDBTransaction txn)>.from(
+        txnCache,
       );
-    }.toJS;
+      if (cache.isEmpty) return;
 
-    txn.oncomplete = (Event event) {
-      transactionCompleter.complete();
-    }.toJS;
-    return transactionCompleter.future;
+      final transactionCompleter = Completer<void>();
+      final txn = _db.transaction(
+        boxNames?.jsify() ?? _db.objectStoreNames,
+        readOnly ? 'readonly' : 'readwrite',
+      );
+      for (final fun in cache) {
+        // The IDB methods return a Future in Dart but must not be awaited in
+        // order to have an actual transaction. They must only be performed and
+        // then the transaction object must call `txn.completed;` which then
+        // returns the actual future.
+        // https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction
+        unawaited(fun(txn));
+      }
+
+      // A failing request fires error and then abort, possibly several times.
+      txn.onerror = (Event event) {
+        if (transactionCompleter.isCompleted) return;
+        Logs().e('[IndexedDBBox] [transaction] Error - ${txn.error}');
+        transactionCompleter.completeError(
+          'Transaction not completed due to an error - ${txn.error}'.toJS,
+        );
+      }.toJS;
+      // An abort at commit (e.g. quota exceeded) fires no error event.
+      txn.onabort = (Event event) {
+        if (transactionCompleter.isCompleted) return;
+        Logs().e('[IndexedDBBox] [transaction] Aborted - ${txn.error}');
+        transactionCompleter.completeError(
+          'Transaction aborted - ${txn.error}'.toJS,
+        );
+      }.toJS;
+
+      txn.oncomplete = (Event event) {
+        transactionCompleter.complete();
+      }.toJS;
+      await transactionCompleter.future;
+    } catch (_) {
+      // Nothing of a failed transaction may stay visible in the caches.
+      for (final box in _boxes) {
+        box.clearQuickAccessCache();
+      }
+      rethrow;
+    }
   });
 
   Future<void> clear() async {
