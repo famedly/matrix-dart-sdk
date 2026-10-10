@@ -4,9 +4,13 @@
 
 // Helper for fast evaluation of push conditions on a bunch of events
 
+import 'dart:convert';
+
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 
 import '../../matrix.dart';
+import 'try_get_push_rule.dart';
 
 enum PushRuleConditions {
   eventMatch('event_match'),
@@ -246,7 +250,7 @@ class _OptimizedRules {
     Map<String, Object?> flattenedEventJson,
     String? displayName,
     int memberCount,
-    Room room,
+    bool Function(String userId, String notificationType) canSendNotification,
   ) {
     if (patterns.any((pat) => !pat.match(flattenedEventJson))) {
       return null;
@@ -276,10 +280,8 @@ class _OptimizedRules {
       final sender = flattenedEventJson.tryGet<String>('sender');
       if (sender == null ||
           notificationPermissions.any(
-            (notificationType) => !room.canSendNotification(
-              sender,
-              notificationType: notificationType,
-            ),
+            (notificationType) =>
+                !canSendNotification(sender, notificationType),
           )) {
         return null;
       }
@@ -366,33 +368,47 @@ class PushruleEvaluator {
     return flattened;
   }
 
-  EvaluatedPushRuleAction match(Event event) {
-    final memberCount = event.room.getParticipants([Membership.join]).length;
-    final displayName = event.room
+  /// Evaluates [Event] using the push rules.
+  EvaluatedPushRuleAction match(Event event) => _matchJson(
+    event.toJson(),
+    memberCount: event.room.getParticipants([Membership.join]).length,
+    displayName: event.room
         .unsafeGetUserFromMemoryOrFallback(event.room.client.userID!)
-        .displayName;
-    final flattenedEventJson = _flattenJson(event.toJson(), {}, '');
-    // ensure roomid is present
-    flattenedEventJson['room_id'] = event.room.id;
+        .displayName,
+    canSendNotification: (userId, type) =>
+        event.room.canSendNotification(userId, notificationType: type),
+  );
+
+  /// Evaluates [eventJson] without a [Room] or [Client] using the push rules.
+  EvaluatedPushRuleAction _matchJson(
+    Map<String, Object?> eventJson, {
+    required int memberCount,
+    String? displayName,
+    required bool Function(String userId, String notificationType)
+    canSendNotification,
+  }) {
+    final flattenedEventJson = _flattenJson(eventJson, {}, '');
 
     for (final o in _override) {
       final actions = o.match(
         flattenedEventJson,
         displayName,
         memberCount,
-        event.room,
+        canSendNotification,
       );
       if (actions != null) {
         return actions;
       }
     }
 
-    final roomActions = _room_rules[event.room.id];
+    final roomId = flattenedEventJson.tryGet<String>('room_id');
+    final roomActions = roomId == null ? null : _room_rules[roomId];
     if (roomActions != null) {
       return roomActions;
     }
 
-    final senderActions = _sender_rules[event.senderId];
+    final sender = flattenedEventJson.tryGet<String>('sender');
+    final senderActions = sender == null ? null : _sender_rules[sender];
     if (senderActions != null) {
       return senderActions;
     }
@@ -402,7 +418,7 @@ class PushruleEvaluator {
         flattenedEventJson,
         displayName,
         memberCount,
-        event.room,
+        canSendNotification,
       );
       if (actions != null) {
         return actions;
@@ -414,7 +430,7 @@ class PushruleEvaluator {
         flattenedEventJson,
         displayName,
         memberCount,
-        event.room,
+        canSendNotification,
       );
       if (actions != null) {
         return actions;
@@ -422,5 +438,90 @@ class PushruleEvaluator {
     }
 
     return EvaluatedPushRuleAction();
+  }
+
+  /// Push rule evaluation for the iOS Notification Service Extension (NSE),
+  /// which has no Client, Room or Event and runs this through the JS build
+  /// (lib/pushrule_evaluator_js.dart).
+  ///
+  /// Input (JSON string):
+  /// ```json
+  /// {
+  ///   "rules": m.push_rules content, or just its "global" object,
+  ///   "event": the event JSON,
+  ///   "memberCount": joined member count (int),
+  ///   "roomId": optional, overrides event.room_id,
+  ///   "displayName": optional, own display name (for display_name matching),
+  ///   "powerLevels": optional, m.room.power_levels event or its content,
+  ///   "createEvent": optional, full m.room.create event (sender plus content)
+  /// }
+  ///
+  /// `createEvent` is required for parity with [Room.canSendNotification].
+  /// Omitted, it means no create event, same as a Room with no `m.room.create`.
+  /// ```
+  /// Output (JSON string):
+  /// ```json
+  /// {
+  ///   "notify": bool,
+  ///   "highlight": bool,
+  ///   "sound": String?
+  /// }
+  /// ```
+  /// or
+  /// ```json
+  /// { "error": String }
+  /// ```
+  ///
+  /// Changing this contract requires a matching change in the iOS app.
+  @internal
+  static String evaluateJson(String input) {
+    try {
+      final json = jsonDecode(input) as Map<String, Object?>;
+
+      final rules = json.tryGetMap<String, Object?>('rules') ?? {};
+      final ruleset = TryGetPushRule.tryFromJson(
+        rules.tryGetMap<String, Object?>('global') ?? rules,
+      );
+
+      final event = json['event'] as Map<String, Object?>;
+      final roomId = json['roomId'] as String?;
+      if (roomId != null) event['room_id'] = roomId;
+
+      final powerLevelsJson = json['powerLevels'] as Map<String, Object?>?;
+      final powerLevels =
+          powerLevelsJson?['content'] as Map<String, Object?>? ??
+          powerLevelsJson;
+
+      final createEventJson = json['createEvent'] as Map<String, Object?>?;
+      final createContent =
+          createEventJson?['content'] as Map<String, Object?>?;
+      final createSender = createEventJson?['sender'] as String?;
+
+      final action = PushruleEvaluator.fromRuleset(ruleset)._matchJson(
+        event,
+        memberCount: json['memberCount'] as int,
+        displayName: json['displayName'] as String?,
+        canSendNotification: (userId, type) =>
+            PowerLevel.forUser(
+              userId,
+              powerLevelsContent: powerLevels,
+              createSender: createSender,
+              createContent: createContent,
+            ) >=
+            PowerLevel(
+              powerLevels
+                      ?.tryGetMap<String, Object?>('notifications')
+                      ?.tryGet<int>(type) ??
+                  PowerLevel.defaultModeratorLevel,
+            ),
+      );
+      return jsonEncode({
+        'notify': action.notify,
+        'highlight': action.highlight,
+        'sound': action.sound,
+      });
+    } catch (e) {
+      return jsonEncode({'error': e.toString()});
+    }
   }
 }
