@@ -1672,12 +1672,14 @@ class Client extends MatrixApi {
     String? reason,
     ThirdPartySigned? thirdPartySigned,
   }) async {
-    final inviter = _getInviter(roomId);
+    var inviter = _getInviter(roomId);
     roomId = await super.joinRoomById(
       roomId,
       reason: reason,
       thirdPartySigned: thirdPartySigned,
     );
+    // The rooms may have been loaded during the join.
+    inviter ??= _getInviter(roomId);
     await _onInviteAccepted(roomId, inviter);
     return roomId;
   }
