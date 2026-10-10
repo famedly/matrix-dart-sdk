@@ -359,17 +359,17 @@ class Client extends MatrixApi {
         ? null
         : DateTime.now().add(expiresIn);
     _accessTokenExpiresAt = tokenExpiresAt;
-    await database.updateClient(
-      homeserverUrl,
-      tokenResponse.accessToken,
-      tokenExpiresAt,
-      tokenResponse.refreshToken,
-      userId,
-      deviceId,
-      deviceName,
-      prevBatch,
-      encryption?.pickledOlmAccount,
-      oidcClientId,
+    await database.storeClient(
+      homeserverUrl: homeserverUrl,
+      token: tokenResponse.accessToken,
+      tokenExpiresAt: tokenExpiresAt,
+      refreshToken: tokenResponse.refreshToken,
+      userId: userId,
+      deviceId: deviceId,
+      deviceName: deviceName,
+      prevBatch: prevBatch,
+      olmAccount: encryption?.pickledOlmAccount,
+      oidcClientId: oidcClientId,
     );
   }
 
@@ -2120,17 +2120,17 @@ class Client extends MatrixApi {
       if (onLoginStateChanged.value == LoginState.softLoggedOut) {
         if (newRefreshToken != null && accessToken != null && userID != null) {
           // Store the new tokens:
-          await database.updateClient(
-            homeserver.toString(),
-            accessToken,
-            accessTokenExpiresAt,
-            newRefreshToken,
-            userID,
-            _deviceID,
-            _deviceName,
-            prevBatch,
-            encryption?.pickledOlmAccount,
-            newOidcClientId,
+          await database.storeClient(
+            homeserverUrl: homeserver.toString(),
+            token: accessToken,
+            tokenExpiresAt: accessTokenExpiresAt,
+            refreshToken: newRefreshToken,
+            userId: userID,
+            deviceId: _deviceID,
+            deviceName: _deviceName,
+            prevBatch: prevBatch,
+            olmAccount: encryption?.pickledOlmAccount,
+            oidcClientId: newOidcClientId,
           );
         }
         onInitStateChanged?.call(InitState.finished);
@@ -2178,34 +2178,19 @@ class Client extends MatrixApi {
       onInitStateChanged?.call(InitState.settingUpEncryption);
       await encryption?.init(olmAccount);
 
-      if (id != null) {
-        await database.updateClient(
-          homeserver.toString(),
-          accessToken,
-          accessTokenExpiresAt,
-          newRefreshToken,
-          userID,
-          _deviceID,
-          _deviceName,
-          prevBatch,
-          encryption?.pickledOlmAccount,
-          newOidcClientId,
-        );
-      } else {
-        _id = await database.insertClient(
-          clientName,
-          homeserver.toString(),
-          accessToken,
-          accessTokenExpiresAt,
-          newRefreshToken,
-          userID,
-          _deviceID,
-          _deviceName,
-          prevBatch,
-          encryption?.pickledOlmAccount,
-          newOidcClientId,
-        );
-      }
+      await database.storeClient(
+        homeserverUrl: homeserver.toString(),
+        token: accessToken,
+        tokenExpiresAt: accessTokenExpiresAt,
+        refreshToken: newRefreshToken,
+        userId: userID,
+        deviceId: _deviceID,
+        deviceName: _deviceName,
+        prevBatch: prevBatch,
+        olmAccount: encryption?.pickledOlmAccount,
+        oidcClientId: newOidcClientId,
+      );
+      _id ??= 0;
       userDeviceKeysLoading = database
           .getUserDeviceKeys(this)
           .then((keys) => _userDeviceKeys = keys);
@@ -4111,20 +4096,18 @@ class Client extends MatrixApi {
     final tokenExpiresAtMs = int.tryParse(
       migrateClient.tryGet<String>('token_expires_at') ?? '',
     );
-    await database.insertClient(
-      clientName,
-      migrateClient['homeserver_url'],
-      migrateClient['token'],
-      tokenExpiresAtMs == null
+    await database.storeClient(
+      homeserverUrl: migrateClient['homeserver_url'],
+      token: migrateClient['token'],
+      tokenExpiresAt: tokenExpiresAtMs == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(tokenExpiresAtMs),
-      migrateClient['refresh_token'],
-      migrateClient['user_id'],
-      migrateClient['device_id'],
-      migrateClient['device_name'],
-      null,
-      migrateClient['olm_account'],
-      migrateClient['oidc_client_id'],
+      refreshToken: migrateClient['refresh_token'],
+      userId: migrateClient['user_id'],
+      deviceId: migrateClient['device_id'],
+      deviceName: migrateClient['device_name'],
+      olmAccount: migrateClient['olm_account'],
+      oidcClientId: migrateClient['oidc_client_id'],
     );
     Logs().d('Migrate SSSSCache...');
     for (final type in cacheTypes) {
