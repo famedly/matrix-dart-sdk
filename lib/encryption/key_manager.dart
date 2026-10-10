@@ -718,6 +718,8 @@ class KeyManager {
                 decrypted.tryGetMap<String, String>('sender_claimed_keys') ??
                 <String, String>{},
             uploaded: true,
+            // Best effort: the server can write to the backup as well.
+            sharedBy: decrypted.tryGet<String>(SessionKey.sharedByKey),
           );
         }
       }
@@ -1607,6 +1609,7 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
         'sender_claimed_keys': sess.senderClaimedKeys,
         'session_key': sess.inboundGroupSession!.exportAtFirstKnownIndex(),
         ...SessionKey.sharedHistoryContent(sess.sharedHistory),
+        SessionKey.sharedByKey: ?sess.sharedBy,
       };
       // encrypt the content
       final encrypted = enc.encrypt(json.encode(payload));
