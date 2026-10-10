@@ -17,6 +17,7 @@ class PushNotification {
   final String? sender;
   final String? senderDisplayName;
   final String? type;
+  final Map<String, Object?> additionalProperties;
 
   const PushNotification({
     this.content,
@@ -30,6 +31,7 @@ class PushNotification {
     this.sender,
     this.senderDisplayName,
     this.type,
+    this.additionalProperties = const {},
   });
 
   /// Generate a Push Notification object from JSON. It also supports a
@@ -67,9 +69,11 @@ class PushNotification {
         sender: json['sender'] as String?,
         senderDisplayName: json['sender_display_name'] as String?,
         type: json['type'] as String?,
+        additionalProperties: json,
       );
 
   Map<String, Object?> toJson() => {
+    ...additionalProperties,
     if (content != null) 'content': content,
     if (counts != null) 'counts': counts?.toJson(),
     if (devices != null) 'devices': devices?.map((i) => i.toJson()).toList(),
