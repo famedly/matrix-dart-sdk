@@ -144,6 +144,26 @@ void main() {
       await expectLater(box.get('fluffy'), throwsA(anything));
     });
 
+    test(
+      'a write the transaction rejects fails it and writes nothing',
+      () async {
+        final cats = collection.openBox<Map>('cats');
+        final dogs = collection.openBox<Map>('dogs');
+        // 'cats' is outside the scope, so IndexedDB throws before the request
+        // exists and fires no error event.
+        await expectLater(
+          collection.transaction(() async {
+            await dogs.put('loki', data2);
+            await cats.put('fluffy', data);
+          }, boxNames: ['dogs']),
+          throwsA(anything),
+        );
+        expect(await cats.get('fluffy'), null);
+        expect(await dogs.get('loki'), null);
+      },
+      skip: isWeb ? false : 'sqflite ignores boxNames',
+    );
+
     test('Box.deleteAll', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('fluffy', data);

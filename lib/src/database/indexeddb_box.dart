@@ -107,7 +107,15 @@ class BoxCollection with ZoneTransactionMixin {
         // then the transaction object must call `txn.completed;` which then
         // returns the actual future.
         // https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction
-        unawaited(fun(txn));
+        // A write can throw before its request exists (e.g. ReadOnlyError),
+        // which fires no error event, so abort by hand.
+        unawaited(
+          fun(txn).onError((Object e, _) {
+            if (transactionCompleter.isCompleted) return;
+            transactionCompleter.completeError(e);
+            txn.abort();
+          }),
+        );
       }
 
       // A failing request fires error and then abort, possibly several times.
