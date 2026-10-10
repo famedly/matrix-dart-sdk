@@ -971,6 +971,68 @@ void main() {
 
         await database.close();
       });
+      test('exportDump and importDump keep room key bundle data', () async {
+        const roomId = '!room:example.com';
+        const senderId = '@alice:example.com';
+        final database = await getMatrixSdkDatabase();
+        await database.storeInboundGroupSession(
+          roomId,
+          'session',
+          'pickle',
+          '{}',
+          '{}',
+          '{}',
+          'senderKey',
+          '{}',
+        );
+        await database.storeRoomKeyBundle(roomId, senderId, {'file': {}});
+        await database.storePendingRoomKeyBundle(roomId, {'inviter': senderId});
+        final dump = await database.exportDump();
+
+        final imported = await getMatrixSdkDatabase();
+        expect(await imported.importDump(dump), true);
+        expect(
+          await imported.getInboundGroupSessionsByRoom(roomId),
+          hasLength(1),
+        );
+        expect(await imported.getRoomKeyBundle(roomId, senderId), {'file': {}});
+        expect(await imported.getPendingRoomKeyBundle(roomId), {
+          'inviter': senderId,
+        });
+
+        // A dump of version 12 has none of these boxes yet.
+        final oldDump = Map<String, dynamic>.from(jsonDecode(dump))
+          ..remove('box_inbound_group_sessions_by_room')
+          ..remove('box_room_key_bundles')
+          ..remove('box_pending_room_key_bundles');
+        oldDump['box_client']['version'] = '12';
+        final historyVisibilityKey = TupleKey(
+          roomId,
+          EventTypes.HistoryVisibility,
+          '',
+        ).toString();
+        oldDump['box_non_preload_room_states'] = {
+          historyVisibilityKey: {'type': EventTypes.HistoryVisibility},
+        };
+        final importedOld = await getMatrixSdkDatabase();
+        expect(await importedOld.importDump(jsonEncode(oldDump)), true);
+        expect(
+          await importedOld.getInboundGroupSessionsByRoom(roomId),
+          hasLength(1),
+        );
+        expect(
+          await importedOld.database!.query('box_preload_room_states'),
+          hasLength(1),
+        );
+        expect(
+          (await importedOld.database!.query(
+            'box_client',
+            where: 'k = ?',
+            whereArgs: ['version'],
+          )).single['v'],
+          MatrixSdkDatabase.version.toString(),
+        );
+      });
     });
   }
 }

@@ -1605,6 +1605,11 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       _eventsBoxName: await _eventsBox.getAllValues(),
       _seenDeviceIdsBoxName: await _seenDeviceIdsBox.getAllValues(),
       _seenDeviceKeysBoxName: await _seenDeviceKeysBox.getAllValues(),
+      _inboundGroupSessionsByRoomBoxName: await _inboundGroupSessionsByRoomBox
+          .getAllValues(),
+      _roomKeyBundlesBoxName: await _roomKeyBundlesBox.getAllValues(),
+      _pendingRoomKeyBundlesBoxName: await _pendingRoomKeyBundlesBox
+          .getAllValues(),
     };
     final json = jsonEncode(dataMap);
     await clear();
@@ -1694,6 +1699,21 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       }
       for (final key in json[_seenDeviceKeysBoxName]!.keys) {
         await _seenDeviceKeysBox.put(key, json[_seenDeviceKeysBoxName]![key]);
+      }
+      // Missing in dumps of version 12 and older, which the migration fixes.
+      for (final entry
+          in (json[_inboundGroupSessionsByRoomBoxName] ?? {}).entries) {
+        await _inboundGroupSessionsByRoomBox.put(entry.key, entry.value);
+      }
+      for (final entry in (json[_roomKeyBundlesBoxName] ?? {}).entries) {
+        await _roomKeyBundlesBox.put(entry.key, entry.value);
+      }
+      for (final entry in (json[_pendingRoomKeyBundlesBoxName] ?? {}).entries) {
+        await _pendingRoomKeyBundlesBox.put(entry.key, entry.value);
+      }
+      final dumpVersion = int.tryParse(await _clientBox.get('version') ?? '');
+      if (dumpVersion != null && dumpVersion < version) {
+        await _migrateFromVersion(dumpVersion);
       }
       return true;
     } catch (e, s) {
