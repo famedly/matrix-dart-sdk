@@ -18,6 +18,20 @@ abstract class DatabaseApi {
 
   Future<Map<String, dynamic>?> getClient(String name);
 
+  Future<void> storeClient({
+    required String homeserverUrl,
+    required String token,
+    DateTime? tokenExpiresAt,
+    String? refreshToken,
+    required String userId,
+    String? deviceId,
+    String? deviceName,
+    String? prevBatch,
+    String? olmAccount,
+    String? oidcClientId,
+  });
+
+  @Deprecated('Use storeClient() instead.')
   Future updateClient(
     String homeserverUrl,
     String token,
@@ -29,8 +43,20 @@ abstract class DatabaseApi {
     String? prevBatch,
     String? olmAccount,
     String? oidcClientId,
+  ) => storeClient(
+    homeserverUrl: homeserverUrl,
+    token: token,
+    tokenExpiresAt: tokenExpiresAt,
+    refreshToken: refreshToken,
+    userId: userId,
+    deviceId: deviceId,
+    deviceName: deviceName,
+    prevBatch: prevBatch,
+    olmAccount: olmAccount,
+    oidcClientId: oidcClientId,
   );
 
+  @Deprecated('Use storeClient() instead.')
   Future insertClient(
     String name,
     String homeserverUrl,
@@ -43,6 +69,17 @@ abstract class DatabaseApi {
     String? prevBatch,
     String? olmAccount,
     String? oidcClientId,
+  ) => storeClient(
+    homeserverUrl: homeserverUrl,
+    token: token,
+    tokenExpiresAt: tokenExpiresAt,
+    refreshToken: refreshToken,
+    userId: userId,
+    deviceId: deviceId,
+    deviceName: deviceName,
+    prevBatch: prevBatch,
+    olmAccount: olmAccount,
+    oidcClientId: oidcClientId,
   );
 
   Future<List<Room>> getRoomList(Client client);
