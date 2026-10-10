@@ -150,7 +150,10 @@ class FakeMatrixApi extends BaseClient {
     (_calledEndpoints[action] ??= <dynamic>[]).add(data);
     if (method == 'GET' &&
         action.contains('/download/fakeserver.notexisting/')) {
-      final bytes = media['mxc://${action.split('/download/').last}'];
+      _apiCallStream.add(action);
+      // Without the query and the optional file name.
+      final mxc = request.url.path.split('/download/').last.split('/');
+      final bytes = media['mxc://${mxc.take(2).join('/')}'];
       return bytes == null
           ? Response(
               json.encode({'errcode': 'M_NOT_FOUND', 'error': 'Not found'}),
