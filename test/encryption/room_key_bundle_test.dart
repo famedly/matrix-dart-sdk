@@ -408,8 +408,11 @@ void main() {
     test('no history is shared if disabled', () async {
       FakeMatrixApi.calledEndpoints.clear();
       alice.shareHistoryOnInvite = false;
-      await alice.inviteUser(roomId, bobId);
-      alice.shareHistoryOnInvite = true;
+      try {
+        await alice.inviteUser(roomId, bobId);
+      } finally {
+        alice.shareHistoryOnInvite = true;
+      }
       expect(sharedKeyBundle(), false);
     });
 
@@ -428,8 +431,11 @@ void main() {
       () async {
         FakeMatrixApi.calledEndpoints.clear();
         alice.shareKeysWith = ShareKeysWith.directlyVerifiedOnly;
-        await alice.inviteUser(roomId, bobId);
-        alice.shareKeysWith = ShareKeysWith.crossVerifiedIfEnabled;
+        try {
+          await alice.inviteUser(roomId, bobId);
+        } finally {
+          alice.shareKeysWith = ShareKeysWith.crossVerifiedIfEnabled;
+        }
         expect(sharedKeyBundle(), false);
       },
     );
@@ -440,8 +446,11 @@ void main() {
         FakeMatrixApi.calledEndpoints.clear();
         final ownKeys = alice.userDeviceKeys[aliceId]!;
         ownKeys.selfSigningKey!.blocked = true;
-        await alice.inviteUser(roomId, bobId);
-        ownKeys.selfSigningKey!.blocked = false;
+        try {
+          await alice.inviteUser(roomId, bobId);
+        } finally {
+          ownKeys.selfSigningKey!.blocked = false;
+        }
         expect(sharedKeyBundle(), false);
       },
     );
@@ -754,12 +763,17 @@ void main() {
         bob.roomsLoading = loaded.future;
         final room = bob.getRoomById(roomId)!;
         bob.rooms.remove(room);
-        final import = bob.encryption!.keyManager.importPendingRoomKeyBundles();
-        await Future.delayed(const Duration(milliseconds: 100));
-        bob.rooms.add(room);
-        loaded.complete();
-        await import;
-        bob.roomsLoading = roomsLoading;
+        try {
+          final import = bob.encryption!.keyManager
+              .importPendingRoomKeyBundles();
+          await Future.delayed(const Duration(milliseconds: 100));
+          bob.rooms.add(room);
+          loaded.complete();
+          await import;
+        } finally {
+          if (!bob.rooms.contains(room)) bob.rooms.add(room);
+          bob.roomsLoading = roomsLoading;
+        }
         expect(getSession(sessionId)?.sharedBy, aliceId);
       });
 

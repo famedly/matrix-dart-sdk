@@ -119,7 +119,8 @@ void main() async {
       expect(decryptedEvent.senderDeviceKeys?.userId, otherClient.userID);
       expect(decryptedEvent.senderDeviceKeys?.deviceId, otherClient.deviceID);
 
-      // Device keys of another user or device must be discarded.
+      // Device keys of another user or device, or without a valid self
+      // signature must be discarded.
       final session = otherClient
           .encryption!
           .olmManager
@@ -130,7 +131,19 @@ void main() async {
           ...otherClient.encryption!.olmManager.signedDeviceKeys(),
           'user_id': client.userID,
         },
-        client.encryption!.olmManager.signedDeviceKeys(),
+        // Validly signed, but for another identity key.
+        otherClient.encryption!.olmManager.signJson({
+          ...otherClient.encryption!.olmManager.signedDeviceKeys()
+            ..remove('signatures'),
+          'keys': {
+            'curve25519:${otherClient.deviceID}': client.identityKey,
+            'ed25519:${otherClient.deviceID}': otherClient.fingerprintKey,
+          },
+        }),
+        {
+          ...otherClient.encryption!.olmManager.signedDeviceKeys(),
+          'signatures': {},
+        },
       ]) {
         final encrypted = session.session!.encrypt(
           json.encode({

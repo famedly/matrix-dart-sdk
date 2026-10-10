@@ -846,9 +846,12 @@ void main() => group('Integration tests', () {
   test('Share room history on invite (MSC4268)', () async {
     Client? testClientA, testClientB;
     final uiaSubscriptions = <StreamSubscription>[];
+    // Also cleans up clients whose login failed halfway.
+    final clients = <Client>[];
 
     Future<Client> login(String name, String userName, String password) async {
       final client = Client(name, database: await getDatabase());
+      clients.add(client);
       await client.checkHomeserver(Uri.parse(homeserver));
       for (var attempt = 1; ; attempt++) {
         try {
@@ -981,14 +984,12 @@ void main() => group('Integration tests', () {
       for (final subscription in uiaSubscriptions) {
         await subscription.cancel();
       }
-      if (testClientA?.isLogged() ?? false) {
-        await testClientA!.logoutAll();
+      for (final client in clients) {
+        if (client.isLogged()) await client.logoutAll();
       }
-      if (testClientB?.isLogged() ?? false) {
-        await testClientB!.logoutAll();
+      for (final client in clients) {
+        await client.dispose(closeDatabase: false);
       }
-      await testClientA?.dispose(closeDatabase: false);
-      await testClientB?.dispose(closeDatabase: false);
     }
   });
 }, timeout: Timeout(Duration(minutes: 6)));
