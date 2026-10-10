@@ -136,7 +136,6 @@ class OlmManager {
 
     final signedOneTimeKeys = <String, Map<String, Object?>>{};
     try {
-      int? uploadedOneTimeKeysCount;
       if (oldKeyCount != null) {
         // check if we have OTKs that still need uploading. If we do, we don't try to generate new ones,
         // instead we try to upload the old ones first
@@ -152,7 +151,6 @@ class OlmManager {
         if (oneTimeKeysCount > 0) {
           olmAccount.generateOneTimeKeys(oneTimeKeysCount);
         }
-        uploadedOneTimeKeysCount = oneTimeKeysCount + oldOTKsNeedingUpload;
       }
 
       if (unusedFallbackKey == false) {
@@ -261,18 +259,8 @@ class OlmManager {
       if (updateDatabase) {
         await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
       }
-      // The server counts all unclaimed keys, so claims racing this upload
-      // lower it. A higher count means leftovers we hold no private half for,
-      // e.g. from an earlier account on this device ID. Our keys are accepted
-      // either way, and failing would not remove the leftovers.
-      final serverCount = response['signed_curve25519'] ?? 0;
-      if (oldKeyCount != null &&
-          uploadedOneTimeKeysCount != null &&
-          serverCount > oldKeyCount + uploadedOneTimeKeysCount) {
-        Logs().w(
-          'Server holds $serverCount one time keys, expected at most ${oldKeyCount + uploadedOneTimeKeysCount}',
-        );
-      }
+      // A 200 means our keys were accepted. The returned count is not checked:
+      // it counts all unclaimed keys, so claims racing this upload lower it.
       return true;
     } on MatrixException catch (exception) {
       _uploadKeysLock = false;
