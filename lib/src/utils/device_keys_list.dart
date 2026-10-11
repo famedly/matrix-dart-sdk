@@ -270,7 +270,7 @@ abstract class SignableKey extends MatrixSignableKey {
       case ShareKeysWith.crossVerified:
         return hasValidSignatureChain(verifiedByTheirMasterKey: true);
       case ShareKeysWith.directlyVerifiedOnly:
-        return directVerified;
+        return directVerified || crossVerified;
     }
   }
 
