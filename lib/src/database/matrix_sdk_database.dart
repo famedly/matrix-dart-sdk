@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:sqflite_common/sqflite.dart';
 
+import '../../encryption/ssss.dart';
 import '../../encryption/utils/olm_session.dart';
 import '../../encryption/utils/outbound_group_session.dart';
 import '../../encryption/utils/ssss_cache.dart';
@@ -164,12 +165,50 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   /// like delete. Set it if you want to use sqlite FFI.
   final DatabaseFactory? sqfliteFactory;
 
+  final ({
+    Future<String?> Function(String key) read,
+    Future<void> Function(String key, String value) write,
+    Future<void> Function(String key) delete,
+  })?
+  secureStorage;
+
+  String get _secureStorageClientDataKey => 'client_data_$name';
+  String _getSecureStorageSSSSCacheKey(String type) =>
+      'ssss_cache_${name}_$type';
+
+  Future<Map<String, String>?> _readSecureStorageClientData() async {
+    final data = await secureStorage?.read(_secureStorageClientDataKey);
+    if (data == null) return null;
+    return (jsonDecode(data) as Map).cast<String, String>();
+  }
+
+  Future<void> _clearSecureStorage() async {
+    final secureStorage = this.secureStorage;
+    if (secureStorage == null) return;
+    await secureStorage.delete(_secureStorageClientDataKey);
+    for (final type in cacheTypes) {
+      await secureStorage.delete(_getSecureStorageSSSSCacheKey(type));
+    }
+  }
+
   static Future<MatrixSdkDatabase> init(
     String name, {
     Database? database,
     dynamic idbFactory,
     DatabaseFactory? sqfliteFactory,
     int maxFileSize = 0,
+
+    /// If provided, the database stores client data like access token and the
+    /// SSSS cache also in the provided secure storage. This is helpful in
+    /// case of a database corruption and allows easy database recovery.
+    /// Data is always stored in both places, but read from the secure storage
+    /// first.
+    ({
+      Future<String?> Function(String key) read,
+      Future<void> Function(String key, String value) write,
+      Future<void> Function(String key) delete,
+    })?
+    secureStorage,
     Uri? fileStorageLocation,
     Duration? deleteFilesAfterDuration,
   }) async {
@@ -179,6 +218,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       idbFactory: idbFactory,
       sqfliteFactory: sqfliteFactory,
       maxFileSize: maxFileSize,
+      secureStorage: secureStorage,
       fileStorageLocation: fileStorageLocation,
       deleteFilesAfterDuration: deleteFilesAfterDuration,
     );
@@ -195,6 +235,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     this.idbFactory,
     this.sqfliteFactory,
     this.maxFileSize = 0,
+    this.secureStorage,
     Uri? fileStorageLocation,
     Duration? deleteFilesAfterDuration,
   }) {
@@ -344,6 +385,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _deviceKeysListBox.clearQuickAccessCache();
     _lastSentOlmMessagesBox.clearQuickAccessCache();
 
+    await _clearSecureStorage();
+
     await _collection.clear();
   }
 
@@ -366,7 +409,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   });
 
   @override
-  Future<void> clearSSSSCache() => _ssssCacheBox.clear();
+  Future<void> clearSSSSCache() async {
+    for (final type in cacheTypes) {
+      await secureStorage?.delete(_getSecureStorageSSSSCacheKey(type));
+    }
+    await _ssssCacheBox.clear();
+  }
 
   @override
   Future<void> close() async => _collection.close();
@@ -433,13 +481,17 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       );
 
   @override
-  Future<Map<String, dynamic>?> getClient(String name) =>
-      runBenchmarked('Get Client from store', () async {
-        final clientMap = await _clientBox.getAllValues();
-        clientMap.remove('version');
-        if (clientMap.isEmpty) return null;
-        return clientMap;
-      });
+  Future<Map<String, dynamic>?> getClient(String name) {
+    return runBenchmarked('Get Client from store', () async {
+      final secureStorageJson = await _readSecureStorageClientData();
+
+      final clientMap = await _clientBox.getAllValues();
+      clientMap.remove('version');
+      clientMap.addAll(secureStorageJson ?? {});
+      if (clientMap.isEmpty) return null;
+      return clientMap;
+    });
+  }
 
   @override
   Future<Event?> getEventById(String eventId, Room room) async {
@@ -696,6 +748,16 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<SSSSCache?> getSSSSCache(String type) async {
+    final secureStorage = this.secureStorage;
+    if (secureStorage != null) {
+      final data = await secureStorage.read(
+        _getSecureStorageSSSSCacheKey(type),
+      );
+      if (data != null) {
+        return SSSSCache.fromJson(jsonDecode(data));
+      }
+    }
+
     final raw = await _ssssCacheBox.get(type);
     if (raw == null) return null;
     return SSSSCache.fromJson(copyMap(raw));
@@ -845,6 +907,24 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String? olmAccount,
     String? oidcClientId,
   }) async {
+    final secureStorage = this.secureStorage;
+    if (secureStorage != null) {
+      await secureStorage.write(
+        _secureStorageClientDataKey,
+        jsonEncode({
+          'homeserver_url': homeserverUrl,
+          'token': token,
+          'token_expires_at': ?tokenExpiresAt?.millisecondsSinceEpoch
+              .toString(),
+          'user_id': userId,
+          'refresh_token': ?refreshToken,
+          'oidc_client_id': ?oidcClientId,
+          'device_id': ?deviceId,
+          'device_name': ?deviceName,
+          'olm_account': ?olmAccount,
+        }),
+      );
+    }
     await transaction(() async {
       await _clientBox.put('homeserver_url', homeserverUrl);
       await _clientBox.put('token', token);
@@ -1277,15 +1357,22 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     String ciphertext,
     String content,
   ) async {
-    await _ssssCacheBox.put(
-      type,
-      SSSSCache(
-        type: type,
-        keyId: keyId,
-        ciphertext: ciphertext,
-        content: content,
-      ).toJson(),
-    );
+    final json = SSSSCache(
+      type: type,
+      keyId: keyId,
+      ciphertext: ciphertext,
+      content: content,
+    ).toJson();
+
+    final secureStorage = this.secureStorage;
+    if (secureStorage != null) {
+      await secureStorage.write(
+        _getSecureStorageSSSSCacheKey(type),
+        jsonEncode(json),
+      );
+    }
+
+    await _ssssCacheBox.put(type, json);
   }
 
   @override
@@ -1299,6 +1386,15 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> updateClientKeys(String olmAccount) async {
+    final secureStorage = this.secureStorage;
+    if (secureStorage != null) {
+      final clientData = await _readSecureStorageClientData() ?? {};
+      clientData['olm_account'] = olmAccount;
+      await secureStorage.write(
+        _secureStorageClientDataKey,
+        jsonEncode(clientData),
+      );
+    }
     await _clientBox.put('olm_account', olmAccount);
     return;
   }
@@ -1580,6 +1676,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> delete() async {
+    await _clearSecureStorage();
     // database?.path is null on web
     await _collection.deleteDatabase(
       database?.path ?? name,
