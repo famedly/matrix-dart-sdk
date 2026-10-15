@@ -10,6 +10,8 @@ import 'package:web/web.dart';
 import '../../matrix_api_lite/utils/logs.dart';
 import 'zone_transaction_mixin.dart';
 
+typedef BoxBatch = IDBTransaction;
+
 /// Key-Value store abstraction over IndexedDB so that the sdk database can use
 /// a single interface for all platforms. API is inspired by Hive.
 class BoxCollection with ZoneTransactionMixin {
@@ -69,6 +71,49 @@ class BoxCollection with ZoneTransactionMixin {
       throw ('Box with name $name is not in the known box names of this collection.');
     }
     return Box<V>(name, this);
+  }
+
+  /// Runs the writes of [action] in one IndexedDB transaction, so they are
+  /// committed together or not at all.
+  ///
+  /// [action] may only await box operations which get [txn] passed. Any other
+  /// await lets IndexedDB commit the transaction early, and the next request
+  /// throws a `TransactionInactiveError`.
+  Future<void> batch(Future<void> Function(BoxBatch txn) action) async {
+    final txn = _db.transaction(boxNames.toList().jsify()!, 'readwrite');
+    final transactionCompleter = Completer<void>();
+
+    // Register before the first request, the commit can happen any time after.
+    txn.onerror = (Event event) {
+      if (transactionCompleter.isCompleted) return;
+      Logs().e('[IndexedDBBox] [batch] Error - ${txn.error}');
+      transactionCompleter.completeError(
+        'Batch not completed due to an error - ${txn.error}'.toJS,
+      );
+    }.toJS;
+    // An abort at commit (e.g. quota exceeded) fires no error event.
+    txn.onabort = (Event event) {
+      if (transactionCompleter.isCompleted) return;
+      Logs().e('[IndexedDBBox] [batch] Aborted - ${txn.error}');
+      transactionCompleter.completeError('Batch aborted - ${txn.error}'.toJS);
+    }.toJS;
+    txn.oncomplete = (Event event) {
+      transactionCompleter.complete();
+    }.toJS;
+
+    try {
+      await action(txn);
+    } catch (_) {
+      // The error of action wins over the one of the abort.
+      transactionCompleter.future.ignore();
+      try {
+        txn.abort();
+      } catch (_) {
+        // Already committed or aborted.
+      }
+      rethrow;
+    }
+    return transactionCompleter.future;
   }
 
   List<Future<void> Function(IDBTransaction txn)>? _txnCache;
@@ -301,15 +346,17 @@ class Box<V> {
     return list;
   }
 
-  Future<void> put(String key, V val, [IDBTransaction? txn]) async {
-    if (boxCollection._txnCache != null) {
+  Future<void> put(String key, V val, [Object? batch]) async {
+    if (batch == null && boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => put(key, val, txn));
       _quickAccessCache[key] = val;
       _quickAccessCachedKeys?.add(key);
       return;
     }
 
-    txn ??= boxCollection._db.transaction(name.toJS, 'readwrite');
+    final txn =
+        batch as IDBTransaction? ??
+        boxCollection._db.transaction(name.toJS, 'readwrite');
     final store = txn.objectStore(name);
     final putRequest = store.put(val.jsify(), key.toJS);
     final putCompleter = Completer();
@@ -328,15 +375,17 @@ class Box<V> {
     return;
   }
 
-  Future<void> delete(String key, [IDBTransaction? txn]) async {
-    if (boxCollection._txnCache != null) {
+  Future<void> delete(String key, [Object? batch]) async {
+    if (batch == null && boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => delete(key, txn));
       _quickAccessCache[key] = null;
       _quickAccessCachedKeys?.remove(key);
       return;
     }
 
-    txn ??= boxCollection._db.transaction(name.toJS, 'readwrite');
+    final txn =
+        batch as IDBTransaction? ??
+        boxCollection._db.transaction(name.toJS, 'readwrite');
     final store = txn.objectStore(name);
     final deleteRequest = store.delete(key.toJS);
     final deleteCompleter = Completer();
@@ -358,8 +407,8 @@ class Box<V> {
     return;
   }
 
-  Future<void> deleteAll(List<String> keys, [IDBTransaction? txn]) async {
-    if (boxCollection._txnCache != null) {
+  Future<void> deleteAll(List<String> keys, [Object? batch]) async {
+    if (batch == null && boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => deleteAll(keys, txn));
       for (final key in keys) {
         _quickAccessCache[key] = null;
@@ -368,7 +417,9 @@ class Box<V> {
       return;
     }
 
-    txn ??= boxCollection._db.transaction(name.toJS, 'readwrite');
+    final txn =
+        batch as IDBTransaction? ??
+        boxCollection._db.transaction(name.toJS, 'readwrite');
     final store = txn.objectStore(name);
     for (final key in keys) {
       final deleteRequest = store.delete(key.toJS);
@@ -397,11 +448,13 @@ class Box<V> {
     _quickAccessCachedKeys = null;
   }
 
-  Future<void> clear([IDBTransaction? txn]) async {
-    if (boxCollection._txnCache != null) {
+  Future<void> clear([Object? batch]) async {
+    if (batch == null && boxCollection._txnCache != null) {
       boxCollection._txnCache!.add(clear);
     } else {
-      txn ??= boxCollection._db.transaction(name.toJS, 'readwrite');
+      final txn =
+          batch as IDBTransaction? ??
+          boxCollection._db.transaction(name.toJS, 'readwrite');
       final store = txn.objectStore(name);
       final clearRequest = store.clear();
       final clearCompleter = Completer();
