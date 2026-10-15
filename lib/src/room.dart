@@ -735,7 +735,8 @@ class Room {
       potentialMentions =
           potentialMentions
               .map(
-                (mention) => mention.isValidMatrixIdStrict()
+                (mention) =>
+                    mention.isValidMatrixIdStrict(strictDomainCheck: true)
                     ? mention
                     : getMention(mention),
               )
