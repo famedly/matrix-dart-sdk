@@ -55,8 +55,8 @@ abstract class DatabaseApi {
 
   Future<Map<String, BasicEvent>> getAccountData();
 
-  /// Stores a RoomUpdate object in the database. Must be called inside of
-  /// [transaction].
+  /// Stores a RoomUpdate object in the database. Call it in a [transaction]
+  /// when storing many, so that they are committed at once.
   Future<void> storeRoomUpdate(
     String roomId,
     SyncRoomUpdate roomUpdate,
@@ -66,8 +66,8 @@ abstract class DatabaseApi {
 
   Future<void> deleteTimelineForRoom(String roomId);
 
-  /// Stores an EventUpdate object in the database. Must be called inside of
-  /// [transaction].
+  /// Stores an EventUpdate object in the database. Call it in a [transaction]
+  /// when storing many, so that they are committed at once.
   Future<void> storeEventUpdate(
     String roomId,
     StrippedStateEvent event,

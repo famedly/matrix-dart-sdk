@@ -331,32 +331,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> clear() async {
-    _clientBox.clearQuickAccessCache();
-    _accountDataBox.clearQuickAccessCache();
-    _roomsBox.clearQuickAccessCache();
-    _preloadRoomStateBox.clearQuickAccessCache();
-    _nonPreloadRoomStateBox.clearQuickAccessCache();
-    _roomMembersBox.clearQuickAccessCache();
-    _toDeviceQueueBox.clearQuickAccessCache();
-    _roomAccountDataBox.clearQuickAccessCache();
-    _inboundGroupSessionsBox.clearQuickAccessCache();
-    _inboundGroupSessionsUploadQueueBox.clearQuickAccessCache();
-    _outboundGroupSessionsBox.clearQuickAccessCache();
-    _olmSessionsBox.clearQuickAccessCache();
-    _ssssCacheBox.clearQuickAccessCache();
-    _presencesBox.clearQuickAccessCache();
-    _timelineFragmentsBox.clearQuickAccessCache();
-    _eventsBox.clearQuickAccessCache();
-    _seenDeviceIdsBox.clearQuickAccessCache();
-    _seenDeviceKeysBox.clearQuickAccessCache();
-    _userProfilesBox.clearQuickAccessCache();
-    _readReceiptsBox.clearQuickAccessCache();
-    _deviceKeysListBox.clearQuickAccessCache();
-    _lastSentOlmMessagesBox.clearQuickAccessCache();
-
-    await _collection.clear();
-  }
+  Future<void> clear() => _collection.clear();
 
   @override
   Future<void> clearCache() => transaction(() async {

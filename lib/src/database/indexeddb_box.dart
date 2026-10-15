@@ -233,10 +233,10 @@ class Box<V> implements OverlayBox {
     return boxCollection.written(this);
   }
 
-  Future<List<String>> getAllKeys([IDBTransaction? txn]) async {
+  Future<List<String>> getAllKeys() async {
     final cachedKeys = _quickAccessCachedKeys;
     if (cachedKeys != null) return cachedKeys.toList();
-    txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
+    final txn = boxCollection._db.transaction(name.toJS, 'readonly');
     final keys = overlay.keys(await _getAllKeysFromStore(txn));
     // put and delete keep this set in sync with the pending writes. A box
     // with a cache size keeps none, the set would grow without bound.
@@ -269,11 +269,8 @@ class Box<V> implements OverlayBox {
 
   /// Returns all keys starting with [prefix], using the key order of the
   /// object store.
-  Future<List<String>> getKeysWithPrefix(
-    String prefix, [
-    IDBTransaction? txn,
-  ]) async {
-    txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
+  Future<List<String>> getKeysWithPrefix(String prefix) async {
+    final txn = boxCollection._db.transaction(name.toJS, 'readonly');
     final request = txn
         .objectStore(name)
         .getAllKeys(
@@ -301,8 +298,8 @@ class Box<V> implements OverlayBox {
       prefix.substring(0, prefix.length - 1) +
       String.fromCharCode(prefix.codeUnitAt(prefix.length - 1) + 1);
 
-  Future<Map<String, V>> getAllValues([IDBTransaction? txn]) async {
-    txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
+  Future<Map<String, V>> getAllValues() async {
+    final txn = boxCollection._db.transaction(name.toJS, 'readonly');
     final store = txn.objectStore(name);
     final map = <String, V>{};
 
@@ -333,11 +330,11 @@ class Box<V> implements OverlayBox {
     return overlay.values(map);
   }
 
-  Future<V?> get(String key, [IDBTransaction? txn]) async {
+  Future<V?> get(String key) async {
     final uncommitted = overlay.lookup(key);
     if (uncommitted != null) return uncommitted.value;
     if (_quickAccessCache.containsKey(key)) return _cacheHit(key);
-    txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
+    final txn = boxCollection._db.transaction(name.toJS, 'readonly');
     final store = txn.objectStore(name);
     final getObjectRequest = store.get(key.toJS);
     final getObjectCompleter = Completer();
@@ -359,7 +356,7 @@ class Box<V> implements OverlayBox {
     return value;
   }
 
-  Future<List<V?>> getAll(List<String> keys, [IDBTransaction? txn]) async {
+  Future<List<V?>> getAll(List<String> keys) async {
     final values = <String, V?>{};
     final missing = <String>[];
     for (final key in keys) {
@@ -373,7 +370,7 @@ class Box<V> implements OverlayBox {
       }
     }
     if (missing.isEmpty) return [for (final key in keys) values[key]];
-    txn ??= boxCollection._db.transaction(name.toJS, 'readonly');
+    final txn = boxCollection._db.transaction(name.toJS, 'readonly');
     final store = txn.objectStore(name);
     final found = await Future.wait(
       missing.map((key) async {

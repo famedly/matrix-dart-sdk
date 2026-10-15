@@ -38,10 +38,9 @@ class BoxCollection with ZoneTransactionMixin, GroupCommit<Box> {
       batch.execute(
         'CREATE TABLE IF NOT EXISTS $name (k TEXT PRIMARY KEY NOT NULL, v TEXT)',
       );
-      batch.execute(
-        'DROP INDEX IF EXISTS k_index',
-      ); // Previously we have created a redundant index. We can safely remove it.
     }
+    // Previously we have created a redundant index. We can safely remove it.
+    batch.execute('DROP INDEX IF EXISTS k_index');
     await batch.commit(noResult: true);
     return BoxCollection(sqfliteDatabase, boxNames, name);
   }
@@ -97,10 +96,6 @@ class BoxCollection with ZoneTransactionMixin, GroupCommit<Box> {
   });
 
   Future<void> close() => closeAfterCommit(_db.close);
-
-  @Deprecated('use collection.deleteDatabase now')
-  static Future<void> delete(String path, [dynamic factory]) =>
-      (factory ?? databaseFactory).deleteDatabase(path);
 
   Future<void> deleteDatabase(String path, [dynamic factory]) async {
     await close();
@@ -239,11 +234,10 @@ class Box<V> implements OverlayBox {
     return boxCollection.written(this);
   }
 
-  Future<List<String>> getAllKeys([Transaction? txn]) async {
+  Future<List<String>> getAllKeys() async {
     final cachedKeys = _quickAccessCachedKeys;
     if (cachedKeys != null) return cachedKeys.toList();
-    final executor = txn ?? boxCollection._db;
-    final result = await executor.query(name, columns: ['k']);
+    final result = await boxCollection._db.query(name, columns: ['k']);
     final keys = overlay.keys(result.map((row) => row['k'] as String));
     // put and delete keep this set in sync with the pending writes. A box
     // with a cache size keeps none, the set would grow without bound.
@@ -252,12 +246,8 @@ class Box<V> implements OverlayBox {
   }
 
   /// Returns all keys starting with [prefix], using the primary key index.
-  Future<List<String>> getKeysWithPrefix(
-    String prefix, [
-    Transaction? txn,
-  ]) async {
-    final executor = txn ?? boxCollection._db;
-    final result = await executor.query(
+  Future<List<String>> getKeysWithPrefix(String prefix) async {
+    final result = await boxCollection._db.query(
       name,
       columns: ['k'],
       where: 'k >= ? AND k < ?',
@@ -271,21 +261,19 @@ class Box<V> implements OverlayBox {
       prefix.substring(0, prefix.length - 1) +
       String.fromCharCode(prefix.codeUnitAt(prefix.length - 1) + 1);
 
-  Future<Map<String, V>> getAllValues([Transaction? txn]) async {
-    final executor = txn ?? boxCollection._db;
+  Future<Map<String, V>> getAllValues() async {
     final values = <String, V>{};
-    for (final row in await executor.query(name)) {
+    for (final row in await boxCollection._db.query(name)) {
       values[row['k'] as String] = _fromString(row['v']) as V;
     }
     return overlay.values(values);
   }
 
-  Future<V?> get(String key, [Transaction? txn]) async {
+  Future<V?> get(String key) async {
     final uncommitted = overlay.lookup(key);
     if (uncommitted != null) return uncommitted.value;
     if (_quickAccessCache.containsKey(key)) return _cacheHit(key);
-    final executor = txn ?? boxCollection._db;
-    final result = await executor.query(
+    final result = await boxCollection._db.query(
       name,
       columns: ['v'],
       where: 'k = ?',
@@ -299,7 +287,7 @@ class Box<V> implements OverlayBox {
     return value;
   }
 
-  Future<List<V?>> getAll(List<String> keys, [Transaction? txn]) async {
+  Future<List<V?>> getAll(List<String> keys) async {
     final values = <String, V?>{};
     final missing = <String>[];
     for (final key in keys) {
@@ -312,11 +300,10 @@ class Box<V> implements OverlayBox {
         missing.add(key);
       }
     }
-    final executor = txn ?? boxCollection._db;
     // Older SQLite builds allow only 999 variables per statement.
     for (var i = 0; i < missing.length; i += 800) {
       final chunk = missing.sublist(i, min(i + 800, missing.length));
-      final result = await executor.query(
+      final result = await boxCollection._db.query(
         name,
         where: 'k IN (${chunk.map((_) => '?').join(',')})',
         whereArgs: chunk,
