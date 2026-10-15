@@ -75,6 +75,14 @@ abstract class DatabaseApi {
     Client client,
   );
 
+  /// Loads what handling these events of a sync will read, so that it is not
+  /// read event by event.
+  Future<void> prefetchEventUpdates(
+    String roomId,
+    List<StrippedStateEvent> events,
+    EventUpdateType type,
+  ) async {}
+
   Future<Event?> getEventById(String eventId, Room room);
 
   Future<void> forgetRoom(String roomId);
@@ -258,6 +266,10 @@ abstract class DatabaseApi {
 
   Future<dynamic> close();
 
+  /// Runs [action] and commits all its writes at once, after it returned.
+  /// Transactions run one after another, a nested one runs in the outer one.
+  /// Nothing is rolled back: if [action] throws, its writes are committed
+  /// anyway and the error is rethrown.
   Future<void> transaction(Future<void> Function() action);
 
   Future<String> exportDump();
