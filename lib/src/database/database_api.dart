@@ -55,8 +55,8 @@ abstract class DatabaseApi {
 
   Future<Map<String, BasicEvent>> getAccountData();
 
-  /// Stores a RoomUpdate object in the database. Must be called inside of
-  /// [transaction].
+  /// Stores a RoomUpdate object in the database. Call it in a [transaction]
+  /// when storing many, so that they are committed at once.
   Future<void> storeRoomUpdate(
     String roomId,
     SyncRoomUpdate roomUpdate,
@@ -66,14 +66,22 @@ abstract class DatabaseApi {
 
   Future<void> deleteTimelineForRoom(String roomId);
 
-  /// Stores an EventUpdate object in the database. Must be called inside of
-  /// [transaction].
+  /// Stores an EventUpdate object in the database. Call it in a [transaction]
+  /// when storing many, so that they are committed at once.
   Future<void> storeEventUpdate(
     String roomId,
     StrippedStateEvent event,
     EventUpdateType type,
     Client client,
   );
+
+  /// Loads what handling these events of a sync will read, so that it is not
+  /// read event by event.
+  Future<void> prefetchEventUpdates(
+    String roomId,
+    List<StrippedStateEvent> events,
+    EventUpdateType type,
+  ) async {}
 
   Future<Event?> getEventById(String eventId, Room room);
 
@@ -258,6 +266,10 @@ abstract class DatabaseApi {
 
   Future<dynamic> close();
 
+  /// Runs [action] and commits all its writes at once, after it returned.
+  /// Transactions run one after another, a nested one runs in the outer one.
+  /// Nothing is rolled back: if [action] throws, its writes are committed
+  /// anyway and the error is rethrown.
   Future<void> transaction(Future<void> Function() action);
 
   Future<String> exportDump();
