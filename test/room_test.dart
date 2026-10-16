@@ -1402,7 +1402,7 @@ void main() {
     test('sendEvent with user mention', () async {
       FakeMatrixApi.calledEndpoints.clear();
       final resp = await room.sendTextEvent(
-        'Hello world @[Alice Margatroid]',
+        'Hello world @[Alice Margatroid] @bob:invalid~server',
         addMentions: true,
         txid: 'testtxid',
       );
