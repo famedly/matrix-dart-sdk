@@ -3,6 +3,20 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+
+## [14.1.0] 16th Oct 2026
+- feat: add secure storage interface to database (Christian Kußowski)
+- fix: await sync after invite() in encrypted rooms (Christian Kußowski)
+- fix: compare new inbound sessions with the stored one, not only the cached one (Niklas Zender)
+- fix: do not add invalid matrix IDs to m.mention (Christian Kußowski)
+- fix: persist the timeline order when a sent event comes down the sync (Niklas Zender)
+- perf: only look up new devices of a user if there are any (Niklas Zender)
+- refactor: add additionalProperties to Pushnotification (Christian Kußowski)
+- refactor: insertClient and updateClient to storeClient() (Christian Kußowski)
+- refactor: remove useless readOnly parameter (Christian Kußowski)
+- refactor: remove useless transaction around db read (Christian Kußowski)
+- test: make the EventTooLarge test deterministic (Niklas Zender)
+
 ## [14.0.0] 8th Oct 2026
 - build: set flutter version for analyze in ci (Christian Kußowski)
 - chore: make DeviceKeysList serializable (Christian Kußowski)
