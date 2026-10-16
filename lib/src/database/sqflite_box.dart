@@ -9,6 +9,8 @@ import 'package:sqflite_common/sqflite.dart';
 
 import 'zone_transaction_mixin.dart';
 
+typedef BoxBatch = Batch;
+
 /// Key-Value store abstraction over Sqflite so that the sdk database can use
 /// a single interface for all platforms. API is inspired by Hive.
 class BoxCollection with ZoneTransactionMixin {
@@ -47,6 +49,15 @@ class BoxCollection with ZoneTransactionMixin {
       throw ('Box with name $name is not in the known box names of this collection.');
     }
     return Box<V>(name, this);
+  }
+
+  /// Runs the writes of [action] in one sqflite batch, so they are committed
+  /// together or not at all. Pass [txn] to the box writes.
+  Future<void> batch(Future<void> Function(BoxBatch txn) action) async {
+    final batch = _db.batch();
+    // A throwing action leaves the batch uncommitted.
+    await action(batch);
+    await batch.commit(noResult: true);
   }
 
   Batch? _activeBatch;
@@ -228,8 +239,8 @@ class Box<V> {
     return list;
   }
 
-  Future<void> put(String key, V val) async {
-    final txn = boxCollection._activeBatch;
+  Future<void> put(String key, V val, [Object? batch]) async {
+    final txn = batch as Batch? ?? boxCollection._activeBatch;
 
     final params = {'k': key, 'v': _toString(val)};
     if (txn == null) {
@@ -247,8 +258,8 @@ class Box<V> {
     return;
   }
 
-  Future<void> delete(String key, [Batch? txn]) async {
-    txn ??= boxCollection._activeBatch;
+  Future<void> delete(String key, [Object? batch]) async {
+    final txn = batch as Batch? ?? boxCollection._activeBatch;
 
     if (txn == null) {
       await boxCollection._db.delete(name, where: 'k = ?', whereArgs: [key]);
@@ -263,8 +274,8 @@ class Box<V> {
     return;
   }
 
-  Future<void> deleteAll(List<String> keys, [Batch? txn]) async {
-    txn ??= boxCollection._activeBatch;
+  Future<void> deleteAll(List<String> keys, [Object? batch]) async {
+    final txn = batch as Batch? ?? boxCollection._activeBatch;
 
     final placeholder = keys.map((_) => '?').join(',');
     if (txn == null) {
@@ -289,8 +300,8 @@ class Box<V> {
     _quickAccessCachedKeys = null;
   }
 
-  Future<void> clear([Batch? txn]) async {
-    txn ??= boxCollection._activeBatch;
+  Future<void> clear([Object? batch]) async {
+    final txn = batch as Batch? ?? boxCollection._activeBatch;
 
     if (txn == null) {
       await boxCollection._db.delete(name);
