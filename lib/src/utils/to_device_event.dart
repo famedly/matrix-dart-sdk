@@ -7,6 +7,9 @@ import '../../matrix.dart';
 class ToDeviceEvent extends BasicEventWithSender {
   Map<String, dynamic>? encryptedContent;
 
+  /// The validated `sender_device_keys` of an olm encrypted event (MSC4147).
+  DeviceKeys? senderDeviceKeys;
+
   String get sender => senderId;
   set sender(String sender) => senderId = sender;
 
@@ -15,6 +18,7 @@ class ToDeviceEvent extends BasicEventWithSender {
     required super.type,
     required Map<String, dynamic> super.content,
     this.encryptedContent,
+    this.senderDeviceKeys,
   }) : super(senderId: sender);
 
   factory ToDeviceEvent.fromJson(Map<String, dynamic> json) {

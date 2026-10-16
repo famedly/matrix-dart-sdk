@@ -34,6 +34,32 @@ class SessionKey {
           : null) ??
       <String>[];
 
+  /// Whether the creator of this session agreed that it may be shared with
+  /// users invited later (MSC4268). matrix-rust-sdk sends `m.shared_history`
+  /// and older versions the unstable key, so we accept all of them.
+  bool get sharedHistory =>
+      sharedHistoryKeys.any((key) => content[key] == true);
+
+  static const sharedHistoryKeys = [
+    'shared_history',
+    'm.shared_history',
+    'org.matrix.msc3061.shared_history',
+  ];
+
+  /// `shared_history` is the spec name. matrix-rust-sdk only reads
+  /// `m.shared_history` or the unstable key, so we write the latter as well.
+  static Map<String, bool> sharedHistoryContent(bool sharedHistory) => {
+    'shared_history': sharedHistory,
+    'org.matrix.msc3061.shared_history': sharedHistory,
+  };
+
+  /// The user who shared this session with us in a key bundle (MSC4268). We
+  /// only have their word that the claimed sender created this session, so
+  /// this should be shown to the user.
+  String? get sharedBy => content.tryGet<String>(sharedByKey);
+
+  static const sharedByKey = 'com.famedly.msc4268.shared_by';
+
   /// Claimed keys of the original sender
   late Map<String, String> senderClaimedKeys;
 

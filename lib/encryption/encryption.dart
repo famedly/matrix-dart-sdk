@@ -14,6 +14,7 @@ import 'key_verification_manager.dart';
 import 'olm_manager.dart';
 import 'ssss.dart';
 import 'utils/bootstrap.dart';
+import 'utils/session_key.dart';
 
 class Encryption {
   final Client client;
@@ -89,7 +90,12 @@ class Encryption {
   }
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
-    if (event.type == EventTypes.RoomKey) {
+    if ([
+      EventTypes.RoomKey,
+      // Must be stored before the sync advances, nobody sends it again.
+      EventTypes.RoomKeyBundle,
+      EventTypes.RoomKeyBundleUnstable,
+    ].contains(event.type)) {
       // a new room key. We need to handle this asap, before other
       // events in /sync are handled
       await keyManager.handleToDeviceEvent(event);
@@ -140,6 +146,20 @@ class Encryption {
       // maybe we need to re-try SSSS secrets
       runInRoot(() => ssss.periodicallyRequestMissingCache());
     }
+    // Everyone who was invited may have got our current session in a key
+    // bundle (MSC4268), so we must rotate it whenever someone leaves. In a
+    // limited sync any membership but join may hide a join and leave, so we
+    // rotate on all of them. The new session is only created on the next send.
+    if (event.type == EventTypes.RoomMember &&
+        event.stateKey != client.userID &&
+        event.room.encrypted &&
+        event.content['membership'] != 'join') {
+      await keyManager.loadOutboundGroupSession(event.room.id);
+      await keyManager.clearOrUseOutboundGroupSession(
+        event.room.id,
+        wipe: true,
+      );
+    }
   }
 
   Future<ToDeviceEvent> decryptToDeviceEvent(ToDeviceEvent event) async {
@@ -169,6 +189,7 @@ class Encryption {
     }
     Map<String, dynamic> decryptedPayload;
     var canRequestSession = false;
+    String? sharedBy;
     try {
       if (content.algorithm != AlgorithmTypes.megolmV1AesSha2) {
         throw DecryptException(DecryptException.unknownAlgorithm);
@@ -225,6 +246,7 @@ class Encryption {
             .onError((e, _) => Logs().e('Ignoring error for updating indexes'));
       }
       decryptedPayload = json.decode(decryptResult.plaintext);
+      sharedBy = inboundGroupSession.sharedBy;
     } catch (exception) {
       Logs().d('Could not decrypt event', exception);
       // alright, if this was actually by our own outbound group session, we might as well clear it
@@ -271,7 +293,11 @@ class Encryption {
       eventId: event.eventId,
       room: event.room,
       originServerTs: event.originServerTs,
-      unsigned: event.unsigned,
+      // Stored with the event, so it survives a restart (MSC4268). Never take
+      // it from the server.
+      unsigned: {...?event.unsigned}
+        ..remove(SessionKey.sharedByKey)
+        ..addAll({SessionKey.sharedByKey: ?sharedBy}),
       stateKey: event.stateKey,
       status: event.status,
       originalSource: event,
@@ -432,4 +458,6 @@ class DecryptException implements Exception {
       "The message isn't sent for this device";
   static const String unknownMessageType = 'Unknown message type';
   static const String decryptionFailed = 'Decryption failed';
+  static const String invalidSenderDeviceKeys =
+      "Message was decrypted but sender_device_keys don't match";
 }

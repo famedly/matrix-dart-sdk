@@ -126,6 +126,44 @@ void main() {
       expect(ret != null, true);
     });
 
+    test('the backup keeps who shared a session (MSC4268)', () async {
+      final inbound = vod.InboundGroupSession(vod.GroupSession().sessionKey);
+      const roomId = '!someroom:example.org';
+      final sessionId = inbound.sessionId;
+      await client.encryption!.keyManager.setInboundGroupSession(
+        roomId,
+        sessionId,
+        client.identityKey,
+        {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': roomId,
+          'session_id': sessionId,
+          'session_key': inbound.exportAtFirstKnownIndex(),
+        },
+        forwarded: true,
+        sharedBy: '@alice:example.com',
+      );
+      FakeMatrixApi.calledEndpoints.clear();
+      await client.encryption!.keyManager.uploadInboundGroupSessions();
+      await FakeMatrixApi.firstWhereValue(
+        '/client/v3/room_keys/keys?version=5',
+      );
+      final payload = FakeMatrixApi
+          .calledEndpoints['/client/v3/room_keys/keys?version=5']!
+          .first;
+
+      client.encryption!.keyManager.clearInboundGroupSessions();
+      await client.encryption!.keyManager.loadFromResponse(
+        RoomKeys.fromJson(json.decode(payload)),
+      );
+      expect(
+        client.encryption!.keyManager
+            .getInboundGroupSession(roomId, sessionId)
+            ?.sharedBy,
+        '@alice:example.com',
+      );
+    });
+
     test(
       'Room.searchEvents decrypts an event whose session is only in online key backup',
       () async {

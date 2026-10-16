@@ -50,6 +50,9 @@ abstract class EventTypes {
   static const String RoomKey = 'm.room_key';
   static const String ForwardedRoomKey = 'm.forwarded_room_key';
   static const String RoomKeyRequest = 'm.room_key_request';
+  static const String RoomKeyBundle = 'm.room_key_bundle';
+  static const String RoomKeyBundleUnstable =
+      'io.element.msc4268.room_key_bundle';
   static const String KeyVerificationRequest = 'm.key.verification.request';
   static const String KeyVerificationStart = 'm.key.verification.start';
   static const String KeyVerificationReady = 'm.key.verification.ready';
