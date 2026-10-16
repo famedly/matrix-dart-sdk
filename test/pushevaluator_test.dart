@@ -400,6 +400,11 @@ void main() {
 
       ruleset.override?[0].conditions?[0].is$ = '1';
       _testMatch(ruleset, event);
+
+      room.summary.mJoinedMemberCount = 2;
+      ruleset.override?[0].conditions?[0].is$ = '==2';
+      _testMatch(ruleset, event);
+      room.summary.mJoinedMemberCount = null;
     });
 
     test('notification permissions rule', () async {
