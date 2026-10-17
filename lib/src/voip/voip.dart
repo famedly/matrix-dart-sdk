@@ -1143,7 +1143,9 @@ class VoIP {
       // previous session is still leaving; without this the new call would
       // never get a session of its own.
       await existing.left;
-      if (groupCalls.containsKey(id) || membership.isExpired) return;
+      if (groupCalls.containsKey(id) || !_isStillActive(room, membership)) {
+        return;
+      }
     }
 
     final groupCall = GroupCallSession(
@@ -1163,6 +1165,20 @@ class VoIP {
       await delegate.handleNewGroupCall(groupCall);
     }
   }
+
+  /// [membership] may have been withdrawn or re-sent since it was read.
+  bool _isStillActive(Room room, CallMembership membership) => room
+      .getCallMembershipsFromRoom(this)
+      .values
+      .expand((memberships) => memberships)
+      .any(
+        (m) =>
+            m.userId == membership.userId &&
+            m.deviceId == membership.deviceId &&
+            m.callId == membership.callId &&
+            m.scope == membership.scope &&
+            !m.isExpired,
+      );
 
   @Deprecated('Call `hasActiveGroupCall` on the room directly instead')
   bool hasActiveCall(Room room) => room.hasActiveGroupCall(this);
