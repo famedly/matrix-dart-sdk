@@ -370,18 +370,25 @@ class GroupCallSession {
     }
   }
 
-  Future<void>? _forceRejoinInFlight;
+  bool _forceRejoinInFlight = false;
   Timer? _forceRejoinRetry;
   int _forceRejoinFailures = 0;
 
   /// Every member state update re-detects the missing membership, so one
   /// attempt runs at a time and a failed one backs off instead of letting the
-  /// next update hammer the homeserver into rate limiting us.
-  Future<void> _forceRejoin() {
-    if (_forceRejoinRetry?.isActive ?? false) return Future.value();
-    return _forceRejoinInFlight ??= _attemptForceRejoin().whenComplete(
-      () => _forceRejoinInFlight = null,
-    );
+  /// next update hammer the homeserver into rate limiting us. A running
+  /// attempt makes further calls a no-op instead of awaiting it, because
+  /// [CallBackend.preShareKey] re-enters [onMemberStateChanged] before the
+  /// fresh membership is in local room state.
+  Future<void> _forceRejoin() async {
+    if (_forceRejoinInFlight) return;
+    if (_forceRejoinRetry?.isActive ?? false) return;
+    _forceRejoinInFlight = true;
+    try {
+      await _attemptForceRejoin();
+    } finally {
+      _forceRejoinInFlight = false;
+    }
   }
 
   Future<void> _attemptForceRejoin() async {
@@ -399,6 +406,13 @@ class GroupCallSession {
     try {
       // rejoin the call and share the key with the existing participants
       await sendMemberStateEvent();
+      if (_leaveStarted) {
+        // leave() tore the session down while our membership was in flight, so
+        // its removal raced ahead of this write: undo it instead of leaving
+        // the user in the call on the homeserver.
+        await removeMemberStateEvent();
+        return;
+      }
       await backend.preShareKey(this);
       _forceRejoinFailures = 0;
     } catch (e, s) {
@@ -409,6 +423,7 @@ class GroupCallSession {
         e,
         s,
       );
+      if (_leaveStarted) return;
       _forceRejoinRetry = Timer(delay, () {
         if (state != GroupCallState.entered || _hasOwnMembership()) return;
         unawaited(_forceRejoin());
