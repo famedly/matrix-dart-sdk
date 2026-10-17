@@ -65,7 +65,7 @@ class MatrixFile {
   Map<String, dynamic> get info => ({'mimetype': mimeType, 'size': size});
 
   static String msgTypeFromMime(String mimeType) {
-    if (mimeType.toLowerCase().startsWith('image/')) {
+    if (mimeType.toLowerCase().startsWith('image/') || (mimeType.toLowerCase() == "application/x-tgsticker")) {
       return MessageTypes.Image;
     }
     if (mimeType.toLowerCase().startsWith('video/')) {
