@@ -1534,11 +1534,12 @@ void main() {
           final leaving = previous.leave();
           await pumpEventQueue();
 
+          final caller = membership('@caller:example.com', 'CALLER', '');
+          setMemberships(caller.userId, [caller]);
+
           final incoming = <GroupCallSession>[];
           final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
-          final created = voip.createGroupCallFromRoomStateEvent(
-            membership('@caller:example.com', 'CALLER', ''),
-          );
+          final created = voip.createGroupCallFromRoomStateEvent(caller);
           await pumpEventQueue();
           expect(incoming, isEmpty);
 
@@ -1552,6 +1553,71 @@ void main() {
           expect(voip.getGroupCallById(room.id, ''), same(incoming.single));
         },
       );
+
+      test('a caller hanging up while we leave does not ring again', () async {
+        final backend = HeldDisposeBackend();
+        final previous = await voip.fetchOrCreateGroupCall(
+          '',
+          room,
+          backend,
+          'm.call',
+          'm.room',
+          preShareKey: false,
+        );
+        await previous.enter();
+        final leaving = previous.leave();
+        await pumpEventQueue();
+
+        final caller = membership('@caller:example.com', 'CALLER', '');
+        setMemberships(caller.userId, [caller]);
+
+        final incoming = <GroupCallSession>[];
+        final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
+        final created = voip.createGroupCallFromRoomStateEvent(caller);
+        await pumpEventQueue();
+
+        // hanging up drops the membership from room state without expiring it
+        setMemberships(caller.userId, []);
+
+        backend.release.complete();
+        await leaving;
+        await created;
+        await sub.cancel();
+
+        expect(incoming, isEmpty);
+        expect(voip.getGroupCallById(room.id, ''), isNull);
+      });
+
+      test('a refused leave lets the delayed leave event apply', () async {
+        const callId = 'test_refused_leave_delayed';
+        final key = '${room.id}|$callId|m.room';
+        final restartTimer = Timer.periodic(Duration(hours: 1), (_) {});
+        voip.delayedEventCancellers[key] = DelayedEventCanceller(
+          delayedEventId: 'fake_delayed_event_id',
+          restartTimer: restartTimer,
+        );
+
+        FakeMatrixApi.currentApi!.api['PUT']![ownMemberStatePath()] = (_) => {
+          'errcode': 'M_LIMIT_EXCEEDED',
+          'error': 'Too Many Requests',
+        };
+        FakeMatrixApi.calledEndpoints.clear();
+
+        await expectLater(
+          room.removeFamedlyCallMemberEvent(callId, voip),
+          throwsA(isA<MatrixException>()),
+        );
+
+        expect(voip.delayedEventCancellers.containsKey(key), isFalse);
+        expect(restartTimer.isActive, isFalse);
+        expect(
+          FakeMatrixApi.calledEndpoints.keys.any(
+            (endpoint) => endpoint.contains('delayed_events'),
+          ),
+          isFalse,
+          reason: 'the scheduled delayed leave must stay on the homeserver',
+        );
+      });
 
       test(
         'force rejoin runs once at a time and backs off when rate limited',

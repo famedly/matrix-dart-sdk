@@ -1143,7 +1143,22 @@ class VoIP {
       // previous session is still leaving; without this the new call would
       // never get a session of its own.
       await existing.left;
-      if (groupCalls.containsKey(id) || membership.isExpired) return;
+      if (groupCalls.containsKey(id)) return;
+      // Hanging up only drops the membership from room state, it does not
+      // expire it, so re-read the state instead of trusting the snapshot.
+      final stillJoined = room
+          .getCallMembershipsFromRoom(this)
+          .values
+          .expand((memberships) => memberships)
+          .any(
+            (mem) =>
+                !mem.isExpired &&
+                mem.userId == membership.userId &&
+                mem.deviceId == membership.deviceId &&
+                mem.callId == membership.callId &&
+                mem.scope == membership.scope,
+          );
+      if (!stillJoined) return;
     }
 
     final groupCall = GroupCallSession(

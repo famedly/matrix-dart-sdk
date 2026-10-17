@@ -156,13 +156,23 @@ extension FamedlyCallMemberEventsExtension on Room {
     final newContent = {
       'memberships': List.from(ownMemberships.map((e) => e.toJson())),
     };
-    await setFamedlyCallMemberEvent(
-      newContent,
-      voip,
-      groupCallId,
-      application: application,
-      scope: scope,
-    );
+    try {
+      await setFamedlyCallMemberEvent(
+        newContent,
+        voip,
+        groupCallId,
+        application: application,
+        scope: scope,
+      );
+    } catch (_) {
+      // Stop the heartbeat but keep the delayed leave scheduled, so the
+      // homeserver still drops us even though the removal did not go through.
+      voip.delayedEventCancellers
+          .remove('$id|$groupCallId|$scope')
+          ?.restartTimer
+          .cancel();
+      rethrow;
+    }
 
     final canceller = voip.delayedEventCancellers['$id|$groupCallId|$scope'];
     if (canceller == null) return;
