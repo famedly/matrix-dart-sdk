@@ -1534,11 +1534,11 @@ void main() {
           final leaving = previous.leave();
           await pumpEventQueue();
 
+          final caller = membership('@caller:example.com', 'CALLER', '');
+          setMemberships('@caller:example.com', [caller]);
           final incoming = <GroupCallSession>[];
           final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
-          final created = voip.createGroupCallFromRoomStateEvent(
-            membership('@caller:example.com', 'CALLER', ''),
-          );
+          final created = voip.createGroupCallFromRoomStateEvent(caller);
           await pumpEventQueue();
           expect(incoming, isEmpty);
 
@@ -1550,6 +1550,75 @@ void main() {
           expect(incoming, hasLength(1));
           expect(incoming.single, isNot(same(previous)));
           expect(voip.getGroupCallById(room.id, ''), same(incoming.single));
+        },
+      );
+
+      test(
+        'a call withdrawn while the previous one leaves gets no session',
+        () async {
+          final backend = HeldDisposeBackend();
+          final previous = await voip.fetchOrCreateGroupCall(
+            '',
+            room,
+            backend,
+            'm.call',
+            'm.room',
+            preShareKey: false,
+          );
+          await previous.enter();
+          final leaving = previous.leave();
+          await pumpEventQueue();
+
+          final caller = membership('@caller:example.com', 'CALLER', '');
+          setMemberships('@caller:example.com', [caller]);
+          final incoming = <GroupCallSession>[];
+          final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
+          final created = voip.createGroupCallFromRoomStateEvent(caller);
+          await pumpEventQueue();
+
+          // the caller hung up before our leave finished
+          setMemberships('@caller:example.com', []);
+          backend.release.complete();
+          await leaving;
+          await created;
+          await sub.cancel();
+
+          expect(incoming, isEmpty);
+          expect(voip.getGroupCallById(room.id, ''), isNull);
+        },
+      );
+
+      test(
+        'a failed membership removal stops the heartbeat but keeps the delayed leave',
+        () async {
+          const callId = 'test_failed_removal_heartbeat';
+          final heartbeat = Timer.periodic(Duration(hours: 1), (_) {});
+          voip.delayedEventCancellers['${room.id}|$callId|m.room'] =
+              DelayedEventCanceller(
+                delayedEventId: 'pending_leave',
+                restartTimer: heartbeat,
+              );
+
+          final api = FakeMatrixApi.currentApi!;
+          api.api['PUT']![ownMemberStatePath()] = (_) => {
+            'errcode': 'M_LIMIT_EXCEEDED',
+            'error': 'Too Many Requests',
+          };
+          var delayedEventCalls = 0;
+          api.api['POST']!['/client/unstable/org.matrix.msc4140/delayed_events/pending_leave'] =
+              (_) {
+                delayedEventCalls++;
+                return {};
+              };
+
+          await expectLater(
+            room.removeFamedlyCallMemberEvent(callId, voip),
+            throwsA(isA<MatrixException>()),
+          );
+
+          expect(heartbeat.isActive, isFalse);
+          expect(voip.delayedEventCancellers, isEmpty);
+          expect(delayedEventCalls, 0, reason: 'the delayed leave must fire');
         },
       );
 
