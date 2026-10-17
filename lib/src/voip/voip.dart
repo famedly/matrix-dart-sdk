@@ -1083,6 +1083,11 @@ class VoIP {
     }
 
     var groupCall = getGroupCallById(room.id, groupCallId);
+    if (groupCall != null && groupCall.isLeaving) {
+      // A session on its way out cannot be entered again.
+      await groupCall.left;
+      groupCall = getGroupCallById(room.id, groupCallId);
+    }
 
     groupCall ??= await _newGroupCall(
       groupCallId,
@@ -1130,6 +1135,19 @@ class VoIP {
       return;
     }
 
+    final id = VoipId(roomId: membership.roomId, callId: membership.callId);
+    final existing = groupCalls[id];
+    if (existing != null) {
+      if (!existing.isLeaving) return;
+      // Calls that reuse an id (e.g. 1:1 calls) can start again while the
+      // previous session is still leaving; without this the new call would
+      // never get a session of its own.
+      await existing.left;
+      if (groupCalls.containsKey(id) || !_isStillActive(room, membership)) {
+        return;
+      }
+    }
+
     final groupCall = GroupCallSession(
       client: client,
       voip: this,
@@ -1140,12 +1158,6 @@ class VoIP {
       scope: membership.scope,
     );
 
-    if (groupCalls.containsKey(
-      VoipId(roomId: membership.roomId, callId: membership.callId),
-    )) {
-      return;
-    }
-
     setGroupCallById(groupCall);
 
     onIncomingGroupCall.add(groupCall);
@@ -1153,6 +1165,20 @@ class VoIP {
       await delegate.handleNewGroupCall(groupCall);
     }
   }
+
+  /// [membership] may have been withdrawn or re-sent since it was read.
+  bool _isStillActive(Room room, CallMembership membership) => room
+      .getCallMembershipsFromRoom(this)
+      .values
+      .expand((memberships) => memberships)
+      .any(
+        (m) =>
+            m.userId == membership.userId &&
+            m.deviceId == membership.deviceId &&
+            m.callId == membership.callId &&
+            m.scope == membership.scope &&
+            !m.isExpired,
+      );
 
   @Deprecated('Call `hasActiveGroupCall` on the room directly instead')
   bool hasActiveCall(Room room) => room.hasActiveGroupCall(this);
