@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:core';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 
@@ -155,18 +156,56 @@ class GroupCallSession {
     });
   }
 
+  bool _leaveStarted = false;
+  final Completer<void> _left = Completer<void>();
+
+  /// Whether [leave] started; the session is gone or about to be.
+  bool get isLeaving => _leaveStarted;
+
+  /// Completes once [leave] has torn this session down, whether or not the
+  /// homeserver heard about it. Never completes with an error.
+  Future<void> get left => _left.future;
+
+  /// Always finishes the local teardown, so a failed homeserver request cannot
+  /// strand this session as leaving in [VoIP.groupCalls]. Rethrows it after.
   Future<void> leave() async {
+    if (_leaveStarted) return;
+    _leaveStarted = true;
+    _cancelForceRejoin();
     setState(GroupCallState.leaving);
-    await removeMemberStateEvent();
-    await backend.dispose(this);
+    // A rejoin landing after the removal would put the membership back.
+    await _forceRejoinInFlight;
+
+    Object? error;
+    StackTrace? stackTrace;
+    Future<void> attempt(String step, Future<void> Function() run) async {
+      try {
+        await run();
+      } catch (e, s) {
+        Logs().w('[VOIP] leave: could not $step for $groupCallId', e, s);
+        error ??= e;
+        stackTrace ??= s;
+      }
+    }
+
+    await attempt('remove the member state event', removeMemberStateEvent);
+    await attempt('dispose the backend', () => backend.dispose(this));
     setState(GroupCallState.localCallFeedUninitialized);
     voip.currentGroupCID = null;
     _participants.clear();
-    voip.groupCalls.remove(VoipId(roomId: room.id, callId: groupCallId));
-    await voip.delegate.handleGroupCallEnded(this);
+    final id = VoipId(roomId: room.id, callId: groupCallId);
+    if (identical(voip.groupCalls[id], this)) voip.groupCalls.remove(id);
     _resendMemberStateEventTimer?.cancel();
     _reactionsTimer?.cancel();
+    await attempt(
+      'notify the delegate',
+      () => voip.delegate.handleGroupCallEnded(this),
+    );
     setState(GroupCallState.ended);
+    _left.complete();
+
+    final failure = error;
+    if (failure != null) Error.throwWithStackTrace(failure, stackTrace!);
   }
 
   Future<String?> sendMemberStateEvent() async {
@@ -310,28 +349,8 @@ class GroupCallSession {
           // hm we did not leave but got a leave event? probably delayed
           // event did not restart, let's just send our member event again.
           // if we clicked the leave button our state would have been `leaving`
-          Logs().w(
-            '[onMemberStateChanged] server says that we left the call but looks like we are still in it, will force join again',
-          );
-
-          // also clear delayed event state so that they can be started again
-          final canceller =
-              voip.delayedEventCancellers['${room.id}|$groupCallId|$scope'];
-          if (canceller != null) {
-            canceller.restartTimer.cancel();
-
-            // because the server said you left, you don't actually have to cancel
-            // the delayed event, the server already thinks it's cancelled
-
-            voip.delayedEventCancellers.remove(
-              '${room.id}|$groupCallId|$scope',
-            );
-          }
-
-          // rejoin the call and share the key with the existing participants
           anyLeft.remove(localParticipant);
-          await sendMemberStateEvent();
-          await backend.preShareKey(this);
+          await _forceRejoin();
         }
 
         final nonLocalAnyLeft = Set<CallParticipant>.from(anyLeft)
@@ -351,6 +370,78 @@ class GroupCallSession {
       // ignore: deprecated_member_use_from_same_package
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
     }
+  }
+
+  Future<void>? _forceRejoinInFlight;
+  Timer? _forceRejoinRetry;
+  int _forceRejoinFailures = 0;
+
+  /// Every member state update re-detects the missing membership until sync
+  /// shows the new one, LiveKit's preShareKey included, so one attempt runs at
+  /// a time, other callers skip rather than await it, and a failed one backs off.
+  Future<void> _forceRejoin() async {
+    if (_forceRejoinInFlight != null) return;
+    if (_forceRejoinRetry?.isActive ?? false) return;
+    final attempt = _forceRejoinInFlight = _attemptForceRejoin();
+    try {
+      await attempt;
+    } finally {
+      _forceRejoinInFlight = null;
+    }
+  }
+
+  Future<void> _attemptForceRejoin() async {
+    Logs().w(
+      '[onMemberStateChanged] server says that we left the call but looks like we are still in it, will force join again',
+    );
+
+    // because the server said you left, you don't actually have to cancel
+    // the delayed event, the server already thinks it's cancelled
+    final canceller = voip.delayedEventCancellers.remove(
+      '${room.id}|$groupCallId|$scope',
+    );
+    canceller?.restartTimer.cancel();
+
+    try {
+      // rejoin the call and share the key with the existing participants
+      await sendMemberStateEvent();
+      await backend.preShareKey(this);
+      _forceRejoinFailures = 0;
+    } catch (e, s) {
+      _forceRejoinFailures++;
+      final delay = _forceRejoinBackoff(e);
+      Logs().w(
+        '[onMemberStateChanged] force join failed ($_forceRejoinFailures), retrying in $delay',
+        e,
+        s,
+      );
+      _forceRejoinRetry = Timer(delay, () {
+        if (state != GroupCallState.entered || _hasOwnMembership()) return;
+        unawaited(_forceRejoin());
+      });
+    }
+  }
+
+  Duration _forceRejoinBackoff(Object error) {
+    final retryAfterMs = error is MatrixException ? error.retryAfterMs : null;
+    if (retryAfterMs != null) return Duration(milliseconds: retryAfterMs);
+    final exponent = min(_forceRejoinFailures - 1, 5);
+    return Duration(seconds: 1 << exponent);
+  }
+
+  bool _hasOwnMembership() => room
+      .getCallMembershipsForUser(client.userID!, client.deviceID!, voip)
+      .any(
+        (m) =>
+            m.callId == groupCallId &&
+            m.scope == scope &&
+            m.roomId == room.id &&
+            !m.isExpired,
+      );
+
+  void _cancelForceRejoin() {
+    _forceRejoinRetry?.cancel();
+    _forceRejoinRetry = null;
   }
 
   /// Send a reaction event to the group call
