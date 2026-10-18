@@ -114,6 +114,35 @@ void main() {
       expect(respondeEventId, '1234');
     });
 
+    test('Parse poll without top-level org.matrix.msc1767.text', () {
+      // mautrix bridges send the fallback text as an
+      // org.matrix.msc1767.message array plus a plain body.
+      final content = PollEventContent.fromJson({
+        'msgtype': 'm.text',
+        'body': 'Boardgames?\n\n1. Coming\n\n2. Not Coming',
+        'org.matrix.msc1767.message': [
+          {'body': 'Boardgames?', 'mimetype': 'text/plain'},
+        ],
+        PollEventContent.startType: {
+          'kind': 'org.matrix.msc3381.poll.disclosed',
+          'max_selections': 2,
+          'question': {'org.matrix.msc1767.text': 'Boardgames?'},
+          'answers': [
+            {'id': 'a', 'org.matrix.msc1767.text': 'Coming'},
+            {'id': 'b', 'org.matrix.msc1767.text': 'Not Coming'},
+          ],
+        },
+      });
+
+      expect(content.mText, 'Boardgames?\n\n1. Coming\n\n2. Not Coming');
+      expect(content.pollStartContent.kind, PollKind.disclosed);
+      expect(content.pollStartContent.question.mText, 'Boardgames?');
+      expect(content.pollStartContent.answers.map((a) => a.mText), [
+        'Coming',
+        'Not Coming',
+      ]);
+    });
+
     test('fetchPollResponses on fragmented timeline', () async {
       final room = client.getRoomById(roomId)!;
       final pollEventContent = PollEventContent(
