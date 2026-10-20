@@ -4,6 +4,9 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [14.2.0] 20th Oct 2026
+- chore: update vodozemac to 0.9.0 (yurtemre7)
+
 ## [14.1.0] 16th Oct 2026
 - feat: add secure storage interface to database (Christian Kußowski)
 - fix: await sync after invite() in encrypted rooms (Christian Kußowski)
