@@ -101,6 +101,48 @@ void main() async {
       expect(decryptedEvent.content['hello'], 'superfoxies');
     });
 
+    test('received room keys are not logged', () async {
+      const roomId = '!726s6s6q:example.com';
+      final session = vod.GroupSession();
+      payload = await otherClient.encryption!.encryptToDeviceMessage(
+        [device],
+        EventTypes.RoomKey,
+        {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'room_id': roomId,
+          'session_id': session.sessionId,
+          'session_key': session.sessionKey,
+        },
+      );
+      Logs().level = Level.verbose;
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'roomKeyLogTest',
+          toDevice: [
+            BasicEventWithSender(
+              senderId: otherClient.userID!,
+              type: EventTypes.Encrypted,
+              content: payload[client.userID][client.deviceID],
+            ),
+          ],
+        ),
+      );
+      Logs().level = Level.error;
+      expect(
+        client.encryption!.keyManager.getInboundGroupSession(
+          roomId,
+          session.sessionId,
+        ),
+        isNotNull,
+      );
+      expect(
+        Logs().outputEvents.where(
+          (e) => e.toFormattedString().contains(session.sessionKey),
+        ),
+        isEmpty,
+      );
+    });
+
     test('dispose client', () async {
       await client.dispose(closeDatabase: true);
       await otherClient.dispose(closeDatabase: true);
