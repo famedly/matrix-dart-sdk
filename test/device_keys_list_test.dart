@@ -184,6 +184,10 @@ void main() async {
 
       expect(key.verified, true);
       expect(key.encryptToDevice, true);
+      client.shareKeysWith = ShareKeysWith.directlyVerifiedOnly;
+      expect(key.directVerified, false);
+      expect(key.encryptToDevice, true); // verified through cross-signing
+      client.shareKeysWith = ShareKeysWith.all;
       await key.setBlocked(true);
       expect(key.verified, false);
       expect(key.encryptToDevice, false);
