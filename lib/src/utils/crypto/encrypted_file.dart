@@ -21,6 +21,21 @@ class EncryptedFile {
   String k;
   String iv;
   String sha256;
+
+  /// The `EncryptedFile` JSON of the spec for this file uploaded to [url].
+  Map<String, Object?> toJson(Uri url) => {
+    'url': url.toString(),
+    'v': 'v2',
+    'key': {
+      'alg': 'A256CTR',
+      'ext': true,
+      'k': k,
+      'key_ops': ['encrypt', 'decrypt'],
+      'kty': 'oct',
+    },
+    'iv': iv,
+    'hashes': {'sha256': sha256},
+  };
 }
 
 Future<EncryptedFile> encryptFile(Uint8List input) async {
