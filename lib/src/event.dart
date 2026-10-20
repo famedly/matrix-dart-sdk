@@ -977,69 +977,26 @@ class Event extends MatrixEvent {
   bool get isEventTypeKnown =>
       EventLocalizations.localizationsMap.containsKey(type);
 
-  /// Returns a localized String representation of this event. For a
-  /// room list you may find [withSenderNamePrefix] useful. Set [hideReply] to
-  /// crop all lines starting with '>'. With [plaintextBody] it'll use the
-  /// plaintextBody instead of the normal body which in practice will convert
-  /// the html body to a plain text body before falling back to the body. In
-  /// either case this function won't return the html body without converting
-  /// it to plain text.
-  /// [removeMarkdown] allow to remove the markdown formating from the event body.
-  /// Usefull form message preview or notifications text.
-  Future<String> calcLocalizedBody(
+  /// Returns a localized String representation of this event, e.g. for
+  /// message previews and notifications. The result is plain text, never HTML.
+  ///
+  /// Message text options:
+  /// - [plaintextBody]: when the event has an HTML `formatted_body`, converts it
+  ///   to plain text (e.g. spoilers are flattened). Without it, or when there
+  ///   is no HTML, the `body` field is used and `formatted_body` is ignored.
+  /// - [hideReply]: removes the reply fallback (lines starting with `>`).
+  /// - [hideEdit]: for edit events, uses the new content (`m.new_content`)
+  ///   instead of the edit event's own fallback body.
+  /// - [removeMarkdown]: strips Markdown syntax from the text.
+  ///
+  /// Display names come from room state already in memory; nothing is fetched.
+  /// If a user isn't loaded, their MXID localpart is shown instead (see
+  /// `formatLocalpart` and `mxidLocalPartFallback` on [Client]). To get real
+  /// names, `await` these first:
+  /// - [fetchSenderUser] for the sender.
+  /// - `redactedBecause?.fetchSenderUser()` for the redactor of a redacted event.
+  String calcLocalizedBody(
     MatrixLocalizations i18n, {
-    bool withSenderNamePrefix = false,
-    bool hideReply = false,
-    bool hideEdit = false,
-    bool plaintextBody = false,
-    bool removeMarkdown = false,
-  }) async {
-    if (redacted) {
-      await redactedBecause?.fetchSenderUser();
-    }
-
-    if (withSenderNamePrefix &&
-        (type == EventTypes.Message || type.contains(EventTypes.Encrypted))) {
-      // To be sure that if the event need to be localized, the user is in memory.
-      // used by EventLocalizations._localizedBodyNormalMessage
-      await fetchSenderUser();
-    }
-
-    return calcLocalizedBodyFallback(
-      i18n,
-      withSenderNamePrefix: withSenderNamePrefix,
-      hideReply: hideReply,
-      hideEdit: hideEdit,
-      plaintextBody: plaintextBody,
-      removeMarkdown: removeMarkdown,
-    );
-  }
-
-  @Deprecated('Use calcLocalizedBody or calcLocalizedBodyFallback')
-  String getLocalizedBody(
-    MatrixLocalizations i18n, {
-    bool withSenderNamePrefix = false,
-    bool hideReply = false,
-    bool hideEdit = false,
-    bool plaintextBody = false,
-    bool removeMarkdown = false,
-  }) => calcLocalizedBodyFallback(
-    i18n,
-    withSenderNamePrefix: withSenderNamePrefix,
-    hideReply: hideReply,
-    hideEdit: hideEdit,
-    plaintextBody: plaintextBody,
-    removeMarkdown: removeMarkdown,
-  );
-
-  /// Works similar to `calcLocalizedBody()` but does not wait for the sender
-  /// user to be fetched. If it is not in the cache it will just use the
-  /// fallback and display the localpart of the MXID according to the
-  /// values of `formatLocalpart` and `mxidLocalPartFallback` in the `Client`
-  /// class.
-  String calcLocalizedBodyFallback(
-    MatrixLocalizations i18n, {
-    bool withSenderNamePrefix = false,
     bool hideReply = false,
     bool hideEdit = false,
     bool plaintextBody = false,
@@ -1066,18 +1023,40 @@ class Event extends MatrixEvent {
       localizedBody = callback(this, i18n, body);
     }
 
-    // Add the sender name prefix
-    if (withSenderNamePrefix &&
-        type == EventTypes.Message &&
-        textOnlyMessageTypes.contains(messageType)) {
-      final senderNameOrYou = senderId == room.client.userID
-          ? i18n.you
-          : senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
-      localizedBody = '$senderNameOrYou: $localizedBody';
-    }
-
     return localizedBody;
   }
+
+  @Deprecated('Use calcLocalizedBody')
+  String getLocalizedBody(
+    MatrixLocalizations i18n, {
+    bool withSenderNamePrefix = false,
+    bool hideReply = false,
+    bool hideEdit = false,
+    bool plaintextBody = false,
+    bool removeMarkdown = false,
+  }) => calcLocalizedBody(
+    i18n,
+    hideReply: hideReply,
+    hideEdit: hideEdit,
+    plaintextBody: plaintextBody,
+    removeMarkdown: removeMarkdown,
+  );
+
+  @Deprecated('Use calcLocalizedBody')
+  String calcLocalizedBodyFallback(
+    MatrixLocalizations i18n, {
+    bool withSenderNamePrefix = false,
+    bool hideReply = false,
+    bool hideEdit = false,
+    bool plaintextBody = false,
+    bool removeMarkdown = false,
+  }) => calcLocalizedBody(
+    i18n,
+    hideReply: hideReply,
+    hideEdit: hideEdit,
+    plaintextBody: plaintextBody,
+    removeMarkdown: removeMarkdown,
+  );
 
   /// Calculating the body of an event regardless of localization.
   String calcUnlocalizedBody({
@@ -1135,13 +1114,6 @@ class Event extends MatrixEvent {
     }
     return body;
   }
-
-  static const Set<String> textOnlyMessageTypes = {
-    MessageTypes.Text,
-    MessageTypes.Notice,
-    MessageTypes.Emote,
-    MessageTypes.None,
-  };
 
   /// returns if this event matches the passed event or transaction id
   bool matchesEventOrTransactionId(String? search) {
