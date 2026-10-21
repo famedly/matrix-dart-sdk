@@ -191,9 +191,9 @@ class GroupCallSession {
     await attempt('remove the member state event', removeMemberStateEvent);
     await attempt('dispose the backend', () => backend.dispose(this));
     setState(GroupCallState.localCallFeedUninitialized);
-    voip.currentGroupCID = null;
     _participants.clear();
     final id = VoipId(roomId: room.id, callId: groupCallId);
+    if (voip.currentGroupCID == id) voip.currentGroupCID = null;
     if (identical(voip.groupCalls[id], this)) voip.groupCalls.remove(id);
     _resendMemberStateEventTimer?.cancel();
     _reactionsTimer?.cancel();
