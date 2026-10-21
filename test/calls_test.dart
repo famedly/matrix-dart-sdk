@@ -1462,6 +1462,28 @@ void main() {
         await expectLater(groupCall.left, completes);
       });
 
+      test('a slow leave keeps the call entered meanwhile current', () async {
+        final backend = HeldDisposeBackend();
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          backend,
+          'm.call',
+          'm.room',
+          'test_slow_leave',
+        );
+        await groupCall.enter();
+        final leaving = groupCall.leave();
+        await pumpEventQueue();
+
+        final next = VoipId(roomId: room.id, callId: 'test_next_call');
+        voip.currentGroupCID = next;
+        backend.release.complete();
+        await leaving;
+
+        expect(voip.currentGroupCID, next);
+      });
+
       test('a second leave while leaving does nothing', () async {
         final backend = HeldDisposeBackend();
         final groupCall = GroupCallSession.withAutoGenId(
