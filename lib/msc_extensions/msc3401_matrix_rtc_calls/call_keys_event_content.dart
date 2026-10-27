@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2019-Present Christian Kußowski
-// SPDX-FileCopyrightText: 2019-Present Contributors to FluffyChat
+// SPDX-FileCopyrightText: 2026-Present Famedly GmbH
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -32,7 +31,7 @@ class CallKeysEvent extends ToDeviceEvent {
 class CallKeysEventContent {
   static const String eventType = 'io.element.call.encryption_keys';
 
-  final CallKeysEntry keys;
+  final EncryptionKeyEntry keys;
   final CallKeysMember member;
   final String roomId;
   final CallKeysSession session;
@@ -48,7 +47,7 @@ class CallKeysEventContent {
 
   factory CallKeysEventContent.fromJson(Map<String, Object?> json) =>
       CallKeysEventContent(
-        keys: CallKeysEntry.fromJson(
+        keys: EncryptionKeyEntry.fromJson(
           Map<String, Object?>.from(json['keys'] as Map),
         ),
         member: CallKeysMember.fromJson(
@@ -68,18 +67,6 @@ class CallKeysEventContent {
     'session': session.toJson(),
     if (sentTs != null) 'sent_ts': sentTs,
   };
-}
-
-class CallKeysEntry {
-  final int index;
-  final String key;
-
-  const CallKeysEntry({required this.index, required this.key});
-
-  factory CallKeysEntry.fromJson(Map<String, Object?> json) =>
-      CallKeysEntry(index: json['index'] as int, key: json['key'] as String);
-
-  Map<String, Object?> toJson() => {'index': index, 'key': key};
 }
 
 class CallKeysMember {

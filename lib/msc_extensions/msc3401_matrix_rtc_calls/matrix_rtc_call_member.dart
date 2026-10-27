@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2019-Present Christian Kußowski
-// SPDX-FileCopyrightText: 2019-Present Contributors to FluffyChat
+// SPDX-FileCopyrightText: 2026-Present Famedly GmbH
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 

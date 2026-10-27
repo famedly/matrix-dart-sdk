@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2019-Present Christian Kußowski
-// SPDX-FileCopyrightText: 2019-Present Contributors to FluffyChat
+// SPDX-FileCopyrightText: 2026-Present Famedly GmbH
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -81,7 +80,12 @@ extension MatrixRtcRoomExtension on Room {
         final expiresAt = (validContent.createdAt ?? event.originServerTs).add(
           validContent.expires,
         );
-        if (expiresAt.isBefore(DateTime.now())) return false;
+        // Grace period for slow renewals.
+        if (expiresAt
+            .add(const Duration(minutes: 1))
+            .isBefore(DateTime.now())) {
+          return false;
+        }
         return true;
       } catch (e, s) {
         Logs().d('Invalid "org.matrix.msc3401.call.member" event!', e, s);
@@ -125,7 +129,9 @@ extension MatrixRtcRoomExtension on Room {
   Future<MatrixRtcCall> joinMatrixRtcCall({
     MatrixRtcCallIntent intent = MatrixRtcCallIntent.video,
     List<String>? urls,
-  }) => MatrixRtcCall.join(this, intent: intent, urls: urls);
+    CallTimeouts? timeouts,
+  }) =>
+      MatrixRtcCall.join(this, intent: intent, urls: urls, timeouts: timeouts);
 }
 
 class MatrixRtcCredentials {

@@ -1,15 +1,14 @@
-// SPDX-FileCopyrightText: 2019-Present Christian Kußowski
-// SPDX-FileCopyrightText: 2019-Present Contributors to FluffyChat
+// SPDX-FileCopyrightText: 2026-Present Famedly GmbH
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import '../../matrix.dart';
+import '../../src/utils/crypto/crypto.dart';
 
 import 'call_keys_event_content.dart';
 import 'matrix_rtc_call_member.dart';
@@ -22,6 +21,7 @@ typedef MatrixRtcKey = ({Uint8List key, int index, String participantId});
 class MatrixRtcCall {
   final Room room;
   final MatrixRtcCallIntent intent;
+  final CallTimeouts timeouts;
   late final MatrixRtcCredentials credentials;
 
   // Not broadcast, so keys arriving before anyone listens are buffered.
@@ -49,7 +49,7 @@ class MatrixRtcCall {
 
   String get ownMembershipId => '${room.client.userID}:${room.client.deviceID}';
 
-  MatrixRtcCall._(this.room, this.intent) {
+  MatrixRtcCall._(this.room, this.intent, this.timeouts) {
     _onCallEncryptionKeysSub = room.client.onCallEncryptionKeys.listen(
       _onCallEncryptionKeys,
     );
@@ -59,8 +59,18 @@ class MatrixRtcCall {
     Room room, {
     MatrixRtcCallIntent intent = MatrixRtcCallIntent.video,
     List<String>? urls,
+    CallTimeouts? timeouts,
   }) async {
-    final call = MatrixRtcCall._(room, intent);
+    final call = MatrixRtcCall._(
+      room,
+      intent,
+      timeouts ??
+          CallTimeouts(
+            updateExpireTsTimerDuration: const Duration(hours: 1),
+            expireTsBumpDuration: const Duration(hours: 4),
+            makeKeyOnJoinDelay: const Duration(seconds: 15),
+          ),
+    );
     try {
       await call._join(urls);
       return call;
@@ -101,7 +111,7 @@ class MatrixRtcCall {
     Logs().d(
       '[Join MatrixRtc Call] (2/5) Set "${MatrixRtcCallMember.eventType}" State event...',
     );
-    await _setMembershipState(
+    final memberEventId = await _setMembershipState(
       urls
           .map(
             (url) => MatrixRtcFocusPreferred(
@@ -116,9 +126,17 @@ class MatrixRtcCall {
     if (!hasActiveMatrixRtcCall) {
       final dmUserId = room.directChatMatrixID;
       if (dmUserId != null) {
-        await room.sendRtcNotification(type: .ring, userIds: [dmUserId]);
+        await room.sendRtcNotification(
+          type: .ring,
+          userIds: [dmUserId],
+          memberEventId: memberEventId,
+        );
       } else {
-        await room.sendRtcNotification(type: .notification, mentionRoom: true);
+        await room.sendRtcNotification(
+          type: .notification,
+          mentionRoom: true,
+          memberEventId: memberEventId,
+        );
       }
     }
 
@@ -138,14 +156,20 @@ class MatrixRtcCall {
         });
     await _createKeyAndShare();
 
-    _resendCallMemberState = Timer.periodic(const Duration(hours: 1), (_) {
-      final ownMembership = room.ownMatrixRtcMembership;
-      if (ownMembership == null) {
-        _resendCallMemberState?.cancel();
-        return;
-      }
-      _setMembershipState(ownMembership.fociPreferred);
-    });
+    _resendCallMemberState = Timer.periodic(
+      timeouts.updateExpireTsTimerDuration,
+      (_) async {
+        final ownMembership = room.ownMatrixRtcMembership;
+        if (ownMembership == null) {
+          _resendCallMemberState?.cancel();
+          return;
+        }
+        // The raised hand reacts to the old member event, so carry it over.
+        final handRaised = userHasHandRaised(room.client.userID!);
+        final eventId = await _setMembershipState(ownMembership.fociPreferred);
+        if (handRaised) await room.sendReaction(eventId, '🖐️');
+      },
+    );
   }
 
   Future<MatrixRtcCredentials> _authenticate(
@@ -191,7 +215,7 @@ class MatrixRtcCall {
     );
   }
 
-  Future<void> _setMembershipState(
+  Future<String> _setMembershipState(
     List<MatrixRtcFocusPreferred> fociPreferred,
   ) => room.client.setRoomStateWithKey(
     room.id,
@@ -201,7 +225,7 @@ class MatrixRtcCall {
       application: 'm.call',
       callId: '',
       deviceId: room.client.deviceID,
-      expires: Duration(hours: 4),
+      expires: timeouts.expireTsBumpDuration,
       createdAt: DateTime.now(),
       fociPreferred: fociPreferred,
       focusActive: MatrixRtcFocusActive(
@@ -254,14 +278,13 @@ class MatrixRtcCall {
     final keyCreatedAt = _keyCreatedAt;
     final canJustForwardToNewUsers =
         keyCreatedAt != null &&
-        DateTime.now().difference(keyCreatedAt).inSeconds < 15 &&
+        DateTime.now().difference(keyCreatedAt) < timeouts.makeKeyOnJoinDelay &&
         _lastSharedParticipants.difference(currentParticipants).isEmpty;
 
     var key = _lastKey;
     if (key == null || !canJustForwardToNewUsers) {
-      final rng = Random.secure();
       if (key != null) _keyIndex = (_keyIndex + 1) % 256;
-      key = Uint8List.fromList(List.generate(16, (_) => rng.nextInt(256)));
+      key = secureRandomBytes(16);
       _keyCreatedAt = DateTime.now();
       _lastKey = key;
       if (_onNewKey.isClosed) return;
@@ -275,6 +298,7 @@ class MatrixRtcCall {
     final forwardParticipants = canJustForwardToNewUsers
         ? currentParticipants.difference(_lastSharedParticipants)
         : currentParticipants;
+    await room.client.userDeviceKeysLoading;
     final deviceKeys = <DeviceKeys>[];
     for (final membershipId in forwardParticipants) {
       final membershipParts = membershipId.split(':');
@@ -314,24 +338,31 @@ class MatrixRtcCall {
       deviceKeys.removeWhere((d) => !d.encryptToDevice);
     }
 
-    await room.client.sendToDeviceEncrypted(
+    final content = CallKeysEventContent(
+      keys: EncryptionKeyEntry(index, base64Encode(key)),
+      member: CallKeysMember(
+        id: ownMembershipId,
+        claimedDeviceId: room.client.deviceID!,
+      ),
+      roomId: room.id,
+      sentTs: DateTime.now().millisecondsSinceEpoch,
+      session: CallKeysSession(
+        application: 'm.call',
+        callId: '',
+        scope: 'm.room',
+      ),
+    ).toJson();
+    Future<void> send() => room.client.sendToDeviceEncrypted(
       deviceKeys,
       CallKeysEventContent.eventType,
-      CallKeysEventContent(
-        keys: CallKeysEntry(index: index, key: base64Encode(key)),
-        member: CallKeysMember(
-          id: ownMembershipId,
-          claimedDeviceId: room.client.deviceID!,
-        ),
-        roomId: room.id,
-        sentTs: DateTime.now().millisecondsSinceEpoch,
-        session: CallKeysSession(
-          application: 'm.call',
-          callId: '',
-          scope: 'm.room',
-        ),
-      ).toJson(),
+      content,
     );
+    try {
+      await send();
+    } catch (e, s) {
+      Logs().w('Failed to share call keys, retrying once', e, s);
+      await send();
+    }
   }
 
   static bool _isRaiseHandReaction(Event event) =>
