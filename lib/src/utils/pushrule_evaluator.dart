@@ -24,6 +24,14 @@ enum PushRuleConditions {
   }
 }
 
+// Legacy default mention rules from pre-v1.17 specs. If m.mentions is present,
+// they should not fire, but custom user content rules are unaffected.
+const Set<String> _legacyMentionRuleIds = {
+  '.m.rule.contains_user_name',
+  '.m.rule.contains_display_name',
+  '.m.rule.roomnotif',
+};
+
 class EvaluatedPushRuleAction {
   // if this message should be highlighted.
   bool highlight = false;
@@ -201,6 +209,8 @@ class _MemberCountCondition {
 }
 
 class _OptimizedRules {
+  final String ruleId;
+  final bool defaultRule;
   List<_PatternCondition> patterns = [];
   List<_EventPropertyCondition> eventProperties = [];
   List<_MemberCountCondition> memberCounts = [];
@@ -208,7 +218,9 @@ class _OptimizedRules {
   bool matchDisplayname = false;
   EvaluatedPushRuleAction actions = EvaluatedPushRuleAction();
 
-  _OptimizedRules.fromRule(PushRule rule) {
+  _OptimizedRules.fromRule(PushRule rule)
+    : ruleId = rule.ruleId,
+      defaultRule = rule.default$ {
     if (!rule.enabled) return;
 
     for (final condition in rule.conditions ?? <PushCondition>[]) {
@@ -241,6 +253,9 @@ class _OptimizedRules {
     }
     actions = EvaluatedPushRuleAction.fromActions(rule.actions);
   }
+
+  bool get isLegacyMentionRule =>
+      defaultRule && _legacyMentionRuleIds.contains(ruleId);
 
   EvaluatedPushRuleAction? match(
     Map<String, Object?> flattenedEventJson,
@@ -373,11 +388,13 @@ class PushruleEvaluator {
     final displayName = event.room
         .unsafeGetUserFromMemoryOrFallback(event.room.client.userID!)
         .displayName;
+    final hasMentionsMetadata = event.content.containsKey('m.mentions');
     final flattenedEventJson = _flattenJson(event.toJson(), {}, '');
     // ensure roomid is present
     flattenedEventJson['room_id'] = event.room.id;
 
     for (final o in _override) {
+      if (hasMentionsMetadata && o.isLegacyMentionRule) continue;
       final actions = o.match(
         flattenedEventJson,
         displayName,
@@ -400,6 +417,7 @@ class PushruleEvaluator {
     }
 
     for (final o in _content_rules) {
+      if (hasMentionsMetadata && o.isLegacyMentionRule) continue;
       final actions = o.match(
         flattenedEventJson,
         displayName,
@@ -412,6 +430,7 @@ class PushruleEvaluator {
     }
 
     for (final o in _underride) {
+      if (hasMentionsMetadata && o.isLegacyMentionRule) continue;
       final actions = o.match(
         flattenedEventJson,
         displayName,
