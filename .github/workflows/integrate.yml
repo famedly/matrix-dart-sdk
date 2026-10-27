@@ -149,6 +149,10 @@ jobs:
           pushd web_test
           dart pub get
           dart run webdev build
+      - name: Ensure the iOS NSE push rule evaluator compiles to JS
+        run: |
+          dart pub get --no-example
+          dart compile js -O2 --no-source-maps -o build/pushrule_evaluator.js lib/pushrule_evaluator_js.dart
 
   database_web_tests:
     runs-on: ubuntu-latest
