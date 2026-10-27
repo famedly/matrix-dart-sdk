@@ -2104,7 +2104,12 @@ class Room {
     var foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     if (partial) {
-      foundUser = await client.database.getUser(mxID, this) ?? foundUser;
+      try {
+        foundUser = await client.database.getUser(mxID, this) ?? foundUser;
+      } catch (e, s) {
+        if (!ignoreErrors) rethrow;
+        Logs().w('Unable to load the user $mxID from the database', e, s);
+      }
     }
 
     // If not in the database, try fetching the member from the server
