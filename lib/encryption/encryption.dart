@@ -278,10 +278,17 @@ class Encryption {
     );
   }
 
+  /// Decrypts [event] if it is encrypted.
+  ///
+  /// If the session is unknown, this by default fires off a key request in
+  /// the background and returns the undecryptable event right away. Pass
+  /// [waitForKeyBackupAndRetry] as `true` to instead await the online key backup
+  /// lookup and retry decryption once before returning.
   Future<Event> decryptRoomEvent(
     Event event, {
     bool store = false,
     EventUpdateType updateType = EventUpdateType.timeline,
+    bool waitForKeyBackupAndRetry = false,
   }) async {
     try {
       if (event.type != EventTypes.Encrypted || event.redacted) {
@@ -300,11 +307,15 @@ class Encryption {
       if (event.type == EventTypes.Encrypted &&
           event.content['can_request_session'] == true &&
           sessionId != null) {
-        keyManager.maybeAutoRequest(
+        await keyManager.maybeAutoRequest(
           event.room.id,
           sessionId,
           content.senderKey,
+          awaitRequest: waitForKeyBackupAndRetry,
         );
+        if (waitForKeyBackupAndRetry) {
+          event = decryptRoomEventSync(event);
+        }
       }
       if (event.type != EventTypes.Encrypted && store) {
         await client.database.storeEventUpdate(

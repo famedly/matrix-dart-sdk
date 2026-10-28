@@ -66,6 +66,17 @@ extension TimelineExportExtension on Timeline {
         users: 0,
       );
 
+      final encryption = room.client.encryption;
+      Future<Event> decryptIfNeeded(Event event) {
+        if (encryption == null || event.type != EventTypes.Encrypted) {
+          return Future.value(event);
+        }
+        return encryption.decryptRoomEvent(
+          event,
+          waitForKeyBackupAndRetry: true,
+        );
+      }
+
       void exportEvent(Event event) {
         eventsToExport.add(event);
 
@@ -87,7 +98,8 @@ extension TimelineExportExtension on Timeline {
 
       // From the timeline
       if (until == null || events.last.originServerTs.isBefore(until)) {
-        for (final event in events) {
+        for (final loaded in events.toList()) {
+          final event = await decryptIfNeeded(loaded);
           if (from != null && event.originServerTs.isBefore(from)) break;
           if (until != null && event.originServerTs.isAfter(until)) continue;
           if (filter != null && !filter(event)) continue;
@@ -121,7 +133,8 @@ extension TimelineExportExtension on Timeline {
       if (eventsFromStore.isNotEmpty) {
         if (until == null ||
             eventsFromStore.last.originServerTs.isBefore(until)) {
-          for (final event in eventsFromStore) {
+          for (final stored in eventsFromStore) {
+            final event = await decryptIfNeeded(stored);
             if (from != null && event.originServerTs.isBefore(from)) break;
             if (until != null && event.originServerTs.isAfter(until)) continue;
             if (filter != null && !filter(event)) continue;
@@ -151,7 +164,6 @@ extension TimelineExportExtension on Timeline {
 
       // From the server
       var prevBatch = room.prev_batch;
-      final encryption = room.client.encryption;
       do {
         if (prevBatch == null) break;
         try {
@@ -165,10 +177,9 @@ extension TimelineExportExtension on Timeline {
           if (resp.chunk.isEmpty) break;
 
           for (final matrixEvent in resp.chunk) {
-            var event = Event.fromMatrixEvent(matrixEvent, room);
-            if (event.type == EventTypes.Encrypted && encryption != null) {
-              event = await encryption.decryptRoomEvent(event);
-            }
+            final event = await decryptIfNeeded(
+              Event.fromMatrixEvent(matrixEvent, room),
+            );
             if (from != null && event.originServerTs.isBefore(from)) break;
             if (until != null && event.originServerTs.isAfter(until)) continue;
             if (filter != null && !filter(event)) continue;
