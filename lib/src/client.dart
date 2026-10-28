@@ -4355,5 +4355,8 @@ enum ShareKeysWith {
   /// or the user must be manually verified first, before keys are shared. By
   /// using cross signing, it is enough to verify the user and then the user
   /// can verify their devices.
+  verifiedOnly,
+
+  @Deprecated('Use verifiedOnly instead')
   directlyVerifiedOnly,
 }

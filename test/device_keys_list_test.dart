@@ -156,7 +156,7 @@ void main() async {
       client.shareKeysWith = ShareKeysWith.all;
       expect(key.encryptToDevice, true);
 
-      client.shareKeysWith = ShareKeysWith.directlyVerifiedOnly;
+      client.shareKeysWith = ShareKeysWith.verifiedOnly;
       expect(key.encryptToDevice, false);
       await key.setVerified(true);
       expect(key.encryptToDevice, true);
