@@ -5,6 +5,7 @@
 import 'dart:convert';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
@@ -127,105 +128,152 @@ void main() {
     });
 
     test(
-      'Room.searchEvents decrypts an event whose session is only in online key backup',
+      'searchEvents and Timeline.export decrypt events whose session is only in online key backup',
       () async {
-        // 1. Fresh outbound + inbound megolm session the client has never seen.
-        final outbound = vod.GroupSession();
-        final inbound = vod.InboundGroupSession(outbound.sessionKey);
-        final newSessionId = inbound.sessionId;
-        final newSenderKey = client.identityKey;
+        const backupRoomId = '!searchBackupOnly:example.com';
+        const searchBody = 'a needle in the encrypted haystack';
+        const timelineBody = 'from the timeline';
+        const databaseBody = 'from the database';
 
-        // 2. Real ciphertext that the matching inbound session can decrypt.
-        final ciphertext = outbound.encrypt(
-          json.encode({
-            'type': 'm.room.message',
-            'content': {
-              'msgtype': 'm.text',
-              'body': 'a needle in the encrypted haystack',
-            },
-          }),
-        );
+        // A room the client already knows (maybeAutoRequest looks it up in
+        // client.rooms) and that has no older history to fetch.
+        final room = Room(client: client, id: backupRoomId, prev_batch: '');
+        client.rooms.add(room);
 
-        // 3. Encrypt the inbound session for the FakeMatrixApi backup using
-        //    the same backup public key the FakeMatrixApi advertises.
-        const backupPubKey = 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM';
-        final encryptor = vod.PkEncryption.fromPublicKey(
-          vod.Curve25519PublicKey.fromBase64(backupPubKey),
-        );
-        final encryptedSession = encryptor.encrypt(
-          json.encode({
-            'algorithm': AlgorithmTypes.megolmV1AesSha2,
-            'forwarding_curve25519_key_chain': <String>[],
-            'sender_key': newSenderKey,
-            'sender_claimed_keys': {'ed25519': client.fingerprintKey},
-            'session_key': inbound.exportAt(0),
-          }),
-        );
-        final (ct, mac, ephemeral) = encryptedSession.toBase64();
-
-        // 4. A fresh room that exists in client.rooms (required for
-        //    keyManager.maybeAutoRequest's lookup) and has no DB history.
-        const newRoomId = '!searchBackupOnly:example.com';
-        final newRoom = Room(client: client, id: newRoomId, prev_batch: '');
-        client.rooms.add(newRoom);
-
-        // 5. Mock the online key backup GET for this specific session.
-        FakeMatrixApi
-                .currentApi!
-                .api['GET']!['/client/v3/room_keys/keys/${Uri.encodeComponent(newRoomId)}/${Uri.encodeComponent(newSessionId)}?version=5'] =
-            (_) => {
-              'first_message_index': 0,
-              'forwarded_count': 0,
-              'is_verified': true,
-              'session_data': {
-                'ephemeral': ephemeral,
-                'ciphertext': ct,
-                'mac': mac,
-              },
-            };
-
-        // 6. Mock /messages with our encrypted event.
-        FakeMatrixApi
-                .currentApi!
-                .api['GET']!['/client/v3/rooms/${Uri.encodeComponent(newRoomId)}/messages?from&dir=b&limit=1000&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%5D%7D'] =
-            (_) => {
-              'chunk': [
-                {
-                  'content': {
-                    'algorithm': AlgorithmTypes.megolmV1AesSha2,
-                    'sender_key': newSenderKey,
-                    'session_id': newSessionId,
-                    'ciphertext': ciphertext,
-                    'device_id': client.deviceID,
-                  },
-                  'type': EventTypes.Encrypted,
-                  'event_id': '\$searchEnc',
-                  'origin_server_ts': 1432735824653,
-                  'sender': '@alice:example.com',
+        // Call before [encryptedEvent]. The backup key is exported at index 0,
+        // which is wrong once a message has been encrypted.
+        void putInOnlineBackup(vod.GroupSession session) {
+          final inbound = vod.InboundGroupSession(session.sessionKey);
+          final encryptor = vod.PkEncryption.fromPublicKey(
+            vod.Curve25519PublicKey.fromBase64(
+              'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
+            ),
+          );
+          final (ct, mac, ephemeral) = encryptor
+              .encrypt(
+                json.encode({
+                  'algorithm': AlgorithmTypes.megolmV1AesSha2,
+                  'forwarding_curve25519_key_chain': <String>[],
+                  'sender_key': client.identityKey,
+                  'sender_claimed_keys': {'ed25519': client.fingerprintKey},
+                  'session_key': inbound.exportAt(0),
+                }),
+              )
+              .toBase64();
+          FakeMatrixApi
+                  .currentApi!
+                  .api['GET']!['/client/v3/room_keys/keys/${Uri.encodeComponent(backupRoomId)}/${Uri.encodeComponent(session.sessionId)}?version=5'] =
+              (_) => {
+                'first_message_index': 0,
+                'forwarded_count': 0,
+                'is_verified': true,
+                'session_data': {
+                  'ephemeral': ephemeral,
+                  'ciphertext': ct,
+                  'mac': mac,
                 },
-              ],
-              'end': 't_search_end',
-              'start': 't_search_start',
-            };
+              };
+        }
 
-        // Pre-condition: the session is in neither memory nor DB.
+        Event encryptedEvent(
+          vod.GroupSession session, {
+          required String eventId,
+          required String body,
+        }) => Event(
+          eventId: eventId,
+          type: EventTypes.Encrypted,
+          content: {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'sender_key': client.identityKey,
+            'session_id': session.sessionId,
+            'ciphertext': session.encrypt(
+              json.encode({
+                'type': 'm.room.message',
+                'content': {'msgtype': 'm.text', 'body': body},
+              }),
+            ),
+            'device_id': client.deviceID,
+          },
+          senderId: '@alice:example.com',
+          originServerTs: DateTime.now(),
+          room: room,
+        );
+
+        void mockRoomHistory(Event event) {
+          FakeMatrixApi
+                  .currentApi!
+                  .api['GET']!['/client/v3/rooms/${Uri.encodeComponent(backupRoomId)}/messages?from&dir=b&limit=1000&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%5D%7D'] =
+              (_) => {
+                'chunk': [event.toJson()],
+                'end': 't_search_end',
+                'start': 't_search_start',
+              };
+        }
+
+        // 1. A session this client has never seen.
+        final searchSession = vod.GroupSession();
+
+        // 2. Only the online key backup has that session.
+        putInOnlineBackup(searchSession);
+
+        // 3. Room history returns one message encrypted with it.
+        final searchEvent = encryptedEvent(
+          searchSession,
+          eventId: '\$search',
+          body: searchBody,
+        );
+        mockRoomHistory(searchEvent);
+
+        // 4. The client has not stored that session.
         expect(
           client.encryption!.keyManager.getInboundGroupSession(
-            newRoomId,
-            newSessionId,
+            backupRoomId,
+            searchSession.sessionId,
           ),
           isNull,
         );
 
-        final result = await newRoom.searchEvents(searchFunc: (_) => true);
+        // 5. searchEvents decrypts the message using the backup.
+        final found = await room.searchEvents(searchFunc: (_) => true);
+        expect(found.events.map((event) => event.body), contains(searchBody));
 
-        // The event was decrypted via the backup-load path that searchEvents
-        // performs internally.
-        final decrypted = result.events.where(
-          (e) => e.eventId == '\$searchEnc',
+        // 6. Search stored that session, so export needs a new one.
+        final exportSession = vod.GroupSession();
+        putInOnlineBackup(exportSession);
+
+        // 7. One event is on the timeline and one is only in the database.
+        //    Export skips one stored row per event already on the timeline.
+        final timelineEvent = encryptedEvent(
+          exportSession,
+          eventId: '\$timeline',
+          body: timelineBody,
         );
-        expect(decrypted, isNotEmpty);
-        expect(decrypted.first.body, 'a needle in the encrypted haystack');
+        final databaseEvent = encryptedEvent(
+          exportSession,
+          eventId: '\$database',
+          body: databaseBody,
+        );
+        for (final event in [timelineEvent, databaseEvent]) {
+          await client.database.storeEventUpdate(
+            backupRoomId,
+            event,
+            EventUpdateType.history,
+            client,
+          );
+        }
+
+        // 8. Export decrypts both without asking the server.
+        room.prev_batch = null;
+        final timeline = Timeline(
+          room: room,
+          chunk: TimelineChunk(events: [timelineEvent]),
+        );
+        final complete = await timeline.export().last as ExportComplete;
+        timeline.cancelSubscriptions();
+        expect(complete.events.map((event) => event.body), [
+          timelineBody,
+          databaseBody,
+        ]);
       },
     );
 
