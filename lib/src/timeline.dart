@@ -440,9 +440,7 @@ class Timeline {
     bool onlineKeyBackupOnly = true,
   }) {
     for (final event in events) {
-      if (event.type == EventTypes.Encrypted &&
-          event.messageType == MessageTypes.BadEncrypted &&
-          event.content['can_request_session'] == true) {
+      if (event.canRequestSessionKey) {
         final sessionId = event.content.tryGet<String>('session_id');
         final senderKey = event.content.tryGet<String>('sender_key');
         if (sessionId != null && senderKey != null) {

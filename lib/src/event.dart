@@ -551,14 +551,22 @@ class Event extends MatrixEvent {
         : await timeline.getEventById(relationshipEventId);
   }
 
+  /// Whether this event is an encrypted event that failed to decrypt.
+  bool get isUnableToDecrypt =>
+      type == EventTypes.Encrypted && messageType == MessageTypes.BadEncrypted;
+
+  /// Whether the session key for this undecryptable event can be requested.
+  bool get canRequestSessionKey =>
+      isUnableToDecrypt &&
+      content.tryGet<String>('session_id') != null &&
+      content.tryGet<bool>('can_request_session') == true;
+
   /// If this event is encrypted and the decryption was not successful because
   /// the session is unknown, this requests the session key from other devices
   /// in the room. If the event is not encrypted or the decryption failed because
   /// of a different error, this throws an exception.
   Future<void> requestKey() async {
-    if (type != EventTypes.Encrypted ||
-        messageType != MessageTypes.BadEncrypted ||
-        content['can_request_session'] != true) {
+    if (!canRequestSessionKey) {
       throw ('Session key not requestable');
     }
 
