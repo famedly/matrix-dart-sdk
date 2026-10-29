@@ -1772,8 +1772,7 @@ class Room {
     // Try again to decrypt encrypted events but don't update the database.
     if (encrypted && client.encryptionEnabled) {
       for (var i = 0; i < events.length; i++) {
-        if (events[i].type == EventTypes.Encrypted &&
-            events[i].content['can_request_session'] == true) {
+        if (events[i].canRequestSessionKey) {
           events[i] = await client.encryption!.decryptRoomEvent(events[i]);
         }
       }
@@ -2232,18 +2231,12 @@ class Room {
       final dbEvent = await client.database.getEventById(eventID, this);
       if (dbEvent != null) {
         // The keys may have arrived after the event was stored.
-        if (dbEvent.type == EventTypes.Encrypted && client.encryptionEnabled) {
-          return await client.encryption?.decryptRoomEvent(dbEvent) ?? dbEvent;
-        }
-        return dbEvent;
+        return await client.encryption?.decryptRoomEvent(dbEvent) ?? dbEvent;
       }
       final matrixEvent = await client.getOneRoomEvent(id, eventID);
       final event = Event.fromMatrixEvent(matrixEvent, this);
-      if (event.type == EventTypes.Encrypted && client.encryptionEnabled) {
-        // attempt decryption
-        return await client.encryption?.decryptRoomEvent(event);
-      }
-      return event;
+      // attempt decryption
+      return await client.encryption?.decryptRoomEvent(event) ?? event;
     } on MatrixException catch (err) {
       if (err.errcode == 'M_NOT_FOUND') {
         return null;
@@ -3016,41 +3009,17 @@ class Room {
         .map((matrixEvent) => Event.fromMatrixEvent(matrixEvent, this))
         .toList();
 
-    /// Attempt decrypting the event, if it fails, load the key and try again once.
-    /// Returns null if event cannot be decrypted.
-    Future<Event?> loadKeysAndDecryptEvent(
-      Event event, {
-      bool keyAlreadyLoaded = false,
-    }) async {
-      final decrypted = await client.encryption!.decryptRoomEvent(
-        event,
-        store: false,
-        updateType: EventUpdateType.history,
-      );
-      if (decrypted.type != EventTypes.Encrypted) {
-        return decrypted;
-      } else if (!keyAlreadyLoaded) {
-        final content = event.parsedRoomEncryptedContent;
-        if (content.sessionId != null) {
-          await client.encryption!.keyManager.maybeAutoRequest(
-            id,
-            content.sessionId!,
-            content.senderKey,
-            tryOnlineBackup: true,
-            onlineKeyBackupOnly: true,
-            awaitRequest: true,
-          );
-          return loadKeysAndDecryptEvent(event, keyAlreadyLoaded: true);
-        }
-      }
-      return null;
-    }
-
     // Decrypt all events one after another:
     for (final (index, event) in events.indexed) {
       if (event.type == EventTypes.Encrypted && client.encryption != null) {
-        final decrypted = await loadKeysAndDecryptEvent(event);
-        if (decrypted != null) {
+        final decrypted =
+            await client.encryption?.decryptRoomEvent(
+              event,
+              store: false,
+              waitForKeyBackupAndRetry: true,
+            ) ??
+            event;
+        if (decrypted.type != EventTypes.Encrypted) {
           events[index] = decrypted;
         }
       }

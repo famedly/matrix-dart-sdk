@@ -291,7 +291,9 @@ class Encryption {
     bool waitForKeyBackupAndRetry = false,
   }) async {
     try {
-      if (event.type != EventTypes.Encrypted || event.redacted) {
+      if (client.encryption == null ||
+          event.type != EventTypes.Encrypted ||
+          event.redacted) {
         return event;
       }
       final content = event.parsedRoomEncryptedContent;
@@ -304,12 +306,10 @@ class Encryption {
         await keyManager.loadInboundGroupSession(event.room.id, sessionId);
       }
       event = decryptRoomEventSync(event);
-      if (event.type == EventTypes.Encrypted &&
-          event.content['can_request_session'] == true &&
-          sessionId != null) {
+      if (event.canRequestSessionKey) {
         await keyManager.maybeAutoRequest(
           event.room.id,
-          sessionId,
+          sessionId!,
           content.senderKey,
           awaitRequest: waitForKeyBackupAndRetry,
         );

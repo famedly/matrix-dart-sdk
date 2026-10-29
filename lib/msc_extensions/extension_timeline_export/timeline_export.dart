@@ -67,21 +67,11 @@ extension TimelineExportExtension on Timeline {
       );
 
       final encryption = room.client.encryption;
-      Future<Event> decryptIfNeeded(Event event) {
-        if (encryption == null || event.type != EventTypes.Encrypted) {
-          return Future.value(event);
-        }
-        return encryption.decryptRoomEvent(
-          event,
-          waitForKeyBackupAndRetry: true,
-        );
-      }
 
       void exportEvent(Event event) {
         eventsToExport.add(event);
 
-        if (event.type == EventTypes.Encrypted &&
-            event.messageType == MessageTypes.BadEncrypted) {
+        if (event.isUnableToDecrypt) {
           utdEventsCount++;
         } else if (event.type == EventTypes.Message &&
             {
@@ -99,7 +89,12 @@ extension TimelineExportExtension on Timeline {
       // From the timeline
       if (until == null || events.last.originServerTs.isBefore(until)) {
         for (final loaded in events.toList()) {
-          final event = await decryptIfNeeded(loaded);
+          final event =
+              await encryption?.decryptRoomEvent(
+                loaded,
+                waitForKeyBackupAndRetry: true,
+              ) ??
+              loaded;
           if (from != null && event.originServerTs.isBefore(from)) break;
           if (until != null && event.originServerTs.isAfter(until)) continue;
           if (filter != null && !filter(event)) continue;
@@ -134,7 +129,12 @@ extension TimelineExportExtension on Timeline {
         if (until == null ||
             eventsFromStore.last.originServerTs.isBefore(until)) {
           for (final stored in eventsFromStore) {
-            final event = await decryptIfNeeded(stored);
+            final event =
+                await encryption?.decryptRoomEvent(
+                  stored,
+                  waitForKeyBackupAndRetry: true,
+                ) ??
+                stored;
             if (from != null && event.originServerTs.isBefore(from)) break;
             if (until != null && event.originServerTs.isAfter(until)) continue;
             if (filter != null && !filter(event)) continue;
@@ -177,9 +177,12 @@ extension TimelineExportExtension on Timeline {
           if (resp.chunk.isEmpty) break;
 
           for (final matrixEvent in resp.chunk) {
-            final event = await decryptIfNeeded(
-              Event.fromMatrixEvent(matrixEvent, room),
-            );
+            final event =
+                await encryption?.decryptRoomEvent(
+                  Event.fromMatrixEvent(matrixEvent, room),
+                  waitForKeyBackupAndRetry: true,
+                ) ??
+                Event.fromMatrixEvent(matrixEvent, room);
             if (from != null && event.originServerTs.isBefore(from)) break;
             if (until != null && event.originServerTs.isAfter(until)) continue;
             if (filter != null && !filter(event)) continue;
