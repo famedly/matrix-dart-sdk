@@ -394,10 +394,11 @@ class SSSS {
     final decrypted = await decryptAes(encryptInfo, key, type);
     final db = client.database;
     if (cacheTypes.contains(type)) {
+      final wasCached = await getCached(type) != null;
       // cache the thing
       await db.storeSSSSCache(type, keyId, ciphertext, decrypted);
       onSecretStored.add(keyId);
-      if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
+      if (_cacheCallbacks.containsKey(type) && !wasCached) {
         _cacheCallbacks[type]!(decrypted);
       }
     }
@@ -432,10 +433,11 @@ class SSSS {
     );
     final db = client.database;
     if (cacheTypes.contains(type)) {
+      final wasCached = await getCached(type) != null;
       // cache the thing
       await db.storeSSSSCache(type, keyId, encrypted.ciphertext, secret);
       onSecretStored.add(keyId);
-      if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
+      if (_cacheCallbacks.containsKey(type) && !wasCached) {
         _cacheCallbacks[type]!(secret);
       }
     }

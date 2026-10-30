@@ -545,7 +545,11 @@ void main() => group('Integration tests', () {
         await testClientA.oneShotSync();
         await testClientA.restoreCryptoIdentity(passphrase);
         final newSessionRoomA = testClientA.getRoomById(roomId)!;
-        await newSessionRoomA.lastEvent?.requestKey();
+        if (newSessionRoomA.lastEvent!.body != testMessage6) {
+          await testClientA.onSync.stream.firstWhere(
+            (_) => newSessionRoomA.lastEvent!.body == testMessage6,
+          );
+        }
         expect(newSessionRoomA.lastEvent!.body, testMessage6);
         await newSessionRoomA.leave();
         await newSessionRoomA.forget();
