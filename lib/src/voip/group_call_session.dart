@@ -108,16 +108,28 @@ class GroupCallSession {
   Timer? _reactionsTimer;
   int _reactionsTicker = 0;
 
-  /// enter the group call.
+  /// enter the group call. Stops early if [leave] is called meanwhile.
   Future<void> enter({WrappedMediaStream? stream}) async {
     if (!(state == GroupCallState.localCallFeedUninitialized ||
         state == GroupCallState.localCallFeedInitialized)) {
       throw MatrixSDKVoipException('Cannot enter call in the $state state');
     }
 
+    final entering = _entering = _enter(stream);
+    try {
+      await entering;
+    } finally {
+      _entering = null;
+    }
+  }
+
+  Future<void>? _entering;
+
+  Future<void> _enter(WrappedMediaStream? stream) async {
     if (state == GroupCallState.localCallFeedUninitialized) {
       await backend.initLocalStream(this, stream: stream);
     }
+    if (_leaveStarted) return;
 
     var shouldSendNotification = false;
     if (!room.hasActiveGroupCall(voip)) {
@@ -125,6 +137,7 @@ class GroupCallSession {
     }
 
     final memberEventId = await sendMemberStateEvent();
+    if (_leaveStarted) return;
 
     setState(GroupCallState.entered);
 
@@ -173,6 +186,8 @@ class GroupCallSession {
     _leaveStarted = true;
     _cancelForceRejoin();
     setState(GroupCallState.leaving);
+    // Let a running enter() stop at its next check, so teardown covers it.
+    await _entering?.catchError((_) {});
     // A rejoin write landing after the removal would put the membership back.
     // Only the write: its key sharing is pointless now and may be slow.
     await _forceRejoinWrite?.catchError((_) => null);
@@ -195,13 +210,14 @@ class GroupCallSession {
     _participants.clear();
     final id = VoipId(roomId: room.id, callId: groupCallId);
     if (voip.currentGroupCID == id) voip.currentGroupCID = null;
-    if (identical(voip.groupCalls[id], this)) voip.groupCalls.remove(id);
     _resendMemberStateEventTimer?.cancel();
     _reactionsTimer?.cancel();
     await attempt(
       'notify the delegate',
       () => voip.delegate.handleGroupCallEnded(this),
     );
+    // Only now, so new memberships for this id wait for [left] meanwhile.
+    if (identical(voip.groupCalls[id], this)) voip.groupCalls.remove(id);
     setState(GroupCallState.ended);
     _left.complete();
 

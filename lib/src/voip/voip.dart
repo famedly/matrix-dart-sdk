@@ -1139,6 +1139,11 @@ class VoIP {
     final existing = groupCalls[id];
     if (existing != null) {
       if (!existing.isLeaving) return;
+      // Our own membership lingers in room state until sync shows our leave.
+      if (membership.userId == client.userID &&
+          membership.deviceId == client.deviceID) {
+        return;
+      }
       // Calls that reuse an id (e.g. 1:1 calls) can start again while the
       // previous session is still leaving; without this the new call would
       // never get a session of its own.
