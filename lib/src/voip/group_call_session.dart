@@ -173,8 +173,9 @@ class GroupCallSession {
     _leaveStarted = true;
     _cancelForceRejoin();
     setState(GroupCallState.leaving);
-    // A rejoin landing after the removal would put the membership back.
-    await _forceRejoinInFlight;
+    // A rejoin write landing after the removal would put the membership back.
+    // Only the write: its key sharing is pointless now and may be slow.
+    await _forceRejoinWrite?.catchError((_) => null);
 
     Object? error;
     StackTrace? stackTrace;
@@ -373,6 +374,7 @@ class GroupCallSession {
   }
 
   Future<void>? _forceRejoinInFlight;
+  Future<String?>? _forceRejoinWrite;
   Timer? _forceRejoinRetry;
   int _forceRejoinFailures = 0;
 
@@ -404,8 +406,8 @@ class GroupCallSession {
 
     try {
       // rejoin the call and share the key with the existing participants
-      await sendMemberStateEvent();
-      await backend.preShareKey(this);
+      await (_forceRejoinWrite = sendMemberStateEvent());
+      if (!_leaveStarted) await backend.preShareKey(this);
       _forceRejoinFailures = 0;
     } catch (e, s) {
       _forceRejoinFailures++;
@@ -434,6 +436,7 @@ class GroupCallSession {
       .any(
         (m) =>
             m.callId == groupCallId &&
+            m.deviceId == client.deviceID &&
             m.scope == scope &&
             m.roomId == room.id &&
             !m.isExpired,

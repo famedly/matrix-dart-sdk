@@ -1726,7 +1726,7 @@ void main() {
         },
       );
 
-      test('leave waits for an in-flight force rejoin', () async {
+      test("leave does not wait for a rejoin's key sharing", () async {
         const callId = 'test_force_rejoin_then_leave';
         setMemberships(matrix.userID!, [
           membership(matrix.userID!, matrix.deviceID!, callId),
@@ -1754,16 +1754,56 @@ void main() {
         await pumpEventQueue();
         expect(sentMemberships, hasLength(1));
 
-        final leaving = groupCall.leave();
-        await pumpEventQueue();
-        expect(sentMemberships, hasLength(1), reason: 'leave waits');
+        await groupCall.leave().timeout(Duration(seconds: 5));
+        expect(sentMemberships, hasLength(2));
+        expect(sentMemberships.last, isEmpty);
 
         backend.hold!.complete();
         await rejoin;
-        await leaving;
         expect(sentMemberships, hasLength(2));
-        expect(sentMemberships.last, isEmpty);
       });
+
+      test(
+        "another device's membership does not stop a rejoin retry",
+        () async {
+          const callId = 'test_force_rejoin_other_device';
+          setMemberships(matrix.userID!, [
+            membership(matrix.userID!, matrix.deviceID!, callId),
+          ]);
+          final groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            MeshBackend(),
+            'm.call',
+            'm.room',
+            callId,
+          );
+          await groupCall.enter();
+
+          var rejoinAttempts = 0;
+          FakeMatrixApi.currentApi!.api['PUT']![ownMemberStatePath()] = (_) {
+            rejoinAttempts++;
+            if (rejoinAttempts > 1) return {'event_id': r'$rejoined'};
+            return {
+              'errcode': 'M_LIMIT_EXCEEDED',
+              'error': 'Too Many Requests',
+              'retry_after_ms': 100,
+            };
+          };
+
+          // only our other device is still in the call
+          setMemberships(matrix.userID!, [
+            membership(matrix.userID!, 'OTHERDEVICE', callId),
+          ]);
+          await groupCall.onMemberStateChanged();
+          expect(rejoinAttempts, 1);
+
+          await Future.delayed(Duration(milliseconds: 200));
+          expect(rejoinAttempts, 2);
+
+          await groupCall.leave();
+        },
+      );
 
       test('leaving cancels a pending force rejoin', () async {
         const callId = 'test_force_rejoin_cancel';
