@@ -52,6 +52,7 @@ class GroupCallSession {
       CachedStreamController();
 
   Timer? _resendMemberStateEventTimer;
+  Future<void>? _forceRejoinInProgress;
 
   factory GroupCallSession.withAutoGenId(
     Room room,
@@ -253,6 +254,68 @@ class GroupCallSession {
     );
   }
 
+  bool _removeCachedLocalParticipant(CallParticipant? participant) {
+    if (participant == null) {
+      return false;
+    }
+
+    return _participants.remove(participant);
+  }
+
+  void _dropDelayedLeaveState() {
+    final delayedEventKey = '${room.id}|$groupCallId|$scope';
+    final canceller = voip.delayedEventCancellers[delayedEventKey];
+    if (canceller == null) {
+      return;
+    }
+
+    canceller.restartTimer.cancel();
+    voip.delayedEventCancellers.remove(delayedEventKey);
+  }
+
+  Future<void> _forceRejoin() async {
+    if (_forceRejoinInProgress != null) {
+      Logs().v(
+        '[onMemberStateChanged] force rejoin already in progress for room ${room.id} groupCallId: $groupCallId',
+      );
+      return _forceRejoinInProgress!;
+    }
+
+    final cachedLocalParticipant = localParticipant;
+    final shouldRestoreLocalParticipant = _removeCachedLocalParticipant(
+      cachedLocalParticipant,
+    );
+    if (!shouldRestoreLocalParticipant) {
+      return;
+    }
+
+    late final Future<void> rejoinInProgress;
+    rejoinInProgress = Future<void>(() async {
+      try {
+        Logs().w(
+          '[onMemberStateChanged] server says that we left the call but looks like we are still in it, will force join again',
+        );
+
+        _dropDelayedLeaveState();
+
+        await sendMemberStateEvent();
+        await backend.preShareKey(this);
+      } catch (error) {
+        if (shouldRestoreLocalParticipant && state == GroupCallState.entered) {
+          _participants.add(cachedLocalParticipant!);
+        }
+        rethrow;
+      } finally {
+        if (identical(_forceRejoinInProgress, rejoinInProgress)) {
+          _forceRejoinInProgress = null;
+        }
+      }
+    });
+
+    _forceRejoinInProgress = rejoinInProgress;
+    return rejoinInProgress;
+  }
+
   /// compltetely rebuilds the local _participants list
   Future<void> onMemberStateChanged() async {
     // The member events may be received for another room, which we will ignore.
@@ -310,28 +373,8 @@ class GroupCallSession {
           // hm we did not leave but got a leave event? probably delayed
           // event did not restart, let's just send our member event again.
           // if we clicked the leave button our state would have been `leaving`
-          Logs().w(
-            '[onMemberStateChanged] server says that we left the call but looks like we are still in it, will force join again',
-          );
-
-          // also clear delayed event state so that they can be started again
-          final canceller =
-              voip.delayedEventCancellers['${room.id}|$groupCallId|$scope'];
-          if (canceller != null) {
-            canceller.restartTimer.cancel();
-
-            // because the server said you left, you don't actually have to cancel
-            // the delayed event, the server already thinks it's cancelled
-
-            voip.delayedEventCancellers.remove(
-              '${room.id}|$groupCallId|$scope',
-            );
-          }
-
-          // rejoin the call and share the key with the existing participants
+          await _forceRejoin();
           anyLeft.remove(localParticipant);
-          await sendMemberStateEvent();
-          await backend.preShareKey(this);
         }
 
         final nonLocalAnyLeft = Set<CallParticipant>.from(anyLeft)
