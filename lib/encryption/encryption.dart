@@ -309,7 +309,7 @@ class Encryption {
       event = decryptRoomEventSync(encryptedEvent);
       if (event.canRequestSessionKey) {
         await keyManager.maybeAutoRequest(
-          event.room.id,
+          event.room,
           sessionId!,
           content.senderKey,
           awaitRequest: waitForKeyBackupAndRetry,

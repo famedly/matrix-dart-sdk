@@ -445,7 +445,7 @@ class Timeline {
         final senderKey = event.content.tryGet<String>('sender_key');
         if (sessionId != null && senderKey != null) {
           room.client.encryption?.keyManager.maybeAutoRequest(
-            room.id,
+            room,
             sessionId,
             senderKey,
             tryOnlineBackup: tryOnlineBackup,
