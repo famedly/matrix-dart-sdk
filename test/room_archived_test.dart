@@ -41,6 +41,12 @@ void main() async {
       expect(archive[1].room.name, 'The room name 2');
     });
 
+    test('apply state events from the timeline', () async {
+      final archive = await client.loadArchiveWithTimeline();
+
+      expect(archive[1].room.encrypted, true);
+    });
+
     test('request history', () async {
       final archive = await client.loadArchiveWithTimeline();
 

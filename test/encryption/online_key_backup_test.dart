@@ -16,6 +16,38 @@ void main() {
 
     late Client client;
 
+    void putInBackup(String roomId, vod.InboundGroupSession inbound) {
+      final encryptor = vod.PkEncryption.fromPublicKey(
+        vod.Curve25519PublicKey.fromBase64(
+          'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
+        ),
+      );
+      final (ct, mac, ephemeral) = encryptor
+          .encrypt(
+            json.encode({
+              'algorithm': AlgorithmTypes.megolmV1AesSha2,
+              'forwarding_curve25519_key_chain': <String>[],
+              'sender_key': client.identityKey,
+              'sender_claimed_keys': {'ed25519': client.fingerprintKey},
+              'session_key': inbound.exportAt(0),
+            }),
+          )
+          .toBase64();
+      FakeMatrixApi
+              .currentApi!
+              .api['GET']!['/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(inbound.sessionId)}?version=5'] =
+          (_) => {
+            'first_message_index': 0,
+            'forwarded_count': 0,
+            'is_verified': true,
+            'session_data': {
+              'ephemeral': ephemeral,
+              'ciphertext': ct,
+              'mac': mac,
+            },
+          };
+    }
+
     const roomId = '!726s6s6q:example.com';
     const sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
     const senderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
@@ -146,45 +178,14 @@ void main() {
           }),
         );
 
-        // 3. Encrypt the inbound session for the FakeMatrixApi backup using
-        //    the same backup public key the FakeMatrixApi advertises.
-        const backupPubKey = 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM';
-        final encryptor = vod.PkEncryption.fromPublicKey(
-          vod.Curve25519PublicKey.fromBase64(backupPubKey),
-        );
-        final encryptedSession = encryptor.encrypt(
-          json.encode({
-            'algorithm': AlgorithmTypes.megolmV1AesSha2,
-            'forwarding_curve25519_key_chain': <String>[],
-            'sender_key': newSenderKey,
-            'sender_claimed_keys': {'ed25519': client.fingerprintKey},
-            'session_key': inbound.exportAt(0),
-          }),
-        );
-        final (ct, mac, ephemeral) = encryptedSession.toBase64();
-
-        // 4. A fresh room that exists in client.rooms (required for
-        //    keyManager.maybeAutoRequest's lookup) and has no DB history.
+        // 3. A fresh room that exists in client.rooms and has no DB history,
+        //    with the session only in the online key backup.
         const newRoomId = '!searchBackupOnly:example.com';
         final newRoom = Room(client: client, id: newRoomId, prev_batch: '');
         client.rooms.add(newRoom);
+        putInBackup(newRoomId, inbound);
 
-        // 5. Mock the online key backup GET for this specific session.
-        FakeMatrixApi
-                .currentApi!
-                .api['GET']!['/client/v3/room_keys/keys/${Uri.encodeComponent(newRoomId)}/${Uri.encodeComponent(newSessionId)}?version=5'] =
-            (_) => {
-              'first_message_index': 0,
-              'forwarded_count': 0,
-              'is_verified': true,
-              'session_data': {
-                'ephemeral': ephemeral,
-                'ciphertext': ct,
-                'mac': mac,
-              },
-            };
-
-        // 6. Mock /messages with our encrypted event.
+        // 4. Mock /messages with our encrypted event.
         FakeMatrixApi
                 .currentApi!
                 .api['GET']!['/client/v3/rooms/${Uri.encodeComponent(newRoomId)}/messages?from&dir=b&limit=1000&filter=%7B%22types%22%3A%5B%22m.room.message%22%2C%22m.room.encrypted%22%5D%7D'] =
@@ -226,6 +227,31 @@ void main() {
         );
         expect(decrypted, isNotEmpty);
         expect(decrypted.first.body, 'a needle in the encrypted haystack');
+      },
+    );
+
+    test(
+      'maybeAutoRequest loads keys for a room outside client.rooms',
+      () async {
+        final inbound = vod.InboundGroupSession(vod.GroupSession().sessionKey);
+        const archivedRoomId = '!archived:example.com';
+        putInBackup(archivedRoomId, inbound);
+
+        await client.encryption!.keyManager.maybeAutoRequest(
+          archivedRoomId,
+          inbound.sessionId,
+          client.identityKey,
+          room: Room(client: client, id: archivedRoomId),
+          awaitRequest: true,
+        );
+
+        expect(
+          client.encryption!.keyManager.getInboundGroupSession(
+            archivedRoomId,
+            inbound.sessionId,
+          ),
+          isNotNull,
+        );
       },
     );
 

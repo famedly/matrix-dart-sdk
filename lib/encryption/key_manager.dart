@@ -226,10 +226,11 @@ class KeyManager {
     bool tryOnlineBackup = true,
     bool onlineKeyBackupOnly = true,
     bool awaitRequest = false,
+    Room? room,
   }) async {
-    final room = client.getRoomById(roomId);
+    final knownRoom = room ?? client.getRoomById(roomId);
     final requestIdent = '$roomId|$sessionId';
-    if (room != null && !client.isUnknownSession) {
+    if (knownRoom != null && !client.isUnknownSession) {
       final existingReqCompleter = _requestedSessionIdCompleters[requestIdent];
       if (existingReqCompleter != null) {
         if (awaitRequest) {
@@ -243,7 +244,7 @@ class KeyManager {
         final completer = Completer<void>();
         _requestedSessionIdCompleters[requestIdent] = completer;
         await request(
-          room,
+          knownRoom,
           sessionId,
           senderKey,
           tryOnlineBackup: tryOnlineBackup,

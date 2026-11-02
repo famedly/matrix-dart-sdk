@@ -1173,7 +1173,20 @@ class FakeMatrixApi extends BaseClient {
           },
         },
         '!5345234235:example.com': {
-          'timeline': {'events': []},
+          'timeline': {
+            'events': [
+              {
+                'content': {'algorithm': AlgorithmTypes.megolmV1AesSha2},
+                'type': 'm.room.encryption',
+                'event_id': '2143273582444PhrSn:example.org',
+                'room_id': '!5345234235:example.com',
+                'sender': '@example:example.org',
+                'origin_server_ts': 1432735824654,
+                'unsigned': {'age': 1234},
+                'state_key': '',
+              },
+            ],
+          },
           'state': {
             'events': [
               {

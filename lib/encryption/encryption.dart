@@ -304,6 +304,7 @@ class Encryption {
           event.room.id,
           sessionId,
           content.senderKey,
+          room: event.room,
         );
       }
       if (event.type != EventTypes.Encrypted && store) {

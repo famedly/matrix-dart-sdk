@@ -1272,6 +1272,10 @@ class Client extends MatrixApi {
               <String, BasicEvent>{},
         );
         entry.value.state?.forEach(room.setState);
+        // Young rooms carry state like `m.room.encryption` only in the timeline.
+        entry.value.timeline?.events
+            ?.where((event) => event.stateKey != null)
+            .forEach(room.setState);
         final timeline = Timeline(
           room: room,
           chunk: TimelineChunk(
@@ -1288,6 +1292,7 @@ class Client extends MatrixApi {
           // Try to decrypt encrypted events but don't update the database.
           if (room.encrypted && room.client.encryptionEnabled) {
             if (timeline.events[i].type == EventTypes.Encrypted) {
+              // shortcut: keys fetched from the online backup decrypt on the next load.
               await room.client.encryption!
                   .decryptRoomEvent(timeline.events[i])
                   .then((decrypted) => timeline.events[i] = decrypted);
