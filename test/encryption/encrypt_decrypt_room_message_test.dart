@@ -142,6 +142,30 @@ void main() {
       expect(decrypted?.body, 'Late keys');
     });
 
+    test(
+      'key backup retry keeps the original event as originalSource',
+      () async {
+        final encryptedEvent = Event(
+          type: EventTypes.Encrypted,
+          content: {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'ciphertext': 'not-a-real-ciphertext',
+            'session_id': 'session-not-in-store',
+            'sender_key': client.identityKey,
+          },
+          room: room,
+          originServerTs: now,
+          eventId: '\$retry_source',
+          senderId: client.userID!,
+        );
+        final decrypted = await client.encryption!.decryptRoomEvent(
+          encryptedEvent,
+          waitForKeyBackupAndRetry: true,
+        );
+        expect(decrypted.originalSource, same(encryptedEvent));
+      },
+    );
+
     test('dispose client', () async {
       await client.dispose(closeDatabase: true);
     });

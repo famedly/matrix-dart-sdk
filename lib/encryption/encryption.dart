@@ -305,7 +305,8 @@ class Encryption {
               false)) {
         await keyManager.loadInboundGroupSession(event.room.id, sessionId);
       }
-      event = decryptRoomEventSync(event);
+      final encryptedEvent = event;
+      event = decryptRoomEventSync(encryptedEvent);
       if (event.canRequestSessionKey) {
         await keyManager.maybeAutoRequest(
           event.room.id,
@@ -314,7 +315,7 @@ class Encryption {
           awaitRequest: waitForKeyBackupAndRetry,
         );
         if (waitForKeyBackupAndRetry) {
-          event = decryptRoomEventSync(event);
+          event = decryptRoomEventSync(encryptedEvent);
         }
       }
       if (event.type != EventTypes.Encrypted && store) {
