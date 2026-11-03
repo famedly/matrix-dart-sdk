@@ -248,6 +248,10 @@ class KeyManager {
           tryOnlineBackup: tryOnlineBackup,
           onlineKeyBackupOnly: onlineKeyBackupOnly,
         );
+      } catch (_) {
+        // A failed attempt must not block a later retry for this session.
+        _requestedSessionIdCompleters.remove(requestIdent);
+        rethrow;
       } finally {
         completer.complete();
       }
@@ -783,6 +787,8 @@ class KeyManager {
             err,
             stacktrace,
           );
+          // Nothing else to fall back to, so the caller can retry later.
+          if (onlineKeyBackupOnly) rethrow;
         }
       }
 

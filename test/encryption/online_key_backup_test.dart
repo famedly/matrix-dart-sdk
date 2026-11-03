@@ -51,6 +51,37 @@ void main() {
       );
     });
 
+    test('failed backup request can be retried', () async {
+      final keyManager = client.encryption!.keyManager;
+      keyManager.clearInboundGroupSessions();
+      final room = client.getRoomById(roomId)!;
+      final path =
+          '/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=5';
+      final api = FakeMatrixApi.currentApi!.api['GET']!;
+      final backupKey = api[path];
+      api[path] = (_) => {'errcode': 'M_LIMIT_EXCEEDED', 'error': 'slow down'};
+      await expectLater(
+        keyManager.maybeAutoRequest(
+          room,
+          sessionId,
+          senderKey,
+          awaitRequest: true,
+        ),
+        throwsA(isA<MatrixException>()),
+      );
+      api[path] = backupKey;
+      await keyManager.maybeAutoRequest(
+        room,
+        sessionId,
+        senderKey,
+        awaitRequest: true,
+      );
+      expect(
+        keyManager.getInboundGroupSession(roomId, sessionId)?.sessionId,
+        sessionId,
+      );
+    });
+
     test('Load all Room Keys', () async {
       final keyManager = client.encryption!.keyManager;
       const roomId = '!getroomkeys726s6s6q:example.com';
