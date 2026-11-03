@@ -603,6 +603,74 @@ void main() {
       expect(syncUpdate.rooms?.join?.containsKey(room.id), true);
     });
 
+    for (final (type, body) in [
+      (PollEventContent.endType, 'Poll has been ended'),
+      ('org.example.custom', 'Unknown event org.example.custom'),
+    ]) {
+      test(
+        'setInboundGroupSession decrypts last event of type $type',
+        () async {
+          final session = vod.GroupSession();
+          final inbound = vod.InboundGroupSession(session.sessionKey);
+          final roomId = '!$type:example.org';
+          final sessionId = inbound.sessionId;
+          final room = Room(id: roomId, client: client);
+          client.rooms.add(room);
+          await client.handleSync(
+            SyncUpdate(
+              nextBatch: '',
+              rooms: RoomsUpdate(
+                join: {
+                  room.id: JoinedRoomUpdate(
+                    timeline: TimelineUpdate(
+                      events: [
+                        MatrixEvent(
+                          senderId: '@test:example.com',
+                          type: EventTypes.Encrypted,
+                          eventId: '\$late',
+                          originServerTs: DateTime.now(),
+                          content: {
+                            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+                            'ciphertext': session.encrypt(
+                              json.encode({'type': type, 'content': {}}),
+                            ),
+                            'device_id': client.deviceID,
+                            'sender_key': client.identityKey,
+                            'session_id': sessionId,
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                },
+              ),
+            ),
+          );
+          expect(room.lastEvent?.type, EventTypes.Encrypted);
+
+          await client.encryption!.keyManager
+              .setInboundGroupSession(roomId, sessionId, client.identityKey, {
+                'algorithm': AlgorithmTypes.megolmV1AesSha2,
+                'room_id': roomId,
+                'session_id': sessionId,
+                'session_key': inbound.exportAt(0),
+                'sender_key': client.identityKey,
+                'sender_claimed_ed25519_key': client.fingerprintKey,
+              }, forwarded: true);
+
+          // No fallback lookup: the decrypted event is the preview and
+          // localization renders it, unknown types included.
+          expect(room.lastEvent?.type, type);
+          expect(
+            room.lastEvent?.calcLocalizedBody(
+              const MatrixDefaultLocalizations(),
+            ),
+            body,
+          );
+        },
+      );
+    }
+
     test('Reused deviceID attack', () async {
       Logs().level = Level.warning;
 
