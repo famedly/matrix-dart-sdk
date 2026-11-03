@@ -229,7 +229,7 @@ class KeyManager {
   }) async {
     final room = client.getRoomById(roomId);
     final requestIdent = '$roomId|$sessionId';
-    if (room != null && !client.isUnknownSession) {
+    if (room != null && (onlineKeyBackupOnly || !client.isUnknownSession)) {
       final existingReqCompleter = _requestedSessionIdCompleters[requestIdent];
       if (existingReqCompleter != null) {
         if (awaitRequest) {
