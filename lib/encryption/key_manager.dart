@@ -53,9 +53,7 @@ class KeyManager {
       _requestedSessionIdCompleters.clear();
       for (final room in client.rooms) {
         final lastEvent = room.lastEvent;
-        if (lastEvent != null &&
-            lastEvent.type == EventTypes.Encrypted &&
-            lastEvent.content['can_request_session'] == true) {
+        if (lastEvent != null && lastEvent.canRequestSessionKey) {
           final sessionId = lastEvent.content.tryGet<String>('session_id');
           final senderKey = lastEvent.content.tryGet<String>('sender_key');
           if (sessionId != null && senderKey != null) {
