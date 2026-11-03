@@ -437,7 +437,9 @@ class GroupCallSession {
 
   Duration _forceRejoinBackoff(Object error) {
     final retryAfterMs = error is MatrixException ? error.retryAfterMs : null;
-    if (retryAfterMs != null) return Duration(milliseconds: retryAfterMs);
+    if (retryAfterMs != null && retryAfterMs > 0) {
+      return Duration(milliseconds: retryAfterMs);
+    }
     final exponent = min(_forceRejoinFailures - 1, 5);
     return Duration(seconds: 1 << exponent);
   }
