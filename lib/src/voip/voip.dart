@@ -126,6 +126,13 @@ class VoIP {
 
       final mems = event.room.getCallMembershipsFromEvent(event, this);
       for (final mem in mems) {
+        // An echo of our own write, e.g. one that lingers until sync shows our
+        // leave. Never an incoming call.
+        if (mem.userId == client.userID &&
+            mem.deviceId == client.deviceID &&
+            mem.membershipId == currentSessionId) {
+          continue;
+        }
         unawaited(createGroupCallFromRoomStateEvent(mem));
       }
       final groupCallsEntries = List.of(groupCalls.entries);
@@ -1132,14 +1139,6 @@ class VoIP {
 
     if (membership.application != 'm.call' && membership.scope != 'm.room') {
       Logs().w('Received invalid group call application or scope.');
-      return;
-    }
-
-    // An echo of a membership this client sent, e.g. one that lingers in room
-    // state until sync shows our leave. Never an incoming call.
-    if (membership.userId == client.userID &&
-        membership.deviceId == client.deviceID &&
-        membership.membershipId == currentSessionId) {
       return;
     }
 

@@ -1687,24 +1687,24 @@ void main() {
           preShareKey: false,
         );
         await previous.enter();
-        // sync has not shown our leave yet
         final own = membership(
           matrix.userID!,
           matrix.deviceID!,
           '',
           membershipId: voip.currentSessionId,
         );
-        setMemberships(matrix.userID!, [own]);
+        final incoming = <GroupCallSession>[];
+        final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
         final leaving = previous.leave();
         await pumpEventQueue();
 
-        final incoming = <GroupCallSession>[];
-        final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
-        final created = voip.createGroupCallFromRoomStateEvent(own);
+        // sync echoes our membership while leaving and after
+        setMemberships(matrix.userID!, [own]);
+        await pumpEventQueue();
         backend.release.complete();
         await leaving;
-        await created;
-        await voip.createGroupCallFromRoomStateEvent(own);
+        setMemberships(matrix.userID!, [own]);
+        await pumpEventQueue();
         await sub.cancel();
 
         expect(incoming, isEmpty);
