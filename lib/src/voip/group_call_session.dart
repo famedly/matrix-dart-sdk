@@ -125,7 +125,7 @@ class GroupCallSession {
       shouldSendNotification = true;
     }
 
-    final memberEventId = await (_membershipWrite = sendMemberStateEvent());
+    final memberEventId = await sendMemberStateEvent();
     if (_leaveStarted) return;
 
     setState(GroupCallState.entered);
@@ -160,8 +160,9 @@ class GroupCallSession {
     await voip.delegate.handleNewGroupCall(this);
   }
 
-  /// Steps of [enter] and force rejoins that [leave] has to undo, so it lets
-  /// them land first. Nothing else is awaited: delegates may call [leave].
+  /// The local stream init and the latest membership write, which [leave] has
+  /// to undo, so it lets them land first. Nothing else is awaited: delegates
+  /// may call [leave].
   Future<WrappedMediaStream?>? _localStreamInit;
   Future<String?>? _membershipWrite;
 
@@ -221,7 +222,11 @@ class GroupCallSession {
     if (failure != null) Error.throwWithStackTrace(failure, stackTrace!);
   }
 
-  Future<String?> sendMemberStateEvent() async {
+  /// [leave] waits for the latest write, so its removal lands after it.
+  Future<String?> sendMemberStateEvent() =>
+      _membershipWrite = _sendMemberStateEvent();
+
+  Future<String?> _sendMemberStateEvent() async {
     // Get current member event ID to preserve permanent reactions
     final currentMemberships = room.getCallMembershipsForUser(
       client.userID!,
@@ -417,7 +422,7 @@ class GroupCallSession {
 
     try {
       // rejoin the call and share the key with the existing participants
-      await (_membershipWrite = sendMemberStateEvent());
+      await sendMemberStateEvent();
       if (!_leaveStarted) await backend.preShareKey(this);
       _forceRejoinFailures = 0;
     } catch (e, s) {
