@@ -132,7 +132,7 @@ class Room {
 
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
-  void setState(StrippedStateEvent state) {
+  void setState(StrippedStateEvent state, {bool notifyRoomState = true}) {
     // Ignore other non-state events
     final stateKey = state.stateKey;
 
@@ -157,7 +157,9 @@ class Room {
 
     (states[state.type] ??= {})[stateKey] = state;
 
-    client.onRoomState.add((roomId: id, state: state));
+    if (notifyRoomState) {
+      client.onRoomState.add((roomId: id, state: state));
+    }
   }
 
   /// ID of the fully read marker event.

@@ -744,11 +744,15 @@ class KeyManager {
   /// and stores it.
   Future<void> loadSingleKey(String roomId, String sessionId) async {
     final info = await getRoomKeysBackupInfo();
-    final ret = await client.getRoomKeyBySessionId(
-      roomId,
-      sessionId,
-      info.version,
-    );
+    late KeyBackupData ret;
+    try {
+      ret = await client.getRoomKeyBySessionId(roomId, sessionId, info.version);
+    } on MatrixException catch (e) {
+      final retryAfterMs = e.retryAfterMs;
+      if (retryAfterMs == null) rethrow;
+      await Future.delayed(Duration(milliseconds: retryAfterMs));
+      ret = await client.getRoomKeyBySessionId(roomId, sessionId, info.version);
+    }
     final keys = RoomKeys.fromJson({
       'rooms': {
         roomId: {
