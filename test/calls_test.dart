@@ -47,7 +47,7 @@ class HeldDisposeBackend extends MeshBackend {
   }
 }
 
-/// Holds enter() after the local stream exists, like a slow permission prompt.
+/// Holds enter() before the local stream exists, like a permission prompt.
 class HeldInitBackend extends MeshBackend {
   final release = Completer<void>();
 
@@ -56,18 +56,22 @@ class HeldInitBackend extends MeshBackend {
     GroupCallSession groupCall, {
     WrappedMediaStream? stream,
   }) async {
-    final local = await super.initLocalStream(groupCall, stream: stream);
     await release.future;
-    return local;
+    return super.initLocalStream(groupCall, stream: stream);
   }
 }
 
-class HeldEndDelegate extends MockWebRTCDelegate {
-  final release = Completer<void>();
+class CallbackDelegate extends MockWebRTCDelegate {
+  Future<void> Function(GroupCallSession)? onNew;
+  Future<void> Function(GroupCallSession)? onEnded;
 
   @override
-  Future<void> handleGroupCallEnded(GroupCallSession groupCall) =>
-      release.future;
+  Future<void> handleNewGroupCall(GroupCallSession groupCall) async =>
+      onNew?.call(groupCall);
+
+  @override
+  Future<void> handleGroupCallEnded(GroupCallSession groupCall) async =>
+      onEnded?.call(groupCall);
 }
 
 /// Re-enters onMemberStateChanged from preShareKey like LiveKitBackend does.
@@ -1445,8 +1449,9 @@ void main() {
       CallMembership membership(
         String userId,
         String deviceId,
-        String callId,
-      ) => CallMembership(
+        String callId, {
+        String? membershipId,
+      }) => CallMembership(
         userId: userId,
         roomId: room.id,
         callId: callId,
@@ -1457,7 +1462,7 @@ void main() {
         expiresTs: DateTime.now()
             .add(Duration(hours: 1))
             .millisecondsSinceEpoch,
-        membershipId: 'session_$deviceId',
+        membershipId: membershipId ?? 'session_$deviceId',
         voip: voip,
       );
 
@@ -1649,6 +1654,10 @@ void main() {
           return {'event_id': r'$event'};
         };
 
+        final states = <GroupCallState>[];
+        final sub = groupCall.matrixRTCEventStream.stream.listen((e) {
+          if (e is GroupCallStateChanged) states.add(e.state);
+        });
         final entering = groupCall.enter();
         await pumpEventQueue();
         final leaving = groupCall.leave();
@@ -1656,50 +1665,68 @@ void main() {
         backend.release.complete();
         await entering;
         await leaving;
+        await sub.cancel();
 
         expect(groupCall.state, GroupCallState.ended);
+        expect(
+          states.skipWhile((s) => s != GroupCallState.leaving),
+          isNot(contains(GroupCallState.localCallFeedInitialized)),
+        );
         expect(sentMemberships.where((m) => m.isNotEmpty), isEmpty);
         expect(voip.currentGroupCID, isNull);
       });
 
-      test(
-        'our own membership seen while leaving is no incoming call',
-        () async {
-          final backend = HeldDisposeBackend();
-          final previous = await voip.fetchOrCreateGroupCall(
-            '',
-            room,
-            backend,
-            'm.call',
-            'm.room',
-            preShareKey: false,
-          );
-          await previous.enter();
-          // sync has not shown our leave yet
-          final own = membership(matrix.userID!, matrix.deviceID!, '');
-          setMemberships(matrix.userID!, [own]);
-          final leaving = previous.leave();
-          await pumpEventQueue();
+      test('an echo of our own membership is no incoming call', () async {
+        final backend = HeldDisposeBackend();
+        final previous = await voip.fetchOrCreateGroupCall(
+          '',
+          room,
+          backend,
+          'm.call',
+          'm.room',
+          preShareKey: false,
+        );
+        await previous.enter();
+        // sync has not shown our leave yet
+        final own = membership(
+          matrix.userID!,
+          matrix.deviceID!,
+          '',
+          membershipId: voip.currentSessionId,
+        );
+        setMemberships(matrix.userID!, [own]);
+        final leaving = previous.leave();
+        await pumpEventQueue();
 
-          final incoming = <GroupCallSession>[];
-          final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
-          final created = voip.createGroupCallFromRoomStateEvent(own);
-          backend.release.complete();
-          await leaving;
-          await created;
-          await sub.cancel();
+        final incoming = <GroupCallSession>[];
+        final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
+        final created = voip.createGroupCallFromRoomStateEvent(own);
+        backend.release.complete();
+        await leaving;
+        await created;
+        await voip.createGroupCallFromRoomStateEvent(own);
+        await sub.cancel();
 
-          expect(incoming, isEmpty);
-          expect(voip.getGroupCallById(room.id, ''), isNull);
-        },
-      );
+        expect(incoming, isEmpty);
+        expect(voip.getGroupCallById(room.id, ''), isNull);
+      });
 
-      test(
-        'a call starting during the delegate teardown waits for it',
-        () async {
-          final delegate = HeldEndDelegate();
-          final heldVoip = VoIP(matrix, delegate);
-          final previous = await heldVoip.fetchOrCreateGroupCall(
+      test('the delegate can start the next call for the same id', () async {
+        final delegate = CallbackDelegate();
+        final callbackVoip = VoIP(matrix, delegate);
+        final previous = await callbackVoip.fetchOrCreateGroupCall(
+          '',
+          room,
+          MeshBackend(),
+          'm.call',
+          'm.room',
+          preShareKey: false,
+        );
+        await previous.enter();
+
+        GroupCallSession? next;
+        delegate.onEnded = (_) async {
+          next = await callbackVoip.fetchOrCreateGroupCall(
             '',
             room,
             MeshBackend(),
@@ -1707,27 +1734,28 @@ void main() {
             'm.room',
             preShareKey: false,
           );
-          await previous.enter();
-          final leaving = previous.leave();
-          await pumpEventQueue();
+        };
+        await previous.leave().timeout(Duration(seconds: 5));
 
-          final caller = membership('@caller:example.com', 'CALLER', '');
-          setMemberships('@caller:example.com', [caller]);
-          final incoming = <GroupCallSession>[];
-          final sub = heldVoip.onIncomingGroupCall.stream.listen(incoming.add);
-          final created = heldVoip.createGroupCallFromRoomStateEvent(caller);
-          await pumpEventQueue();
-          expect(incoming, isEmpty);
+        expect(next, isNot(same(previous)));
+        expect(callbackVoip.getGroupCallById(room.id, ''), same(next));
+      });
 
-          delegate.release.complete();
-          await leaving;
-          await created;
-          await sub.cancel();
+      test('the delegate can leave from handleNewGroupCall', () async {
+        final delegate = CallbackDelegate()..onNew = (call) => call.leave();
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          VoIP(matrix, delegate),
+          MeshBackend(),
+          'm.call',
+          'm.room',
+          'test_leave_from_delegate',
+        );
 
-          expect(incoming, hasLength(1));
-          expect(heldVoip.getGroupCallById(room.id, ''), same(incoming.single));
-        },
-      );
+        await groupCall.enter().timeout(Duration(seconds: 5));
+        await groupCall.left.timeout(Duration(seconds: 5));
+        expect(groupCall.state, GroupCallState.ended);
+      });
 
       test(
         'a failed membership removal stops the heartbeat but keeps the delayed leave',

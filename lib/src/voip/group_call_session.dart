@@ -115,19 +115,8 @@ class GroupCallSession {
       throw MatrixSDKVoipException('Cannot enter call in the $state state');
     }
 
-    final entering = _entering = _enter(stream);
-    try {
-      await entering;
-    } finally {
-      _entering = null;
-    }
-  }
-
-  Future<void>? _entering;
-
-  Future<void> _enter(WrappedMediaStream? stream) async {
     if (state == GroupCallState.localCallFeedUninitialized) {
-      await backend.initLocalStream(this, stream: stream);
+      await (_localStreamInit = backend.initLocalStream(this, stream: stream));
     }
     if (_leaveStarted) return;
 
@@ -136,7 +125,7 @@ class GroupCallSession {
       shouldSendNotification = true;
     }
 
-    final memberEventId = await sendMemberStateEvent();
+    final memberEventId = await (_membershipWrite = sendMemberStateEvent());
     if (_leaveStarted) return;
 
     setState(GroupCallState.entered);
@@ -152,22 +141,29 @@ class GroupCallSession {
         mentionRoom: true,
         memberEventId: memberEventId,
       );
+      if (_leaveStarted) return;
     }
 
     // Set up _participants for the members currently in the call.
     // Other members will be picked up by the RoomState.members event.
     await onMemberStateChanged();
+    if (_leaveStarted) return;
 
     await backend.setupP2PCallsWithExistingMembers(this);
+    if (_leaveStarted) return;
 
     voip.currentGroupCID = VoipId(roomId: room.id, callId: groupCallId);
-
-    await voip.delegate.handleNewGroupCall(this);
-
     _reactionsTimer = Timer.periodic(Duration(seconds: 1), (_) {
       if (_reactionsTicker > 0) _reactionsTicker--;
     });
+
+    await voip.delegate.handleNewGroupCall(this);
   }
+
+  /// Steps of [enter] and force rejoins that [leave] has to undo, so it lets
+  /// them land first. Nothing else is awaited: delegates may call [leave].
+  Future<WrappedMediaStream?>? _localStreamInit;
+  Future<String?>? _membershipWrite;
 
   bool _leaveStarted = false;
   final Completer<void> _left = Completer<void>();
@@ -176,7 +172,8 @@ class GroupCallSession {
   bool get isLeaving => _leaveStarted;
 
   /// Completes once [leave] has torn this session down, whether or not the
-  /// homeserver heard about it. Never completes with an error.
+  /// homeserver heard about it, and before the delegate is told. Never
+  /// completes with an error.
   Future<void> get left => _left.future;
 
   /// Always finishes the local teardown, so a failed homeserver request cannot
@@ -185,12 +182,11 @@ class GroupCallSession {
     if (_leaveStarted) return;
     _leaveStarted = true;
     _cancelForceRejoin();
+    // Before setting leaving, which initLocalStream would overwrite.
+    await _localStreamInit?.catchError((_) => null);
     setState(GroupCallState.leaving);
-    // Let a running enter() stop at its next check, so teardown covers it.
-    await _entering?.catchError((_) {});
-    // A rejoin write landing after the removal would put the membership back.
-    // Only the write: its key sharing is pointless now and may be slow.
-    await _forceRejoinWrite?.catchError((_) => null);
+    // A write landing after the removal would put the membership back.
+    await _membershipWrite?.catchError((_) => null);
 
     Object? error;
     StackTrace? stackTrace;
@@ -212,14 +208,14 @@ class GroupCallSession {
     if (voip.currentGroupCID == id) voip.currentGroupCID = null;
     _resendMemberStateEventTimer?.cancel();
     _reactionsTimer?.cancel();
+    if (identical(voip.groupCalls[id], this)) voip.groupCalls.remove(id);
+    // Before the delegate, which may start the next call for this id.
+    _left.complete();
     await attempt(
       'notify the delegate',
       () => voip.delegate.handleGroupCallEnded(this),
     );
-    // Only now, so new memberships for this id wait for [left] meanwhile.
-    if (identical(voip.groupCalls[id], this)) voip.groupCalls.remove(id);
     setState(GroupCallState.ended);
-    _left.complete();
 
     final failure = error;
     if (failure != null) Error.throwWithStackTrace(failure, stackTrace!);
@@ -390,7 +386,6 @@ class GroupCallSession {
   }
 
   Future<void>? _forceRejoinInFlight;
-  Future<String?>? _forceRejoinWrite;
   Timer? _forceRejoinRetry;
   int _forceRejoinFailures = 0;
 
@@ -422,7 +417,7 @@ class GroupCallSession {
 
     try {
       // rejoin the call and share the key with the existing participants
-      await (_forceRejoinWrite = sendMemberStateEvent());
+      await (_membershipWrite = sendMemberStateEvent());
       if (!_leaveStarted) await backend.preShareKey(this);
       _forceRejoinFailures = 0;
     } catch (e, s) {
