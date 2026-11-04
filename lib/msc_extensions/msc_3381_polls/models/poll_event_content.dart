@@ -16,7 +16,7 @@ class PollEventContent {
 
   factory PollEventContent.fromJson(Map<String, dynamic> json) =>
       PollEventContent(
-        mText: json[mTextJsonKey],
+        mText: json[mTextJsonKey] ?? json['body'] ?? '',
         pollStartContent: PollStartContent.fromJson(json[startType]),
       );
 
