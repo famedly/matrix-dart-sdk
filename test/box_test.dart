@@ -97,6 +97,38 @@ void main() {
       await box.clear();
     });
 
+    test('Collection.batch', () async {
+      final cats = collection.openBox<Map>('cats');
+      final dogs = collection.openBox<Map>('dogs');
+      await cats.put('old', data);
+      await collection.batch((txn) async {
+        await cats.put('fluffy', data, txn);
+        await dogs.put('loki', data2, txn);
+        await cats.delete('old', txn);
+      });
+      // Read from the store, not from the cache.
+      cats.clearQuickAccessCache();
+      dogs.clearQuickAccessCache();
+      expect(await cats.get('fluffy'), data);
+      expect(await dogs.get('loki'), data2);
+      expect(await cats.get('old'), null);
+      await cats.clear();
+      await dogs.clear();
+    });
+
+    test('Collection.batch writes nothing if the action throws', () async {
+      final cats = collection.openBox<Map>('cats');
+      await expectLater(
+        collection.batch((txn) async {
+          await cats.put('fluffy', data, txn);
+          throw Exception('failed');
+        }),
+        throwsException,
+      );
+      cats.clearQuickAccessCache();
+      expect(await cats.get('fluffy'), null);
+    });
+
     test('Box.deleteAll', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('fluffy', data);
