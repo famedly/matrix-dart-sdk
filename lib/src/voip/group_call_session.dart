@@ -183,6 +183,8 @@ class GroupCallSession {
     if (_leaveStarted) return;
     _leaveStarted = true;
     _cancelForceRejoin();
+    // A refresh started while we wait below could land after the removal.
+    _resendMemberStateEventTimer?.cancel();
     // Before setting leaving, which initLocalStream would overwrite.
     await _localStreamInit?.catchError((_) => null);
     setState(GroupCallState.leaving);
