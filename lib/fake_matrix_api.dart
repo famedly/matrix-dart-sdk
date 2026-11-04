@@ -56,6 +56,10 @@ class FakeMatrixApi extends BaseClient {
 
   static FakeMatrixApi? currentApi;
 
+  /// Files uploaded without an explicit mock, shared by all instances so that
+  /// one client can download what another one uploaded.
+  static final media = <String, Uint8List>{};
+
   static Future<String> firstWhereValue(String value) {
     return firstWhere((v) => v == value);
   }
@@ -110,7 +114,7 @@ class FakeMatrixApi extends BaseClient {
     final method = request.method;
     final dynamic data = method == 'GET'
         ? request.url.queryParameters
-        : request.body;
+        : utf8.decode(request.bodyBytes, allowMalformed: true);
     dynamic res = {};
     var statusCode = 200;
 
@@ -144,6 +148,19 @@ class FakeMatrixApi extends BaseClient {
 
     // Call API
     (_calledEndpoints[action] ??= <dynamic>[]).add(data);
+    if (method == 'GET' &&
+        action.contains('/download/fakeserver.notexisting/')) {
+      _apiCallStream.add(action);
+      // Without the query and the optional file name.
+      final mxc = request.url.path.split('/download/').last.split('/');
+      final bytes = media['mxc://${mxc.take(2).join('/')}'];
+      return bytes == null
+          ? Response(
+              json.encode({'errcode': 'M_NOT_FOUND', 'error': 'Not found'}),
+              404,
+            )
+          : Response.bytes(bytes, 200);
+    }
     if (request.url.origin ==
             'https://fakeserverpriortoauthmedia.notexisting' &&
         action.contains('/client/versions')) {
@@ -210,6 +227,10 @@ class FakeMatrixApi extends BaseClient {
             statusCode = 405;
           }
         }
+      } else if (method == 'POST' && action.startsWith('/media/v3/upload')) {
+        final mxc = 'mxc://fakeserver.notexisting/media${media.length}';
+        media[mxc] = request.bodyBytes;
+        res = {'content_uri': mxc};
       } else if (method == 'PUT' &&
           action.contains('/client/v3/sendToDevice/')) {
         res = {};
@@ -2385,7 +2406,7 @@ class FakeMatrixApi extends BaseClient {
             },
           if (decodeJson(
                 req,
-              )['one_time_keys']['@test:fakeServer.notExisting'] !=
+              )['one_time_keys']['@test:fakeServer.notExisting']?['GHTYAJCE'] !=
               null)
             '@test:fakeServer.notExisting': {
               'GHTYAJCE': {

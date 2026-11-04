@@ -103,6 +103,24 @@ class OlmManager {
     return signableJson.toJson();
   }
 
+  /// Our own device keys, signed by this device. Sent along with every olm
+  /// message as `sender_device_keys` (MSC4147).
+  Map<String, Object?> signedDeviceKeys() {
+    final keys = _olmAccount!.identityKeys;
+    return signJson({
+      'user_id': client.userID,
+      'device_id': ourDeviceId,
+      'algorithms': [
+        AlgorithmTypes.olmV1Curve25519AesSha2,
+        AlgorithmTypes.megolmV1AesSha2,
+      ],
+      'keys': {
+        'curve25519:$ourDeviceId': keys.curve25519.toBase64(),
+        'ed25519:$ourDeviceId': keys.ed25519.toBase64(),
+      },
+    });
+  }
+
   String signString(String s) {
     return _olmAccount!.sign(s).toBase64();
   }
@@ -168,23 +186,9 @@ class OlmManager {
       }
 
       // and now generate the payload to upload
-      var deviceKeys = <String, dynamic>{
-        'user_id': client.userID,
-        'device_id': ourDeviceId,
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2,
-        ],
-        'keys': <String, dynamic>{},
-      };
-
-      if (uploadDeviceKeys) {
-        final keys = olmAccount.identityKeys;
-        deviceKeys['keys']['curve25519:$ourDeviceId'] = keys.curve25519
-            .toBase64();
-        deviceKeys['keys']['ed25519:$ourDeviceId'] = keys.ed25519.toBase64();
-        deviceKeys = signJson(deviceKeys);
-      }
+      final deviceKeys = uploadDeviceKeys
+          ? MatrixDeviceKeys.fromJson(signedDeviceKeys())
+          : null;
 
       // now sign all the one-time keys
       for (final entry in olmAccount.oneTimeKeys.entries) {
@@ -226,9 +230,7 @@ class OlmManager {
         await client.uploadDehydratedDevice(
           deviceId: ourDeviceId!,
           initialDeviceDisplayName: client.dehydratedDeviceDisplayName,
-          deviceKeys: uploadDeviceKeys
-              ? MatrixDeviceKeys.fromJson(deviceKeys)
-              : null,
+          deviceKeys: deviceKeys,
           oneTimeKeys: signedOneTimeKeys,
           fallbackKeys: signedFallbackKeys,
           deviceData: {
@@ -242,9 +244,7 @@ class OlmManager {
       }
       final currentUpload = this.currentUpload = CancelableOperation.fromFuture(
         client.uploadKeys(
-          deviceKeys: uploadDeviceKeys
-              ? MatrixDeviceKeys.fromJson(deviceKeys)
-              : null,
+          deviceKeys: deviceKeys,
           oneTimeKeys: signedOneTimeKeys,
           fallbackKeys: signedFallbackKeys,
         ),
@@ -475,12 +475,48 @@ class OlmManager {
         plainContent['recipient_keys']['ed25519'] != fingerprintKey) {
       throw DecryptException(DecryptException.ownFingerprintDoesntMatch);
     }
+    final senderDeviceKeys = _validSenderDeviceKeys(
+      plainContent,
+      event.sender,
+      senderKey,
+    );
     return ToDeviceEvent(
       content: plainContent['content'],
       encryptedContent: event.content,
       type: plainContent['type'],
       sender: event.sender,
+      senderDeviceKeys: senderDeviceKeys,
     );
+  }
+
+  /// Validates the optional `sender_device_keys` (MSC4147) as the spec
+  /// requires. Events with invalid device keys must be discarded.
+  DeviceKeys? _validSenderDeviceKeys(
+    Map<String, dynamic> plainContent,
+    String sender,
+    String senderKey,
+  ) {
+    final json = plainContent['sender_device_keys'];
+    if (json == null) return null;
+    DeviceKeys? deviceKeys;
+    try {
+      deviceKeys = DeviceKeys.fromJson(
+        Map<String, dynamic>.from(json as Map),
+        client,
+      );
+    } catch (e) {
+      Logs().w('[OlmManager] Unable to parse sender_device_keys', e);
+    }
+    if (deviceKeys == null ||
+        deviceKeys.userId != sender ||
+        deviceKeys.curve25519Key != senderKey ||
+        deviceKeys.ed25519Key == null ||
+        deviceKeys.ed25519Key !=
+            plainContent.tryGetMap<String, Object?>('keys')?['ed25519'] ||
+        !deviceKeys.selfSigned) {
+      throw DecryptException(DecryptException.invalidSenderDeviceKeys);
+    }
+    return deviceKeys;
   }
 
   Future<List<OlmSession>> getOlmSessionsFromDatabase(String senderKey) async {
@@ -680,6 +716,7 @@ class OlmManager {
       'keys': {'ed25519': fingerprintKey},
       'recipient': device.userId,
       'recipient_keys': {'ed25519': device.ed25519Key},
+      'sender_device_keys': signedDeviceKeys(),
     };
     final encryptResult = sess.first.session!.encrypt(json.encode(fullPayload));
     await storeOlmSession(sess.first);
