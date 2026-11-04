@@ -711,7 +711,7 @@ void main() async {
       expect(event.roomMemberChangeType, RoomMemberChangeType.join);
       expect(
         event.calcLocalizedBody(MatrixDefaultLocalizations()),
-        'Alice joined the chat',
+        'Alice Margatroid joined the chat',
       );
       expect(event.isEventTypeKnown, true);
 
@@ -838,13 +838,16 @@ void main() async {
         'state_key': '@alice:example.org',
         'type': 'm.room.member',
         'unsigned': {
-          'prev_content': {'membership': 'invite'},
+          'prev_content': {
+            'membership': 'invite',
+            'displayname': 'Alice Margatroid',
+          },
         },
       }, room);
       expect(event.roomMemberChangeType, RoomMemberChangeType.rejectInvite);
       expect(
         event.calcLocalizedBody(MatrixDefaultLocalizations()),
-        'Alice rejected the invitation',
+        'Alice Margatroid rejected the invitation',
       );
       expect(event.isEventTypeKnown, true);
 
@@ -1162,6 +1165,39 @@ void main() async {
         'Unknown event unknown.event.type',
       );
       expect(event.isEventTypeKnown, false);
+
+      event = Event.fromJson({
+        'content': {'membership': 'join', 'avatar_url': 'mxc://new'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.member',
+        'unsigned': {
+          'prev_content': {'membership': 'join', 'avatar_url': 'mxc://old'},
+        },
+      }, room);
+      expect(
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        ' changed the profile avatar',
+      );
+
+      room.setState(
+        User('@alice:example.org', displayName: 'Alice Margatroid', room: room),
+      );
+      event = Event.fromJson({
+        'content': {'membership': 'join', 'displayname': 'Alice Old'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@alice:example.org',
+        'state_key': '@alice:example.org',
+        'type': 'm.room.member',
+      }, room);
+      expect(
+        event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        'Alice Margatroid joined the chat',
+      );
 
       await matrix.dispose(closeDatabase: true);
     });
