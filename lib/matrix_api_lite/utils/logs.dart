@@ -23,6 +23,9 @@ class Logs {
   Level level = Level.info;
   bool nativeColors = true;
 
+  /// How many log events [outputEvents] keeps. The oldest ones are dropped first.
+  int maxOutputEvents = 1000;
+
   final List<LogEvent> outputEvents = [];
 
   /// Callback to receive log events for external logging (e.g., Sentry).
@@ -33,6 +36,9 @@ class Logs {
 
   void addLogEvent(LogEvent logEvent) {
     outputEvents.add(logEvent);
+    if (outputEvents.length > maxOutputEvents) {
+      outputEvents.removeRange(0, outputEvents.length - maxOutputEvents);
+    }
 
     // Call external logger callback if set
     onLog?.call(logEvent);
