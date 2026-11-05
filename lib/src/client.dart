@@ -1259,9 +1259,10 @@ class Client extends MatrixApi {
     final leave = syncResp.rooms?.leave;
     final archivedRooms = <ArchivedRoom>[];
     if (leave != null) {
-      // Decrypt rooms in parallel. Within a room, events stay sequential so a
+      // Decrypt a few rooms at a time so key backup lookups stay under
+      // homeserver rate limits. Within a room, events stay sequential so a
       // shared session is only requested once.
-      final decryptFutures = <Future<void>>[];
+      final decryptJobs = <Future<void> Function()>[];
       for (final entry in leave.entries) {
         final room = Room(
           id: entry.key,
@@ -1314,27 +1315,48 @@ class Client extends MatrixApi {
           ),
         );
         archivedRooms.add(ArchivedRoom(room: room, timeline: timeline));
-        decryptFutures.add(() async {
+        decryptJobs.add(() async {
+          // Sessions still undecryptable after one awaited backup attempt -
+          // later events of these sessions must not trigger another request.
+          final unavailableSessions = <String>{};
           for (var i = 0; i < timeline.events.length; i++) {
             // Try to decrypt encrypted events but don't update the database.
             if (room.encrypted && room.client.encryptionEnabled) {
-              if (timeline.events[i].type == EventTypes.Encrypted) {
-                timeline
-                    .events[i] = await room.client.encryption!.decryptRoomEvent(
-                  timeline.events[i],
+              final event = timeline.events[i];
+              if (event.type == EventTypes.Encrypted) {
+                final encryption = room.client.encryption!;
+                final sessionId = event.content.tryGet<String>('session_id');
+                if (sessionId != null &&
+                    unavailableSessions.contains(sessionId)) {
+                  timeline.events[i] = encryption.decryptRoomEventSync(event);
+                  continue;
+                }
+                timeline.events[i] = await encryption.decryptRoomEvent(
+                  event,
                   // Archived rooms are not in client.rooms, so a key fetched in the
                   // background never reaches this timeline. Wait for the backup.
                   waitForKeyBackupAndRetry: true,
                 );
+                if (sessionId != null &&
+                    timeline.events[i].type == EventTypes.Encrypted) {
+                  unavailableSessions.add(sessionId);
+                }
               }
             }
           }
           room.lastEvent = timeline.events.firstWhereOrNull(
             (event) => roomPreviewLastEvents.contains(event.type),
           );
-        }());
+        });
       }
-      await Future.wait(decryptFutures);
+      final jobs = decryptJobs.iterator;
+      await Future.wait(
+        List.generate(4, (_) async {
+          while (jobs.moveNext()) {
+            await jobs.current();
+          }
+        }),
+      );
     }
 
     // Sort the archived rooms by last event originServerTs as this is the

@@ -330,6 +330,29 @@ void main() {
           eventId: '\$archive',
           body: archiveBody,
         );
+        // A session whose backup lookup keeps failing is only requested once,
+        // not once per event.
+        final rateLimitedSession = vod.GroupSession();
+        var rateLimitedCalls = 0;
+        FakeMatrixApi
+                .currentApi!
+                .api['GET']!['/client/v3/room_keys/keys/${Uri.encodeComponent(archiveRoomId)}/${Uri.encodeComponent(rateLimitedSession.sessionId)}?version=5'] =
+            (_) {
+              rateLimitedCalls++;
+              return {
+                'errcode': 'M_LIMIT_EXCEEDED',
+                'error': 'slow down',
+                'retry_after_ms': 1,
+              };
+            };
+        final rateLimitedEvents = [
+          for (var i = 0; i < 3; i++)
+            encryptedEvent(
+              rateLimitedSession,
+              eventId: '\$rateLimited$i',
+              body: 'rate limited $i',
+            ).toJson(),
+        ];
         FakeMatrixApi
                 .currentApi!
                 .api['GET']!['/client/v3/sync?filter=%7B%22room%22%3A%7B%22include_leave%22%3Atrue%2C%22state%22%3A%7B%22lazy_load_members%22%3Atrue%7D%2C%22timeline%22%3A%7B%22limit%22%3A10%7D%7D%7D&timeout=0'] =
@@ -353,7 +376,7 @@ void main() {
                       ],
                     },
                     'timeline': {
-                      'events': [archiveEvent.toJson()],
+                      'events': [archiveEvent.toJson(), ...rateLimitedEvents],
                       'prev_batch': 't_archive_prev',
                     },
                   },
@@ -365,6 +388,8 @@ void main() {
           archive.single.timeline.events.map((event) => event.body),
           contains(archiveBody),
         );
+        // One request plus its rate-limit retry inside loadSingleKey.
+        expect(rateLimitedCalls, 2);
 
         final archiveHistorySession = vod.GroupSession();
         putInOnlineBackup(archiveHistorySession, roomId: archiveRoomId);
