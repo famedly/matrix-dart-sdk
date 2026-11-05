@@ -51,6 +51,46 @@ void main() {
       );
     });
 
+    test('failed backup request can be retried', () async {
+      final keyManager = client.encryption!.keyManager;
+      keyManager.clearInboundGroupSessions();
+      final room = client.getRoomById(roomId)!;
+      final path =
+          '/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=5';
+      final api = FakeMatrixApi.currentApi!.api['GET']!;
+      final backupKey = api[path];
+      api[path] = (_) => {'errcode': 'M_LIMIT_EXCEEDED', 'error': 'slow down'};
+      await expectLater(
+        keyManager.maybeAutoRequest(
+          room,
+          sessionId,
+          senderKey,
+          awaitRequest: true,
+        ),
+        throwsA(isA<MatrixException>()),
+      );
+      // A rate limit is retried once inside loadSingleKey.
+      var calls = 0;
+      api[path] = (req) => calls++ == 0
+          ? {
+              'errcode': 'M_LIMIT_EXCEEDED',
+              'error': 'slow down',
+              'retry_after_ms': 1,
+            }
+          : backupKey!(req);
+      await keyManager.maybeAutoRequest(
+        room,
+        sessionId,
+        senderKey,
+        awaitRequest: true,
+      );
+      expect(
+        keyManager.getInboundGroupSession(roomId, sessionId)?.sessionId,
+        sessionId,
+      );
+      expect(calls, 2);
+    });
+
     test('Load all Room Keys', () async {
       final keyManager = client.encryption!.keyManager;
       const roomId = '!getroomkeys726s6s6q:example.com';
@@ -128,7 +168,7 @@ void main() {
     });
 
     test(
-      'searchEvents and Timeline.export decrypt events whose session is only in online key backup',
+      'searchEvents, Timeline.export and archived timeline history decrypt events whose session is only in online key backup',
       () async {
         const backupRoomId = '!searchBackupOnly:example.com';
         const searchBody = 'a needle in the encrypted haystack';
@@ -142,7 +182,10 @@ void main() {
 
         // Call before [encryptedEvent]. The backup key is exported at index 0,
         // which is wrong once a message has been encrypted.
-        void putInOnlineBackup(vod.GroupSession session) {
+        void putInOnlineBackup(
+          vod.GroupSession session, {
+          String roomId = backupRoomId,
+        }) {
           final inbound = vod.InboundGroupSession(session.sessionKey);
           final encryptor = vod.PkEncryption.fromPublicKey(
             vod.Curve25519PublicKey.fromBase64(
@@ -162,7 +205,7 @@ void main() {
               .toBase64();
           FakeMatrixApi
                   .currentApi!
-                  .api['GET']!['/client/v3/room_keys/keys/${Uri.encodeComponent(backupRoomId)}/${Uri.encodeComponent(session.sessionId)}?version=5'] =
+                  .api['GET']!['/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(session.sessionId)}?version=5'] =
               (_) => {
                 'first_message_index': 0,
                 'forwarded_count': 0,
@@ -274,6 +317,101 @@ void main() {
           timelineBody,
           databaseBody,
         ]);
+
+        // 9. An archived room isn't in client.rooms, so the listing and later
+        //    history both wait for the key backup.
+        const archiveRoomId = '!archiveBackupOnly:example.com';
+        const archiveBody = 'from the archive';
+        const archiveHistoryBody = 'from the archive history';
+        final archiveSession = vod.GroupSession();
+        putInOnlineBackup(archiveSession, roomId: archiveRoomId);
+        final archiveEvent = encryptedEvent(
+          archiveSession,
+          eventId: '\$archive',
+          body: archiveBody,
+        );
+        // A session whose backup lookup keeps failing is only requested once,
+        // not once per event.
+        final rateLimitedSession = vod.GroupSession();
+        var rateLimitedCalls = 0;
+        FakeMatrixApi
+                .currentApi!
+                .api['GET']!['/client/v3/room_keys/keys/${Uri.encodeComponent(archiveRoomId)}/${Uri.encodeComponent(rateLimitedSession.sessionId)}?version=5'] =
+            (_) {
+              rateLimitedCalls++;
+              return {
+                'errcode': 'M_LIMIT_EXCEEDED',
+                'error': 'slow down',
+                'retry_after_ms': 1,
+              };
+            };
+        final rateLimitedEvents = [
+          for (var i = 0; i < 3; i++)
+            encryptedEvent(
+              rateLimitedSession,
+              eventId: '\$rateLimited$i',
+              body: 'rate limited $i',
+            ).toJson(),
+        ];
+        FakeMatrixApi
+                .currentApi!
+                .api['GET']!['/client/v3/sync?filter=%7B%22room%22%3A%7B%22include_leave%22%3Atrue%2C%22state%22%3A%7B%22lazy_load_members%22%3Atrue%7D%2C%22timeline%22%3A%7B%22limit%22%3A10%7D%7D%7D&timeout=0'] =
+            (_) => {
+              'next_batch': 't_archive',
+              'rooms': {
+                'leave': {
+                  archiveRoomId: {
+                    'state': {
+                      'events': [
+                        {
+                          'type': EventTypes.Encryption,
+                          'state_key': '',
+                          'content': {
+                            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+                          },
+                          'event_id': '\$encryption',
+                          'sender': '@alice:example.com',
+                          'origin_server_ts': 0,
+                        },
+                      ],
+                    },
+                    'timeline': {
+                      'events': [archiveEvent.toJson(), ...rateLimitedEvents],
+                      'prev_batch': 't_archive_prev',
+                    },
+                  },
+                },
+              },
+            };
+        final archive = await client.loadArchiveWithTimeline();
+        expect(
+          archive.single.timeline.events.map((event) => event.body),
+          contains(archiveBody),
+        );
+        // One request plus its rate-limit retry inside loadSingleKey.
+        expect(rateLimitedCalls, 2);
+
+        final archiveHistorySession = vod.GroupSession();
+        putInOnlineBackup(archiveHistorySession, roomId: archiveRoomId);
+        final archiveHistoryEvent = encryptedEvent(
+          archiveHistorySession,
+          eventId: '\$archiveHistory',
+          body: archiveHistoryBody,
+        );
+        FakeMatrixApi
+                .currentApi!
+                .api['GET']!['/client/v3/rooms/${Uri.encodeComponent(archiveRoomId)}/messages?from=t_archive_prev&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D'] =
+            (_) => {
+              'chunk': [archiveHistoryEvent.toJson()],
+              'start': 't_archive_prev',
+              'end': 't_archive_end',
+            };
+        await archive.single.timeline.requestHistory();
+        expect(
+          archive.single.timeline.events.map((event) => event.body),
+          contains(archiveHistoryBody),
+        );
+        archive.single.timeline.cancelSubscriptions();
       },
     );
 

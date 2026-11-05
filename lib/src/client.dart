@@ -1259,6 +1259,10 @@ class Client extends MatrixApi {
     final leave = syncResp.rooms?.leave;
     final archivedRooms = <ArchivedRoom>[];
     if (leave != null) {
+      // Decrypt a few rooms at a time so key backup lookups stay under
+      // homeserver rate limits. Within a room, events stay sequential so a
+      // shared session is only requested once.
+      final decryptJobs = <Future<void> Function()>[];
       for (final entry in leave.entries) {
         final room = Room(
           id: entry.key,
@@ -1271,7 +1275,33 @@ class Client extends MatrixApi {
               ) ??
               <String, BasicEvent>{},
         );
-        entry.value.state?.forEach(room.setState);
+
+        entry.value.state?.forEach(
+          (state) => _setRoomState(
+            room,
+            state,
+            filterPartial: false,
+            notifyRoomState: false,
+          ),
+        );
+        // `state` only holds state from before the timeline window. A young
+        // room's own state events (e.g. m.room.encryption) arrive in the
+        // timeline instead, so apply those too, in chronological order.
+        for (final event in entry.value.timeline?.events ?? <MatrixEvent>[]) {
+          if (event.stateKey != null) {
+            if (event.type == EventTypes.Encryption &&
+                _isIgnoredEncryptionEvent(room, event)) {
+              continue;
+            }
+            _setRoomState(
+              room,
+              Event.fromMatrixEvent(event, room),
+              filterPartial: false,
+              notifyRoomState: false,
+            );
+          }
+        }
+
         final timeline = Timeline(
           room: room,
           chunk: TimelineChunk(
@@ -1284,22 +1314,49 @@ class Client extends MatrixApi {
             prevBatch: entry.value.timeline?.prevBatch ?? '',
           ),
         );
-        for (var i = 0; i < timeline.events.length; i++) {
-          // Try to decrypt encrypted events but don't update the database.
-          if (room.encrypted && room.client.encryptionEnabled) {
-            if (timeline.events[i].type == EventTypes.Encrypted) {
-              await room.client.encryption!
-                  .decryptRoomEvent(timeline.events[i])
-                  .then((decrypted) => timeline.events[i] = decrypted);
+        archivedRooms.add(ArchivedRoom(room: room, timeline: timeline));
+        decryptJobs.add(() async {
+          // Sessions still undecryptable after one awaited backup attempt -
+          // later events of these sessions must not trigger another request.
+          final unavailableSessions = <String>{};
+          for (var i = 0; i < timeline.events.length; i++) {
+            // Try to decrypt encrypted events but don't update the database.
+            if (room.encrypted && room.client.encryptionEnabled) {
+              final event = timeline.events[i];
+              if (event.type == EventTypes.Encrypted) {
+                final encryption = room.client.encryption!;
+                final sessionId = event.content.tryGet<String>('session_id');
+                if (sessionId != null &&
+                    unavailableSessions.contains(sessionId)) {
+                  timeline.events[i] = encryption.decryptRoomEventSync(event);
+                  continue;
+                }
+                timeline.events[i] = await encryption.decryptRoomEvent(
+                  event,
+                  // Archived rooms are not in client.rooms, so a key fetched in the
+                  // background never reaches this timeline. Wait for the backup.
+                  waitForKeyBackupAndRetry: true,
+                );
+                if (sessionId != null &&
+                    timeline.events[i].type == EventTypes.Encrypted) {
+                  unavailableSessions.add(sessionId);
+                }
+              }
             }
           }
-        }
-        room.lastEvent = timeline.events.firstWhereOrNull(
-          (event) => roomPreviewLastEvents.contains(event.type),
-        );
-
-        archivedRooms.add(ArchivedRoom(room: room, timeline: timeline));
+          room.lastEvent = timeline.events.firstWhereOrNull(
+            (event) => roomPreviewLastEvents.contains(event.type),
+          );
+        });
       }
+      final jobs = decryptJobs.iterator;
+      await Future.wait(
+        List.generate(4, (_) async {
+          while (jobs.moveNext()) {
+            await jobs.current();
+          }
+        }),
+      );
     }
 
     // Sort the archived rooms by last event originServerTs as this is the
@@ -2885,6 +2942,48 @@ class Client extends MatrixApi {
   /// Stores event that came down /sync but didn't get decrypted because of missing keys yet.
   final List<_EventPendingDecryption> _eventsPendingDecryption = [];
 
+  /// The client must ignore any new `m.room.encryption` event once encryption
+  /// is already enabled, to prevent man-in-the-middle attacks.
+  bool _isIgnoredEncryptionEvent(Room room, StrippedStateEvent event) {
+    if (room.encrypted &&
+        event.content.tryGet<String>('algorithm') !=
+            room
+                .getState(EventTypes.Encryption)
+                ?.content
+                .tryGet<String>('algorithm')) {
+      Logs().wtf(
+        'Received an `m.room.encryption` event in a room, where encryption is already enabled! This event must be ignored as it could be an attack!',
+        jsonEncode(event.toJson()),
+      );
+      return true;
+    }
+    return false;
+  }
+
+  /// Applies [event] as room state. When [filterPartial] is set, a partially
+  /// loaded room only keeps important state and members already in memory,
+  /// matching sync. Archived rooms pass `filterPartial: false`.
+  void _setRoomState(
+    Room room,
+    StrippedStateEvent event, {
+    bool filterPartial = true,
+    bool notifyRoomState = true,
+  }) {
+    if (filterPartial) {
+      final stateKey = event.stateKey;
+      final memberAlreadyInMemory =
+          event.type == EventTypes.RoomMember &&
+          stateKey != null &&
+          room.getState(EventTypes.RoomMember, stateKey) != null;
+      if (room.partial &&
+          !importantStateEvents.contains(event.type) &&
+          !memberAlreadyInMemory) {
+        return;
+      }
+    }
+    room.setState(event, notifyRoomState: notifyRoomState);
+  }
+
   Future<void> _handleRoomEvents(
     Room room,
     List<StrippedStateEvent> events,
@@ -2897,25 +2996,11 @@ class Client extends MatrixApi {
 
     for (var event in events) {
       if (event.type == EventTypes.Encryption) {
-        // The client must ignore any new m.room.encryption event to prevent
-        // man-in-the-middle attacks!
-        if ((room.encrypted &&
-            event.content.tryGet<String>('algorithm') !=
-                room
-                    .getState(EventTypes.Encryption)
-                    ?.content
-                    .tryGet<String>('algorithm'))) {
-          Logs().wtf(
-            'Received an `m.room.encryption` event in a room, where encryption is already enabled! This event must be ignored as it could be an attack!',
-            jsonEncode(event.toJson()),
-          );
-          continue;
-        } else {
-          // Encryption has been enabled in a room -> Reset tracked user IDs so
-          // sync they can be calculated again.
-          Logs().i('End to end encryption enabled in', room.id);
-          _trackedUserIds = null;
-        }
+        if (_isIgnoredEncryptionEvent(room, event)) continue;
+        // Encryption has been enabled in a room -> Reset tracked user IDs so
+        // sync they can be calculated again.
+        Logs().i('End to end encryption enabled in', room.id);
+        _trackedUserIds = null;
       }
 
       if (event is MatrixEvent &&
@@ -3155,14 +3240,7 @@ class Client extends MatrixApi {
         // Update the room state:
         final stateKey = event.stateKey;
         if (stateKey != null) {
-          final memberAlreadyInMemory =
-              event.type == EventTypes.RoomMember &&
-              room.getState(EventTypes.RoomMember, stateKey) != null;
-          if (!room.partial ||
-              importantStateEvents.contains(event.type) ||
-              memberAlreadyInMemory) {
-            room.setState(event);
-          }
+          _setRoomState(room, event);
 
           // New members must be added to the tracked user IDs for encryption
           // even if the room is only partially loaded, as otherwise their
