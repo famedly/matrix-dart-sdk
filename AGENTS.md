@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - Squash related commits together so the history stays clean (one logical change per commit).
 - Keep code comments concise and developer-style — explain intent, not the obvious.
 - Keep PR descriptions short and clean — a brief summary plus key verification, not exhaustive detail.
-- Commits must always be signed, authored and committed solely by `cursoragent@cursor.com`, with no `Co-authored-by` trailer (bypass the Cursor co-author hook with `git commit --no-verify`).
+- Commits must always be signed.
 
 ## Cursor Cloud specific instructions
 
