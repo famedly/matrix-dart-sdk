@@ -3,6 +3,10 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [16.0.1] 6th Nov 2026
+
+- fix: allow sdp_transform 0.3.x again so matrix resolves with livekit_client (td)
+
 ## [16.0.0] 6th Nov 2026
 
 - fix(voip): close leave races with enter, own membership echoes and delegate teardown (td)
