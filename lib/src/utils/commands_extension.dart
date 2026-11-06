@@ -28,6 +28,7 @@ extension CommandsClientExtension on Client {
   /// - `txid`: an optional transaction ID
   /// - `threadRootEventId`: an optional root event ID of a thread the command is supposed to run on
   /// - `threadLastEventId`: an optional most recent event ID of a thread the command is supposed to run on
+  /// - `addMentions`: whether text commands should resolve mention metadata
   /// - `stdout`: an optional [StringBuffer] the command can write output to. This is meant as tiny implementation of https://en.wikipedia.org/wiki/Standard_streams in order to process advanced command output to the matrix client. See [DefaultCommandOutput] for a rough idea.
   Future<String?> parseAndRunCommand(
     Room? room,
@@ -37,6 +38,7 @@ extension CommandsClientExtension on Client {
     String? txid,
     String? threadRootEventId,
     String? threadLastEventId,
+    bool addMentions = true,
     StringBuffer? stdout,
   }) async {
     final args = CommandArgs(
@@ -48,6 +50,7 @@ extension CommandsClientExtension on Client {
       txid: txid,
       threadRootEventId: threadRootEventId,
       threadLastEventId: threadLastEventId,
+      addMentions: addMentions,
     );
     if (!msg.startsWith('/')) {
       final sendCommand = commands['send'];
@@ -102,6 +105,7 @@ extension CommandsClientExtension on Client {
         txid: args.txid,
         threadRootEventId: args.threadRootEventId,
         threadLastEventId: args.threadLastEventId,
+        addMentions: args.addMentions,
       );
     });
     addCommand('me', (args, stdout) async {
@@ -118,6 +122,7 @@ extension CommandsClientExtension on Client {
         txid: args.txid,
         threadRootEventId: args.threadRootEventId,
         threadLastEventId: args.threadLastEventId,
+        addMentions: args.addMentions,
       );
     });
     addCommand('dm', (args, stdout) async {
@@ -163,6 +168,7 @@ extension CommandsClientExtension on Client {
         txid: args.txid,
         threadRootEventId: args.threadRootEventId,
         threadLastEventId: args.threadLastEventId,
+        addMentions: args.addMentions,
       );
     });
     addCommand('html', (args, stdout) async {
@@ -496,6 +502,7 @@ class CommandArgs {
   String? txid;
   String? threadRootEventId;
   String? threadLastEventId;
+  bool addMentions;
 
   CommandArgs({
     required this.msg,
@@ -506,6 +513,7 @@ class CommandArgs {
     this.txid,
     this.threadRootEventId,
     this.threadLastEventId,
+    this.addMentions = true,
   });
 }
 
