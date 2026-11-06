@@ -68,6 +68,13 @@ abstract class CallBackend {
     List<CallParticipant> anyJoined,
   );
 
+  /// A participant that is still in the call but started a new session, e.g.
+  /// by reloading, and so lost the keys it had.
+  Future<void> onRejoinedParticipant(
+    GroupCallSession groupCall,
+    List<CallParticipant> rejoined,
+  ) => onNewParticipant(groupCall, rejoined);
+
   Future<void> onLeftParticipant(
     GroupCallSession groupCall,
     List<CallParticipant> anyLeft,

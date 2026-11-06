@@ -515,6 +515,21 @@ class LiveKitBackend extends CallBackend {
     List<CallParticipant> anyJoined,
   ) => _changeEncryptionKey(groupCall, anyJoined, true);
 
+  /// The same device already had our key before it reloaded, so it gets the
+  /// current one again instead of everyone rotating.
+  @override
+  Future<void> onRejoinedParticipant(
+    GroupCallSession groupCall,
+    List<CallParticipant> rejoined,
+  ) async {
+    if (!e2eeEnabled) return;
+    await _sendEncryptionKeysEvent(
+      groupCall,
+      _latestLocalKeyIndex,
+      sendTo: rejoined,
+    );
+  }
+
   @override
   Future<void> onLeftParticipant(
     GroupCallSession groupCall,

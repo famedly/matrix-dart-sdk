@@ -114,5 +114,30 @@ void main() {
         expect(keyProvider.localKeyIndices, [0, 1]);
       },
     );
+
+    test(
+      'a rejoined participant gets the current key, nobody rotates',
+      () async {
+        await backend.preShareKey(groupCall);
+        FakeMatrixApi.calledEndpoints.clear();
+
+        await backend.onRejoinedParticipant(groupCall, [
+          CallParticipant(
+            voip,
+            userId: '@alice:example.com',
+            deviceId: 'JLAFKJWSCS',
+          ),
+        ]);
+
+        expect(backend.latestLocalKeyIndex, 0);
+        expect(keyProvider.localKeyIndices, [0]);
+        expect(
+          FakeMatrixApi.calledEndpoints.keys.where(
+            (endpoint) => endpoint.contains('/sendToDevice/'),
+          ),
+          isNotEmpty,
+        );
+      },
+    );
   });
 }
