@@ -3,6 +3,28 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [16.0.0] 6th Nov 2026
+
+- fix(voip): close leave races with enter, own membership echoes and delegate teardown (td)
+- fix(voip): don't hold leave on rejoin key sharing or other devices' memberships (td)
+- fix(voip): filter own membership echoes at the sync listener (td)
+- fix(voip): ignore non-positive retry_after_ms in the rejoin back-off (td)
+- fix(voip): keep the delayed leave when removing the membership fails (td)
+- fix(voip): let leave wait for any in-flight membership write (td)
+- fix(voip): only clear currentGroupCID when the leaving call owns it (td)
+- fix(voip): only wait on the enter steps leave has to undo (td)
+- fix(voip): recover calls from failed leaves and rate-limited rejoins (td)
+- fix(voip): stop the membership refresh before leave waits (td)
+- fix: attempt decrypt events from timeline and database + request key if needed during export (Karthikeyan S)
+- fix: failed backup request cannot be retried (Karthikeyan S)
+- fix: keep member names from prev_content for left and declined users (yurtemre7)
+- fix: keep original encrypted event as source on key backup retry (Karthikeyan S)
+- fix: limit archived room decryption to four at a time to avoid rate-limiting (Karthikeyan S)
+- fix: re-send the call key to a member that rejoins under a new membershipID (td)
+- fix: wait for key backup when paginating archived timelines (Karthikeyan S)
+- fix: [BREAKING] pass Room to maybeAutoRequest so it works for archived rooms too (Karthikeyan S)
+- refactor: add isUnableToDecrypt and canRequestSessionKey getters + simplify decryptRoomEvent callers (Karthikeyan S)
+- test: cover last event preview after late session key (#2542) (td)
 
 ## [15.0.0] 3rd Nov 2026
 
