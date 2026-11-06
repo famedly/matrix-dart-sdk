@@ -365,12 +365,6 @@ class GroupCallSession {
           previous != newMembershipIds[p];
     }).toList();
     _membershipIds = newMembershipIds;
-    if (rejoined.isNotEmpty && state == GroupCallState.entered) {
-      Logs().v(
-        'rejoined: ${rejoined.map((e) => e.id)} roomId: ${room.id} groupCallId: $groupCallId',
-      );
-      await backend.onRejoinedParticipant(this, rejoined);
-    }
 
     if (anyJoined.isNotEmpty || anyLeft.isNotEmpty) {
       if (anyJoined.isNotEmpty) {
@@ -413,6 +407,15 @@ class GroupCallSession {
 
       // ignore: deprecated_member_use_from_same_package
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);
+    }
+
+    // Last, so joins and leaves, a leave's key rotation included, never wait
+    // on this send.
+    if (rejoined.isNotEmpty && state == GroupCallState.entered) {
+      Logs().v(
+        'rejoined: ${rejoined.map((e) => e.id)} roomId: ${room.id} groupCallId: $groupCallId',
+      );
+      await backend.onRejoinedParticipant(this, rejoined);
     }
   }
 

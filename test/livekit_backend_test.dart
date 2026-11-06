@@ -66,6 +66,7 @@ void main() {
           makeKeyOnLeaveDelay: Duration(milliseconds: 10),
           makeKeyOnJoinDelay: Duration(seconds: 1),
           useKeyDelay: Duration(milliseconds: 10),
+          encryptionKeySendRetryDelay: Duration(milliseconds: 1),
         ),
       );
       backend = LiveKitBackend(
@@ -139,5 +140,25 @@ void main() {
         );
       },
     );
+
+    test('a key send that keeps failing gives up after 3 retries', () async {
+      await backend.preShareKey(groupCall);
+      FakeMatrixApi.calledEndpoints.clear();
+      FakeMatrixApi.failToDevice = true;
+      addTearDown(() => FakeMatrixApi.failToDevice = false);
+
+      await backend.onRejoinedParticipant(groupCall, [
+        CallParticipant(
+          voip,
+          userId: '@alice:example.com',
+          deviceId: 'JLAFKJWSCS',
+        ),
+      ]);
+
+      final sends = FakeMatrixApi.calledEndpoints.entries
+          .where((e) => e.key.contains('/sendToDevice/'))
+          .expand((e) => e.value);
+      expect(sends, hasLength(4), reason: 'the first try and 3 retries');
+    });
   });
 }
