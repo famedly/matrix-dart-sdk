@@ -39,6 +39,10 @@ class GroupCallSession {
   List<CallParticipant> get participants => List.unmodifiable(_participants);
   final Set<CallParticipant> _participants = {};
 
+  /// Per participant, so a device that reloads and rejoins before its old
+  /// membership expires is still seen as a new session.
+  Map<CallParticipant, String> _membershipIds = {};
+
   String groupCallId;
 
   @Deprecated('Use matrixRTCEventStream instead')
@@ -207,6 +211,7 @@ class GroupCallSession {
     await attempt('dispose the backend', () => backend.dispose(this));
     setState(GroupCallState.localCallFeedUninitialized);
     _participants.clear();
+    _membershipIds = {};
     final id = VoipId(roomId: room.id, callId: groupCallId);
     if (voip.currentGroupCID == id) voip.currentGroupCID = null;
     _resendMemberStateEventTimer?.cancel();
@@ -327,6 +332,7 @@ class GroupCallSession {
     }).toList();
 
     final newP = <CallParticipant>{};
+    final newMembershipIds = <CallParticipant, String>{};
 
     for (final mem in memsForCurrentGroupCall) {
       final rp = CallParticipant(
@@ -336,6 +342,7 @@ class GroupCallSession {
       );
 
       newP.add(rp);
+      newMembershipIds[rp] = mem.membershipId;
 
       if (rp.isLocal) continue;
 
@@ -347,6 +354,23 @@ class GroupCallSession {
     final oldPcopy = Set<CallParticipant>.from(_participants);
     final anyJoined = newPcopy.difference(oldPcopy);
     final anyLeft = oldPcopy.difference(newPcopy);
+
+    // Same device under a new membershipId: it reloaded and lost our keys
+    // without ever leaving. Our own is skipped, the reload leaves a stale
+    // membership of ours in the room state until our new one syncs.
+    final rejoined = newPcopy.intersection(oldPcopy).where((p) {
+      final previous = _membershipIds[p];
+      return p != localParticipant &&
+          previous != null &&
+          previous != newMembershipIds[p];
+    }).toList();
+    _membershipIds = newMembershipIds;
+    if (rejoined.isNotEmpty && state == GroupCallState.entered) {
+      Logs().v(
+        'rejoined: ${rejoined.map((e) => e.id)} roomId: ${room.id} groupCallId: $groupCallId',
+      );
+      await backend.onRejoinedParticipant(this, rejoined);
+    }
 
     if (anyJoined.isNotEmpty || anyLeft.isNotEmpty) {
       if (anyJoined.isNotEmpty) {
