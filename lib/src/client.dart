@@ -2336,8 +2336,8 @@ class Client extends MatrixApi {
       await dispose();
     }
 
-    _id = accessToken = _syncFilterId = homeserver = _userID = _deviceID =
-        _deviceName = _prevBatch = _trackedUserIds = null;
+    _id = accessToken = _accessTokenExpiresAt = _syncFilterId = homeserver =
+        _userID = _deviceID = _deviceName = _prevBatch = _trackedUserIds = null;
     _rooms = [];
     _eventsPendingDecryption.clear();
     await encryption?.dispose();
@@ -2433,8 +2433,11 @@ class Client extends MatrixApi {
         return;
       }
     }();
-    await _handleSoftLogoutFuture;
-    _handleSoftLogoutFuture = null;
+    try {
+      await _handleSoftLogoutFuture;
+    } finally {
+      _handleSoftLogoutFuture = null;
+    }
   }
 
   /// Checks if the token expires in under [expiresIn] time and calls the
