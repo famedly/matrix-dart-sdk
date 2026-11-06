@@ -255,6 +255,10 @@ class LiveKitBackend extends CallBackend {
     }
   }
 
+  /// Bounded so a failing send can't stall its caller; a receiver that still
+  /// lacks the key asks for it.
+  static const _encryptionKeySendRetries = 3;
+
   /// sends the enc key to the devices using todevice, passing a list of
   /// sendTo only sends events to them
   /// setting keyIndex to null will send the latestKey
@@ -262,6 +266,7 @@ class LiveKitBackend extends CallBackend {
     GroupCallSession groupCall,
     int keyIndex, {
     List<CallParticipant>? sendTo,
+    int retry = 0,
   }) async {
     final myKeys = _getKeysForParticipant(groupCall.localParticipant!);
     final myLatestKey = myKeys?[keyIndex];
@@ -297,8 +302,28 @@ class LiveKitBackend extends CallBackend {
         EventTypes.GroupCallMemberEncryptionKeys,
       );
     } catch (e, s) {
-      Logs().e('[VOIP E2EE] Failed to send e2ee keys, retrying', e, s);
-      await _sendEncryptionKeysEvent(groupCall, keyIndex, sendTo: sendTo);
+      if (retry >= _encryptionKeySendRetries) {
+        Logs().e(
+          '[VOIP E2EE] Failed to send e2ee keys, giving up after $retry retries',
+          e,
+          s,
+        );
+        return;
+      }
+      final delay =
+          groupCall.voip.timeouts!.encryptionKeySendRetryDelay * (1 << retry);
+      Logs().w(
+        '[VOIP E2EE] Failed to send e2ee keys, retrying in $delay',
+        e,
+        s,
+      );
+      await Future.delayed(delay);
+      await _sendEncryptionKeysEvent(
+        groupCall,
+        keyIndex,
+        sendTo: sendTo,
+        retry: retry + 1,
+      );
     }
   }
 
