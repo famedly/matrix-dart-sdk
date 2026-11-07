@@ -9,6 +9,7 @@
 // every simulated /sync is processed inside a database transaction and is
 // followed by `updateUserDeviceKeys()`, exactly like `Client._sync()` does.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:canonical_json/canonical_json.dart';
@@ -626,6 +627,206 @@ void main() {
               'BUG: The room key was never sent to the room creator - '
               'they cannot decrypt our first message!',
         );
+      },
+    );
+
+    test(
+      'Scenario 5: we join and send while the sync loop still queries their keys',
+      () async {
+        const roomId = '!1234:fakeServer.notExisting';
+        roomCounter++;
+        final grace = FakeRemoteUser(
+          '@grace$roomCounter:remote.server',
+          'GRACEDEV',
+        );
+        registerRemoteUsers([grace]);
+
+        // The first keys/query that asks for grace hangs until released, like
+        // a federated query still in flight.
+        final api = FakeMatrixApi.currentApi!.api;
+        final query = api['POST']!['/client/v3/keys/query'];
+        final asked = Completer<void>();
+        final release = Completer<void>();
+        api['POST']!['/client/v3/keys/query'] = (req) {
+          final res = query(req);
+          final Map<String, dynamic> requested =
+              decodeJson(req)['device_keys'] ?? {};
+          if (!requested.containsKey(grace.userId) || asked.isCompleted) {
+            return res;
+          }
+          asked.complete();
+          return release.future.then((_) => res);
+        };
+
+        // grace created the room and invited us; we joined. The join sync
+        // names grace in device_lists.changed: we now share a room.
+        await emulateSync(
+          SyncUpdate(
+            nextBatch: 'invited_$roomCounter',
+            rooms: RoomsUpdate(
+              invite: {
+                roomId: InvitedRoomUpdate(
+                  inviteState: [
+                    StrippedStateEvent(
+                      type: 'm.room.member',
+                      content: {'membership': 'invite'},
+                      senderId: grace.userId,
+                      stateKey: client.userID,
+                    ),
+                  ],
+                ),
+              },
+            ),
+          ),
+        );
+        final joined = SyncUpdate(
+          nextBatch: 'joined_$roomCounter',
+          deviceLists: DeviceListsUpdate(changed: [grace.userId]),
+          rooms: RoomsUpdate(
+            join: {
+              roomId: JoinedRoomUpdate(
+                summary: RoomSummary.fromJson({
+                  'm.joined_member_count': 2,
+                  'm.invited_member_count': 0,
+                }),
+                state: [
+                  MatrixEvent(
+                    type: 'm.room.create',
+                    content: {'creator': grace.userId},
+                    senderId: grace.userId,
+                    stateKey: '',
+                    eventId: '\$create_grace_$roomCounter',
+                    originServerTs: DateTime.fromMillisecondsSinceEpoch(100),
+                  ),
+                  MatrixEvent(
+                    type: 'm.room.encryption',
+                    content: {'algorithm': AlgorithmTypes.megolmV1AesSha2},
+                    senderId: grace.userId,
+                    stateKey: '',
+                    eventId: '\$enc_grace_$roomCounter',
+                    originServerTs: DateTime.fromMillisecondsSinceEpoch(101),
+                  ),
+                  memberEvent(grace.userId, 'join', 102),
+                ],
+                timeline: TimelineUpdate(
+                  events: [memberEvent(client.userID!, 'join', 300)],
+                  limited: false,
+                ),
+              ),
+            },
+          ),
+        );
+        await client.database.transaction(() async {
+          await client.handleSync(joined, direction: Direction.f);
+        });
+        // The sync loop's updateUserDeviceKeys, still waiting for grace's keys.
+        final syncLoop = client.updateUserDeviceKeys();
+        await asked.future;
+
+        final room = client.getRoomById(roomId)!;
+        FakeMatrixApi.calledEndpoints.clear();
+        await room.sendTextEvent('hello grace');
+        release.complete();
+        await syncLoop;
+
+        final payload = toDevicePayloadFor(grace);
+        expect(
+          payload,
+          isNotNull,
+          reason:
+              'BUG: The room key went out while grace\'s device list was '
+              'still being fetched, without grace',
+        );
+        final decrypted = grace.decryptToDevice(payload!);
+        final sessionKey = decrypted['content']['session_key'] as String;
+        expect(vod.InboundGroupSession(sessionKey).firstKnownIndex, 0);
+      },
+    );
+
+    test(
+      'Scenario 6: a device list never looks empty while a new device is added',
+      () async {
+        roomCounter++;
+        final userId = '@grace$roomCounter:remote.server';
+        final first = FakeRemoteUser(userId, 'GRACEDEV1');
+        final second = FakeRemoteUser(userId, 'GRACEDEV2');
+        var devices = [first];
+        final api = FakeMatrixApi.currentApi!.api;
+        final query = api['POST']!['/client/v3/keys/query'];
+        api['POST']!['/client/v3/keys/query'] = (req) {
+          final Map<String, dynamic> res = json.decode(json.encode(query(req)));
+          res['device_keys'][userId] = {
+            for (final d in devices) d.deviceId: d.signedDeviceKeys,
+          };
+          return res;
+        };
+        await client.updateUserDeviceKeys(additionalUsers: {userId});
+        expect(client.userDeviceKeys[userId]!.deviceKeys.keys, [
+          first.deviceId,
+        ]);
+
+        // grace adds a device. Storing a new device awaits the database:
+        // whoever reads the list meanwhile must still find the first one. The
+        // new one comes first in the response, before the known one is back.
+        devices = [second, first];
+        client.userDeviceKeys[userId]!.outdated = true;
+        var done = false;
+        final update = client.updateUserDeviceKeys().whenComplete(
+          () => done = true,
+        );
+        final seen = <int>{};
+        while (!done) {
+          seen.add(client.userDeviceKeys[userId]!.deviceKeys.length);
+          await Future<void>.delayed(Duration.zero);
+        }
+        await update;
+        expect(seen, isNot(contains(0)));
+        expect(client.userDeviceKeys[userId]!.deviceKeys.keys.toSet(), {
+          first.deviceId,
+          second.deviceId,
+        });
+      },
+    );
+
+    test(
+      'Scenario 7: a send does not query a server again whose last query failed',
+      () async {
+        const roomId = '!1234:fakeServer.notExisting';
+        roomCounter++;
+        final hank = '@hank$roomCounter:unreachable.server';
+        // hank's server does not answer: every query names it in failures.
+        final api = FakeMatrixApi.currentApi!.api;
+        final query = api['POST']!['/client/v3/keys/query'];
+        api['POST']!['/client/v3/keys/query'] = (req) {
+          final Map<String, dynamic> res = json.decode(json.encode(query(req)));
+          (res['device_keys'] as Map<String, dynamic>).remove(hank);
+          res['failures'] = {
+            'unreachable.server': {'error': 'unreachable'},
+          };
+          return res;
+        };
+        await emulateSync(
+          SyncUpdate(
+            nextBatch: 'create_$roomCounter',
+            rooms: RoomsUpdate(
+              join: {
+                roomId: newRoomUpdate(invited: [hank]),
+              },
+            ),
+          ),
+        );
+        expect(client.userDeviceKeys[hank]?.outdated, true);
+
+        bool askedForHank() =>
+            (FakeMatrixApi.calledEndpoints['/client/v3/keys/query'] ?? []).any(
+              (body) =>
+                  (decodeJson(body)['device_keys'] as Map).containsKey(hank),
+            );
+        final room = client.getRoomById(roomId)!;
+        FakeMatrixApi.calledEndpoints.clear();
+        await room.sendTextEvent('first');
+        await room.sendTextEvent('second');
+        expect(askedForHank(), false);
       },
     );
 

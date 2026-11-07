@@ -2766,14 +2766,19 @@ class Room {
     // keys of (e.g. their membership event came down while the room was only
     // partially loaded or got lost in a gappy sync), fetch them now instead
     // of silently encrypting without them, as they would otherwise never be
-    // able to decrypt any message in this room.
-    final missingUserIds = users
-        .map((user) => user.id)
-        .where((userId) => client.userDeviceKeys[userId] == null)
-        .toSet();
+    // able to decrypt any message in this room. The same for an outdated
+    // list: it may be the empty one the sync loop has just created and is
+    // still fetching, e.g. for the creator of a room we have just joined.
+    final missingUserIds = users.map((user) => user.id).where((userId) {
+      final list = client.userDeviceKeys[userId];
+      // An outdated list of a server whose last query just failed waits
+      // like the sync loop does, so a send does not wait for it each time.
+      return list == null ||
+          (list.outdated && !client.keyQueryBackingOff(userId.domain));
+    }).toSet();
     if (missingUserIds.isNotEmpty) {
       Logs().i(
-        '[E2EE] Fetching device keys of ${missingUserIds.length} untracked users in $id before encrypting',
+        '[E2EE] Fetching device keys of ${missingUserIds.length} untracked or outdated users in $id before encrypting',
       );
       await client.updateUserDeviceKeys(additionalUsers: missingUserIds);
     }
