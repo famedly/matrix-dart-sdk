@@ -84,6 +84,35 @@ void main() {
       expect(await database.getSSSSCache(type), isNull);
     });
 
+    test('getClient backfills missing client data', () async {
+      await database.storeClient(
+        homeserverUrl: 'https://example.org',
+        token: 'token',
+        userId: '@alice:example.org',
+        prevBatch: 'batch',
+      );
+      secureStore['client_data_$name'] = jsonEncode({'olm_account': 'olm'});
+
+      await database.getClient(name);
+      final stored =
+          jsonDecode(secureStore['client_data_$name']!) as Map<String, Object?>;
+      expect(stored, {
+        'homeserver_url': 'https://example.org',
+        'token': 'token',
+        'user_id': '@alice:example.org',
+        'olm_account': 'olm',
+      });
+    });
+
+    test('getSSSSCache backfills a missing cache', () async {
+      const type = EventTypes.MegolmBackup;
+      await database.storeSSSSCache(type, 'keyId', 'ciphertext', 'content');
+      secureStore.clear();
+
+      expect((await database.getSSSSCache(type))?.content, 'content');
+      expect(secureStore['ssss_cache_${name}_$type'], isNotNull);
+    });
+
     test('clear wipes secure storage', () async {
       await database.storeClient(
         homeserverUrl: 'https://example.org',

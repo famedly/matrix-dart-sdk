@@ -172,6 +172,19 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   })?
   secureStorage;
 
+  /// Never mirror sync state like `prev_batch`: secure storage wins on read.
+  static const _secureStorageClientDataKeys = {
+    'homeserver_url',
+    'token',
+    'token_expires_at',
+    'user_id',
+    'refresh_token',
+    'oidc_client_id',
+    'device_id',
+    'device_name',
+    'olm_account',
+  };
+
   String get _secureStorageClientDataKey => 'client_data_$name';
   String _getSecureStorageSSSSCacheKey(String type) =>
       'ssss_cache_${name}_$type';
@@ -489,6 +502,20 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       clientMap.remove('version');
       clientMap.addAll(secureStorageJson ?? {});
       if (clientMap.isEmpty) return null;
+
+      final secureStorage = this.secureStorage;
+      final clientData = {
+        for (final key in _secureStorageClientDataKeys)
+          if (clientMap[key] case final String value) key: value,
+      };
+      // Backfills databases created before secure storage was set.
+      if (secureStorage != null &&
+          clientData.length > (secureStorageJson?.length ?? 0)) {
+        await secureStorage.write(
+          _secureStorageClientDataKey,
+          jsonEncode(clientData),
+        );
+      }
       return clientMap;
     });
   }
@@ -760,7 +787,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
     final raw = await _ssssCacheBox.get(type);
     if (raw == null) return null;
-    return SSSSCache.fromJson(copyMap(raw));
+    final cache = SSSSCache.fromJson(copyMap(raw));
+    // Backfills databases created before secure storage was set.
+    await secureStorage?.write(
+      _getSecureStorageSSSSCacheKey(type),
+      jsonEncode(cache.toJson()),
+    );
+    return cache;
   }
 
   @override
