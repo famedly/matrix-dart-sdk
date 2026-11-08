@@ -53,13 +53,11 @@ class KeyManager {
       _requestedSessionIdCompleters.clear();
       for (final room in client.rooms) {
         final lastEvent = room.lastEvent;
-        if (lastEvent != null &&
-            lastEvent.type == EventTypes.Encrypted &&
-            lastEvent.content['can_request_session'] == true) {
+        if (lastEvent != null && lastEvent.canRequestSessionKey) {
           final sessionId = lastEvent.content.tryGet<String>('session_id');
           final senderKey = lastEvent.content.tryGet<String>('sender_key');
           if (sessionId != null && senderKey != null) {
-            maybeAutoRequest(room.id, sessionId, senderKey);
+            maybeAutoRequest(room, sessionId, senderKey);
           }
         }
       }
@@ -220,28 +218,29 @@ class KeyManager {
 
   /// Attempt auto-request for a key
   FutureOr<void> maybeAutoRequest(
-    String roomId,
+    Room room,
     String sessionId,
     String? senderKey, {
     bool tryOnlineBackup = true,
     bool onlineKeyBackupOnly = true,
     bool awaitRequest = false,
   }) async {
-    final room = client.getRoomById(roomId);
-    final requestIdent = '$roomId|$sessionId';
-    if (room != null && !client.isUnknownSession) {
-      final existingReqCompleter = _requestedSessionIdCompleters[requestIdent];
-      if (existingReqCompleter != null) {
-        if (awaitRequest) {
-          await existingReqCompleter.future;
-        }
-        // return if already exists (after awaiting completion if required)
-        return;
-      }
+    if (!onlineKeyBackupOnly && client.isUnknownSession) return;
 
-      Future<void> requestFn() async {
-        final completer = Completer<void>();
-        _requestedSessionIdCompleters[requestIdent] = completer;
+    final requestIdent = '${room.id}|$sessionId';
+    final existingReqCompleter = _requestedSessionIdCompleters[requestIdent];
+    if (existingReqCompleter != null) {
+      if (awaitRequest) {
+        await existingReqCompleter.future;
+      }
+      // return if already exists (after awaiting completion if required)
+      return;
+    }
+
+    Future<void> requestFn() async {
+      final completer = Completer<void>();
+      _requestedSessionIdCompleters[requestIdent] = completer;
+      try {
         await request(
           room,
           sessionId,
@@ -249,14 +248,19 @@ class KeyManager {
           tryOnlineBackup: tryOnlineBackup,
           onlineKeyBackupOnly: onlineKeyBackupOnly,
         );
+      } catch (_) {
+        // A failed attempt must not block a later retry for this session.
+        _requestedSessionIdCompleters.remove(requestIdent);
+        rethrow;
+      } finally {
         completer.complete();
       }
+    }
 
-      if (awaitRequest) {
-        await requestFn();
-      } else {
-        runInRoot(requestFn);
-      }
+    if (awaitRequest) {
+      await requestFn();
+    } else {
+      runInRoot(requestFn);
     }
   }
 
@@ -740,11 +744,15 @@ class KeyManager {
   /// and stores it.
   Future<void> loadSingleKey(String roomId, String sessionId) async {
     final info = await getRoomKeysBackupInfo();
-    final ret = await client.getRoomKeyBySessionId(
-      roomId,
-      sessionId,
-      info.version,
-    );
+    late KeyBackupData ret;
+    try {
+      ret = await client.getRoomKeyBySessionId(roomId, sessionId, info.version);
+    } on MatrixException catch (e) {
+      final retryAfterMs = e.retryAfterMs;
+      if (retryAfterMs == null) rethrow;
+      await Future.delayed(Duration(milliseconds: retryAfterMs));
+      ret = await client.getRoomKeyBySessionId(roomId, sessionId, info.version);
+    }
     final keys = RoomKeys.fromJson({
       'rooms': {
         roomId: {
@@ -783,6 +791,8 @@ class KeyManager {
             err,
             stacktrace,
           );
+          // Nothing else to fall back to, so the caller can retry later.
+          if (onlineKeyBackupOnly) rethrow;
         }
       }
 

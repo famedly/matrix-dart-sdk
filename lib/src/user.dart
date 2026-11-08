@@ -51,6 +51,12 @@ class User extends StrippedStateEvent {
     this.prevContent,
   }) : super(type: typeKey);
 
+  @override
+  Map<String, Object?> toJson() => {
+    ...super.toJson(),
+    if (prevContent?.isNotEmpty == true) 'prev_content': prevContent,
+  };
+
   /// The full qualified Matrix ID in the format @username:server.abc.
   String get id => stateKey ?? '@unknown:unknown';
 

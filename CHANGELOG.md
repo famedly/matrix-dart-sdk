@@ -3,7 +3,61 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+## [16.0.1] 6th Nov 2026
+
+- fix: allow sdp_transform 0.3.x again so matrix resolves with livekit_client (td)
+
+## [16.0.0] 6th Nov 2026
+
+- fix(voip): close leave races with enter, own membership echoes and delegate teardown (td)
+- fix(voip): don't hold leave on rejoin key sharing or other devices' memberships (td)
+- fix(voip): filter own membership echoes at the sync listener (td)
+- fix(voip): ignore non-positive retry_after_ms in the rejoin back-off (td)
+- fix(voip): keep the delayed leave when removing the membership fails (td)
+- fix(voip): let leave wait for any in-flight membership write (td)
+- fix(voip): only clear currentGroupCID when the leaving call owns it (td)
+- fix(voip): only wait on the enter steps leave has to undo (td)
+- fix(voip): recover calls from failed leaves and rate-limited rejoins (td)
+- fix(voip): stop the membership refresh before leave waits (td)
+- fix: attempt decrypt events from timeline and database + request key if needed during export (Karthikeyan S)
+- fix: failed backup request cannot be retried (Karthikeyan S)
+- fix: keep member names from prev_content for left and declined users (yurtemre7)
+- fix: keep original encrypted event as source on key backup retry (Karthikeyan S)
+- fix: limit archived room decryption to four at a time to avoid rate-limiting (Karthikeyan S)
+- fix: re-send the call key to a member that rejoins under a new membershipID (td)
+- fix: wait for key backup when paginating archived timelines (Karthikeyan S)
+- fix: [BREAKING] pass Room to maybeAutoRequest so it works for archived rooms too (Karthikeyan S)
+- refactor: add isUnableToDecrypt and canRequestSessionKey getters + simplify decryptRoomEvent callers (Karthikeyan S)
+- test: cover last event preview after late session key (#2542) (td)
+
+## [15.0.0] 3rd Nov 2026
+
+- chore: align CODEOWNERS with current team structure (Niklas Zender)
+- fix: decrypt last events from key backup right after SSSS unlock (yurtemre7)
+- fix: use correct room participant count for push rules if available (Christian Kußowski)
+- fix: verified only mode for ShareKeysWith (Christian Kußowski)
+- refactor: [BREAKING] deprecate calcLocalizedBodyFallback + remove withSenderNamePrefix in calcLocalizedBody (Karthikeyan S)
+
+## [14.2.0] 20th Oct 2026
+
+- chore: update vodozemac to 0.9.0 (yurtemre7)
+
+## [14.1.0] 16th Oct 2026
+
+- feat: add secure storage interface to database (Christian Kußowski)
+- fix: await sync after invite() in encrypted rooms (Christian Kußowski)
+- fix: compare new inbound sessions with the stored one, not only the cached one (Niklas Zender)
+- fix: do not add invalid matrix IDs to m.mention (Christian Kußowski)
+- fix: persist the timeline order when a sent event comes down the sync (Niklas Zender)
+- perf: only look up new devices of a user if there are any (Niklas Zender)
+- refactor: add additionalProperties to Pushnotification (Christian Kußowski)
+- refactor: insertClient and updateClient to storeClient() (Christian Kußowski)
+- refactor: remove useless readOnly parameter (Christian Kußowski)
+- refactor: remove useless transaction around db read (Christian Kußowski)
+- test: make the EventTooLarge test deterministic (Niklas Zender)
+
 ## [14.0.0] 8th Oct 2026
+
 - build: set flutter version for analyze in ci (Christian Kußowski)
 - chore: make DeviceKeysList serializable (Christian Kußowski)
 - chore: remove pantalaimon reference (Christian Kußowski)
@@ -19,6 +73,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - refactor: add dedicated box for last sent olm message (Christian Kußowski)
 
 ## [13.0.0] 22nd September 2026
+
 - feat: add method to clear free database pages (Christian Kußowski)
 - fix: dart code linter (td)
 - fix: persist leave rooms in db corerctly (td)
@@ -26,9 +81,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - refactor: drop redundant database index (Christian Kußowski)
 
 ## [12.0.1] 2nd September 2026
+
 - fix: wrong if condition where rooms get removed from list even when includeLeave == true (Christian Kußowski)
 
 ## [12.0.0] 2nd September 2026
+
 This version changes how left rooms are stored in the client and the archive is loaded.
 When calling `loadArchive()` it no longer caches the archived rooms internally and
 `client.getRoomById()` would no longer return such a cached room. It is up to the
@@ -49,10 +106,12 @@ Client(
 - refactor: Remove archive cache from Client (Christian Kußowski)
 
 ## [11.0.0] 31st August 2026
+
 - build: update to vodozemac 0.8.0 (Christian Kußowski)
 - chore: add localization for incoming call (Christian Kußowski)
 
 ## [10.2.2] 24th Auguest 2026
+
 - chore: log to-device recipients that get silently skipped (td)
 - fix: add reason why db was cleared (td)
 
@@ -71,10 +130,12 @@ Client(
 - fix: Remove port from registration redirect if its a loopback (N00byKing)
 
 ## [10.0.1] 11th August 2026
+
 - fix: do not guess a file extension for video thumbnails with unknown mimetype (Cursor Agent)
 - fix: refresh DM hero avatars in partial rooms (Qays Dwekat)
 
 ## [10.0.0] 7th August 2026
+
 - build: update dart vodozemac to 0.7.0 and vodozemac rust to 0.10.0 with it (Christian Kußowski)
 - chore: (BREAKING CHANGE) use dart 3.12 (td)
 - chore: export run benchmarked (Christian Kußowski)
@@ -86,6 +147,7 @@ Client(
 - fix: workaround that [JSAny.dartify] on wasm could turn an int into double (Christian Kußowski)
 
 ## [9.0.0] 27th July 2026
+
 - build: (BREAKING) update to matrix spec 1-19 (Christian Kußowski)
 - build: (BREAKING) update to sqlite3 (Christian Kußowski)
 - chore: forward error on bootstrap error (Christian Kußowski)
@@ -101,11 +163,13 @@ Client(
 - test(polls): await expectLater before power-level mutation (quantumheart)
 
 ## [8.1.0] 13th July 2026
+
 - fix: avoid concurrent modification when updating group calls (Marco Attanasio)
 - fix: clear LiveKit key debounce timestamp on dispose (Marco Attanasio)
 - fix: get user device keys for gappy syncs and partial rooms (td)
 
 ## [8.0.0] 9th July 2026
+
 - chore: better error handling for soft logout (Christian Kußowski)
 - docs: correct Dart SDK version in cloud setup notes (Cursor Agent)
 - fix: do not assume room member count is 1 if absent (Christian Kußowski)
@@ -115,6 +179,7 @@ Client(
 - refactor: No longer set timeline event as state event (Christian Kußowski)
 
 ## [7.5.0] 2nd July 2026
+
 - build: (BREAKING) update to matrix spec 1.18 (Christian Kußowski)
 - build: (deps): bump actions/checkout from 6 to 7 (dependabot[bot])
 - build: update dart to 3.11 and enable null aware elements in lists (Christian Kußowski)
@@ -127,17 +192,21 @@ Client(
 - refactor: use new formatting for code generated files (Christian Kußowski)
 
 ## [7.4.0] 23rd June 2026
+
 - feat: add skipScanner flag to download methods for per-call content scanner bypass (Khalil Amor)
 
 ## [7.3.0] 18th June 2026
+
 - feat: add isValidMatrixIdStrict for spec-compliant matrix id validation (Cursor Agent)
 - fix: return null when thumbnail was not found and make cast nullable (yurtemre7)
 
 ## [7.2.4] 16th June 2026
+
 - chore: Follow up actually store updated tofu state in db (Christian Kußowski)
 - fix: Allow image resizer to return new mime type (Christian Kußowski)
 
 ## [7.2.3] 11th June 2026
+
 - feat: Flag cross signing keys as tofu (Christian Kußowski)
 - chore: Increase timeout for create key (Christian Kußowski)
 - fix: Do not request keys when already logged out (Christian Kußowski)
@@ -160,6 +229,7 @@ Client(
 - fix: Workaround that synapse's initial sync account data may not be up to date (Christian Kußowski)
 
 ## [7.1.2] 12th May 2026
+
 - fix: do not send notify rtc event in direct chats (td)
 
 ## [7.1.1] 12th May 2026

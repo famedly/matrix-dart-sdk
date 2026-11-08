@@ -364,14 +364,14 @@ void main() {
 
     test('invite', () async {
       FakeMatrixApi.calledEndpoints.clear();
-      await room.sendTextEvent('/invite @baduser:example.org');
+      await room.sendTextEvent('/invite @inviteuser:example.org');
       expect(
         json.decode(
           FakeMatrixApi
               .calledEndpoints['/client/v3/rooms/!1234%3AfakeServer.notExisting/invite']
               ?.first,
         ),
-        {'user_id': '@baduser:example.org'},
+        {'user_id': '@inviteuser:example.org'},
       );
     });
 

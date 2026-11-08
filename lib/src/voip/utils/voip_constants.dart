@@ -54,6 +54,10 @@ class CallTimeouts {
   /// How often the delayed event should be restarted on the homeserver
   final Duration delayedEventRestart;
 
+  /// Wait before the first retry of a failed encryption key send, doubled for
+  /// each further retry.
+  final Duration encryptionKeySendRetryDelay;
+
   CallTimeouts({
     this.defaultCallEventLifetime = const Duration(seconds: 10),
     this.callInviteLifetime = const Duration(seconds: 60),
@@ -67,6 +71,7 @@ class CallTimeouts {
     this.useKeyDelay = const Duration(seconds: 4),
     this.delayedEventApplyLeave = const Duration(seconds: 18),
     this.delayedEventRestart = const Duration(seconds: 4),
+    this.encryptionKeySendRetryDelay = const Duration(seconds: 1),
   });
 }
 

@@ -11,6 +11,30 @@ import 'package:test/test.dart';
 import 'fake_client.dart';
 import 'webrtc_stub.dart';
 
+class _RejoinRecordingBackend extends MeshBackend {
+  final rejoined = <List<CallParticipant>>[];
+  final participantsWhenRejoined = <List<CallParticipant>>[];
+
+  @override
+  Future<void> onRejoinedParticipant(
+    GroupCallSession groupCall,
+    List<CallParticipant> rejoined,
+  ) async {
+    this.rejoined.add(rejoined);
+    participantsWhenRejoined.add(groupCall.participants);
+  }
+}
+
+class _JoinRecordingBackend extends MeshBackend {
+  final joined = <List<CallParticipant>>[];
+
+  @override
+  Future<void> onNewParticipant(
+    GroupCallSession groupCall,
+    List<CallParticipant> anyJoined,
+  ) async => joined.add(anyJoined);
+}
+
 void main() {
   late Client matrix;
   late Room room;
@@ -243,6 +267,130 @@ void main() {
         expect(events[0].participants[0].userId, '@remoteuser:example.com');
         expect(events[0].participants[0].deviceId, 'DEVICE123');
       });
+      test(
+        'a device rejoining under a new membershipId is reported as rejoined, not left and joined',
+        () async {
+          final rejoinBackend = _RejoinRecordingBackend();
+          backend = rejoinBackend;
+          groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            backend,
+            'm.call',
+            'm.room',
+            'test-group-call-rejoin',
+          );
+          await backend.initLocalStream(groupCall);
+          groupCall.setState(GroupCallState.entered);
+
+          // left: true empties the user's memberships.
+          void setRemoteMembership(
+            String membershipId, {
+            String userId = '@remoteuser:example.com',
+            String deviceId = 'DEVICE123',
+            bool left = false,
+          }) => room.setState(
+            Event(
+              room: room,
+              eventId: '$userId-$membershipId-$left',
+              originServerTs: DateTime.now(),
+              type: EventTypes.GroupCallMember,
+              senderId: userId,
+              stateKey: userId,
+              content: {
+                'memberships': [
+                  if (!left)
+                    CallMembership(
+                      userId: userId,
+                      roomId: room.id,
+                      callId: groupCall.groupCallId,
+                      application: groupCall.application,
+                      scope: groupCall.scope,
+                      backend: backend,
+                      deviceId: deviceId,
+                      expiresTs: DateTime.now()
+                          .add(Duration(hours: 1))
+                          .millisecondsSinceEpoch,
+                      membershipId: membershipId,
+                      feeds: [],
+                      voip: voip,
+                    ).toJson(),
+                ],
+              },
+            ),
+          );
+          const leaver = '@leaver:example.com';
+
+          setRemoteMembership('session-before-reload');
+          setRemoteMembership('leaver-session', userId: leaver);
+          await groupCall.onMemberStateChanged();
+
+          final events = <MatrixRTCCallEvent>[];
+          groupCall.matrixRTCEventStream.stream
+              .where((e) => e is ParticipantsChangeEvent)
+              .listen(events.add);
+
+          // A renewal keeps the session.
+          setRemoteMembership('session-before-reload');
+          await groupCall.onMemberStateChanged();
+          expect(rejoinBackend.rejoined, isEmpty);
+
+          // The reload lands together with someone else leaving.
+          setRemoteMembership('session-after-reload');
+          setRemoteMembership('leaver-session', userId: leaver, left: true);
+          await groupCall.onMemberStateChanged();
+          await pumpEventQueue();
+
+          expect(rejoinBackend.rejoined.single.single.deviceId, 'DEVICE123');
+          expect(
+            rejoinBackend.participantsWhenRejoined.single.map((p) => p.userId),
+            isNot(contains(leaver)),
+            reason: 'the leave is handled before the rejoin key send',
+          );
+          expect(
+            events.whereType<ParticipantsJoinEvent>(),
+            isEmpty,
+            reason: 'the rejoined participant never left',
+          );
+          expect(
+            events
+                .whereType<ParticipantsLeftEvent>()
+                .expand((e) => e.participants)
+                .map((p) => p.userId),
+            [leaver],
+          );
+          expect(
+            groupCall.participants.map((p) => p.deviceId),
+            contains('DEVICE123'),
+          );
+        },
+      );
+
+      test(
+        'a backend without its own rejoin handling treats it as a join',
+        () async {
+          final joinBackend = _JoinRecordingBackend();
+          groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            joinBackend,
+            'm.call',
+            'm.room',
+            'test-group-call-rejoin-default',
+          );
+          final rejoined = [
+            CallParticipant(
+              voip,
+              userId: '@remoteuser:example.com',
+              deviceId: 'DEVICE123',
+            ),
+          ];
+
+          await joinBackend.onRejoinedParticipant(groupCall, rejoined);
+
+          expect(joinBackend.joined, [rejoined]);
+        },
+      );
     });
 
     group('CallAddedEvent, CallRemovedEvent, and CallReplacedEvent', () {

@@ -39,6 +39,8 @@ void main() async {
       expect(archive[1].room.id, '!5345234235:example.com');
       expect(archive[1].room.membership, Membership.leave);
       expect(archive[1].room.name, 'The room name 2');
+      // m.room.encryption sits in the timeline, not the state block.
+      expect(archive[1].room.encrypted, true);
     });
 
     test('request history', () async {

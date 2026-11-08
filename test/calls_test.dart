@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
@@ -33,6 +34,54 @@ class MockMutatingGroupCallSession extends GroupCallSession {
   Future<void> onMemberStateChanged() async {
     onMemberStateChangedCalls++;
     await onMemberStateChangedHook?.call();
+  }
+}
+
+class HeldDisposeBackend extends MeshBackend {
+  final release = Completer<void>();
+
+  @override
+  Future<void> dispose(GroupCallSession groupCall) async {
+    await release.future;
+    await super.dispose(groupCall);
+  }
+}
+
+/// Holds enter() before the local stream exists, like a permission prompt.
+class HeldInitBackend extends MeshBackend {
+  final release = Completer<void>();
+
+  @override
+  Future<WrappedMediaStream?> initLocalStream(
+    GroupCallSession groupCall, {
+    WrappedMediaStream? stream,
+  }) async {
+    await release.future;
+    return super.initLocalStream(groupCall, stream: stream);
+  }
+}
+
+class CallbackDelegate extends MockWebRTCDelegate {
+  Future<void> Function(GroupCallSession)? onNew;
+  Future<void> Function(GroupCallSession)? onEnded;
+
+  @override
+  Future<void> handleNewGroupCall(GroupCallSession groupCall) async =>
+      onNew?.call(groupCall);
+
+  @override
+  Future<void> handleGroupCallEnded(GroupCallSession groupCall) async =>
+      onEnded?.call(groupCall);
+}
+
+/// Re-enters onMemberStateChanged from preShareKey like LiveKitBackend does.
+class ReentrantPreShareKeyBackend extends MeshBackend {
+  Completer<void>? hold;
+
+  @override
+  Future<void> preShareKey(GroupCallSession groupCall) async {
+    await hold?.future;
+    await groupCall.onMemberStateChanged();
   }
 }
 
@@ -1376,6 +1425,567 @@ void main() {
           await groupCall.leave();
         },
       );
+    });
+
+    group('leaving and rejoining', () {
+      String ownMemberStatePath() =>
+          '/client/v3/rooms/${Uri.encodeComponent(room.id)}/state/${Uri.encodeComponent(EventTypes.GroupCallMember)}/${Uri.encodeComponent(matrix.userID!)}';
+
+      void setMemberships(String userId, List<CallMembership> memberships) =>
+          room.setState(
+            Event(
+              room: room,
+              eventId: 'mem_${userId}_${memberships.length}',
+              originServerTs: DateTime.now(),
+              type: EventTypes.GroupCallMember,
+              content: {
+                'memberships': memberships.map((m) => m.toJson()).toList(),
+              },
+              senderId: userId,
+              stateKey: userId,
+            ),
+          );
+
+      CallMembership membership(
+        String userId,
+        String deviceId,
+        String callId, {
+        String? membershipId,
+      }) => CallMembership(
+        userId: userId,
+        roomId: room.id,
+        callId: callId,
+        application: 'm.call',
+        scope: 'm.room',
+        backend: MeshBackend(),
+        deviceId: deviceId,
+        expiresTs: DateTime.now()
+            .add(Duration(hours: 1))
+            .millisecondsSinceEpoch,
+        membershipId: membershipId ?? 'session_$deviceId',
+        voip: voip,
+      );
+
+      test('a refused leave still tears the session down', () async {
+        const callId = 'test_refused_leave';
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          MeshBackend(),
+          'm.call',
+          'm.room',
+          callId,
+        );
+        voip.setGroupCallById(groupCall);
+        await groupCall.enter();
+
+        FakeMatrixApi.currentApi!.api['PUT']![ownMemberStatePath()] = (_) => {
+          'errcode': 'M_LIMIT_EXCEEDED',
+          'error': 'Too Many Requests',
+        };
+
+        await expectLater(groupCall.leave(), throwsA(isA<MatrixException>()));
+        expect(groupCall.state, GroupCallState.ended);
+        expect(voip.getGroupCallById(room.id, callId), isNull);
+        await expectLater(groupCall.left, completes);
+      });
+
+      test('a slow leave keeps the call entered meanwhile current', () async {
+        final backend = HeldDisposeBackend();
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          backend,
+          'm.call',
+          'm.room',
+          'test_slow_leave',
+        );
+        await groupCall.enter();
+        final leaving = groupCall.leave();
+        await pumpEventQueue();
+
+        final next = VoipId(roomId: room.id, callId: 'test_next_call');
+        voip.currentGroupCID = next;
+        backend.release.complete();
+        await leaving;
+
+        expect(voip.currentGroupCID, next);
+      });
+
+      test('a second leave while leaving does nothing', () async {
+        final backend = HeldDisposeBackend();
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          backend,
+          'm.call',
+          'm.room',
+          'test_double_leave',
+        );
+        await groupCall.enter();
+
+        final firstLeave = groupCall.leave();
+        await pumpEventQueue();
+        await groupCall.leave();
+        expect(groupCall.state, GroupCallState.leaving);
+
+        backend.release.complete();
+        await firstLeave;
+        expect(groupCall.state, GroupCallState.ended);
+      });
+
+      test(
+        'fetchOrCreateGroupCall hands out a fresh session, not a leaving one',
+        () async {
+          final backend = HeldDisposeBackend();
+          final previous = await voip.fetchOrCreateGroupCall(
+            '',
+            room,
+            backend,
+            'm.call',
+            'm.room',
+            preShareKey: false,
+          );
+          await previous.enter();
+          final leaving = previous.leave();
+          await pumpEventQueue();
+
+          final next = voip.fetchOrCreateGroupCall(
+            '',
+            room,
+            MeshBackend(),
+            'm.call',
+            'm.room',
+            preShareKey: false,
+          );
+          backend.release.complete();
+          await leaving;
+
+          final fresh = await next;
+          expect(fresh, isNot(same(previous)));
+          expect(fresh.state, GroupCallState.localCallFeedUninitialized);
+          expect(voip.getGroupCallById(room.id, ''), same(fresh));
+        },
+      );
+
+      test(
+        'a call starting while the previous one leaves gets its own session',
+        () async {
+          final backend = HeldDisposeBackend();
+          final previous = await voip.fetchOrCreateGroupCall(
+            '',
+            room,
+            backend,
+            'm.call',
+            'm.room',
+            preShareKey: false,
+          );
+          await previous.enter();
+          final leaving = previous.leave();
+          await pumpEventQueue();
+
+          final caller = membership('@caller:example.com', 'CALLER', '');
+          setMemberships('@caller:example.com', [caller]);
+          final incoming = <GroupCallSession>[];
+          final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
+          final created = voip.createGroupCallFromRoomStateEvent(caller);
+          await pumpEventQueue();
+          expect(incoming, isEmpty);
+
+          backend.release.complete();
+          await leaving;
+          await created;
+          await sub.cancel();
+
+          expect(incoming, hasLength(1));
+          expect(incoming.single, isNot(same(previous)));
+          expect(voip.getGroupCallById(room.id, ''), same(incoming.single));
+        },
+      );
+
+      test(
+        'a call withdrawn while the previous one leaves gets no session',
+        () async {
+          final backend = HeldDisposeBackend();
+          final previous = await voip.fetchOrCreateGroupCall(
+            '',
+            room,
+            backend,
+            'm.call',
+            'm.room',
+            preShareKey: false,
+          );
+          await previous.enter();
+          final leaving = previous.leave();
+          await pumpEventQueue();
+
+          final caller = membership('@caller:example.com', 'CALLER', '');
+          setMemberships('@caller:example.com', [caller]);
+          final incoming = <GroupCallSession>[];
+          final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
+          final created = voip.createGroupCallFromRoomStateEvent(caller);
+          await pumpEventQueue();
+
+          // the caller hung up before our leave finished
+          setMemberships('@caller:example.com', []);
+          backend.release.complete();
+          await leaving;
+          await created;
+          await sub.cancel();
+
+          expect(incoming, isEmpty);
+          expect(voip.getGroupCallById(room.id, ''), isNull);
+        },
+      );
+
+      test('hanging up while entering tears the call down', () async {
+        final backend = HeldInitBackend();
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          backend,
+          'm.call',
+          'm.room',
+          'test_leave_while_entering',
+        );
+        final sentMemberships = <List>[];
+        FakeMatrixApi.currentApi!.api['PUT']![ownMemberStatePath()] = (body) {
+          sentMemberships.add(jsonDecode(body)['memberships'] as List);
+          return {'event_id': r'$event'};
+        };
+
+        final states = <GroupCallState>[];
+        final sub = groupCall.matrixRTCEventStream.stream.listen((e) {
+          if (e is GroupCallStateChanged) states.add(e.state);
+        });
+        final entering = groupCall.enter();
+        await pumpEventQueue();
+        final leaving = groupCall.leave();
+        await pumpEventQueue();
+        backend.release.complete();
+        await entering;
+        await leaving;
+        await sub.cancel();
+
+        expect(groupCall.state, GroupCallState.ended);
+        expect(
+          states.skipWhile((s) => s != GroupCallState.leaving),
+          isNot(contains(GroupCallState.localCallFeedInitialized)),
+        );
+        expect(sentMemberships.where((m) => m.isNotEmpty), isEmpty);
+        expect(voip.currentGroupCID, isNull);
+      });
+
+      test('an echo of our own membership is no incoming call', () async {
+        final backend = HeldDisposeBackend();
+        final previous = await voip.fetchOrCreateGroupCall(
+          '',
+          room,
+          backend,
+          'm.call',
+          'm.room',
+          preShareKey: false,
+        );
+        await previous.enter();
+        final own = membership(
+          matrix.userID!,
+          matrix.deviceID!,
+          '',
+          membershipId: voip.currentSessionId,
+        );
+        final incoming = <GroupCallSession>[];
+        final sub = voip.onIncomingGroupCall.stream.listen(incoming.add);
+        final leaving = previous.leave();
+        await pumpEventQueue();
+
+        // sync echoes our membership while leaving and after
+        setMemberships(matrix.userID!, [own]);
+        await pumpEventQueue();
+        backend.release.complete();
+        await leaving;
+        setMemberships(matrix.userID!, [own]);
+        await pumpEventQueue();
+        await sub.cancel();
+
+        expect(incoming, isEmpty);
+        expect(voip.getGroupCallById(room.id, ''), isNull);
+      });
+
+      test('the delegate can start the next call for the same id', () async {
+        final delegate = CallbackDelegate();
+        final callbackVoip = VoIP(matrix, delegate);
+        final previous = await callbackVoip.fetchOrCreateGroupCall(
+          '',
+          room,
+          MeshBackend(),
+          'm.call',
+          'm.room',
+          preShareKey: false,
+        );
+        await previous.enter();
+
+        GroupCallSession? next;
+        delegate.onEnded = (_) async {
+          next = await callbackVoip.fetchOrCreateGroupCall(
+            '',
+            room,
+            MeshBackend(),
+            'm.call',
+            'm.room',
+            preShareKey: false,
+          );
+        };
+        await previous.leave().timeout(Duration(seconds: 5));
+
+        expect(next, isNot(same(previous)));
+        expect(callbackVoip.getGroupCallById(room.id, ''), same(next));
+      });
+
+      test('the delegate can leave from handleNewGroupCall', () async {
+        final delegate = CallbackDelegate()..onNew = (call) => call.leave();
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          VoIP(matrix, delegate),
+          MeshBackend(),
+          'm.call',
+          'm.room',
+          'test_leave_from_delegate',
+        );
+
+        await groupCall.enter().timeout(Duration(seconds: 5));
+        await groupCall.left.timeout(Duration(seconds: 5));
+        expect(groupCall.state, GroupCallState.ended);
+      });
+
+      test(
+        'a failed membership removal stops the heartbeat but keeps the delayed leave',
+        () async {
+          const callId = 'test_failed_removal_heartbeat';
+          final heartbeat = Timer.periodic(Duration(hours: 1), (_) {});
+          voip.delayedEventCancellers['${room.id}|$callId|m.room'] =
+              DelayedEventCanceller(
+                delayedEventId: 'pending_leave',
+                restartTimer: heartbeat,
+              );
+
+          final api = FakeMatrixApi.currentApi!;
+          api.api['PUT']![ownMemberStatePath()] = (_) => {
+            'errcode': 'M_LIMIT_EXCEEDED',
+            'error': 'Too Many Requests',
+          };
+          var delayedEventCalls = 0;
+          api.api['POST']!['/client/unstable/org.matrix.msc4140/delayed_events/pending_leave'] =
+              (_) {
+                delayedEventCalls++;
+                return {};
+              };
+
+          await expectLater(
+            room.removeFamedlyCallMemberEvent(callId, voip),
+            throwsA(isA<MatrixException>()),
+          );
+
+          expect(heartbeat.isActive, isFalse);
+          expect(voip.delayedEventCancellers, isEmpty);
+          expect(delayedEventCalls, 0, reason: 'the delayed leave must fire');
+        },
+      );
+
+      test(
+        'force rejoin runs once at a time and backs off when rate limited',
+        () async {
+          const callId = 'test_force_rejoin';
+          final own = membership(matrix.userID!, matrix.deviceID!, callId);
+          setMemberships(matrix.userID!, [own]);
+
+          final groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            MeshBackend(),
+            'm.call',
+            'm.room',
+            callId,
+          );
+          await groupCall.enter();
+          expect(groupCall.hasLocalParticipant(), isTrue);
+
+          var rejoinAttempts = 0;
+          var rateLimited = true;
+          FakeMatrixApi.currentApi!.api['PUT']![ownMemberStatePath()] = (_) {
+            rejoinAttempts++;
+            if (!rateLimited) return {'event_id': r'$rejoined'};
+            return {
+              'errcode': 'M_LIMIT_EXCEEDED',
+              'error': 'Too Many Requests',
+              'retry_after_ms': 200,
+            };
+          };
+
+          // the homeserver applied our delayed leave
+          setMemberships(matrix.userID!, []);
+          await Future.wait([
+            groupCall.onMemberStateChanged(),
+            groupCall.onMemberStateChanged(),
+          ]);
+          expect(rejoinAttempts, 1);
+
+          // more member updates during the back-off do not retry early
+          await groupCall.onMemberStateChanged();
+          expect(rejoinAttempts, 1);
+
+          rateLimited = false;
+          await Future.delayed(Duration(milliseconds: 300));
+          expect(rejoinAttempts, 2);
+
+          await groupCall.leave();
+        },
+      );
+
+      test(
+        'a rejoin whose preShareKey re-enters member handling completes once',
+        () async {
+          const callId = 'test_force_rejoin_reentrant';
+          setMemberships(matrix.userID!, [
+            membership(matrix.userID!, matrix.deviceID!, callId),
+          ]);
+          final groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            ReentrantPreShareKeyBackend(),
+            'm.call',
+            'm.room',
+            callId,
+          );
+          await groupCall.enter();
+
+          var rejoinAttempts = 0;
+          FakeMatrixApi.currentApi!.api['PUT']![ownMemberStatePath()] = (_) {
+            rejoinAttempts++;
+            return {'event_id': r'$rejoined'};
+          };
+
+          // sync has not delivered the re-sent membership yet
+          setMemberships(matrix.userID!, []);
+          await groupCall.onMemberStateChanged().timeout(Duration(seconds: 5));
+          expect(rejoinAttempts, 1);
+
+          await groupCall.leave();
+        },
+      );
+
+      test("leave does not wait for a rejoin's key sharing", () async {
+        const callId = 'test_force_rejoin_then_leave';
+        setMemberships(matrix.userID!, [
+          membership(matrix.userID!, matrix.deviceID!, callId),
+        ]);
+        final backend = ReentrantPreShareKeyBackend();
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          backend,
+          'm.call',
+          'm.room',
+          callId,
+        );
+        await groupCall.enter();
+
+        final sentMemberships = <List>[];
+        FakeMatrixApi.currentApi!.api['PUT']![ownMemberStatePath()] = (body) {
+          sentMemberships.add(jsonDecode(body)['memberships'] as List);
+          return {'event_id': r'$event'};
+        };
+
+        backend.hold = Completer<void>();
+        setMemberships(matrix.userID!, []);
+        final rejoin = groupCall.onMemberStateChanged();
+        await pumpEventQueue();
+        expect(sentMemberships, hasLength(1));
+
+        await groupCall.leave().timeout(Duration(seconds: 5));
+        expect(sentMemberships, hasLength(2));
+        expect(sentMemberships.last, isEmpty);
+
+        backend.hold!.complete();
+        await rejoin;
+        expect(sentMemberships, hasLength(2));
+      });
+
+      test(
+        "another device's membership does not stop a rejoin retry",
+        () async {
+          const callId = 'test_force_rejoin_other_device';
+          setMemberships(matrix.userID!, [
+            membership(matrix.userID!, matrix.deviceID!, callId),
+          ]);
+          final groupCall = GroupCallSession.withAutoGenId(
+            room,
+            voip,
+            MeshBackend(),
+            'm.call',
+            'm.room',
+            callId,
+          );
+          await groupCall.enter();
+
+          var rejoinAttempts = 0;
+          FakeMatrixApi.currentApi!.api['PUT']![ownMemberStatePath()] = (_) {
+            rejoinAttempts++;
+            if (rejoinAttempts > 1) return {'event_id': r'$rejoined'};
+            return {
+              'errcode': 'M_LIMIT_EXCEEDED',
+              'error': 'Too Many Requests',
+              'retry_after_ms': 100,
+            };
+          };
+
+          // only our other device is still in the call
+          setMemberships(matrix.userID!, [
+            membership(matrix.userID!, 'OTHERDEVICE', callId),
+          ]);
+          await groupCall.onMemberStateChanged();
+          expect(rejoinAttempts, 1);
+
+          await Future.delayed(Duration(milliseconds: 200));
+          expect(rejoinAttempts, 2);
+
+          await groupCall.leave();
+        },
+      );
+
+      test('leaving cancels a pending force rejoin', () async {
+        const callId = 'test_force_rejoin_cancel';
+        setMemberships(matrix.userID!, [
+          membership(matrix.userID!, matrix.deviceID!, callId),
+        ]);
+
+        final groupCall = GroupCallSession.withAutoGenId(
+          room,
+          voip,
+          MeshBackend(),
+          'm.call',
+          'm.room',
+          callId,
+        );
+        await groupCall.enter();
+
+        var rejoinAttempts = 0;
+        FakeMatrixApi.currentApi!.api['PUT']![ownMemberStatePath()] = (_) {
+          rejoinAttempts++;
+          return {
+            'errcode': 'M_LIMIT_EXCEEDED',
+            'error': 'Too Many Requests',
+            'retry_after_ms': 100,
+          };
+        };
+
+        setMemberships(matrix.userID!, []);
+        await groupCall.onMemberStateChanged();
+        expect(rejoinAttempts, 1);
+
+        await expectLater(groupCall.leave(), throwsA(isA<MatrixException>()));
+        await Future.delayed(Duration(milliseconds: 200));
+        expect(rejoinAttempts, 2, reason: 'only the leave itself, no retry');
+      });
     });
 
     test('call persists after sending invite', () async {

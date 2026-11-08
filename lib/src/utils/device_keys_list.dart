@@ -271,6 +271,8 @@ abstract class SignableKey extends MatrixSignableKey {
         return hasValidSignatureChain(verifiedByTheirMasterKey: true);
       case ShareKeysWith.directlyVerifiedOnly:
         return directVerified;
+      case ShareKeysWith.verifiedOnly:
+        return verified;
     }
   }
 

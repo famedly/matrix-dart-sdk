@@ -216,6 +216,19 @@ class Timeline {
     }
   }
 
+  // Archived rooms aren't in [Client.rooms], so a key fetched in the background never reaches them.
+  Future<void> _decryptEvents(List<Event> events) async {
+    if (!room.encrypted || !room.client.encryptionEnabled) return;
+    for (var i = 0; i < events.length; i++) {
+      if (events[i].type == EventTypes.Encrypted) {
+        events[i] = await room.client.encryption!.decryptRoomEvent(
+          events[i],
+          waitForKeyBackupAndRetry: room.isArchived,
+        );
+      }
+    }
+  }
+
   /// Request more previous events from the server. [historyCount] defines how much events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
   /// the historical events will be published in the onEvent stream. [filter] allows you to specify a
@@ -284,16 +297,7 @@ class Timeline {
       }
     }
 
-    // Try to decrypt encrypted events but don't update the database.
-    if (room.encrypted && room.client.encryptionEnabled) {
-      for (var i = 0; i < newEvents.length; i++) {
-        if (newEvents[i].type == EventTypes.Encrypted) {
-          newEvents[i] = await room.client.encryption!.decryptRoomEvent(
-            newEvents[i],
-          );
-        }
-      }
-    }
+    await _decryptEvents(newEvents);
 
     // update chunk anchors
     if (type == EventUpdateType.history) {
@@ -440,14 +444,12 @@ class Timeline {
     bool onlineKeyBackupOnly = true,
   }) {
     for (final event in events) {
-      if (event.type == EventTypes.Encrypted &&
-          event.messageType == MessageTypes.BadEncrypted &&
-          event.content['can_request_session'] == true) {
+      if (event.canRequestSessionKey) {
         final sessionId = event.content.tryGet<String>('session_id');
         final senderKey = event.content.tryGet<String>('sender_key');
         if (sessionId != null && senderKey != null) {
           room.client.encryption?.keyManager.maybeAutoRequest(
-            room.id,
+            room,
             sessionId,
             senderKey,
             tryOnlineBackup: tryOnlineBackup,
@@ -607,16 +609,7 @@ class Timeline {
             .map((e) => Event.fromMatrixEvent(e, room))
             .toList();
 
-        // Decrypt if needed
-        if (room.encrypted && room.client.encryptionEnabled) {
-          for (var i = 0; i < newEvents.length; i++) {
-            if (newEvents[i].type == EventTypes.Encrypted) {
-              newEvents[i] = await room.client.encryption!.decryptRoomEvent(
-                newEvents[i],
-              );
-            }
-          }
-        }
+        await _decryptEvents(newEvents);
 
         for (final event in newEvents) {
           addAggregatedEvent(event);
