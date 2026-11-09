@@ -1811,11 +1811,11 @@ void main() {
       ], reason: 'Rooms sorted by custom sorter (alphabetically)');
 
       matrix.setCustomRoomSorter(null);
-      expect(
-        matrix.rooms,
-        [roomB, roomC, roomA],
-        reason: 'Rooms should revert to default sort by latest event time',
-      );
+      expect(matrix.rooms, [
+        roomB,
+        roomC,
+        roomA,
+      ], reason: 'Rooms should revert to default sort by latest event time');
     });
 
     tearDown(() async {
