@@ -760,7 +760,17 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
     final raw = await _ssssCacheBox.get(type);
     if (raw == null) return null;
-    return SSSSCache.fromJson(copyMap(raw));
+    final cache = SSSSCache.fromJson(copyMap(raw));
+    // Chat backup connected before secure storage was set only cached here.
+    try {
+      await secureStorage?.write(
+        _getSecureStorageSSSSCacheKey(type),
+        jsonEncode(cache.toJson()),
+      );
+    } catch (e, s) {
+      Logs().w('Unable to copy the SSSS cache to secure storage', e, s);
+    }
+    return cache;
   }
 
   @override

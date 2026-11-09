@@ -12,10 +12,12 @@ void main() {
   group('MatrixSdkDatabase secure storage', () {
     late Map<String, String> secureStore;
     late MatrixSdkDatabase database;
+    var failWrites = false;
     const name = 'secure_storage_test';
 
     setUp(() async {
       secureStore = {};
+      failWrites = false;
       database = await MatrixSdkDatabase.init(
         name,
         database: await databaseFactoryFfi.openDatabase(
@@ -25,7 +27,10 @@ void main() {
         sqfliteFactory: databaseFactoryFfi,
         secureStorage: (
           read: (key) async => secureStore[key],
-          write: (key, value) async => secureStore[key] = value,
+          write: (key, value) async {
+            if (failWrites) throw Exception('Keychain locked');
+            secureStore[key] = value;
+          },
           delete: (key) async => secureStore.remove(key),
         ),
       );
@@ -82,6 +87,24 @@ void main() {
       await database.clearSSSSCache();
       expect(secureStore, isEmpty);
       expect(await database.getSSSSCache(type), isNull);
+    });
+
+    test('getSSSSCache copies a cache only the database has', () async {
+      const type = EventTypes.MegolmBackup;
+      await database.storeSSSSCache(type, 'keyId', 'ciphertext', 'content');
+      secureStore.clear();
+
+      expect((await database.getSSSSCache(type))?.content, 'content');
+      expect(secureStore['ssss_cache_${name}_$type'], isNotNull);
+    });
+
+    test('getSSSSCache returns the cache when the copy fails', () async {
+      const type = EventTypes.MegolmBackup;
+      await database.storeSSSSCache(type, 'keyId', 'ciphertext', 'content');
+      secureStore.clear();
+      failWrites = true;
+
+      expect((await database.getSSSSCache(type))?.content, 'content');
     });
 
     test('clear wipes secure storage', () async {
