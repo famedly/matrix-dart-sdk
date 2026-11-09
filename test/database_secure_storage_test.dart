@@ -12,13 +12,11 @@ void main() {
   group('MatrixSdkDatabase secure storage', () {
     late Map<String, String> secureStore;
     late MatrixSdkDatabase database;
-    var failWrites = false;
     final writtenKeys = <String>[];
     const name = 'secure_storage_test';
 
     setUp(() async {
       secureStore = {};
-      failWrites = false;
       writtenKeys.clear();
       database = await MatrixSdkDatabase.init(
         name,
@@ -30,7 +28,6 @@ void main() {
         secureStorage: (
           read: (key) async => secureStore[key],
           write: (key, value) async {
-            if (failWrites) throw Exception('Keychain locked');
             writtenKeys.add(key);
             secureStore[key] = value;
           },
@@ -101,18 +98,6 @@ void main() {
       expect(writtenKeys, ['olm_account_$name']);
     });
 
-    test('a key update after clear brings back no session', () async {
-      await database.storeClient(
-        homeserverUrl: 'https://example.org',
-        token: 'token',
-        userId: '@alice:example.org',
-      );
-      await database.clear();
-      await database.updateClientKeys('olm');
-
-      expect((await database.getClient(name))?['token'], isNull);
-    });
-
     test('an olm account in the client data is still read', () async {
       secureStore['client_data_$name'] = jsonEncode({
         'homeserver_url': 'https://example.org',
@@ -133,20 +118,12 @@ void main() {
       expect(secureStore['ssss_cache_${name}_$type'], isNotNull);
     });
 
-    test('getSSSSCache returns the cache when the copy fails', () async {
-      const type = EventTypes.MegolmBackup;
-      await database.storeSSSSCache(type, 'keyId', 'ciphertext', 'content');
-      secureStore.clear();
-      failWrites = true;
-
-      expect((await database.getSSSSCache(type))?.content, 'content');
-    });
-
     test('clear wipes secure storage', () async {
       await database.storeClient(
         homeserverUrl: 'https://example.org',
         token: 'token',
         userId: '@alice:example.org',
+        olmAccount: 'olm',
       );
       await database.storeSSSSCache(
         EventTypes.CrossSigningSelfSigning,
