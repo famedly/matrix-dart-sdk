@@ -10,6 +10,7 @@ import 'dart:typed_data';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
 import 'package:path/path.dart' show join;
@@ -1522,6 +1523,22 @@ void main() {
       expect(client.accessToken, 'abcd');
       await client.refreshAccessToken();
       expect(client.accessToken, 'a_new_token');
+      await client.dispose();
+    });
+
+    test('a refresh without a new refresh token keeps the old one', () async {
+      final client = await getClient();
+      client.httpClient = MockClient(
+        (_) async => http.Response(
+          jsonEncode({'access_token': 'a_new_token', 'expires_in_ms': 60000}),
+          200,
+        ),
+      );
+      await client.refreshAccessToken();
+
+      final storedClient = await client.database.getClient(client.clientName);
+      expect(storedClient?['token'], 'a_new_token');
+      expect(storedClient?['refresh_token'], 'refresh_abcd');
       await client.dispose();
     });
 
