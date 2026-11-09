@@ -173,6 +173,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   secureStorage;
 
   String get _secureStorageClientDataKey => 'client_data_$name';
+
+  /// Kept apart, so updating it never writes back client data read earlier.
+  String get _secureStorageOlmAccountKey => 'olm_account_$name';
   String _getSecureStorageSSSSCacheKey(String type) =>
       'ssss_cache_${name}_$type';
 
@@ -186,6 +189,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     final secureStorage = this.secureStorage;
     if (secureStorage == null) return;
     await secureStorage.delete(_secureStorageClientDataKey);
+    await secureStorage.delete(_secureStorageOlmAccountKey);
     for (final type in cacheTypes) {
       await secureStorage.delete(_getSecureStorageSSSSCacheKey(type));
     }
@@ -484,10 +488,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<Map<String, dynamic>?> getClient(String name) {
     return runBenchmarked('Get Client from store', () async {
       final secureStorageJson = await _readSecureStorageClientData();
+      final olmAccount = await secureStorage?.read(_secureStorageOlmAccountKey);
 
       final clientMap = await _clientBox.getAllValues();
       clientMap.remove('version');
       clientMap.addAll(secureStorageJson ?? {});
+      if (olmAccount != null) clientMap['olm_account'] = olmAccount;
       if (clientMap.isEmpty) return null;
       return clientMap;
     });
@@ -931,9 +937,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           'oidc_client_id': ?oidcClientId,
           'device_id': ?deviceId,
           'device_name': ?deviceName,
-          'olm_account': ?olmAccount,
         }),
       );
+      if (olmAccount == null) {
+        await secureStorage.delete(_secureStorageOlmAccountKey);
+      } else {
+        await secureStorage.write(_secureStorageOlmAccountKey, olmAccount);
+      }
     }
     await transaction(() async {
       await _clientBox.put('homeserver_url', homeserverUrl);
@@ -1396,15 +1406,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   @override
   Future<void> updateClientKeys(String olmAccount) async {
-    final secureStorage = this.secureStorage;
-    if (secureStorage != null) {
-      final clientData = await _readSecureStorageClientData() ?? {};
-      clientData['olm_account'] = olmAccount;
-      await secureStorage.write(
-        _secureStorageClientDataKey,
-        jsonEncode(clientData),
-      );
-    }
+    await secureStorage?.write(_secureStorageOlmAccountKey, olmAccount);
     await _clientBox.put('olm_account', olmAccount);
     return;
   }
