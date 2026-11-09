@@ -12,10 +12,14 @@ void main() {
   group('MatrixSdkDatabase secure storage', () {
     late Map<String, String> secureStore;
     late MatrixSdkDatabase database;
+    var failWrites = false;
+    final writtenKeys = <String>[];
     const name = 'secure_storage_test';
 
     setUp(() async {
       secureStore = {};
+      failWrites = false;
+      writtenKeys.clear();
       database = await MatrixSdkDatabase.init(
         name,
         database: await databaseFactoryFfi.openDatabase(
@@ -25,7 +29,11 @@ void main() {
         sqfliteFactory: databaseFactoryFfi,
         secureStorage: (
           read: (key) async => secureStore[key],
-          write: (key, value) async => secureStore[key] = value,
+          write: (key, value) async {
+            if (failWrites) throw Exception('Keychain locked');
+            writtenKeys.add(key);
+            secureStore[key] = value;
+          },
           delete: (key) async => secureStore.remove(key),
         ),
       );
@@ -44,14 +52,11 @@ void main() {
           jsonDecode(secureStore['client_data_$name']!) as Map<String, Object?>;
       expect(stored['token'], 'token');
       expect(stored['refresh_token'], 'refresh');
-      expect(stored['olm_account'], 'olm1');
       expect(stored.containsKey('token_expires_at'), isFalse);
+      expect(secureStore['olm_account_$name'], 'olm1');
 
       await database.updateClientKeys('olm2');
-      final updated =
-          jsonDecode(secureStore['client_data_$name']!) as Map<String, Object?>;
-      expect(updated['olm_account'], 'olm2');
-      expect(updated['token'], 'token');
+      expect(secureStore['olm_account_$name'], 'olm2');
 
       final client = await database.getClient(name);
       expect(client?['olm_account'], 'olm2');
@@ -82,6 +87,59 @@ void main() {
       await database.clearSSSSCache();
       expect(secureStore, isEmpty);
       expect(await database.getSSSSCache(type), isNull);
+    });
+
+    test('a key update writes nothing but the olm account', () async {
+      await database.storeClient(
+        homeserverUrl: 'https://example.org',
+        token: 'token',
+        userId: '@alice:example.org',
+      );
+      writtenKeys.clear();
+      await database.updateClientKeys('olm');
+
+      expect(writtenKeys, ['olm_account_$name']);
+    });
+
+    test('a key update after clear brings back no session', () async {
+      await database.storeClient(
+        homeserverUrl: 'https://example.org',
+        token: 'token',
+        userId: '@alice:example.org',
+      );
+      await database.clear();
+      await database.updateClientKeys('olm');
+
+      expect((await database.getClient(name))?['token'], isNull);
+    });
+
+    test('an olm account in the client data is still read', () async {
+      secureStore['client_data_$name'] = jsonEncode({
+        'homeserver_url': 'https://example.org',
+        'token': 'token',
+        'user_id': '@alice:example.org',
+        'olm_account': 'olm',
+      });
+
+      expect((await database.getClient(name))?['olm_account'], 'olm');
+    });
+
+    test('getSSSSCache copies a cache only the database has', () async {
+      const type = EventTypes.MegolmBackup;
+      await database.storeSSSSCache(type, 'keyId', 'ciphertext', 'content');
+      secureStore.clear();
+
+      expect((await database.getSSSSCache(type))?.content, 'content');
+      expect(secureStore['ssss_cache_${name}_$type'], isNotNull);
+    });
+
+    test('getSSSSCache returns the cache when the copy fails', () async {
+      const type = EventTypes.MegolmBackup;
+      await database.storeSSSSCache(type, 'keyId', 'ciphertext', 'content');
+      secureStore.clear();
+      failWrites = true;
+
+      expect((await database.getSSSSCache(type))?.content, 'content');
     });
 
     test('clear wipes secure storage', () async {

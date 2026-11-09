@@ -353,6 +353,9 @@ class Client extends MatrixApi {
       ),
     };
 
+    // A logout or another login while the request ran must not get these.
+    if (userID != userId || deviceID != deviceId) return;
+
     accessToken = tokenResponse.accessToken;
     final expiresIn = tokenResponse.expiresIn;
     final tokenExpiresAt = expiresIn == null

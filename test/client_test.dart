@@ -9,6 +9,7 @@ import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
+import 'package:http/http.dart' as http;
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
 import 'package:path/path.dart' show join;
@@ -1524,6 +1525,21 @@ void main() {
       await client.dispose();
     });
 
+    test('a refresh that finishes after a logout is not stored', () async {
+      final client = await getClient();
+      final heldRefresh = _HeldRefresh(client.httpClient);
+      client.httpClient = heldRefresh;
+      final refresh = client.refreshAccessToken();
+      await heldRefresh.reached.future;
+      await client.clear();
+      heldRefresh.release.complete();
+      await refresh;
+
+      expect(client.accessToken, isNull);
+      expect(await client.database.getClient(client.clientName), isNull);
+      await client.dispose();
+    });
+
     test('handleSoftLogout', () async {
       final client = await getClient();
       expect(client.accessToken, 'abcd');
@@ -1822,4 +1838,22 @@ void main() {
       await matrix.dispose(closeDatabase: true);
     });
   });
+}
+
+/// Holds back the /refresh response until [release] completes.
+class _HeldRefresh extends http.BaseClient {
+  _HeldRefresh(this.inner);
+
+  final http.Client inner;
+  final reached = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.path.endsWith('/refresh')) {
+      reached.complete();
+      await release.future;
+    }
+    return inner.send(request);
+  }
 }
