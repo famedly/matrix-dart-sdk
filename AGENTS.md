@@ -30,7 +30,7 @@ root fails (the example needs the Flutter SDK). Use `dart pub get --no-example` 
 in `.github/workflows/integrate.yml` pass `--no-example`.
 
 The Dart SDK version is pinned by `dart_version` in `.github/workflows/versions.env`
-(currently 3.12.2), which is what CI feeds to `dart-lang/setup-dart`. Environment setup
+(currently 3.13.7), which is what CI feeds to `dart-lang/setup-dart`. Environment setup
 installs exactly that version into `/usr/local/lib/dart-sdk` (symlinked as
 `/usr/local/bin/dart`), so the VM follows the pin whenever it moves. An SDK older than
 the pin cannot resolve dependencies: the `sqflite_common_ffi` dev dependency tracks new
