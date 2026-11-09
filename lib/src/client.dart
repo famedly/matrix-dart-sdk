@@ -366,7 +366,8 @@ class Client extends MatrixApi {
       homeserverUrl: homeserverUrl,
       token: tokenResponse.accessToken,
       tokenExpiresAt: tokenExpiresAt,
-      refreshToken: tokenResponse.refreshToken,
+      // Without a new one, the spec keeps the old refresh token valid.
+      refreshToken: tokenResponse.refreshToken ?? refreshToken,
       userId: userId,
       deviceId: deviceId,
       deviceName: deviceName,
