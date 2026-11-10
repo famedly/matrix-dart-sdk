@@ -4,6 +4,10 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [16.0.3] 10th Nov 2026
+
+- fix: apply edits that getTimeline decrypts (td)
+
 ## [16.0.2] 10th Nov 2026
 
 - chore(deps): bump pinned Dart to 3.13.7 and Flutter to 3.47.9 (td)
