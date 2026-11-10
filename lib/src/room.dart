@@ -1889,6 +1889,8 @@ class Room {
           }
         }
       }
+      // Relations were aggregated before decryption, replace them.
+      chunk.events.forEach(timeline.addAggregatedEvent);
     }
 
     // Fetch poll responses for fragmented timelines after decryption so
