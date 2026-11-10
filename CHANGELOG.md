@@ -3,6 +3,21 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
+
+## [16.0.2] 10th Nov 2026
+
+- chore(deps): bump pinned Dart to 3.13.7 and Flutter to 3.47.9 (td)
+- ci: remove issue-triage workflow (td)
+- fix(voip): give up on a failing call key send after 3 retries (td)
+- fix(voip): send a rejoined member its key after handling joins and leaves (td)
+- fix: aggregate events after decryption (yurtemre7)
+- fix: copy the SSSS cache into secure storage (td)
+- fix: do not log decrypted megolm sessions (Christian Kußowski)
+- fix: don't store a refresh that finished after logout (td)
+- fix: keep the olm account in its own secure storage key (td)
+- fix: keep the refresh token when a refresh doesn't return a new one (td)
+- test: drop redundant secure storage tests (td)
+
 ## [16.0.1] 6th Nov 2026
 
 - fix: allow sdp_transform 0.3.x again so matrix resolves with livekit_client (td)
