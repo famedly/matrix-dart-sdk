@@ -65,12 +65,20 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/send Hello World');
       var sent = getLastMessagePayload();
-      expect(sent, {'msgtype': 'm.text', 'body': 'Hello World'});
+      expect(sent, {
+        'msgtype': 'm.text',
+        'body': 'Hello World',
+        'm.mentions': {},
+      });
 
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('Beep Boop');
       sent = getLastMessagePayload();
-      expect(sent, {'msgtype': 'm.text', 'body': 'Beep Boop'});
+      expect(sent, {
+        'msgtype': 'm.text',
+        'body': 'Beep Boop',
+        'm.mentions': {},
+      });
 
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('Beep *Boop*');
@@ -78,6 +86,7 @@ void main() {
       expect(sent, {
         'msgtype': 'm.text',
         'body': 'Beep *Boop*',
+        'm.mentions': {},
         'format': 'org.matrix.custom.html',
         'formatted_body': 'Beep <em>Boop</em>',
       });
@@ -85,21 +94,25 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('//send Hello World');
       sent = getLastMessagePayload();
-      expect(sent, {'msgtype': 'm.text', 'body': '/send Hello World'});
+      expect(sent, {
+        'msgtype': 'm.text',
+        'body': '/send Hello World',
+        'm.mentions': {},
+      });
     });
 
     test('me', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/me heya');
       final sent = getLastMessagePayload();
-      expect(sent, {'msgtype': 'm.emote', 'body': 'heya'});
+      expect(sent, {'msgtype': 'm.emote', 'body': 'heya', 'm.mentions': {}});
     });
 
     test('plain', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/plain *floof*');
       final sent = getLastMessagePayload();
-      expect(sent, {'msgtype': 'm.text', 'body': '*floof*'});
+      expect(sent, {'msgtype': 'm.text', 'body': '*floof*', 'm.mentions': {}});
     });
 
     test('html', () async {
@@ -109,6 +122,7 @@ void main() {
       expect(sent, {
         'msgtype': 'm.text',
         'body': '<b>yay</b>',
+        'm.mentions': {},
         'format': 'org.matrix.custom.html',
         'formatted_body': '<b>yay</b>',
       });
@@ -196,6 +210,7 @@ void main() {
       expect(sent, {
         'msgtype': 'm.text',
         'body': 'thread',
+        'm.mentions': {},
         'm.relates_to': {
           'rel_type': 'm.thread',
           'event_id': '\$parent_event',
@@ -217,6 +232,7 @@ void main() {
       expect(sent, {
         'msgtype': 'm.image',
         'body': 'file.jpeg',
+        'm.mentions': {},
         'filename': 'file.jpeg',
         'url': 'mxc://example.com/AQwafuaFswefuhsfAFAgsw',
         'info': {'mimetype': 'image/jpeg', 'size': 0},
@@ -248,12 +264,44 @@ void main() {
       expect(sent, {
         'msgtype': 'm.text',
         'body': '> <@test:fakeServer.notExisting> reply\n\nreply',
-        'm.mentions': {
-          'user_ids': ['@test:fakeServer.notExisting'],
-        },
+        'm.mentions': {},
         'format': 'org.matrix.custom.html',
         'formatted_body':
             '<mx-reply><blockquote><a href="https://matrix.to/#/!1234:fakeServer.notExisting/\$parent_event">In reply to</a> <a href="https://matrix.to/#/@test:fakeServer.notExisting">@test:fakeServer.notExisting</a><br>reply</blockquote></mx-reply>reply',
+        'm.relates_to': {
+          'rel_type': 'm.thread',
+          'event_id': '\$parent_event',
+          'is_falling_back': false,
+          'm.in_reply_to': {'event_id': '\$parent_event'},
+        },
+      });
+    });
+
+    test('thread_reply mentions replied-to user', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent(
+        'reply',
+        inReplyTo: Event(
+          eventId: '\$parent_event',
+          type: 'm.room.message',
+          content: {'msgtype': 'm.text', 'body': 'reply'},
+          originServerTs: DateTime.now(),
+          senderId: '@alice:example.org',
+          room: room,
+        ),
+        threadRootEventId: '\$parent_event',
+        threadLastEventId: '\$parent_event',
+      );
+      final sent = getLastMessagePayload();
+      expect(sent, {
+        'msgtype': 'm.text',
+        'body': '> <@alice:example.org> reply\n\nreply',
+        'm.mentions': {
+          'user_ids': ['@alice:example.org'],
+        },
+        'format': 'org.matrix.custom.html',
+        'formatted_body':
+            '<mx-reply><blockquote><a href="https://matrix.to/#/!1234:fakeServer.notExisting/\$parent_event">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>reply</blockquote></mx-reply>reply',
         'm.relates_to': {
           'rel_type': 'm.thread',
           'event_id': '\$parent_event',
@@ -274,6 +322,7 @@ void main() {
       expect(sent, {
         'msgtype': 'm.text',
         'body': 'thread',
+        'm.mentions': {},
         'm.relates_to': {
           'rel_type': 'm.thread',
           'event_id': '\$parent_event',
@@ -506,21 +555,21 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/googly');
       final sent = getLastMessagePayload();
-      expect(sent, CuteEventContent.googlyEyes);
+      expect(sent, {...CuteEventContent.googlyEyes, 'm.mentions': {}});
     });
 
     test('cute events - hug', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/hug');
       final sent = getLastMessagePayload();
-      expect(sent, CuteEventContent.hug);
+      expect(sent, {...CuteEventContent.hug, 'm.mentions': {}});
     });
 
     test('cute events - hug', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/cuddle');
       final sent = getLastMessagePayload();
-      expect(sent, CuteEventContent.cuddle);
+      expect(sent, {...CuteEventContent.cuddle, 'm.mentions': {}});
     });
 
     test('client - clearcache', () async {
