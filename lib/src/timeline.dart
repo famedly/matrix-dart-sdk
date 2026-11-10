@@ -318,6 +318,7 @@ class Timeline {
         onInsert?.call(i);
       }
     }
+    newEvents.forEach(addAggregatedEvent);
 
     await Future.wait(
       newEvents

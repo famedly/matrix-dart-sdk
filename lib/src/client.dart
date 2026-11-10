@@ -1348,6 +1348,8 @@ class Client extends MatrixApi {
               }
             }
           }
+          // Relations were aggregated before decryption, replace them.
+          timeline.events.forEach(timeline.addAggregatedEvent);
           room.lastEvent = timeline.events.firstWhereOrNull(
             (event) => roomPreviewLastEvents.contains(event.type),
           );
