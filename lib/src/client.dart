@@ -2431,7 +2431,8 @@ class Client extends MatrixApi {
     onLoginStateChanged.add(LoginState.softLoggedOut);
     try {
       await onSoftLogout(this);
-      onLoginStateChanged.add(LoginState.loggedIn);
+      // A logout during the refresh already moved the state to loggedOut.
+      if (isLogged()) onLoginStateChanged.add(LoginState.loggedIn);
     } on MatrixException catch (e) {
       // A rate limit leaves the refresh token valid, every other error is final.
       if (e.error == MatrixError.M_LIMIT_EXCEEDED) {

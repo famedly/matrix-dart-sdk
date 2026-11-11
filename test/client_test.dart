@@ -1632,6 +1632,18 @@ void main() {
       await client.dispose();
     });
 
+    test('a logout during the soft logout refresh stays logged out', () async {
+      final client = await getClient();
+      // A first refresh gives the access token an expiry.
+      await client.refreshAccessToken();
+      client.onSoftLogout = (client) => client.clear();
+
+      await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+
+      expect(client.onLoginStateChanged.value, LoginState.loggedOut);
+      await client.dispose();
+    });
+
     test('handleSoftLogout', () async {
       final client = await getClient();
       expect(client.accessToken, 'abcd');
