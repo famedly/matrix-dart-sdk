@@ -320,6 +320,7 @@ class Client extends MatrixApi {
   ).whenComplete(() => _refreshAccessTokenFuture = null);
 
   Future<void>? _refreshAccessTokenFuture;
+  var _clearing = false;
 
   Future<void> _refreshAccessToken({
     Duration? customRefreshTokenLifetime,
@@ -2333,6 +2334,7 @@ class Client extends MatrixApi {
   }) async {
     Logs().i('Clearing the session because of $reason');
     Logs().outputEvents.clear();
+    _clearing = true;
     // A refresh still storing its token would write the credentials back.
     await _refreshAccessTokenFuture?.catchError((_) {});
     DatabaseApi? legacyDatabase;
@@ -2356,6 +2358,7 @@ class Client extends MatrixApi {
 
     _id = accessToken = _syncFilterId = homeserver = _userID = _deviceID =
         _deviceName = _prevBatch = _trackedUserIds = null;
+    _clearing = false;
     _rooms = [];
     _eventsPendingDecryption.clear();
     await encryption?.dispose();
@@ -2503,6 +2506,8 @@ class Client extends MatrixApi {
       await ensureNotSoftLoggedOut(
         timeout == null ? const Duration(minutes: 1) : (timeout * 2),
       );
+      // A logout waiting on the same refresh is about to wipe the database.
+      if (_clearing) return;
 
       await _checkSyncFilter();
 

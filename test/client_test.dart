@@ -1560,6 +1560,26 @@ void main() {
       await client.dispose();
     });
 
+    test(
+      'a sync waiting on the refresh does not run during a logout',
+      () async {
+        final client = await getClient();
+        // A first refresh gives the access token an expiry.
+        await client.refreshAccessToken();
+        await client.abortSync();
+        final heldRefresh = _HeldRefresh(client.httpClient);
+        client.httpClient = heldRefresh;
+        final sync = client.oneShotSync(timeout: const Duration(minutes: 5));
+        await heldRefresh.reached.future;
+        final clear = client.clear();
+        heldRefresh.release.complete();
+        await Future.wait([sync, clear]);
+
+        expect(heldRefresh.syncsAfterRelease, 0);
+        await client.dispose();
+      },
+    );
+
     test('concurrent refreshes share one request', () async {
       final client = await getClient();
       final refreshes = _CountedRefresh(client.httpClient);
@@ -1954,12 +1974,16 @@ class _HeldRefresh extends http.BaseClient {
   final http.Client inner;
   final reached = Completer<void>();
   final release = Completer<void>();
+  var syncsAfterRelease = 0;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     if (request.url.path.endsWith('/refresh')) {
       reached.complete();
       await release.future;
+    }
+    if (release.isCompleted && request.url.path.endsWith('/sync')) {
+      syncsAfterRelease++;
     }
     return inner.send(request);
   }
