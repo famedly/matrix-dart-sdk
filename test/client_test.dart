@@ -1557,6 +1557,65 @@ void main() {
       await client.dispose();
     });
 
+    test('concurrent refreshes share one request', () async {
+      final client = await getClient();
+      final refreshes = _CountedRefresh(client.httpClient);
+      client.httpClient = refreshes;
+      await Future.wait([
+        client.refreshAccessToken(),
+        client.refreshAccessToken(),
+      ]);
+
+      expect(refreshes.count, 1);
+      await client.dispose();
+    });
+
+    test('soft logout callers do not start parallel refreshes', () async {
+      final client = await getClient();
+      // A first refresh gives the access token an expiry.
+      await client.refreshAccessToken();
+      final refreshes = _CountedRefresh(client.httpClient, failFirst: true);
+      client.httpClient = refreshes;
+
+      Future<void> softLogoutWithRetry() async {
+        await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+        await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+      }
+
+      await Future.wait(List.generate(5, (_) => softLogoutWithRetry()));
+
+      expect(refreshes.count, 2);
+      await client.dispose();
+    });
+
+    test(
+      'no soft logout runs after a failed one cleared the session',
+      () async {
+        final client = await getClient();
+        // A first refresh gives the access token an expiry.
+        await client.refreshAccessToken();
+        var softLogouts = 0;
+        client.onSoftLogout = (_) async {
+          softLogouts++;
+          throw MatrixException.fromJson({
+            'errcode': 'M_UNKNOWN_TOKEN',
+            'error': 'refresh token does not exist',
+          });
+        };
+        await expectLater(
+          client.ensureNotSoftLoggedOut(const Duration(minutes: 10)),
+          throwsA(isA<MatrixException>()),
+        );
+        expect(client.isLogged(), isFalse);
+
+        await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+
+        expect(softLogouts, 1);
+        expect(client.onLoginStateChanged.value, LoginState.loggedOut);
+        await client.dispose();
+      },
+    );
+
     test('handleSoftLogout', () async {
       final client = await getClient();
       expect(client.accessToken, 'abcd');
@@ -1870,6 +1929,27 @@ class _HeldRefresh extends http.BaseClient {
     if (request.url.path.endsWith('/refresh')) {
       reached.complete();
       await release.future;
+    }
+    return inner.send(request);
+  }
+}
+
+/// Counts /refresh requests and can fail the first one like a dropped network.
+class _CountedRefresh extends http.BaseClient {
+  _CountedRefresh(this.inner, {this.failFirst = false});
+
+  final http.Client inner;
+  final bool failFirst;
+  var count = 0;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.path.endsWith('/refresh')) {
+      count++;
+      await Future.delayed(const Duration(milliseconds: 10));
+      if (failFirst && count == 1) {
+        throw http.ClientException('Network is unreachable');
+      }
     }
     return inner.send(request);
   }
