@@ -308,10 +308,20 @@ class Client extends MatrixApi {
   /// logout case.
   /// Throws an Exception if there is no refresh token available or the
   /// client is not logged in.
+  /// Concurrent calls share the running refresh, so a caller joining it does
+  /// not get its own [customRefreshTokenLifetime] applied.
   Future<void> refreshAccessToken({
     /// Experimental feature which allows to send a custom refresh token
     /// lifetime to the server which overrides the default one. Needs server
     /// support.
+    Duration? customRefreshTokenLifetime,
+  }) => _refreshAccessTokenFuture ??= _refreshAccessToken(
+    customRefreshTokenLifetime: customRefreshTokenLifetime,
+  ).whenComplete(() => _refreshAccessTokenFuture = null);
+
+  Future<void>? _refreshAccessTokenFuture;
+
+  Future<void> _refreshAccessToken({
     Duration? customRefreshTokenLifetime,
   }) async {
     // ignore: deprecated_member_use_from_same_package
@@ -2407,40 +2417,53 @@ class Client extends MatrixApi {
   Future<void>? _handleSoftLogoutFuture;
 
   Future<void> _handleSoftLogout() async {
+    // Requests still in flight after a failed soft logout cleared the session
+    // must not start another one on the empty client.
+    if (!isLogged()) return;
+    return _handleSoftLogoutFuture ??= _runSoftLogout().whenComplete(
+      () => _handleSoftLogoutFuture = null,
+    );
+  }
+
+  Future<void> _runSoftLogout() async {
     final onSoftLogout = this.onSoftLogout ?? (_) => refreshAccessToken();
 
-    _handleSoftLogoutFuture ??= () async {
-      onLoginStateChanged.add(LoginState.softLoggedOut);
-      try {
-        await onSoftLogout(this);
-        onLoginStateChanged.add(LoginState.loggedIn);
-      } on MatrixException catch (e) {
+    onLoginStateChanged.add(LoginState.softLoggedOut);
+    try {
+      await onSoftLogout(this);
+      onLoginStateChanged.add(LoginState.loggedIn);
+    } on MatrixException catch (e) {
+      // A rate limit leaves the refresh token valid, every other error is final.
+      if (e.error == MatrixError.M_LIMIT_EXCEEDED) {
+        Logs().w(
+          'Unable to refresh session after soft logout. Try again...',
+          e,
+        );
+        return;
+      }
+      Logs().w(
+        'Unable to refresh session after soft logout. Clearing session...',
+        e,
+      );
+      await clear(reason: SessionClearReason.softLogoutRefreshFailed);
+      rethrow;
+    } on OidcException catch (e) {
+      if (e.error == 'invalid_grant') {
         Logs().w(
           'Unable to refresh session after soft logout. Clearing session...',
           e,
         );
         await clear(reason: SessionClearReason.softLogoutRefreshFailed);
-        rethrow;
-      } on OidcException catch (e) {
-        if (e.error == 'invalid_grant') {
-          Logs().w(
-            'Unable to refresh session after soft logout. Clearing session...',
-            e,
-          );
-          await clear(reason: SessionClearReason.softLogoutRefreshFailed);
-        }
-        rethrow;
-      } catch (e, s) {
-        Logs().e(
-          'Unable to refresh session after soft logout. Try again...',
-          e,
-          s,
-        );
-        return;
       }
-    }();
-    await _handleSoftLogoutFuture;
-    _handleSoftLogoutFuture = null;
+      rethrow;
+    } catch (e, s) {
+      Logs().e(
+        'Unable to refresh session after soft logout. Try again...',
+        e,
+        s,
+      );
+      return;
+    }
   }
 
   /// Checks if the token expires in under [expiresIn] time and calls the
