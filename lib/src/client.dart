@@ -2334,16 +2334,19 @@ class Client extends MatrixApi {
   }) async {
     Logs().i('Clearing the session because of $reason');
     Logs().outputEvents.clear();
-    _clearing = true;
-    // A refresh still storing its token would write the credentials back.
-    await _refreshAccessTokenFuture?.catchError((_) {});
     DatabaseApi? legacyDatabase;
     if (legacyDatabaseBuilder != null) {
       // If there was data in the legacy db, it will never let the SDK
       // completely log out as we migrate data from it, everytime we `init`
       legacyDatabase = await legacyDatabaseBuilder?.call(this);
     }
+    _clearing = true;
     try {
+      // A refresh still storing its token would write the credentials back.
+      // The request itself has no timeout until its headers arrive.
+      await _refreshAccessTokenFuture
+          ?.timeout(const Duration(seconds: 30))
+          .catchError((_) {});
       await abortSync();
       await database.clear();
       await legacyDatabase?.clear();
@@ -2354,11 +2357,12 @@ class Client extends MatrixApi {
       await legacyDatabase?.delete();
       legacyDatabase = null;
       await dispose();
+    } finally {
+      _clearing = false;
     }
 
     _id = accessToken = _syncFilterId = homeserver = _userID = _deviceID =
         _deviceName = _prevBatch = _trackedUserIds = null;
-    _clearing = false;
     _rooms = [];
     _eventsPendingDecryption.clear();
     await encryption?.dispose();
