@@ -2333,6 +2333,8 @@ class Client extends MatrixApi {
   }) async {
     Logs().i('Clearing the session because of $reason');
     Logs().outputEvents.clear();
+    // A refresh still storing its token would write the credentials back.
+    await _refreshAccessTokenFuture?.catchError((_) {});
     DatabaseApi? legacyDatabase;
     if (legacyDatabaseBuilder != null) {
       // If there was data in the legacy db, it will never let the SDK

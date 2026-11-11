@@ -1542,15 +1542,18 @@ void main() {
       await client.dispose();
     });
 
-    test('a refresh that finishes after a logout is not stored', () async {
+    test('a logout waits for a running refresh before clearing', () async {
       final client = await getClient();
       final heldRefresh = _HeldRefresh(client.httpClient);
       client.httpClient = heldRefresh;
       final refresh = client.refreshAccessToken();
       await heldRefresh.reached.future;
-      await client.clear();
+      final clear = client.clear();
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(client.isLogged(), isTrue);
       heldRefresh.release.complete();
-      await refresh;
+      await Future.wait([refresh, clear]);
 
       expect(client.accessToken, isNull);
       expect(await client.database.getClient(client.clientName), isNull);
