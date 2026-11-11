@@ -320,6 +320,7 @@ class Client extends MatrixApi {
   ).whenComplete(() => _refreshAccessTokenFuture = null);
 
   Future<void>? _refreshAccessTokenFuture;
+  var _clearing = false;
 
   Future<void> _refreshAccessToken({
     Duration? customRefreshTokenLifetime,
@@ -2339,7 +2340,13 @@ class Client extends MatrixApi {
       // completely log out as we migrate data from it, everytime we `init`
       legacyDatabase = await legacyDatabaseBuilder?.call(this);
     }
+    _clearing = true;
     try {
+      // A refresh still storing its token would write the credentials back.
+      // The request itself has no timeout until its headers arrive.
+      await _refreshAccessTokenFuture
+          ?.timeout(const Duration(seconds: 30))
+          .catchError((_) {});
       await abortSync();
       await database.clear();
       await legacyDatabase?.clear();
@@ -2350,6 +2357,8 @@ class Client extends MatrixApi {
       await legacyDatabase?.delete();
       legacyDatabase = null;
       await dispose();
+    } finally {
+      _clearing = false;
     }
 
     _id = accessToken = _syncFilterId = homeserver = _userID = _deviceID =
@@ -2431,7 +2440,8 @@ class Client extends MatrixApi {
     onLoginStateChanged.add(LoginState.softLoggedOut);
     try {
       await onSoftLogout(this);
-      onLoginStateChanged.add(LoginState.loggedIn);
+      // A logout during the refresh already moved the state to loggedOut.
+      if (isLogged()) onLoginStateChanged.add(LoginState.loggedIn);
     } on MatrixException catch (e) {
       // A rate limit leaves the refresh token valid, every other error is final.
       if (e.error == MatrixError.M_LIMIT_EXCEEDED) {
@@ -2500,6 +2510,8 @@ class Client extends MatrixApi {
       await ensureNotSoftLoggedOut(
         timeout == null ? const Duration(minutes: 1) : (timeout * 2),
       );
+      // A logout waiting on the same refresh is about to wipe the database.
+      if (_clearing) return;
 
       await _checkSyncFilter();
 

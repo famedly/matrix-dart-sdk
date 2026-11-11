@@ -1542,20 +1542,43 @@ void main() {
       await client.dispose();
     });
 
-    test('a refresh that finishes after a logout is not stored', () async {
+    test('a logout waits for a running refresh before clearing', () async {
       final client = await getClient();
       final heldRefresh = _HeldRefresh(client.httpClient);
       client.httpClient = heldRefresh;
       final refresh = client.refreshAccessToken();
       await heldRefresh.reached.future;
-      await client.clear();
+      final clear = client.clear();
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(client.isLogged(), isTrue);
       heldRefresh.release.complete();
-      await refresh;
+      await Future.wait([refresh, clear]);
 
       expect(client.accessToken, isNull);
       expect(await client.database.getClient(client.clientName), isNull);
       await client.dispose();
     });
+
+    test(
+      'a sync waiting on the refresh does not run during a logout',
+      () async {
+        final client = await getClient();
+        // A first refresh gives the access token an expiry.
+        await client.refreshAccessToken();
+        await client.abortSync();
+        final heldRefresh = _HeldRefresh(client.httpClient);
+        client.httpClient = heldRefresh;
+        final sync = client.oneShotSync(timeout: const Duration(minutes: 5));
+        await heldRefresh.reached.future;
+        final clear = client.clear();
+        heldRefresh.release.complete();
+        await Future.wait([sync, clear]);
+
+        expect(heldRefresh.syncsAfterRelease, 0);
+        await client.dispose();
+      },
+    );
 
     test('concurrent refreshes share one request', () async {
       final client = await getClient();
@@ -1629,6 +1652,18 @@ void main() {
 
       expect(client.isLogged(), isTrue);
       expect(client.accessToken, isNotNull);
+      await client.dispose();
+    });
+
+    test('a logout during the soft logout refresh stays logged out', () async {
+      final client = await getClient();
+      // A first refresh gives the access token an expiry.
+      await client.refreshAccessToken();
+      client.onSoftLogout = (client) => client.clear();
+
+      await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+
+      expect(client.onLoginStateChanged.value, LoginState.loggedOut);
       await client.dispose();
     });
 
@@ -1939,12 +1974,16 @@ class _HeldRefresh extends http.BaseClient {
   final http.Client inner;
   final reached = Completer<void>();
   final release = Completer<void>();
+  var syncsAfterRelease = 0;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     if (request.url.path.endsWith('/refresh')) {
       reached.complete();
       await release.future;
+    }
+    if (release.isCompleted && request.url.path.endsWith('/sync')) {
+      syncsAfterRelease++;
     }
     return inner.send(request);
   }
