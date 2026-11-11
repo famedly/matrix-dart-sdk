@@ -1616,6 +1616,22 @@ void main() {
       },
     );
 
+    test('a rate limited refresh keeps the session', () async {
+      final client = await getClient();
+      // A first refresh gives the access token an expiry.
+      await client.refreshAccessToken();
+      client.onSoftLogout = (_) async => throw MatrixException.fromJson({
+        'errcode': 'M_LIMIT_EXCEEDED',
+        'error': 'Too many requests',
+      });
+
+      await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+
+      expect(client.isLogged(), isTrue);
+      expect(client.accessToken, isNotNull);
+      await client.dispose();
+    });
+
     test('handleSoftLogout', () async {
       final client = await getClient();
       expect(client.accessToken, 'abcd');

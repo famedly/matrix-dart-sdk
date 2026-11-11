@@ -2433,6 +2433,14 @@ class Client extends MatrixApi {
       await onSoftLogout(this);
       onLoginStateChanged.add(LoginState.loggedIn);
     } on MatrixException catch (e) {
+      // Only an unknown token is final; rate limits and the like can be retried.
+      if (e.error != MatrixError.M_UNKNOWN_TOKEN) {
+        Logs().w(
+          'Unable to refresh session after soft logout. Try again...',
+          e,
+        );
+        return;
+      }
       Logs().w(
         'Unable to refresh session after soft logout. Clearing session...',
         e,
