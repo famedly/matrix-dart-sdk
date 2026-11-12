@@ -4,6 +4,19 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [16.0.4] 12th Nov 2026
+
+- ci: clone v-prefixed dart-vodozemac tags (td)
+- ci: pin the example jobs to the versioned Flutter (td)
+- fix(deps): bump vodozemac to 0.9.1 (td)
+- fix: bound the refresh wait in clear() and always reset the flag (td)
+- fix: clear the session on every final soft logout refresh error (td)
+- fix: keep the session when a soft logout refresh is rate limited (td)
+- fix: let a running refresh finish before clearing the session (td)
+- fix: run only one token refresh at a time (td)
+- fix: stay logged out when the session is cleared during a soft logout (td)
+- fix: stop a sync that waited on the refresh during a logout (td)
+
 ## [16.0.3] 10th Nov 2026
 
 - fix: apply edits that getTimeline decrypts (td)
