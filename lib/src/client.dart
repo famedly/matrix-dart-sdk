@@ -2374,6 +2374,7 @@ class Client extends MatrixApi {
   bool _backgroundSync = true;
   Future<void>? _currentSync;
   Future<void> _retryDelay = Future.value();
+  bool _lastSyncFailed = false;
 
   bool get syncPending => _currentSync != null;
 
@@ -2494,6 +2495,8 @@ class Client extends MatrixApi {
   Future<void> _innerSync({Duration? timeout}) async {
     await _retryDelay;
     _retryDelay = Future.delayed(Duration(seconds: syncErrorTimeoutSec));
+    final catchUp = _lastSyncFailed;
+    _lastSyncFailed = true;
     if (!isLogged() || _disposed || _aborted) return;
     try {
       if (_initLock) {
@@ -2519,7 +2522,10 @@ class Client extends MatrixApi {
           sync(
             filter: syncFilterId,
             since: prevBatch,
-            timeout: timeout?.inMilliseconds,
+            // After a failed sync, don't long-poll so that a restored
+            // connection is noticed right away instead of after the timeout.
+            timeout: (catchUp && timeout != null ? Duration.zero : timeout)
+                ?.inMilliseconds,
             setPresence: syncPresence,
           ).then(Future<SyncUpdate?>.value).catchError((e) {
             if (e is MatrixException) {
@@ -2585,6 +2591,7 @@ class Client extends MatrixApi {
       } catch (_) {} // we want to dispose any errors this throws
 
       _retryDelay = Future.value();
+      _lastSyncFailed = false;
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.finished));
     } on MatrixException catch (e, s) {
       onSyncStatus.add(
