@@ -319,13 +319,13 @@ class SSSS {
 
   Future<bool> checkKey(Uint8List key, SecretStorageKeyContent info) async {
     if (info.algorithm == AlgorithmTypes.secretStorageV1AesHmcSha2) {
-      if ((info.mac is String) && (info.iv is String)) {
+      if (info.mac != null && info.iv != null) {
         return client.nativeImplementations.checkSecretStorageKey(
           CheckSecretStorageKeyArgs(key: key, iv: info.iv!, mac: info.mac!),
         );
       } else {
-        // no real information about the key, assume it is valid
-        return true;
+        // mac or iv is missing. Assume it is invalid:
+        return false;
       }
     } else {
       throw InvalidPassphraseException('Unknown Algorithm');
