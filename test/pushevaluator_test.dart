@@ -320,15 +320,16 @@ void main() {
 
     test('match_display_name rule', () async {
       final event = Event.fromJson(jsonObj, room);
-      (event.room.states[EventTypes.RoomMember] ??=
-          {})[client.userID!] = Event.fromJson({
-        'type': EventTypes.RoomMember,
-        'sender': senderID,
-        'state_key': 'client.senderID',
-        'content': {'displayname': 'Nico', 'membership': 'join'},
-        'room_id': room.id,
-        'origin_server_ts': 5,
-      }, room);
+      event.room.setState(
+        Event.fromJson({
+          'type': EventTypes.RoomMember,
+          'sender': senderID,
+          'state_key': client.userID,
+          'content': {'displayname': 'Nico', 'membership': 'join'},
+          'room_id': room.id,
+          'origin_server_ts': 5,
+        }, room),
+      );
 
       final ruleset = PushRuleSet(
         override: [
@@ -355,15 +356,16 @@ void main() {
 
     test('member_count rule', () async {
       final event = Event.fromJson(jsonObj, room);
-      (event.room.states[EventTypes.RoomMember] ??=
-          {})[client.userID!] = Event.fromJson({
-        'type': EventTypes.RoomMember,
-        'sender': senderID,
-        'state_key': 'client.senderID',
-        'content': {'displayname': 'Nico', 'membership': 'join'},
-        'room_id': room.id,
-        'origin_server_ts': 5,
-      }, room);
+      event.room.setState(
+        Event.fromJson({
+          'type': EventTypes.RoomMember,
+          'sender': senderID,
+          'state_key': client.userID,
+          'content': {'displayname': 'Nico', 'membership': 'join'},
+          'room_id': room.id,
+          'origin_server_ts': 5,
+        }, room),
+      );
 
       final ruleset = PushRuleSet(
         override: [
@@ -404,18 +406,19 @@ void main() {
 
     test('notification permissions rule', () async {
       final event = Event.fromJson(jsonObj, room);
-      (event.room.states[EventTypes.RoomPowerLevels] ??=
-          {})[''] = Event.fromJson({
-        'type': EventTypes.RoomMember,
-        'sender': senderID,
-        'state_key': 'client.senderID',
-        'content': {
-          'notifications': {'broom': 20},
-          'users': {senderID: 20},
-        },
-        'room_id': room.id,
-        'origin_server_ts': 5,
-      }, room);
+      event.room.setState(
+        Event.fromJson({
+          'type': EventTypes.RoomPowerLevels,
+          'sender': senderID,
+          'state_key': '',
+          'content': {
+            'notifications': {'broom': 20},
+            'users': {senderID: 20},
+          },
+          'room_id': room.id,
+          'origin_server_ts': 5,
+        }, room),
+      );
 
       final ruleset = PushRuleSet(
         override: [
