@@ -54,7 +54,6 @@ class BoxCollection with ZoneTransactionMixin {
   Future<void> transaction(
     Future<void> Function() action, {
     List<String>? boxNames,
-    bool readOnly = false,
   }) => zoneTransaction(() async {
     final batch = _db.batch();
     _activeBatch = batch;

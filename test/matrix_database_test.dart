@@ -17,18 +17,10 @@ void main() {
         id: '!room:blubb',
         client: Client('testclient', database: database),
       );
-      await database.insertClient(
-        'testclient',
-        'https://example.org',
-        'blubb',
-        null,
-        null,
-        '@test:example.org',
-        null,
-        null,
-        null,
-        null,
-        null,
+      await database.storeClient(
+        homeserverUrl: 'https://example.org',
+        token: 'blubb',
+        userId: '@test:example.org',
       );
     });
 

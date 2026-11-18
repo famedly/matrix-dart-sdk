@@ -76,7 +76,6 @@ class BoxCollection with ZoneTransactionMixin {
   Future<void> transaction(
     Future<void> Function() action, {
     List<String>? boxNames,
-    bool readOnly = false,
   }) => zoneTransaction(() async {
     final txnCache = _txnCache = [];
     await action();
@@ -89,7 +88,7 @@ class BoxCollection with ZoneTransactionMixin {
     final transactionCompleter = Completer<void>();
     final txn = _db.transaction(
       boxNames?.jsify() ?? _db.objectStoreNames,
-      readOnly ? 'readonly' : 'readwrite',
+      'readwrite',
     );
     for (final fun in cache) {
       // The IDB methods return a Future in Dart but must not be awaited in

@@ -97,5 +97,5 @@ final timeline = await room.getTimeline(
 );
 
 // Print all messages in the timeline to the console
-for(final event in timeline.events) print(event.calcLocalizedBodyFallback());
+for(final event in timeline.events) print(event.calcLocalizedBody(MatrixDefaultLocalizations()));
 ```

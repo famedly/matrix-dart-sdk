@@ -308,10 +308,21 @@ class Client extends MatrixApi {
   /// logout case.
   /// Throws an Exception if there is no refresh token available or the
   /// client is not logged in.
+  /// Concurrent calls share the running refresh, so a caller joining it does
+  /// not get its own [customRefreshTokenLifetime] applied.
   Future<void> refreshAccessToken({
     /// Experimental feature which allows to send a custom refresh token
     /// lifetime to the server which overrides the default one. Needs server
     /// support.
+    Duration? customRefreshTokenLifetime,
+  }) => _refreshAccessTokenFuture ??= _refreshAccessToken(
+    customRefreshTokenLifetime: customRefreshTokenLifetime,
+  ).whenComplete(() => _refreshAccessTokenFuture = null);
+
+  Future<void>? _refreshAccessTokenFuture;
+  var _clearing = false;
+
+  Future<void> _refreshAccessToken({
     Duration? customRefreshTokenLifetime,
   }) async {
     // ignore: deprecated_member_use_from_same_package
@@ -353,23 +364,27 @@ class Client extends MatrixApi {
       ),
     };
 
+    // A logout or another login while the request ran must not get these.
+    if (userID != userId || deviceID != deviceId) return;
+
     accessToken = tokenResponse.accessToken;
     final expiresIn = tokenResponse.expiresIn;
     final tokenExpiresAt = expiresIn == null
         ? null
         : DateTime.now().add(expiresIn);
     _accessTokenExpiresAt = tokenExpiresAt;
-    await database.updateClient(
-      homeserverUrl,
-      tokenResponse.accessToken,
-      tokenExpiresAt,
-      tokenResponse.refreshToken,
-      userId,
-      deviceId,
-      deviceName,
-      prevBatch,
-      encryption?.pickledOlmAccount,
-      oidcClientId,
+    await database.storeClient(
+      homeserverUrl: homeserverUrl,
+      token: tokenResponse.accessToken,
+      tokenExpiresAt: tokenExpiresAt,
+      // Without a new one, the spec keeps the old refresh token valid.
+      refreshToken: tokenResponse.refreshToken ?? refreshToken,
+      userId: userId,
+      deviceId: deviceId,
+      deviceName: deviceName,
+      prevBatch: prevBatch,
+      olmAccount: encryption?.pickledOlmAccount,
+      oidcClientId: oidcClientId,
     );
   }
 
@@ -1259,6 +1274,10 @@ class Client extends MatrixApi {
     final leave = syncResp.rooms?.leave;
     final archivedRooms = <ArchivedRoom>[];
     if (leave != null) {
+      // Decrypt a few rooms at a time so key backup lookups stay under
+      // homeserver rate limits. Within a room, events stay sequential so a
+      // shared session is only requested once.
+      final decryptJobs = <Future<void> Function()>[];
       for (final entry in leave.entries) {
         final room = Room(
           id: entry.key,
@@ -1271,7 +1290,33 @@ class Client extends MatrixApi {
               ) ??
               <String, BasicEvent>{},
         );
-        entry.value.state?.forEach(room.setState);
+
+        entry.value.state?.forEach(
+          (state) => _setRoomState(
+            room,
+            state,
+            filterPartial: false,
+            notifyRoomState: false,
+          ),
+        );
+        // `state` only holds state from before the timeline window. A young
+        // room's own state events (e.g. m.room.encryption) arrive in the
+        // timeline instead, so apply those too, in chronological order.
+        for (final event in entry.value.timeline?.events ?? <MatrixEvent>[]) {
+          if (event.stateKey != null) {
+            if (event.type == EventTypes.Encryption &&
+                _isIgnoredEncryptionEvent(room, event)) {
+              continue;
+            }
+            _setRoomState(
+              room,
+              Event.fromMatrixEvent(event, room),
+              filterPartial: false,
+              notifyRoomState: false,
+            );
+          }
+        }
+
         final timeline = Timeline(
           room: room,
           chunk: TimelineChunk(
@@ -1284,22 +1329,51 @@ class Client extends MatrixApi {
             prevBatch: entry.value.timeline?.prevBatch ?? '',
           ),
         );
-        for (var i = 0; i < timeline.events.length; i++) {
-          // Try to decrypt encrypted events but don't update the database.
-          if (room.encrypted && room.client.encryptionEnabled) {
-            if (timeline.events[i].type == EventTypes.Encrypted) {
-              await room.client.encryption!
-                  .decryptRoomEvent(timeline.events[i])
-                  .then((decrypted) => timeline.events[i] = decrypted);
+        archivedRooms.add(ArchivedRoom(room: room, timeline: timeline));
+        decryptJobs.add(() async {
+          // Sessions still undecryptable after one awaited backup attempt -
+          // later events of these sessions must not trigger another request.
+          final unavailableSessions = <String>{};
+          for (var i = 0; i < timeline.events.length; i++) {
+            // Try to decrypt encrypted events but don't update the database.
+            if (room.encrypted && room.client.encryptionEnabled) {
+              final event = timeline.events[i];
+              if (event.type == EventTypes.Encrypted) {
+                final encryption = room.client.encryption!;
+                final sessionId = event.content.tryGet<String>('session_id');
+                if (sessionId != null &&
+                    unavailableSessions.contains(sessionId)) {
+                  timeline.events[i] = encryption.decryptRoomEventSync(event);
+                  continue;
+                }
+                timeline.events[i] = await encryption.decryptRoomEvent(
+                  event,
+                  // Archived rooms are not in client.rooms, so a key fetched in the
+                  // background never reaches this timeline. Wait for the backup.
+                  waitForKeyBackupAndRetry: true,
+                );
+                if (sessionId != null &&
+                    timeline.events[i].type == EventTypes.Encrypted) {
+                  unavailableSessions.add(sessionId);
+                }
+              }
             }
           }
-        }
-        room.lastEvent = timeline.events.firstWhereOrNull(
-          (event) => roomPreviewLastEvents.contains(event.type),
-        );
-
-        archivedRooms.add(ArchivedRoom(room: room, timeline: timeline));
+          // Relations were aggregated before decryption, replace them.
+          timeline.events.forEach(timeline.addAggregatedEvent);
+          room.lastEvent = timeline.events.firstWhereOrNull(
+            (event) => roomPreviewLastEvents.contains(event.type),
+          );
+        });
       }
+      final jobs = decryptJobs.iterator;
+      await Future.wait(
+        List.generate(4, (_) async {
+          while (jobs.moveNext()) {
+            await jobs.current();
+          }
+        }),
+      );
     }
 
     // Sort the archived rooms by last event originServerTs as this is the
@@ -2120,17 +2194,17 @@ class Client extends MatrixApi {
       if (onLoginStateChanged.value == LoginState.softLoggedOut) {
         if (newRefreshToken != null && accessToken != null && userID != null) {
           // Store the new tokens:
-          await database.updateClient(
-            homeserver.toString(),
-            accessToken,
-            accessTokenExpiresAt,
-            newRefreshToken,
-            userID,
-            _deviceID,
-            _deviceName,
-            prevBatch,
-            encryption?.pickledOlmAccount,
-            newOidcClientId,
+          await database.storeClient(
+            homeserverUrl: homeserver.toString(),
+            token: accessToken,
+            tokenExpiresAt: accessTokenExpiresAt,
+            refreshToken: newRefreshToken,
+            userId: userID,
+            deviceId: _deviceID,
+            deviceName: _deviceName,
+            prevBatch: prevBatch,
+            olmAccount: encryption?.pickledOlmAccount,
+            oidcClientId: newOidcClientId,
           );
         }
         onInitStateChanged?.call(InitState.finished);
@@ -2178,34 +2252,19 @@ class Client extends MatrixApi {
       onInitStateChanged?.call(InitState.settingUpEncryption);
       await encryption?.init(olmAccount);
 
-      if (id != null) {
-        await database.updateClient(
-          homeserver.toString(),
-          accessToken,
-          accessTokenExpiresAt,
-          newRefreshToken,
-          userID,
-          _deviceID,
-          _deviceName,
-          prevBatch,
-          encryption?.pickledOlmAccount,
-          newOidcClientId,
-        );
-      } else {
-        _id = await database.insertClient(
-          clientName,
-          homeserver.toString(),
-          accessToken,
-          accessTokenExpiresAt,
-          newRefreshToken,
-          userID,
-          _deviceID,
-          _deviceName,
-          prevBatch,
-          encryption?.pickledOlmAccount,
-          newOidcClientId,
-        );
-      }
+      await database.storeClient(
+        homeserverUrl: homeserver.toString(),
+        token: accessToken,
+        tokenExpiresAt: accessTokenExpiresAt,
+        refreshToken: newRefreshToken,
+        userId: userID,
+        deviceId: _deviceID,
+        deviceName: _deviceName,
+        prevBatch: prevBatch,
+        olmAccount: encryption?.pickledOlmAccount,
+        oidcClientId: newOidcClientId,
+      );
+      _id ??= 0;
       userDeviceKeysLoading = database
           .getUserDeviceKeys(this)
           .then((keys) => _userDeviceKeys = keys);
@@ -2281,7 +2340,13 @@ class Client extends MatrixApi {
       // completely log out as we migrate data from it, everytime we `init`
       legacyDatabase = await legacyDatabaseBuilder?.call(this);
     }
+    _clearing = true;
     try {
+      // A refresh still storing its token would write the credentials back.
+      // The request itself has no timeout until its headers arrive.
+      await _refreshAccessTokenFuture
+          ?.timeout(const Duration(seconds: 30))
+          .catchError((_) {});
       await abortSync();
       await database.clear();
       await legacyDatabase?.clear();
@@ -2292,6 +2357,8 @@ class Client extends MatrixApi {
       await legacyDatabase?.delete();
       legacyDatabase = null;
       await dispose();
+    } finally {
+      _clearing = false;
     }
 
     _id = accessToken = _syncFilterId = homeserver = _userID = _deviceID =
@@ -2359,40 +2426,54 @@ class Client extends MatrixApi {
   Future<void>? _handleSoftLogoutFuture;
 
   Future<void> _handleSoftLogout() async {
+    // Requests still in flight after a failed soft logout cleared the session
+    // must not start another one on the empty client.
+    if (!isLogged()) return;
+    return _handleSoftLogoutFuture ??= _runSoftLogout().whenComplete(
+      () => _handleSoftLogoutFuture = null,
+    );
+  }
+
+  Future<void> _runSoftLogout() async {
     final onSoftLogout = this.onSoftLogout ?? (_) => refreshAccessToken();
 
-    _handleSoftLogoutFuture ??= () async {
-      onLoginStateChanged.add(LoginState.softLoggedOut);
-      try {
-        await onSoftLogout(this);
-        onLoginStateChanged.add(LoginState.loggedIn);
-      } on MatrixException catch (e) {
+    onLoginStateChanged.add(LoginState.softLoggedOut);
+    try {
+      await onSoftLogout(this);
+      // A logout during the refresh already moved the state to loggedOut.
+      if (isLogged()) onLoginStateChanged.add(LoginState.loggedIn);
+    } on MatrixException catch (e) {
+      // A rate limit leaves the refresh token valid, every other error is final.
+      if (e.error == MatrixError.M_LIMIT_EXCEEDED) {
+        Logs().w(
+          'Unable to refresh session after soft logout. Try again...',
+          e,
+        );
+        return;
+      }
+      Logs().w(
+        'Unable to refresh session after soft logout. Clearing session...',
+        e,
+      );
+      await clear(reason: SessionClearReason.softLogoutRefreshFailed);
+      rethrow;
+    } on OidcException catch (e) {
+      if (e.error == 'invalid_grant') {
         Logs().w(
           'Unable to refresh session after soft logout. Clearing session...',
           e,
         );
         await clear(reason: SessionClearReason.softLogoutRefreshFailed);
-        rethrow;
-      } on OidcException catch (e) {
-        if (e.error == 'invalid_grant') {
-          Logs().w(
-            'Unable to refresh session after soft logout. Clearing session...',
-            e,
-          );
-          await clear(reason: SessionClearReason.softLogoutRefreshFailed);
-        }
-        rethrow;
-      } catch (e, s) {
-        Logs().e(
-          'Unable to refresh session after soft logout. Try again...',
-          e,
-          s,
-        );
-        return;
       }
-    }();
-    await _handleSoftLogoutFuture;
-    _handleSoftLogoutFuture = null;
+      rethrow;
+    } catch (e, s) {
+      Logs().e(
+        'Unable to refresh session after soft logout. Try again...',
+        e,
+        s,
+      );
+      return;
+    }
   }
 
   /// Checks if the token expires in under [expiresIn] time and calls the
@@ -2429,6 +2510,8 @@ class Client extends MatrixApi {
       await ensureNotSoftLoggedOut(
         timeout == null ? const Duration(minutes: 1) : (timeout * 2),
       );
+      // A logout waiting on the same refresh is about to wipe the database.
+      if (_clearing) return;
 
       await _checkSyncFilter();
 
@@ -2651,11 +2734,10 @@ class Client extends MatrixApi {
     final callToDeviceEvents = <ToDeviceEvent>[];
     for (final event in events) {
       var toDeviceEvent = ToDeviceEvent.fromJson(event.toJson());
-      Logs().v('Got to_device event ${toDeviceEvent.toJson()} ');
+      Logs().v('Received To-Device event of type "${toDeviceEvent.type}"');
       if (encryptionEnabled) {
         if (toDeviceEvent.type == EventTypes.Encrypted) {
           toDeviceEvent = await encryption!.decryptToDeviceEvent(toDeviceEvent);
-          Logs().v('Decrypted to_device event is: ${toDeviceEvent.toJson()}');
 
           /// collect new keys so that we can find those events in the decryption queue
           if (toDeviceEvent.type == EventTypes.ForwardedRoomKey ||
@@ -2900,6 +2982,48 @@ class Client extends MatrixApi {
   /// Stores event that came down /sync but didn't get decrypted because of missing keys yet.
   final List<_EventPendingDecryption> _eventsPendingDecryption = [];
 
+  /// The client must ignore any new `m.room.encryption` event once encryption
+  /// is already enabled, to prevent man-in-the-middle attacks.
+  bool _isIgnoredEncryptionEvent(Room room, StrippedStateEvent event) {
+    if (room.encrypted &&
+        event.content.tryGet<String>('algorithm') !=
+            room
+                .getState(EventTypes.Encryption)
+                ?.content
+                .tryGet<String>('algorithm')) {
+      Logs().wtf(
+        'Received an `m.room.encryption` event in a room, where encryption is already enabled! This event must be ignored as it could be an attack!',
+        jsonEncode(event.toJson()),
+      );
+      return true;
+    }
+    return false;
+  }
+
+  /// Applies [event] as room state. When [filterPartial] is set, a partially
+  /// loaded room only keeps important state and members already in memory,
+  /// matching sync. Archived rooms pass `filterPartial: false`.
+  void _setRoomState(
+    Room room,
+    StrippedStateEvent event, {
+    bool filterPartial = true,
+    bool notifyRoomState = true,
+  }) {
+    if (filterPartial) {
+      final stateKey = event.stateKey;
+      final memberAlreadyInMemory =
+          event.type == EventTypes.RoomMember &&
+          stateKey != null &&
+          room.getState(EventTypes.RoomMember, stateKey) != null;
+      if (room.partial &&
+          !importantStateEvents.contains(event.type) &&
+          !memberAlreadyInMemory) {
+        return;
+      }
+    }
+    room.setState(event, notifyRoomState: notifyRoomState);
+  }
+
   Future<void> _handleRoomEvents(
     Room room,
     List<StrippedStateEvent> events,
@@ -2912,25 +3036,11 @@ class Client extends MatrixApi {
 
     for (var event in events) {
       if (event.type == EventTypes.Encryption) {
-        // The client must ignore any new m.room.encryption event to prevent
-        // man-in-the-middle attacks!
-        if ((room.encrypted &&
-            event.content.tryGet<String>('algorithm') !=
-                room
-                    .getState(EventTypes.Encryption)
-                    ?.content
-                    .tryGet<String>('algorithm'))) {
-          Logs().wtf(
-            'Received an `m.room.encryption` event in a room, where encryption is already enabled! This event must be ignored as it could be an attack!',
-            jsonEncode(event.toJson()),
-          );
-          continue;
-        } else {
-          // Encryption has been enabled in a room -> Reset tracked user IDs so
-          // sync they can be calculated again.
-          Logs().i('End to end encryption enabled in', room.id);
-          _trackedUserIds = null;
-        }
+        if (_isIgnoredEncryptionEvent(room, event)) continue;
+        // Encryption has been enabled in a room -> Reset tracked user IDs so
+        // sync they can be calculated again.
+        Logs().i('End to end encryption enabled in', room.id);
+        _trackedUserIds = null;
       }
 
       if (event is MatrixEvent &&
@@ -3170,14 +3280,7 @@ class Client extends MatrixApi {
         // Update the room state:
         final stateKey = event.stateKey;
         if (stateKey != null) {
-          final memberAlreadyInMemory =
-              event.type == EventTypes.RoomMember &&
-              room.getState(EventTypes.RoomMember, stateKey) != null;
-          if (!room.partial ||
-              importantStateEvents.contains(event.type) ||
-              memberAlreadyInMemory) {
-            room.setState(event);
-          }
+          _setRoomState(room, event);
 
           // New members must be added to the tracked user IDs for encryption
           // even if the room is only partially loaded, as otherwise their
@@ -4111,20 +4214,18 @@ class Client extends MatrixApi {
     final tokenExpiresAtMs = int.tryParse(
       migrateClient.tryGet<String>('token_expires_at') ?? '',
     );
-    await database.insertClient(
-      clientName,
-      migrateClient['homeserver_url'],
-      migrateClient['token'],
-      tokenExpiresAtMs == null
+    await database.storeClient(
+      homeserverUrl: migrateClient['homeserver_url'],
+      token: migrateClient['token'],
+      tokenExpiresAt: tokenExpiresAtMs == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(tokenExpiresAtMs),
-      migrateClient['refresh_token'],
-      migrateClient['user_id'],
-      migrateClient['device_id'],
-      migrateClient['device_name'],
-      null,
-      migrateClient['olm_account'],
-      migrateClient['oidc_client_id'],
+      refreshToken: migrateClient['refresh_token'],
+      userId: migrateClient['user_id'],
+      deviceId: migrateClient['device_id'],
+      deviceName: migrateClient['device_name'],
+      olmAccount: migrateClient['olm_account'],
+      oidcClientId: migrateClient['oidc_client_id'],
     );
     Logs().d('Migrate SSSSCache...');
     for (final type in cacheTypes) {
@@ -4372,5 +4473,8 @@ enum ShareKeysWith {
   /// or the user must be manually verified first, before keys are shared. By
   /// using cross signing, it is enough to verify the user and then the user
   /// can verify their devices.
+  verifiedOnly,
+
+  @Deprecated('Use verifiedOnly instead')
   directlyVerifiedOnly,
 }

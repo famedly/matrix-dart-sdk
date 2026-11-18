@@ -101,8 +101,9 @@ class SessionKey {
           pickleKey: utf8.encode(key),
         );
       } catch (_) {
+        // Left invalid: callers skip it via isValid, so a broken row can't
+        // block a valid key from replacing it.
         Logs().e('[Vodozemac] Unable to unpickle inboundGroupSession', e, s);
-        rethrow;
       }
     }
   }

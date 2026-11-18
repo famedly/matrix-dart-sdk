@@ -49,9 +49,13 @@ class Room {
   RoomSummary summary;
 
   /// The room states are a key value store of the key (`type`,`state_key`) => State(event).
-  /// In a lot of cases the `state_key` might be an empty string. You **should** use the
-  /// methods `getState()` and `setState()` to interact with the room states.
-  Map<String, Map<String, StrippedStateEvent>> states = {};
+  /// In a lot of cases the `state_key` might be an empty string. Read-only, use
+  /// `getState()` and `setState()` to interact with the room states.
+  Map<String, Map<String, StrippedStateEvent>> get states =>
+      UnmodifiableMapView(
+        _states.map((type, keys) => MapEntry(type, UnmodifiableMapView(keys))),
+      );
+  final Map<String, Map<String, StrippedStateEvent>> _states = {};
 
   /// Key-Value store for ephemerals.
   Map<String, BasicEvent> ephemerals = {};
@@ -128,11 +132,11 @@ class Room {
   /// if (state is Event) { /*...*/ }
   /// ```
   StrippedStateEvent? getState(String typeKey, [String stateKey = '']) =>
-      states[typeKey]?[stateKey];
+      _states[typeKey]?[stateKey];
 
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
-  void setState(StrippedStateEvent state) {
+  void setState(StrippedStateEvent state, {bool notifyRoomState = true}) {
     // Ignore other non-state events
     final stateKey = state.stateKey;
 
@@ -155,9 +159,11 @@ class Room {
       return;
     }
 
-    (states[state.type] ??= {})[stateKey] = state;
+    (_states[state.type] ??= {})[stateKey] = state;
 
-    client.onRoomState.add((roomId: id, state: state));
+    if (notifyRoomState) {
+      client.onRoomState.add((roomId: id, state: state));
+    }
   }
 
   /// ID of the fully read marker event.
@@ -735,7 +741,8 @@ class Room {
       potentialMentions =
           potentialMentions
               .map(
-                (mention) => mention.isValidMatrixIdStrict()
+                (mention) =>
+                    mention.isValidMatrixIdStrict(strictDomainCheck: true)
                     ? mention
                     : getMention(mention),
               )
@@ -1450,6 +1457,10 @@ class Room {
     /// In case of the room is not found on the server, the client leaves the
     /// room and rethrows the exception.
     bool leaveIfNotFound = true,
+
+    /// Set to true to wait for the join to appear in sync, so that the room
+    /// is joined locally when this returns.
+    bool waitForSync = false,
   }) async {
     final dmId = directChatMatrixID;
     try {
@@ -1457,8 +1468,15 @@ class Room {
       // event might be the join event already and there is also a race condition there for SDK users.
       if (dmId != null) await addToDirectChat(dmId);
 
+      // Listen before the request, the sync can be faster. Joining again
+      // creates no new event, so there is nothing to wait for.
+      final joinedInSync =
+          waitForSync && client.getRoomById(id)?.membership != Membership.join
+          ? client.waitForRoomInSync(id, join: true)
+          : null;
       // now join
       await client.joinRoomById(id);
+      await joinedInSync;
     } on MatrixException catch (exception) {
       if (dmId != null) await removeFromDirectChat();
       if (leaveIfNotFound &&
@@ -1478,9 +1496,18 @@ class Room {
 
   /// Call the Matrix API to leave this room. If this room is set as a direct
   /// chat, this will be removed too.
-  Future<void> leave() async {
+  Future<void> leave({
+    /// Set to true to wait for the leave to appear in sync, so that the room
+    /// is left locally when this returns.
+    bool waitForSync = false,
+  }) async {
     try {
+      // Listen before the request, the sync can be faster.
+      final leftInSync = waitForSync
+          ? client.waitForRoomInSync(id, leave: true)
+          : null;
       await client.leaveRoom(id);
+      await leftInSync;
     } on MatrixException catch (e, s) {
       if ([MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN].contains(e.error)) {
         Logs().w(
@@ -1550,8 +1577,35 @@ class Room {
   }
 
   /// Call the Matrix API to invite a user to this room.
-  Future<void> invite(String userID, {String? reason}) =>
-      client.inviteUser(id, userID, reason: reason);
+  Future<void> invite(
+    String userID, {
+    String? reason,
+
+    /// Set to true to wait for the invite to appear in sync. Useful to be
+    /// sure that device keys are updated when sending a message right after.
+    /// Defaults to true if the room is encrypted.
+    bool? waitForSync,
+  }) async {
+    final existingUser = await requestUser(userID, requestProfile: false);
+    if (existingUser?.membership case Membership.join || Membership.invite) {
+      Logs().d('Skip invite a user who is already participating.');
+      return;
+    }
+    waitForSync ??= encrypted;
+    final roomStateUpdateFuture = !waitForSync
+        ? null
+        : client.onSync.stream.firstWhere((syncUpdate) {
+            final joinedRoom = syncUpdate.rooms?.join?[id];
+            if (joinedRoom == null) return false;
+            return [...?joinedRoom.timeline?.events, ...?joinedRoom.state].any(
+              (event) =>
+                  event.type == EventTypes.RoomMember &&
+                  event.stateKey == userID,
+            );
+          });
+    await client.inviteUser(id, userID, reason: reason);
+    await roomStateUpdateFuture;
+  }
 
   /// Request more previous events from the server. [historyCount] defines how many events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
@@ -1724,8 +1778,7 @@ class Room {
     // Try again to decrypt encrypted events but don't update the database.
     if (encrypted && client.encryptionEnabled) {
       for (var i = 0; i < events.length; i++) {
-        if (events[i].type == EventTypes.Encrypted &&
-            events[i].content['can_request_session'] == true) {
+        if (events[i].canRequestSessionKey) {
           events[i] = await client.encryption!.decryptRoomEvent(events[i]);
         }
       }
@@ -1777,9 +1830,7 @@ class Room {
     var events = <Event>[];
 
     if (!isArchived) {
-      await client.database.transaction(() async {
-        events = await client.database.getEventList(this, limit: limit);
-      });
+      events = await client.database.getEventList(this, limit: limit);
     }
 
     var chunk = TimelineChunk(
@@ -1842,6 +1893,8 @@ class Room {
           }
         }
       }
+      // Relations were aggregated before decryption, replace them.
+      chunk.events.forEach(timeline.addAggregatedEvent);
     }
 
     // Fetch poll responses for fragmented timelines after decryption so
@@ -1875,7 +1928,7 @@ class Room {
       Membership.knock,
     ],
   ]) {
-    final members = states[EventTypes.RoomMember];
+    final members = _states[EventTypes.RoomMember];
     if (members != null) {
       return members.entries
           .where((entry) => entry.value.type == EventTypes.RoomMember)
@@ -2058,7 +2111,12 @@ class Room {
     var foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
 
     if (partial) {
-      foundUser = await client.database.getUser(mxID, this) ?? foundUser;
+      try {
+        foundUser = await client.database.getUser(mxID, this) ?? foundUser;
+      } catch (e, s) {
+        if (!ignoreErrors) rethrow;
+        Logs().w('Unable to load the user $mxID from the database', e, s);
+      }
     }
 
     // If not in the database, try fetching the member from the server
@@ -2179,14 +2237,14 @@ class Room {
   Future<Event?> getEventById(String eventID) async {
     try {
       final dbEvent = await client.database.getEventById(eventID, this);
-      if (dbEvent != null) return dbEvent;
+      if (dbEvent != null) {
+        // The keys may have arrived after the event was stored.
+        return await client.encryption?.decryptRoomEvent(dbEvent) ?? dbEvent;
+      }
       final matrixEvent = await client.getOneRoomEvent(id, eventID);
       final event = Event.fromMatrixEvent(matrixEvent, this);
-      if (event.type == EventTypes.Encrypted && client.encryptionEnabled) {
-        // attempt decryption
-        return await client.encryption?.decryptRoomEvent(event);
-      }
-      return event;
+      // attempt decryption
+      return await client.encryption?.decryptRoomEvent(event) ?? event;
     } on MatrixException catch (err) {
       if (err.errcode == 'M_NOT_FOUND') {
         return null;
@@ -2771,7 +2829,7 @@ class Room {
   /// You should therefore not rely on this and always check the children of
   /// the space.
   List<SpaceParent> get spaceParents =>
-      states[EventTypes.SpaceParent]?.values
+      _states[EventTypes.SpaceParent]?.values
           .map(SpaceParent.fromState)
           .where((child) => child.via.isNotEmpty)
           .toList() ??
@@ -2784,7 +2842,7 @@ class Room {
   List<SpaceChild> get spaceChildren =>
       !isSpace
             ? throw Exception('Room is not a space!')
-            : (states[EventTypes.SpaceChild]?.values
+            : (_states[EventTypes.SpaceChild]?.values
                       .map(SpaceChild.fromState)
                       .where((child) => child.via.isNotEmpty)
                       .toList() ??
@@ -2959,41 +3017,17 @@ class Room {
         .map((matrixEvent) => Event.fromMatrixEvent(matrixEvent, this))
         .toList();
 
-    /// Attempt decrypting the event, if it fails, load the key and try again once.
-    /// Returns null if event cannot be decrypted.
-    Future<Event?> loadKeysAndDecryptEvent(
-      Event event, {
-      bool keyAlreadyLoaded = false,
-    }) async {
-      final decrypted = await client.encryption!.decryptRoomEvent(
-        event,
-        store: false,
-        updateType: EventUpdateType.history,
-      );
-      if (decrypted.type != EventTypes.Encrypted) {
-        return decrypted;
-      } else if (!keyAlreadyLoaded) {
-        final content = event.parsedRoomEncryptedContent;
-        if (content.sessionId != null) {
-          await client.encryption!.keyManager.maybeAutoRequest(
-            id,
-            content.sessionId!,
-            content.senderKey,
-            tryOnlineBackup: true,
-            onlineKeyBackupOnly: true,
-            awaitRequest: true,
-          );
-          return loadKeysAndDecryptEvent(event, keyAlreadyLoaded: true);
-        }
-      }
-      return null;
-    }
-
     // Decrypt all events one after another:
     for (final (index, event) in events.indexed) {
       if (event.type == EventTypes.Encrypted && client.encryption != null) {
-        final decrypted = await loadKeysAndDecryptEvent(event);
-        if (decrypted != null) {
+        final decrypted =
+            await client.encryption?.decryptRoomEvent(
+              event,
+              store: false,
+              waitForKeyBackupAndRetry: true,
+            ) ??
+            event;
+        if (decrypted.type != EventTypes.Encrypted) {
           events[index] = decrypted;
         }
       }

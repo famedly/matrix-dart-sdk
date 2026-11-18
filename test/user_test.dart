@@ -176,5 +176,39 @@ void main() async {
       expect(user1.mentionFragments, {'@[Alice M]', '@[Alice M]#1745'});
       expect(user2.mentionFragments, {'@Bob', '@Bob#1542'});
     });
+    test(
+      'fetched members keep their prev_content name in the database',
+      () async {
+        FakeMatrixApi
+                .currentApi!
+                .api['GET']!['/client/v3/rooms/${Uri.encodeComponent(room.id)}/members'] =
+            (_) => {
+              'chunk': [
+                {
+                  'type': EventTypes.RoomMember,
+                  'content': {'membership': 'leave'},
+                  'sender': '@carol:example.com',
+                  'state_key': '@carol:example.com',
+                  'event_id': '\$carol_leave',
+                  'origin_server_ts': 1,
+                  'unsigned': {
+                    'prev_content': {
+                      'membership': 'invite',
+                      'displayname': 'Carol C',
+                    },
+                  },
+                },
+              ],
+            };
+
+        await room.requestParticipants(Membership.values, true, true);
+        final loaded = await client.database.getUser(
+          '@carol:example.com',
+          room,
+        );
+
+        expect(loaded?.displayName, 'Carol C');
+      },
+    );
   });
 }

@@ -152,8 +152,14 @@ abstract class EventLocalizations {
     EventTypes.RoomMember: (event, i18n, body) {
       // Use lazy functions to avoid triggering profile fetches for cases
       // like displayname changes where we don't need the sender/target name.
-      String targetName() =>
-          event.stateKeyUser?.calcDisplayname(i18n: i18n) ?? '';
+      String targetName() {
+        final stateUser = event.stateKeyUser;
+        final user = stateUser?.displayName?.isNotEmpty == true
+            ? stateUser
+            : (event.stateKey != null ? event.asUser : null);
+        return user?.calcDisplayname(i18n: i18n) ?? '';
+      }
+
       String senderName() =>
           event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
       final userIsTarget = event.stateKey == event.room.client.userID;

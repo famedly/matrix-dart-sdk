@@ -9,6 +9,8 @@ import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
 import 'package:path/path.dart' show join;
@@ -1524,6 +1526,147 @@ void main() {
       await client.dispose();
     });
 
+    test('a refresh without a new refresh token keeps the old one', () async {
+      final client = await getClient();
+      client.httpClient = MockClient(
+        (_) async => http.Response(
+          jsonEncode({'access_token': 'a_new_token', 'expires_in_ms': 60000}),
+          200,
+        ),
+      );
+      await client.refreshAccessToken();
+
+      final storedClient = await client.database.getClient(client.clientName);
+      expect(storedClient?['token'], 'a_new_token');
+      expect(storedClient?['refresh_token'], 'refresh_abcd');
+      await client.dispose();
+    });
+
+    test('a logout waits for a running refresh before clearing', () async {
+      final client = await getClient();
+      final heldRefresh = _HeldRefresh(client.httpClient);
+      client.httpClient = heldRefresh;
+      final refresh = client.refreshAccessToken();
+      await heldRefresh.reached.future;
+      final clear = client.clear();
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(client.isLogged(), isTrue);
+      heldRefresh.release.complete();
+      await Future.wait([refresh, clear]);
+
+      expect(client.accessToken, isNull);
+      expect(await client.database.getClient(client.clientName), isNull);
+      await client.dispose();
+    });
+
+    test(
+      'a sync waiting on the refresh does not run during a logout',
+      () async {
+        final client = await getClient();
+        // A first refresh gives the access token an expiry.
+        await client.refreshAccessToken();
+        await client.abortSync();
+        final heldRefresh = _HeldRefresh(client.httpClient);
+        client.httpClient = heldRefresh;
+        final sync = client.oneShotSync(timeout: const Duration(minutes: 5));
+        await heldRefresh.reached.future;
+        final clear = client.clear();
+        heldRefresh.release.complete();
+        await Future.wait([sync, clear]);
+
+        expect(heldRefresh.syncsAfterRelease, 0);
+        await client.dispose();
+      },
+    );
+
+    test('concurrent refreshes share one request', () async {
+      final client = await getClient();
+      final refreshes = _CountedRefresh(client.httpClient);
+      client.httpClient = refreshes;
+      await Future.wait([
+        client.refreshAccessToken(),
+        client.refreshAccessToken(),
+      ]);
+
+      expect(refreshes.count, 1);
+      await client.dispose();
+    });
+
+    test('soft logout callers do not start parallel refreshes', () async {
+      final client = await getClient();
+      // A first refresh gives the access token an expiry.
+      await client.refreshAccessToken();
+      final refreshes = _CountedRefresh(client.httpClient, failFirst: true);
+      client.httpClient = refreshes;
+
+      Future<void> softLogoutWithRetry() async {
+        await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+        await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+      }
+
+      await Future.wait(List.generate(5, (_) => softLogoutWithRetry()));
+
+      expect(refreshes.count, 2);
+      await client.dispose();
+    });
+
+    test(
+      'no soft logout runs after a failed one cleared the session',
+      () async {
+        final client = await getClient();
+        // A first refresh gives the access token an expiry.
+        await client.refreshAccessToken();
+        var softLogouts = 0;
+        client.onSoftLogout = (_) async {
+          softLogouts++;
+          throw MatrixException.fromJson({
+            'errcode': 'M_UNKNOWN_TOKEN',
+            'error': 'refresh token does not exist',
+          });
+        };
+        await expectLater(
+          client.ensureNotSoftLoggedOut(const Duration(minutes: 10)),
+          throwsA(isA<MatrixException>()),
+        );
+        expect(client.isLogged(), isFalse);
+
+        await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+
+        expect(softLogouts, 1);
+        expect(client.onLoginStateChanged.value, LoginState.loggedOut);
+        await client.dispose();
+      },
+    );
+
+    test('a rate limited refresh keeps the session', () async {
+      final client = await getClient();
+      // A first refresh gives the access token an expiry.
+      await client.refreshAccessToken();
+      client.onSoftLogout = (_) async => throw MatrixException.fromJson({
+        'errcode': 'M_LIMIT_EXCEEDED',
+        'error': 'Too many requests',
+      });
+
+      await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+
+      expect(client.isLogged(), isTrue);
+      expect(client.accessToken, isNotNull);
+      await client.dispose();
+    });
+
+    test('a logout during the soft logout refresh stays logged out', () async {
+      final client = await getClient();
+      // A first refresh gives the access token an expiry.
+      await client.refreshAccessToken();
+      client.onSoftLogout = (client) => client.clear();
+
+      await client.ensureNotSoftLoggedOut(const Duration(minutes: 10));
+
+      expect(client.onLoginStateChanged.value, LoginState.loggedOut);
+      await client.dispose();
+    });
+
     test('handleSoftLogout', () async {
       final client = await getClient();
       expect(client.accessToken, 'abcd');
@@ -1811,15 +1954,58 @@ void main() {
       ], reason: 'Rooms sorted by custom sorter (alphabetically)');
 
       matrix.setCustomRoomSorter(null);
-      expect(
-        matrix.rooms,
-        [roomB, roomC, roomA],
-        reason: 'Rooms should revert to default sort by latest event time',
-      );
+      expect(matrix.rooms, [
+        roomB,
+        roomC,
+        roomA,
+      ], reason: 'Rooms should revert to default sort by latest event time');
     });
 
     tearDown(() async {
       await matrix.dispose(closeDatabase: true);
     });
   });
+}
+
+/// Holds back the /refresh response until [release] completes.
+class _HeldRefresh extends http.BaseClient {
+  _HeldRefresh(this.inner);
+
+  final http.Client inner;
+  final reached = Completer<void>();
+  final release = Completer<void>();
+  var syncsAfterRelease = 0;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.path.endsWith('/refresh')) {
+      reached.complete();
+      await release.future;
+    }
+    if (release.isCompleted && request.url.path.endsWith('/sync')) {
+      syncsAfterRelease++;
+    }
+    return inner.send(request);
+  }
+}
+
+/// Counts /refresh requests and can fail the first one like a dropped network.
+class _CountedRefresh extends http.BaseClient {
+  _CountedRefresh(this.inner, {this.failFirst = false});
+
+  final http.Client inner;
+  final bool failFirst;
+  var count = 0;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.path.endsWith('/refresh')) {
+      count++;
+      await Future.delayed(const Duration(milliseconds: 10));
+      if (failFirst && count == 1) {
+        throw http.ClientException('Network is unreachable');
+      }
+    }
+    return inner.send(request);
+  }
 }

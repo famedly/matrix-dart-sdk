@@ -17,7 +17,9 @@ if [ -z "$version" ] || [ "$version" = "null" ]; then
 fi
 
 rm -rf rust dart-vodozemac
-git clone https://github.com/famedly/dart-vodozemac.git -b "$version"
+# Tags are v-prefixed since v0.9.1 (publish.yml only triggers on those).
+git clone https://github.com/famedly/dart-vodozemac.git -b "v$version" ||
+  git clone https://github.com/famedly/dart-vodozemac.git -b "$version"
 mv ./dart-vodozemac/rust ./
 rm -rf dart-vodozemac
 cd ./rust

@@ -4,7 +4,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
@@ -878,7 +877,64 @@ void main() {
     });
 
     test('invite', () async {
-      await room.invite('Testname');
+      final inviteCompleter = Completer();
+      room
+          .invite('@testuser:example.com', waitForSync: true)
+          .then(inviteCompleter.complete);
+      await Future.delayed(const Duration(seconds: 1));
+      expect(inviteCompleter.isCompleted, false);
+      await room.client.handleSync(
+        SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    MatrixEvent(
+                      roomId: room.id,
+                      type: EventTypes.RoomMember,
+                      content: {'membership': 'invite'},
+                      senderId: room.client.userID!,
+                      stateKey: '@testuser:example.com',
+                      eventId: '\$abcdfake',
+                      originServerTs: DateTime.now(),
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+      await inviteCompleter.future.timeout(const Duration(seconds: 1));
+      expect(inviteCompleter.isCompleted, true);
+    });
+
+    test('join and leave wait for sync', () async {
+      final room = Room(id: '!localpart:example.com', client: matrix);
+      Future<void> expectWaitsForSync(
+        Future<void> action,
+        RoomsUpdate rooms,
+      ) async {
+        var done = false;
+        unawaited(action.then((_) => done = true));
+        await Future.delayed(const Duration(milliseconds: 100));
+        expect(done, isFalse);
+        await matrix.handleSync(SyncUpdate(nextBatch: '', rooms: rooms));
+        await Future.delayed(Duration.zero);
+        matrix.onSyncStatus.add(const SyncStatusUpdate(SyncStatus.finished));
+        await action.timeout(const Duration(seconds: 1));
+      }
+
+      await expectWaitsForSync(
+        room.leave(waitForSync: true),
+        RoomsUpdate(leave: {room.id: LeftRoomUpdate()}),
+      );
+      await expectWaitsForSync(
+        room.join(waitForSync: true),
+        RoomsUpdate(join: {room.id: JoinedRoomUpdate()}),
+      );
     });
 
     test('setPower', () async {
@@ -899,7 +955,8 @@ void main() {
 
     test('getParticipants', () async {
       var userList = room.getParticipants();
-      expect(userList.length, 5);
+      // includes @testuser:example.com invited in the invite test
+      expect(userList.length, 6);
       // add new user
       room.setState(
         Event(
@@ -913,8 +970,8 @@ void main() {
         ),
       );
       userList = room.getParticipants();
-      expect(userList.length, 6);
-      expect(userList[5].displayName, 'alice');
+      expect(userList.length, 7);
+      expect(userList[6].displayName, 'alice');
     });
 
     test('addToDirectChat', () async {
@@ -1189,7 +1246,7 @@ void main() {
 
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
-      expect(timeline.events.length, 19);
+      expect(timeline.events.length, 20);
     });
 
     test('Refresh last event', () async {
@@ -1345,7 +1402,7 @@ void main() {
     test('sendEvent with user mention', () async {
       FakeMatrixApi.calledEndpoints.clear();
       final resp = await room.sendTextEvent(
-        'Hello world @[Alice Margatroid]',
+        'Hello world @[Alice Margatroid] @bob:invalid~server',
         addMentions: true,
         txid: 'testtxid',
       );
@@ -1997,8 +2054,8 @@ void main() {
 
     test('Widgets', () {
       expect(room.widgets.isEmpty, true);
-      room.states['m.widget'] = {
-        'test': Event.fromJson({
+      room.setState(
+        Event.fromJson({
           'content': {
             'creatorUserId': '@rxl881:matrix.org',
             'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
@@ -2008,17 +2065,17 @@ void main() {
             'url': 'https://matrix.org/grafana/whatever',
             'waitForIframeLoad': true,
           },
-          'room_id': '!foo:bar',
+          'room_id': room.id,
           'event_id': '\$15104760642668662QICBu:matrix.org',
           'sender': '@rxl881:matrix.org',
           'state_key': 'test',
           'origin_server_ts': 1432735824653,
           'type': 'm.widget',
         }, room),
-      };
+      );
       expect(room.widgets.length, 1);
-      room.states['m.widget'] = {
-        'test2': Event.fromJson({
+      room.setState(
+        Event.fromJson({
           'content': {
             'creatorUserId': '@rxl881:matrix.org',
             'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
@@ -2027,121 +2084,130 @@ void main() {
             'url': 'https://matrix.org/grafana/whatever',
             'waitForIframeLoad': true,
           },
-          'room_id': '!foo:bar',
+          'room_id': room.id,
           'event_id': '\$15104760642668663QICBu:matrix.org',
           'sender': '@rxl881:matrix.org',
           'state_key': 'test2',
           'origin_server_ts': 1432735824653,
           'type': 'm.widget',
         }, room),
-      };
-      expect(room.widgets.length, 1);
-      room.states['m.widget'] = {
-        'test3': Event.fromJson({
+      );
+      expect(room.widgets.length, 2);
+      room.setState(
+        Event.fromJson({
           'content': {
             'creatorUserId': '@rxl881:matrix.org',
             'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
             'type': 'm.grafana',
             'waitForIframeLoad': true,
           },
-          'room_id': '!foo:bar',
+          'room_id': room.id,
           'event_id': '\$15104760642668662QICBu:matrix.org',
           'sender': '@rxl881:matrix.org',
           'state_key': 'test3',
           'origin_server_ts': 1432735824655,
           'type': 'm.widget',
         }, room),
-      };
-      expect(room.widgets.length, 0);
+      );
+      expect(room.widgets.length, 2);
+    });
+
+    test('states are read-only', () {
+      expect(() => room.states['m.widget'] = {}, throwsUnsupportedError);
+      expect(
+        () => room.states[EventTypes.RoomCreate]!.remove(''),
+        throwsUnsupportedError,
+      );
+      expect(room.getState(EventTypes.RoomCreate), isNotNull);
     });
 
     test('Spaces', () async {
       expect(room.isSpace, false);
-      room.states['m.room.create'] = {
-        '': Event.fromJson({
+      room.setState(
+        Event.fromJson({
           'content': {'type': 'm.space'},
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': 'm.room.create',
           'unsigned': {'age': 1234},
           'state_key': '',
         }, room),
-      };
+      );
       expect(room.isSpace, true);
 
       expect(room.spaceParents.isEmpty, true);
-      room.states[EventTypes.SpaceParent] = {
-        '!1234:example.invalid': Event.fromJson({
+      room.setState(
+        Event.fromJson({
           'content': {
             'via': ['example.invalid'],
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': EventTypes.SpaceParent,
           'unsigned': {'age': 1234},
           'state_key': '!1234:example.invalid',
         }, room),
-      };
+      );
       expect(room.spaceParents.length, 1);
 
       expect(room.spaceChildren.isEmpty, true);
-      room.states[EventTypes.SpaceChild] = {
-        '!b:example.invalid': Event.fromJson({
+      [
+        Event.fromJson({
           'content': {
             'via': ['example.invalid'],
             'order': 'b',
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': EventTypes.SpaceChild,
           'unsigned': {'age': 1234},
           'state_key': '!b:example.invalid',
         }, room),
-        '!c:example.invalid': Event.fromJson({
+        Event.fromJson({
           'content': {
             'via': ['example.invalid'],
             'order': 'c',
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': EventTypes.SpaceChild,
           'unsigned': {'age': 1234},
           'state_key': '!c:example.invalid',
         }, room),
-        '!noorder:example.invalid': Event.fromJson({
+        Event.fromJson({
           'content': {
             'via': ['example.invalid'],
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': EventTypes.SpaceChild,
           'unsigned': {'age': 1234},
           'state_key': '!noorder:example.invalid',
         }, room),
-        '!a:example.invalid': Event.fromJson({
+        Event.fromJson({
           'content': {
             'via': ['example.invalid'],
             'order': 'a',
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': EventTypes.SpaceChild,
           'unsigned': {'age': 1234},
           'state_key': '!a:example.invalid',
         }, room),
-      };
+      ].forEach(room.setState);
       expect(room.spaceChildren.length, 4);
 
       expect(room.spaceChildren[0].roomId, '!a:example.invalid');
@@ -2216,8 +2282,9 @@ void main() {
       try {
         await room.sendTextEvent(
           txid: 'event_too_large',
-          // data just bigger than maxBodySize
-          base64Encode(List<int>.generate(60001, (i) => Random().nextInt(256))),
+          // data just bigger than maxBodySize. Fixed, so it never starts with
+          // `/` (a command, nothing sent); spaces keep markdown parsing fast.
+          'x ' * 30001,
         );
       } catch (e) {
         expect(e.runtimeType, EventTooLarge);
@@ -2234,7 +2301,7 @@ void main() {
       // work in postLoaded room
       expect(room.lastEvent?.eventId, 'event_too_large');
       expect(
-        await room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
+        room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Cancelled sending message',
       );
 
@@ -2253,7 +2320,7 @@ void main() {
 
       expect(roomFromDB?.lastEvent?.eventId, 'event_too_large');
       expect(
-        await room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
+        room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Cancelled sending message',
       );
 
@@ -2264,7 +2331,7 @@ void main() {
 
       expect(roomFromDB?.lastEvent?.eventId, 'event_too_large');
       expect(
-        await room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
+        room.lastEvent?.calcLocalizedBody(MatrixDefaultLocalizations()),
         'Cancelled sending message',
       );
     });

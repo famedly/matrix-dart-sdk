@@ -190,9 +190,11 @@ jobs:
         working-directory: example
     steps:
       - uses: actions/checkout@v7
+      - run: cat .github/workflows/versions.env >> $GITHUB_ENV
+        working-directory: .
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: ${{ env.flutter_version }}
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze
@@ -206,9 +208,11 @@ jobs:
         working-directory: example
     steps:
       - uses: actions/checkout@v7
+      - run: cat .github/workflows/versions.env >> $GITHUB_ENV
+        working-directory: .
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: ${{ env.flutter_version }}
       - run: flutter pub get
       - run: flutter build web --base-href "/matrix-example-chat/"
       - uses: actions/upload-artifact@v7

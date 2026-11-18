@@ -319,13 +319,13 @@ class SSSS {
 
   Future<bool> checkKey(Uint8List key, SecretStorageKeyContent info) async {
     if (info.algorithm == AlgorithmTypes.secretStorageV1AesHmcSha2) {
-      if ((info.mac is String) && (info.iv is String)) {
+      if (info.mac != null && info.iv != null) {
         return client.nativeImplementations.checkSecretStorageKey(
           CheckSecretStorageKeyArgs(key: key, iv: info.iv!, mac: info.mac!),
         );
       } else {
-        // no real information about the key, assume it is valid
-        return true;
+        // mac or iv is missing. Assume it is invalid:
+        return false;
       }
     } else {
       throw InvalidPassphraseException('Unknown Algorithm');
@@ -392,14 +392,8 @@ class SSSS {
       mac: mac,
     );
     final decrypted = await decryptAes(encryptInfo, key, type);
-    final db = client.database;
     if (cacheTypes.contains(type)) {
-      // cache the thing
-      await db.storeSSSSCache(type, keyId, ciphertext, decrypted);
-      onSecretStored.add(keyId);
-      if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
-        _cacheCallbacks[type]!(decrypted);
-      }
+      await _storeCache(type, keyId, ciphertext, decrypted);
     }
     return decrypted;
   }
@@ -430,14 +424,29 @@ class SSSS {
       type,
       Map<String, Object?>.from(content),
     );
-    final db = client.database;
     if (cacheTypes.contains(type)) {
-      // cache the thing
-      await db.storeSSSSCache(type, keyId, encrypted.ciphertext, secret);
-      onSecretStored.add(keyId);
-      if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
-        _cacheCallbacks[type]!(secret);
-      }
+      await _storeCache(type, keyId, encrypted.ciphertext, secret);
+    }
+  }
+
+  Future<void> _storeCache(
+    String type,
+    String keyId,
+    String ciphertext,
+    String secret,
+  ) async {
+    bool wasCached;
+    try {
+      wasCached = await getCached(type) != null;
+    } catch (e, s) {
+      Logs().w('[SSSS] Unable to read cached secret $type', e, s);
+      wasCached = false;
+    }
+    await client.database.storeSSSSCache(type, keyId, ciphertext, secret);
+    _cache.remove(type);
+    onSecretStored.add(keyId);
+    if (_cacheCallbacks.containsKey(type) && !wasCached) {
+      _cacheCallbacks[type]!(secret);
     }
   }
 
