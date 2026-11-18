@@ -4,6 +4,12 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [17.0.0] 18th Nov 2026
+
+- chore(deps): bump webdev to ^4.0.3 in web_test (td)
+- fix: missing mac or iv handles key as valid (Christian Kußowski)
+- refactor: [BREAKING] make Room.states read-only (ismail)
+
 ## [16.0.4] 12th Nov 2026
 
 - ci: clone v-prefixed dart-vodozemac tags (td)
