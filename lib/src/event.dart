@@ -11,6 +11,7 @@ import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 
+import '../encryption/utils/session_key.dart';
 import '../matrix.dart';
 import 'utils/file_send_request_credentials.dart';
 import 'utils/html_to_text.dart';
@@ -64,6 +65,13 @@ class Event extends MatrixEvent {
   MatrixEvent? _originalSource;
 
   MatrixEvent? get originalSource => _originalSource;
+
+  /// The user who shared the keys of this encrypted event with us when they
+  /// invited us (MSC4268). We only have their word that [senderId] really
+  /// sent this event, so this should be shown to the user.
+  String? get keysSharedBy => originalSource == null
+      ? null
+      : unsigned?.tryGet<String>(SessionKey.sharedByKey);
 
   String? get transactionId => unsigned?.tryGet<String>('transaction_id');
 
