@@ -414,18 +414,20 @@ void main() {
         );
 
         // Grant redact power; the same non-creator may now end it.
-        (room.states[EventTypes.RoomPowerLevels] ??= {})[''] = Event.fromJson({
-          'type': EventTypes.RoomPowerLevels,
-          'sender': other,
-          'state_key': '',
-          'content': {
-            'redact': 0,
-            'users': {client.userID!: 0},
-            'users_default': 0,
-          },
-          'room_id': room.id,
-          'origin_server_ts': 1,
-        }, room);
+        room.setState(
+          Event.fromJson({
+            'type': EventTypes.RoomPowerLevels,
+            'sender': other,
+            'state_key': '',
+            'content': {
+              'redact': 0,
+              'users': {client.userID!: 0},
+              'users_default': 0,
+            },
+            'room_id': room.id,
+            'origin_server_ts': 1,
+          }, room),
+        );
         stubEnd('end_mod');
         expect(await poll(other).endPoll(txid: 'end_mod'), 'end_mod');
 

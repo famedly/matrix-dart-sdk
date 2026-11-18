@@ -49,9 +49,13 @@ class Room {
   RoomSummary summary;
 
   /// The room states are a key value store of the key (`type`,`state_key`) => State(event).
-  /// In a lot of cases the `state_key` might be an empty string. You **should** use the
-  /// methods `getState()` and `setState()` to interact with the room states.
-  Map<String, Map<String, StrippedStateEvent>> states = {};
+  /// In a lot of cases the `state_key` might be an empty string. Read-only, use
+  /// `getState()` and `setState()` to interact with the room states.
+  Map<String, Map<String, StrippedStateEvent>> get states =>
+      UnmodifiableMapView(
+        _states.map((type, keys) => MapEntry(type, UnmodifiableMapView(keys))),
+      );
+  final Map<String, Map<String, StrippedStateEvent>> _states = {};
 
   /// Key-Value store for ephemerals.
   Map<String, BasicEvent> ephemerals = {};
@@ -128,7 +132,7 @@ class Room {
   /// if (state is Event) { /*...*/ }
   /// ```
   StrippedStateEvent? getState(String typeKey, [String stateKey = '']) =>
-      states[typeKey]?[stateKey];
+      _states[typeKey]?[stateKey];
 
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
@@ -155,7 +159,7 @@ class Room {
       return;
     }
 
-    (states[state.type] ??= {})[stateKey] = state;
+    (_states[state.type] ??= {})[stateKey] = state;
 
     if (notifyRoomState) {
       client.onRoomState.add((roomId: id, state: state));
@@ -1924,7 +1928,7 @@ class Room {
       Membership.knock,
     ],
   ]) {
-    final members = states[EventTypes.RoomMember];
+    final members = _states[EventTypes.RoomMember];
     if (members != null) {
       return members.entries
           .where((entry) => entry.value.type == EventTypes.RoomMember)
@@ -2825,7 +2829,7 @@ class Room {
   /// You should therefore not rely on this and always check the children of
   /// the space.
   List<SpaceParent> get spaceParents =>
-      states[EventTypes.SpaceParent]?.values
+      _states[EventTypes.SpaceParent]?.values
           .map(SpaceParent.fromState)
           .where((child) => child.via.isNotEmpty)
           .toList() ??
@@ -2838,7 +2842,7 @@ class Room {
   List<SpaceChild> get spaceChildren =>
       !isSpace
             ? throw Exception('Room is not a space!')
-            : (states[EventTypes.SpaceChild]?.values
+            : (_states[EventTypes.SpaceChild]?.values
                       .map(SpaceChild.fromState)
                       .where((child) => child.via.isNotEmpty)
                       .toList() ??

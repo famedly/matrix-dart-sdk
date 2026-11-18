@@ -2054,8 +2054,8 @@ void main() {
 
     test('Widgets', () {
       expect(room.widgets.isEmpty, true);
-      room.states['m.widget'] = {
-        'test': Event.fromJson({
+      room.setState(
+        Event.fromJson({
           'content': {
             'creatorUserId': '@rxl881:matrix.org',
             'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
@@ -2065,17 +2065,17 @@ void main() {
             'url': 'https://matrix.org/grafana/whatever',
             'waitForIframeLoad': true,
           },
-          'room_id': '!foo:bar',
+          'room_id': room.id,
           'event_id': '\$15104760642668662QICBu:matrix.org',
           'sender': '@rxl881:matrix.org',
           'state_key': 'test',
           'origin_server_ts': 1432735824653,
           'type': 'm.widget',
         }, room),
-      };
+      );
       expect(room.widgets.length, 1);
-      room.states['m.widget'] = {
-        'test2': Event.fromJson({
+      room.setState(
+        Event.fromJson({
           'content': {
             'creatorUserId': '@rxl881:matrix.org',
             'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
@@ -2084,121 +2084,130 @@ void main() {
             'url': 'https://matrix.org/grafana/whatever',
             'waitForIframeLoad': true,
           },
-          'room_id': '!foo:bar',
+          'room_id': room.id,
           'event_id': '\$15104760642668663QICBu:matrix.org',
           'sender': '@rxl881:matrix.org',
           'state_key': 'test2',
           'origin_server_ts': 1432735824653,
           'type': 'm.widget',
         }, room),
-      };
-      expect(room.widgets.length, 1);
-      room.states['m.widget'] = {
-        'test3': Event.fromJson({
+      );
+      expect(room.widgets.length, 2);
+      room.setState(
+        Event.fromJson({
           'content': {
             'creatorUserId': '@rxl881:matrix.org',
             'data': {'title': 'Bridges Dashboard', 'dateRange': '1y'},
             'type': 'm.grafana',
             'waitForIframeLoad': true,
           },
-          'room_id': '!foo:bar',
+          'room_id': room.id,
           'event_id': '\$15104760642668662QICBu:matrix.org',
           'sender': '@rxl881:matrix.org',
           'state_key': 'test3',
           'origin_server_ts': 1432735824655,
           'type': 'm.widget',
         }, room),
-      };
-      expect(room.widgets.length, 0);
+      );
+      expect(room.widgets.length, 2);
+    });
+
+    test('states are read-only', () {
+      expect(() => room.states['m.widget'] = {}, throwsUnsupportedError);
+      expect(
+        () => room.states[EventTypes.RoomCreate]!.remove(''),
+        throwsUnsupportedError,
+      );
+      expect(room.getState(EventTypes.RoomCreate), isNotNull);
     });
 
     test('Spaces', () async {
       expect(room.isSpace, false);
-      room.states['m.room.create'] = {
-        '': Event.fromJson({
+      room.setState(
+        Event.fromJson({
           'content': {'type': 'm.space'},
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': 'm.room.create',
           'unsigned': {'age': 1234},
           'state_key': '',
         }, room),
-      };
+      );
       expect(room.isSpace, true);
 
       expect(room.spaceParents.isEmpty, true);
-      room.states[EventTypes.SpaceParent] = {
-        '!1234:example.invalid': Event.fromJson({
+      room.setState(
+        Event.fromJson({
           'content': {
             'via': ['example.invalid'],
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': EventTypes.SpaceParent,
           'unsigned': {'age': 1234},
           'state_key': '!1234:example.invalid',
         }, room),
-      };
+      );
       expect(room.spaceParents.length, 1);
 
       expect(room.spaceChildren.isEmpty, true);
-      room.states[EventTypes.SpaceChild] = {
-        '!b:example.invalid': Event.fromJson({
+      [
+        Event.fromJson({
           'content': {
             'via': ['example.invalid'],
             'order': 'b',
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': EventTypes.SpaceChild,
           'unsigned': {'age': 1234},
           'state_key': '!b:example.invalid',
         }, room),
-        '!c:example.invalid': Event.fromJson({
+        Event.fromJson({
           'content': {
             'via': ['example.invalid'],
             'order': 'c',
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': EventTypes.SpaceChild,
           'unsigned': {'age': 1234},
           'state_key': '!c:example.invalid',
         }, room),
-        '!noorder:example.invalid': Event.fromJson({
+        Event.fromJson({
           'content': {
             'via': ['example.invalid'],
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': EventTypes.SpaceChild,
           'unsigned': {'age': 1234},
           'state_key': '!noorder:example.invalid',
         }, room),
-        '!a:example.invalid': Event.fromJson({
+        Event.fromJson({
           'content': {
             'via': ['example.invalid'],
             'order': 'a',
           },
           'event_id': '\$143273582443PhrSn:example.org',
           'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'room_id': room.id,
           'sender': '@example:example.org',
           'type': EventTypes.SpaceChild,
           'unsigned': {'age': 1234},
           'state_key': '!a:example.invalid',
         }, room),
-      };
+      ].forEach(room.setState);
       expect(room.spaceChildren.length, 4);
 
       expect(room.spaceChildren[0].roomId, '!a:example.invalid');
