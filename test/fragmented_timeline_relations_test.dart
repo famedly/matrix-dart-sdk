@@ -364,6 +364,26 @@ void main() {
       },
     );
 
+    test('a late send echo does not downgrade a synced relation', () async {
+      final timeline = fragmentedTimeline([
+        Event.fromJson(taskEventJson('task_1', 1000), room),
+      ]);
+      final synced = {
+        ...stateEventJson('\$state_2', 'task_1', 'done', 3000),
+        'unsigned': {'transaction_id': 'txid_2'},
+      };
+      client.onTimelineEvent.add(Event.fromJson(synced, room));
+      client.onTimelineEvent.add(
+        Event.fromJson({...synced, 'status': EventStatus.sent.intValue}, room),
+      );
+      await pumpEventQueue();
+
+      expect(
+        timeline.aggregatedEvents['task_1']![stateRelType]!.single.status,
+        EventStatus.synced,
+      );
+    });
+
     test('removes redacted relations while not following live', () async {
       var updates = 0;
       final changes = <int>[];

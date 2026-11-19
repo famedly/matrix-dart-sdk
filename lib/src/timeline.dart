@@ -606,6 +606,16 @@ class Timeline {
             _findEvent(event_id: parentId) >= events.length) {
       return false;
     }
+    // Same rule as the live path: a late echo must not downgrade the status.
+    final txid = event.transactionId;
+    final old =
+        _findAggregatedEvent(event.eventId) ??
+        (txid == null ? null : _findAggregatedEvent(txid));
+    if (old != null &&
+        latestEventStatus(event.status, old.status) == old.status &&
+        !(event.status.isError && old.status.isSending)) {
+      event.status = old.status;
+    }
     addAggregatedEvent(event);
     return true;
   }
