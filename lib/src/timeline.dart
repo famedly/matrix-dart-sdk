@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 
 import '../matrix.dart';
 import 'models/timeline_chunk.dart';
@@ -320,16 +321,7 @@ class Timeline {
     }
     newEvents.forEach(addAggregatedEvent);
 
-    await Future.wait(
-      newEvents
-          .where((event) => event.type == PollEventContent.startType)
-          .map(
-            (event) => fetchAggregatedEvents(
-              event.eventId,
-              RelationshipTypes.reference,
-            ),
-          ),
-    );
+    if (isFragmentedTimeline) await fetchMissingRelations(newEvents);
 
     if (onUpdate != null) {
       onUpdate!();
@@ -385,6 +377,14 @@ class Timeline {
       removeAggregatedEvent(events[i]);
       events.removeAt(i);
       onRemove?.call(i);
+      onUpdate?.call();
+      return;
+    }
+    // Relations aggregated while not following the live timeline are not
+    // part of [events].
+    final relation = _findAggregatedEvent(eventId);
+    if (relation != null) {
+      _removeAggregatedRelation(relation);
       onUpdate?.call();
     }
   }
@@ -524,7 +524,8 @@ class Timeline {
     e.add(event);
     if (onChange != null) {
       final index = _findEvent(event_id: relationshipEventId);
-      onChange?.call(index);
+      // The parent may be outside the chunk, e.g. for fetched siblings.
+      if (index < events.length) onChange?.call(index);
     }
   }
 
@@ -538,6 +539,72 @@ class Timeline {
         _removeEventFromSet(e, event);
       }
     }
+  }
+
+  Event? _findAggregatedEvent(String eventId) {
+    for (final relations in aggregatedEvents.values) {
+      for (final set in relations.values) {
+        final event = set.firstWhereOrNull(
+          (e) => e.matchesEventOrTransactionId(eventId),
+        );
+        if (event != null) return event;
+      }
+    }
+    return null;
+  }
+
+  /// Removes [relation] from [aggregatedEvents] and notifies its parent.
+  void _removeAggregatedRelation(Event relation) {
+    removeAggregatedEvent(relation);
+    final parentId = relation.relationshipEventId;
+    if (parentId == null) return;
+    final index = _findEvent(event_id: parentId);
+    if (index < events.length) onChange?.call(index);
+  }
+
+  /// Applies an update to the relations of loaded events while not following
+  /// the live timeline. Returns whether anything changed.
+  bool _updateRelationsOutsideLive(Event event) {
+    if (event.type == EventTypes.Redaction) {
+      final redacts = event.redacts;
+      final relation = redacts == null ? null : _findAggregatedEvent(redacts);
+      if (relation == null) return false;
+      _removeAggregatedRelation(relation);
+      return true;
+    }
+    final parentId = event.relationshipEventId;
+    if (parentId == null ||
+        !aggregatedEvents.containsKey(parentId) &&
+            _findEvent(event_id: parentId) >= events.length) {
+      return false;
+    }
+    addAggregatedEvent(event);
+    return true;
+  }
+
+  /// Fetches the relations configured in [Client.fragmentedTimelineRelations]
+  /// and [Client.fragmentedTimelineSiblingRelations] for [events], which may
+  /// lie outside the loaded chunk.
+  @internal
+  Future<void> fetchMissingRelations(Iterable<Event> events) async {
+    final relations = room.client.fragmentedTimelineRelations;
+    final siblingRelations = room.client.fragmentedTimelineSiblingRelations;
+    final requests = <(String, String)>{};
+    for (final event in events) {
+      // Local echoes have no server-side relations yet.
+      if (!event.status.isSynced) continue;
+      for (final relType in relations[event.type] ?? const <String>{}) {
+        requests.add((event.eventId, relType));
+      }
+      final relType = event.relationshipType;
+      final parentId = event.relationshipEventId;
+      if (relType != null &&
+          parentId != null &&
+          siblingRelations.contains(relType)) {
+        requests.add((parentId, relType));
+      }
+    }
+    await Future.wait(requests.map((r) => fetchAggregatedEvents(r.$1, r.$2)));
   }
 
   /// Fetches related events from the server using the `/relations` API and
@@ -557,19 +624,15 @@ class Timeline {
         ? '$eventId:$relType:$eventType'
         : '$eventId:$relType';
 
-    if (_relationRequests.containsKey(key)) return _relationRequests[key]!;
-
-    final future = _doFetchAggregatedEvents(
-      eventId,
-      relType,
-      eventType: eventType,
-    );
-    _relationRequests[key] = future;
-    try {
-      await future;
-    } catch (_) {
-      unawaited(_relationRequests.remove(key));
-    }
+    // The cached future never throws, so concurrent callers don't either.
+    return _relationRequests[key] ??= () async {
+      try {
+        await _doFetchAggregatedEvents(eventId, relType, eventType: eventType);
+      } catch (_) {
+        // Logged in _doFetchAggregatedEvents; clearing the key allows a retry.
+        _relationRequests.remove(key);
+      }
+    }();
   }
 
   Future<void> _doFetchAggregatedEvents(
@@ -642,7 +705,16 @@ class Timeline {
         onNewEvent?.call();
       }
 
-      if (!allowNewEvent) return;
+      if (!allowNewEvent) {
+        // Not following the live timeline, but relations to loaded events
+        // (e.g. a state change of a task) must still be kept up to date.
+        if (_updateRelationsOutsideLive(event) &&
+            update &&
+            !_collectHistoryUpdates) {
+          onUpdate?.call();
+        }
+        return;
+      }
 
       final status = event.status;
 
@@ -697,6 +769,13 @@ class Timeline {
 
           events[index].setRedactionEvent(event);
           onChange?.call(index);
+        } else {
+          // Relations fetched via /relations are not part of [events].
+          final redacts = event.redacts;
+          final relation = redacts == null
+              ? null
+              : _findAggregatedEvent(redacts);
+          if (relation != null) _removeAggregatedRelation(relation);
         }
       }
 

@@ -97,6 +97,17 @@ class Client extends MatrixApi {
 
   Set<String> roomPreviewLastEvents;
 
+  /// Maps an event type to the rel types whose relating events a fragmented
+  /// timeline fetches via `/relations` when an event of that type is loaded,
+  /// as those relations may lie outside the loaded chunk.
+  Map<String, Set<String>> fragmentedTimelineRelations;
+
+  /// Rel types for which a relating event loaded into a fragmented timeline
+  /// also fetches all its siblings, for events whose rendering depends on the
+  /// other relations of the same parent (e.g. diffing against a previous
+  /// state).
+  Set<String> fragmentedTimelineSiblingRelations;
+
   Set<String> supportedLoginTypes;
 
   bool requestHistoryOnLimitedTimeline;
@@ -176,6 +187,12 @@ class Client extends MatrixApi {
   ///     - *some* m.room.member events, where needed
   /// [roomPreviewLastEvents]: The event types that should be used to calculate the last event
   ///     in a room for the room list.
+  /// [fragmentedTimelineRelations]: Event types mapped to the rel types whose
+  ///     relating events are fetched from the server when an event of that
+  ///     type is loaded into a fragmented timeline. Poll responses are always
+  ///     included.
+  /// [fragmentedTimelineSiblingRelations]: Rel types for which a relating
+  ///     event loaded into a fragmented timeline also fetches its siblings.
   /// Set [requestHistoryOnLimitedTimeline] to controll the automatic behaviour if the client
   /// receives a limited timeline flag for a room.
   /// If [mxidLocalPartFallback] is true, then the local part of the mxid will be shown
@@ -208,6 +225,8 @@ class Client extends MatrixApi {
     /// previewEvents are stored with stateKey '' not the actual state key
     /// of your state event
     Set<String>? roomPreviewLastEvents,
+    Map<String, Set<String>>? fragmentedTimelineRelations,
+    Set<String>? fragmentedTimelineSiblingRelations,
     this.pinUnreadRooms = false,
     this.pinInvitedRooms = true,
     @Deprecated('Use [sendTimelineEventTimeout] instead.')
@@ -261,6 +280,19 @@ class Client extends MatrixApi {
            Filter(room: RoomFilter(state: StateFilter(lazyLoadMembers: true))),
        importantStateEvents = importantStateEvents ??= {},
        roomPreviewLastEvents = roomPreviewLastEvents ??= {},
+       fragmentedTimelineRelations =
+           <String, Set<String>>{
+             // Copied so adding the poll default never mutates caller sets.
+             ...?fragmentedTimelineRelations?.map(
+               (type, relTypes) => MapEntry(type, {...relTypes}),
+             ),
+           }..update(
+             PollEventContent.startType,
+             (relTypes) => relTypes..add(RelationshipTypes.reference),
+             ifAbsent: () => {RelationshipTypes.reference},
+           ),
+       fragmentedTimelineSiblingRelations =
+           fragmentedTimelineSiblingRelations ?? {},
        supportedLoginTypes =
            supportedLoginTypes ?? {AuthenticationTypes.password},
        verificationMethods = verificationMethods ?? <KeyVerificationMethod>{},
