@@ -346,8 +346,12 @@ class VoIP {
         }
       }
     }
+    // An encryption keys event carries the media keys of the call.
+    final loggedContent = event.type == EventTypes.GroupCallMemberEncryptionKeys
+        ? '<redacted>'
+        : event.content;
     Logs().v(
-      '[VOIP] Handling event of type: ${event.type}, content ${event.content} from sender ${event.senderId} rp: $remoteUserId:$remoteDeviceId',
+      '[VOIP] Handling event of type: ${event.type}, content $loggedContent from sender ${event.senderId} rp: $remoteUserId:$remoteDeviceId',
     );
 
     switch (event.type) {
