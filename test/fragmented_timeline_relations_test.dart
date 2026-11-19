@@ -438,5 +438,138 @@ void main() {
         expect(changes, [0]);
       },
     );
+
+    test('context timeline at the live end fetches relations', () async {
+      final contextPath =
+          '/client/v3/rooms/${Uri.encodeComponent(roomId)}/context/task_1'
+          '?limit=${Room.defaultHistoryCount}';
+      (FakeMatrixApi.currentApi!.api['GET'] ??= {})[contextPath] = (_) => {
+        'start': 'ctx_start',
+        'event': taskEventJson('task_1', 1000),
+        'events_before': <Map<String, Object?>>[],
+        'events_after': <Map<String, Object?>>[],
+        'state': <Map<String, Object?>>[],
+      };
+      addTearDown(
+        () => FakeMatrixApi.currentApi!.api['GET']!.remove(contextPath),
+      );
+      stubRelations(
+        'task_1',
+        stateRelType,
+        () => {
+          'chunk': [stateEventJson('state_1', 'task_1', 'todo', 500)],
+        },
+      );
+
+      final timeline = await room.getTimeline(eventContextId: 'task_1');
+
+      expect(timeline.isFragmentedTimeline, false);
+      expect(
+        timeline.aggregatedEvents['task_1']![stateRelType]!.single.eventId,
+        'state_1',
+      );
+    });
+
+    test('paginating an archived room fetches relations', () async {
+      room.membership = Membership.leave;
+      stubMessages('prev', Direction.b, [taskEventJson('task_2', 500)]);
+      stubRelations(
+        'task_2',
+        stateRelType,
+        () => {
+          'chunk': [stateEventJson('state_2', 'task_2', 'todo', 600)],
+        },
+      );
+      stubRelations('task_2', RelationshipTypes.edit, () => {'chunk': []});
+      final timeline = Timeline(
+        room: room,
+        chunk: TimelineChunk(events: [], prevBatch: 'prev'),
+      );
+
+      await timeline.getRoomEvents();
+
+      expect(
+        timeline.aggregatedEvents['task_2']![stateRelType]!.single.eventId,
+        'state_2',
+      );
+    });
+
+    test(
+      'redacting a loaded relation of an unloaded parent reports no index',
+      () async {
+        final changes = <int>[];
+        final timeline = Timeline(
+          room: room,
+          chunk: TimelineChunk(
+            events: [
+              Event.fromJson(
+                stateEventJson('state_1', 'task_1', 'todo', 2000),
+                room,
+              ),
+            ],
+          ),
+          onChange: changes.add,
+        );
+
+        client.onTimelineEvent.add(
+          Event.fromJson(redactionJson('state_1'), room),
+        );
+        await pumpEventQueue();
+
+        expect(timeline.aggregatedEvents['task_1']![stateRelType], isEmpty);
+        expect(changes, everyElement(lessThan(timeline.events.length)));
+      },
+    );
+
+    test(
+      'decrypts fetched relations and fetches their siblings once the key arrives',
+      tags: 'olm',
+      () async {
+        final encryptedRoom = client.getRoomById('!726s6s6q:example.com')!;
+        final payload = await client.encryption!.encryptGroupMessagePayload(
+          encryptedRoom.id,
+          {
+            'status': 'done',
+            'assignees': <String>[],
+            'm.relates_to': {'rel_type': stateRelType, 'event_id': 'task_1'},
+          },
+          type: stateRelType,
+        );
+        final timeline = Timeline(
+          room: encryptedRoom,
+          chunk: TimelineChunk(events: [], nextBatch: 'next'),
+        );
+        // What a fetched relation looks like when its key was missing.
+        timeline.addAggregatedEvent(
+          Event(
+            type: EventTypes.Encrypted,
+            content: {
+              ...payload,
+              'msgtype': MessageTypes.BadEncrypted,
+              'body': 'Unknown session',
+              'can_request_session': true,
+            },
+            room: encryptedRoom,
+            eventId: 'state_enc',
+            senderId: client.userID!,
+            originServerTs: DateTime.now(),
+          ),
+        );
+
+        encryptedRoom.onSessionKeyReceived.add(payload['session_id']);
+        // Decryption runs in a database transaction; the fetch follows it.
+        await Future.doWhile(() async {
+          await Future.delayed(const Duration(milliseconds: 10));
+          return !calledRelationPaths().any(
+            (p) => p.contains('/task_1/$stateRelType'),
+          );
+        }).timeout(const Duration(seconds: 5));
+
+        final state =
+            timeline.aggregatedEvents['task_1']![stateRelType]!.single;
+        expect(state.type, stateRelType);
+        expect(state.content['status'], 'done');
+      },
+    );
   });
 }

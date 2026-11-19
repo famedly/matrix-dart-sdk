@@ -321,7 +321,7 @@ class Timeline {
     }
     newEvents.forEach(addAggregatedEvent);
 
-    if (isFragmentedTimeline) await fetchMissingRelations(newEvents);
+    if (_mayMissRelations) await fetchMissingRelations(newEvents);
 
     if (onUpdate != null) {
       onUpdate!();
@@ -371,6 +371,11 @@ class Timeline {
     }
   }
 
+  /// Whether relations of loaded events may lie outside this timeline: true
+  /// for fragmented timelines and for archived rooms, which start at
+  /// `prev_batch` and never load the newest events.
+  bool get _mayMissRelations => isFragmentedTimeline || room.isArchived;
+
   void _cleanUpCancelledEvent(String eventId) {
     final i = _findEvent(event_id: eventId);
     if (i < events.length) {
@@ -412,6 +417,7 @@ class Timeline {
 
   Future<void> _sessionKeyReceived(String sessionId) async {
     var decryptAtLeastOneEvent = false;
+    final decrypted = <Event>[];
     Future<void> decryptFn() async {
       final encryption = room.client.encryption;
       if (!room.client.encryptionEnabled || encryption == null) {
@@ -430,13 +436,35 @@ class Timeline {
           onChange?.call(i);
           if (events[i].type != EventTypes.Encrypted) {
             decryptAtLeastOneEvent = true;
+            decrypted.add(events[i]);
           }
         }
+      }
+
+      // Relations fetched via /relations are not part of [events].
+      final undecrypted = aggregatedEvents.values
+          .expand((relations) => relations.values)
+          .expand((set) => set)
+          .where(
+            (e) =>
+                e.type == EventTypes.Encrypted &&
+                e.messageType == MessageTypes.BadEncrypted &&
+                e.content['session_id'] == sessionId,
+          )
+          .toList();
+      for (final event in undecrypted) {
+        final result = await encryption.decryptRoomEvent(event);
+        if (result.type == EventTypes.Encrypted) continue;
+        addAggregatedEvent(result);
+        decryptAtLeastOneEvent = true;
+        decrypted.add(result);
       }
     }
 
     await room.client.database.transaction(decryptFn);
     if (decryptAtLeastOneEvent) onUpdate?.call();
+    // Their type was unknown while encrypted, so their relations were skipped.
+    if (_mayMissRelations) await fetchMissingRelations(decrypted);
   }
 
   /// Request the keys for undecryptable events of this timeline
@@ -762,7 +790,8 @@ class Timeline {
           if (onChange != null) {
             final relationshipEventId = events[index].relationshipEventId;
             if (relationshipEventId != null) {
-              onChange?.call(_findEvent(event_id: relationshipEventId));
+              final parentIndex = _findEvent(event_id: relationshipEventId);
+              if (parentIndex < events.length) onChange?.call(parentIndex);
               return;
             }
           }

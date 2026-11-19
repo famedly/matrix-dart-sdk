@@ -1898,7 +1898,7 @@ class Room {
     }
 
     // After decryption, so encrypted events expose their real type.
-    if (timeline.isFragmentedTimeline) {
+    if (eventContextId != null) {
       await timeline.fetchMissingRelations(chunk.events);
     }
 
