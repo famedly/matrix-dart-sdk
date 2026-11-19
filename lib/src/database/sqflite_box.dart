@@ -38,7 +38,7 @@ class BoxCollection with ZoneTransactionMixin {
         'DROP INDEX IF EXISTS k_index',
       ); // Previously we have created a redundant index. We can safely remove it.
     }
-    await batch.commit(noResult: true);
+    await batch.commit(exclusive: true, noResult: true);
     return BoxCollection(sqfliteDatabase, boxNames, name);
   }
 
@@ -46,8 +46,12 @@ class BoxCollection with ZoneTransactionMixin {
     if (!boxNames.contains(name)) {
       throw ('Box with name $name is not in the known box names of this collection.');
     }
-    return Box<V>(name, this);
+    final box = Box<V>(name, this);
+    _openedBoxes.add(box);
+    return box;
   }
+
+  final List<Box> _openedBoxes = [];
 
   Batch? _activeBatch;
 
@@ -57,9 +61,18 @@ class BoxCollection with ZoneTransactionMixin {
   }) => zoneTransaction(() async {
     final batch = _db.batch();
     _activeBatch = batch;
-    await action();
-    _activeBatch = null;
-    await batch.commit(noResult: true);
+    try {
+      await action();
+      _activeBatch = null;
+      await batch.commit(exclusive: true, noResult: true);
+    } catch (_) {
+      for (final box in _openedBoxes) {
+        box.clearQuickAccessCache();
+      }
+      rethrow;
+    } finally {
+      _activeBatch = null;
+    }
   });
 
   Future<void> clear() => transaction(() async {
