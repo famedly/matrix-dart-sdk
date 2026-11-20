@@ -838,6 +838,42 @@ void main() {
 
         await database.close();
       });
+      test('Unreadable device keys list rows are isolated', () async {
+        final sqliteDb = await databaseFactoryFfi.openDatabase(
+          ':memory:',
+          options: OpenDatabaseOptions(singleInstance: false),
+        );
+        final database = await MatrixSdkDatabase.init(
+          'unit_test.${DateTime.now().millisecondsSinceEpoch}',
+          database: sqliteDb,
+          sqfliteFactory: databaseFactoryFfi,
+        );
+        final client = Client('testclient', database: database);
+
+        await database.storeDeviceKeysList(
+          DeviceKeysList('@alice:example.com', client),
+        );
+        // Simulate a row that cannot be read back, e.g. one exceeding the
+        // 2 MB Android CursorWindow limit or corrupted data.
+        await sqliteDb.insert('box_device_keys_list', {
+          'k': '@mallory:example.com',
+          'v': '{{{not json',
+        });
+
+        // The unreadable row is treated as unknown instead of throwing:
+        final mallory = await database.getDeviceKeysList(
+          '@mallory:example.com',
+          client,
+        );
+        expect(mallory, null);
+
+        // Bulk loading still succeeds and marks the user outdated:
+        final all = await database.getUserDeviceKeys(client);
+        expect(all['@alice:example.com']?.outdated, true);
+        expect(all['@mallory:example.com']?.outdated, true);
+
+        await database.close();
+      });
     });
   }
 }

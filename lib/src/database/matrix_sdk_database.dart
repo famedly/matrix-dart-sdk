@@ -1743,11 +1743,12 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       final value = await _deviceKeysListBox.get(userId);
       if (value == null) return null;
       raw = value;
-    } on DatabaseException catch (e, s) {
-      // Android CursorWindow cannot return rows larger than 2 MB. A user
-      // with thousands of devices (bridges, bots) can exceed this. Treat
-      // the keys as unknown so they get refetched from the server instead
-      // of crashing event processing.
+    } catch (e, s) {
+      // A row can be unreadable: on Android the CursorWindow cannot return
+      // rows larger than 2 MB (a user with thousands of devices, e.g.
+      // bridges and bots, can exceed this) and a corrupt row fails to
+      // decode. Treat the keys as unknown so they get refetched from the
+      // server instead of crashing event processing.
       Logs().w('Unable to read device keys list for $userId', e, s);
       return null;
     }
