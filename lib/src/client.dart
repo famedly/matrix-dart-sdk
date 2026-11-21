@@ -1993,11 +1993,15 @@ class Client extends MatrixApi {
     }
     matrixEvent ??= await database.getEventById(eventId, room);
 
+    Future<MatrixEvent> loadEvent() =>
+        getOneRoomEvent(roomId, eventId).timeout(timeoutForServerRequests);
     try {
-      matrixEvent ??= await getOneRoomEvent(
-        roomId,
-        eventId,
-      ).timeout(timeoutForServerRequests);
+      // The network is often not ready yet right after the device woke up, so
+      // retry once on connection errors.
+      matrixEvent ??= await loadEvent().onError((e, _) {
+        Logs().w('Unable to load event for push notification. Retrying...', e);
+        return Future.delayed(const Duration(seconds: 1), loadEvent);
+      }, test: (e) => e is! MatrixException);
     } on MatrixException catch (_) {
       // No access to the MatrixEvent. Search in /notifications
       await ensureNotSoftLoggedOut();
