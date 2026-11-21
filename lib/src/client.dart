@@ -2063,13 +2063,19 @@ class Client extends MatrixApi {
     final encryption = this.encryption;
     if (event.type == EventTypes.Encrypted && encryption != null) {
       var decrypted = await encryption.decryptRoomEvent(event);
-      if (decrypted.messageType == MessageTypes.BadEncrypted &&
-          prevBatch != null) {
-        await oneShotSync()
-            .timeout(timeoutForServerRequests)
-            .catchError((_) => null);
+      // The room key can arrive after the event and a sync can fail or end
+      // without it, so keep syncing until the key is there or time is up.
+      final stopwatch = Stopwatch()..start();
+      var remaining = timeoutForServerRequests;
+      while (decrypted.messageType == MessageTypes.BadEncrypted &&
+          prevBatch != null &&
+          remaining > Duration.zero) {
+        await oneShotSync(
+          timeout: remaining,
+        ).timeout(remaining).catchError((_) => null);
 
         decrypted = await encryption.decryptRoomEvent(event);
+        remaining = timeoutForServerRequests - stopwatch.elapsed;
       }
       event = decrypted;
     }
