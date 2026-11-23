@@ -1822,6 +1822,12 @@ class Client extends MatrixApi {
   /// triggered by a `Room.requestHistory()` call or a method which calls it.
   final CachedStreamController<Event> onHistoryEvent = CachedStreamController();
 
+  /// Events that could not be decrypted when they came in, so
+  /// [onTimelineEvent] or [onHistoryEvent] had them as `m.room.encrypted`,
+  /// once their room key has arrived (within 5 minutes) and decrypted them.
+  final CachedStreamController<Event> onDecryptedTimelineEvent =
+      CachedStreamController();
+
   /// A stream of incoming Events **after** decryption which **should** trigger
   /// a (local) notification. This includes timeline events but also
   /// invite states. Excluded events are those sent by the user themself or
@@ -2742,8 +2748,9 @@ class Client extends MatrixApi {
           /// collect new keys so that we can find those events in the decryption queue
           if (toDeviceEvent.type == EventTypes.ForwardedRoomKey ||
               toDeviceEvent.type == EventTypes.RoomKey) {
-            final roomId = event.content['room_id'];
-            final sessionId = event.content['session_id'];
+            // The decrypted event: `event` holds only the olm ciphertext.
+            final roomId = toDeviceEvent.content['room_id'];
+            final sessionId = toDeviceEvent.content['session_id'];
             if (roomId is String && sessionId is String) {
               (roomsWithNewKeyToSessionId[roomId] ??= []).add(sessionId);
             }
@@ -2793,9 +2800,7 @@ class Client extends MatrixApi {
 
         _eventsPendingDecryption.removeWhere(
           (e) => events.any(
-            (decryptedEvent) =>
-                decryptedEvent.content['event_id'] ==
-                e.event.content['event_id'],
+            (decryptedEvent) => decryptedEvent.eventId == e.event.eventId,
           ),
         );
       }
@@ -3111,6 +3116,9 @@ class Client extends MatrixApi {
             break;
           case EventUpdateType.history:
             onHistoryEvent.add(timelineEvent);
+            break;
+          case EventUpdateType.decryptedTimelineQueue:
+            onDecryptedTimelineEvent.add(timelineEvent);
             break;
           default:
             break;
