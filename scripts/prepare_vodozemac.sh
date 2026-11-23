@@ -16,12 +16,15 @@ if [ -z "$version" ] || [ "$version" = "null" ]; then
   exit 1
 fi
 
-rm -rf rust dart-vodozemac
-# Tags are v-prefixed since v0.9.1 (publish.yml only triggers on those).
-git clone https://github.com/famedly/dart-vodozemac.git -b "v$version" ||
-  git clone https://github.com/famedly/dart-vodozemac.git -b "$version"
-mv ./dart-vodozemac/rust ./
-rm -rf dart-vodozemac
-cd ./rust
-cargo build
-cd ..
+case "$(uname -s)-$(uname -m)" in
+  Linux-x86_64) asset=libvodozemac_bindings_dart-linux-x64.so ;;
+  Linux-aarch64) asset=libvodozemac_bindings_dart-linux-arm64.so ;;
+  Darwin-*) asset=libvodozemac_bindings_dart-macos.dylib ;;
+  *) echo "prepare_vodozemac: no prebuilt vodozemac for $(uname -sm)" >&2; exit 1 ;;
+esac
+
+# The tests load it from ./rust/target/debug/ (see test/fake_client.dart).
+rm -rf rust
+mkdir -p rust/target/debug
+curl -fsSL "https://github.com/famedly/dart-vodozemac/releases/download/v${version}/${asset}" \
+  -o "rust/target/debug/libvodozemac_bindings_dart.${asset##*.}"
