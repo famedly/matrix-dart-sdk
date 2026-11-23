@@ -1822,6 +1822,12 @@ class Client extends MatrixApi {
   /// triggered by a `Room.requestHistory()` call or a method which calls it.
   final CachedStreamController<Event> onHistoryEvent = CachedStreamController();
 
+  /// Events that could not be decrypted when they came in, so
+  /// [onTimelineEvent] or [onHistoryEvent] had them as `m.room.encrypted`,
+  /// once their room key has arrived (within 5 minutes) and decrypted them.
+  final CachedStreamController<Event> onDecryptedTimelineEvent =
+      CachedStreamController();
+
   /// A stream of incoming Events **after** decryption which **should** trigger
   /// a (local) notification. This includes timeline events but also
   /// invite states. Excluded events are those sent by the user themself or
@@ -3110,6 +3116,9 @@ class Client extends MatrixApi {
             break;
           case EventUpdateType.history:
             onHistoryEvent.add(timelineEvent);
+            break;
+          case EventUpdateType.decryptedTimelineQueue:
+            onDecryptedTimelineEvent.add(timelineEvent);
             break;
           default:
             break;

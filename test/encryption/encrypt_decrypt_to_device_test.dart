@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import 'dart:convert';
+
 import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
@@ -99,6 +101,81 @@ void main() async {
       );
       expect(decryptedEvent.type, 'm.to_device');
       expect(decryptedEvent.content['hello'], 'superfoxies');
+    });
+
+    test('room keys that arrive late decrypt the waiting events', () async {
+      const roomId = '!726s6s6q:example.com';
+      final sessions = [vod.GroupSession(), vod.GroupSession()];
+      // Taken before encrypting: a key exported later starts at a later index.
+      final sessionKeys = [for (final s in sessions) s.sessionKey];
+      MatrixEvent encrypted(int i) => MatrixEvent(
+        type: EventTypes.Encrypted,
+        content: {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'ciphertext': sessions[i].encrypt(
+            json.encode({
+              'type': EventTypes.Message,
+              'content': {'msgtype': 'm.text', 'body': 'late $i'},
+              'room_id': roomId,
+            }),
+          ),
+          'sender_key': otherClient.identityKey,
+          'session_id': sessions[i].sessionId,
+        },
+        senderId: otherClient.userID!,
+        eventId: '\$late$i',
+        originServerTs: DateTime.now(),
+      );
+      Future<void> sendKey(int i) async {
+        final payload = await otherClient.encryption!.encryptToDeviceMessage(
+          [device],
+          EventTypes.RoomKey,
+          {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'room_id': roomId,
+            'session_id': sessions[i].sessionId,
+            'session_key': sessionKeys[i],
+          },
+        );
+        await client.handleSync(
+          SyncUpdate(
+            nextBatch: '',
+            toDevice: [
+              BasicEventWithSender(
+                senderId: otherClient.userID!,
+                type: EventTypes.Encrypted,
+                content: payload[client.userID]![client.deviceID]!,
+              ),
+            ],
+          ),
+        );
+      }
+
+      final decrypted = <Event>[];
+      final sub = client.onDecryptedTimelineEvent.stream.listen(decrypted.add);
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(
+            join: {
+              roomId: JoinedRoomUpdate(
+                timeline: TimelineUpdate(events: [encrypted(0), encrypted(1)]),
+              ),
+            },
+          ),
+        ),
+      );
+      expect(decrypted, isEmpty);
+
+      await sendKey(0);
+      await Future.delayed(Duration.zero);
+      expect(decrypted.map((e) => e.body), ['late 0']);
+      // The first key must not drop the second event from the queue.
+      await sendKey(1);
+      await Future.delayed(Duration.zero);
+      expect(decrypted.map((e) => e.body), ['late 0', 'late 1']);
+      expect(decrypted.map((e) => e.eventId), ['\$late0', '\$late1']);
+      await sub.cancel();
     });
 
     test('dispose client', () async {
