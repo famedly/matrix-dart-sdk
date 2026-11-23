@@ -4,6 +4,14 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [17.1.0] 23rd Nov 2026
+
+- chore(deps): bump frontend-ci-templates dart.yml to v1.3.1 (td)
+- feat: add Client.onDecryptedTimelineEvent (td)
+- fix: don't log call encryption keys (nikzen)
+- fix: keep the content of an event that cannot be decrypted (td)
+- fix: re-decrypt queued events when their room key arrives (td)
+
 ## [17.0.0] 18th Nov 2026
 
 - chore(deps): bump webdev to ^4.0.3 in web_test (td)
