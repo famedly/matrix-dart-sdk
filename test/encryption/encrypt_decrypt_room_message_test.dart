@@ -237,6 +237,26 @@ void main() {
       },
     );
 
+    test('an undecryptable event keeps its content', () async {
+      final content = {
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
+        'ciphertext': 'not-a-real-ciphertext',
+        'session_id': 'session-not-in-store',
+        'sender_key': client.identityKey,
+      };
+      final encryptedEvent = Event(
+        type: EventTypes.Encrypted,
+        content: Map.of(content),
+        room: room,
+        originServerTs: now,
+        eventId: '\$keeps_content',
+        senderId: client.userID!,
+      );
+      final decrypted = client.encryption!.decryptRoomEventSync(encryptedEvent);
+      expect(decrypted.content['msgtype'], MessageTypes.BadEncrypted);
+      expect(encryptedEvent.content, content);
+    });
+
     test('dispose client', () async {
       await client.dispose(closeDatabase: true);
     });

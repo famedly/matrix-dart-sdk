@@ -244,7 +244,8 @@ class Encryption {
       }
       if (canRequestSession) {
         decryptedPayload = {
-          'content': event.content,
+          // Copy, or the error fields below overwrite the caller's event.
+          'content': event.content.copy(),
           'type': EventTypes.Encrypted,
         };
         decryptedPayload['content']['body'] = exception.toString();
