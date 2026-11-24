@@ -62,7 +62,7 @@ re-fetches the mirror (~1 MB).
 - Non-E2EE only: `NO_OLM=1 ./scripts/test.sh` (skips `olm`-tagged tests, no vodozemac needed).
 - Full suite incl. E2EE: `./scripts/test.sh` (runs all 52 files sequentially, ~10 min). Requires the native vodozemac library at `./rust/target/debug/libvodozemac_bindings_dart.so`.
 - Single file: `dart test test/<name>_test.dart` (add `-x olm` to skip encryption tests).
-- vodozemac native lib: built by `./scripts/prepare_vodozemac.sh` (git-clones `dart-vodozemac` into `./rust/` and runs `cargo build`, ~15 s). Environment setup runs it, so the `.so` is normally present. Each environment build re-clones `/workspace`, which wipes the gitignored `./rust/` dir, so re-run the script whenever `./rust/target/debug/libvodozemac_bindings_dart.so` is missing or the `vodozemac` version in `pubspec.yaml` changes.
+- vodozemac native lib: downloaded by `./scripts/prepare_vodozemac.sh` from the `dart-vodozemac` GitHub release matching the `vodozemac` version into `./rust/target/debug/`. Environment setup runs it, so the `.so` is normally present. Each environment build re-clones `/workspace`, which wipes the gitignored `./rust/` dir, so re-run the script whenever `./rust/target/debug/libvodozemac_bindings_dart.so` is missing or the `vodozemac` version in `pubspec.yaml` changes.
 
 ### Integration / E2EE tests against a real homeserver
 - Needs a running homeserver. `dockerd` is installed but is NOT auto-started — start it first (e.g. `sudo dockerd &`) and confirm with `sudo docker info`. The daemon is configured for `fuse-overlayfs` with the containerd-snapshotter disabled (required for Docker on this VM).
