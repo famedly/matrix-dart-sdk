@@ -1863,6 +1863,91 @@ void main() {
       expect(storedEvent2?.eventId, event.eventId);
     });
 
+    test('getEventByPushNotification retries on connection errors', () async {
+      final httpClient = _FlakyEventRequest(FakeMatrixApi());
+      final client =
+          Client(
+              'testclient',
+              httpClient: httpClient,
+              database: await getDatabase(),
+            )
+            ..accessToken = '1234'
+            ..baseUri = Uri.parse('https://fakeserver.notexisting');
+
+      final event = await client.getEventByPushNotification(
+        PushNotification(
+          devices: [],
+          eventId: '1234',
+          roomId: '!localpart:server.abc',
+        ),
+        storeInDatabase: false,
+      );
+      expect(httpClient.count, 2);
+      expect(event?.body, 'This is an example text message');
+    });
+
+    test('getEventByPushNotification keeps syncing for the room key', () async {
+      final client = await getClient();
+      const roomId = '!726s6s6q:example.com';
+      final session = vod.GroupSession();
+      final sessionKey = {
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
+        'room_id': roomId,
+        'session_id': session.sessionId,
+        'session_key': session.sessionKey,
+      };
+      final notification = PushNotification(
+        devices: [],
+        eventId: '\$encrypted',
+        roomId: roomId,
+        sender: '@alice:example.com',
+        type: EventTypes.Encrypted,
+        content: {
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
+          'sender_key': 'senderkey',
+          'device_id': 'DEVICE',
+          'session_id': session.sessionId,
+          'ciphertext': session.encrypt(
+            jsonEncode({
+              'type': EventTypes.Message,
+              'content': {'msgtype': MessageTypes.Text, 'body': 'secret'},
+              'room_id': roomId,
+            }),
+          ),
+        },
+      );
+
+      // Without the key it gives up when the timeout is over:
+      var event = await client.getEventByPushNotification(
+        notification,
+        storeInDatabase: false,
+        timeoutForServerRequests: const Duration(milliseconds: 500),
+      );
+      expect(event?.type, EventTypes.Encrypted);
+
+      // The key arrives only after the first sync:
+      final keyReceived = client.onSync.stream.first.then(
+        (_) => Future.delayed(
+          const Duration(milliseconds: 200),
+          () => client.encryption!.keyManager.setInboundGroupSession(
+            roomId,
+            session.sessionId,
+            'senderkey',
+            sessionKey,
+          ),
+        ),
+      );
+      event = await client.getEventByPushNotification(
+        notification,
+        storeInDatabase: false,
+      );
+      await keyReceived;
+      expect(event?.type, EventTypes.Message);
+      expect(event?.body, 'secret');
+
+      await client.dispose(closeDatabase: true);
+    });
+
     test('Rooms and archived rooms getter', () async {
       final client = await getClient();
       await Future.delayed(Duration(milliseconds: 50));
@@ -2005,6 +2090,22 @@ class _CountedRefresh extends http.BaseClient {
       if (failFirst && count == 1) {
         throw http.ClientException('Network is unreachable');
       }
+    }
+    return inner.send(request);
+  }
+}
+
+/// Fails the first event request like a network that is not ready yet.
+class _FlakyEventRequest extends http.BaseClient {
+  _FlakyEventRequest(this.inner);
+
+  final http.Client inner;
+  var count = 0;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.path.contains('/event/') && ++count == 1) {
+      throw http.ClientException('Network is unreachable');
     }
     return inner.send(request);
   }
