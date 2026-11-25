@@ -91,6 +91,103 @@ void main() {
       expect(calls, 2);
     });
 
+    test(
+      'a request that found no key is retried once the backup changed',
+      () async {
+        final keyManager = client.encryption!.keyManager;
+        keyManager.clearInboundGroupSessions();
+        final room = client.getRoomById(roomId)!;
+        final keyPath =
+            '/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=5';
+        const versionPath = '/client/v3/room_keys/version';
+        final api = FakeMatrixApi.currentApi!.api['GET']!;
+        final backupKey = api[keyPath];
+        final version = api[versionPath];
+        addTearDown(() {
+          api[keyPath] = backupKey;
+          api[versionPath] = version;
+        });
+        var etag = '0';
+        api[versionPath] = (req) => {...version(req), 'etag': etag};
+        var calls = 0;
+        // The key is missing until another device uploads it.
+        api[keyPath] = (req) => calls++ == 0
+            ? {'errcode': 'M_NOT_FOUND', 'error': 'not uploaded yet'}
+            : backupKey(req);
+        Future<void> request() async => keyManager.maybeAutoRequest(
+          room,
+          sessionId,
+          senderKey,
+          awaitRequest: true,
+        );
+        await keyManager.getRoomKeysBackupInfo(false);
+
+        await request();
+        await request();
+        expect(calls, 1, reason: 'the backup did not change since the miss');
+        expect(keyManager.getInboundGroupSession(roomId, sessionId), isNull);
+
+        // The upload changes the etag; the cached version info picks it up.
+        etag = '1';
+        await keyManager.getRoomKeysBackupInfo(false);
+        await request();
+        expect(calls, 2);
+        expect(
+          keyManager.getInboundGroupSession(roomId, sessionId)?.sessionId,
+          sessionId,
+        );
+      },
+    );
+
+    test(
+      'a to-device key request is not repeated when the backup changed',
+      () async {
+        final keyManager = client.encryption!.keyManager;
+        keyManager.clearInboundGroupSessions();
+        final room = client.getRoomById(roomId)!;
+        final keyPath =
+            '/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=5';
+        const versionPath = '/client/v3/room_keys/version';
+        final api = FakeMatrixApi.currentApi!.api['GET']!;
+        final backupKey = api[keyPath];
+        final version = api[versionPath];
+        addTearDown(() {
+          api[keyPath] = backupKey;
+          api[versionPath] = version;
+        });
+        var etag = '0';
+        api[versionPath] = (req) => {...version(req), 'etag': etag};
+        api[keyPath] = (req) => {
+          'errcode': 'M_NOT_FOUND',
+          'error': 'not in it',
+        };
+        int keyRequests() => FakeMatrixApi.calledEndpoints.entries
+            .where(
+              (e) => e.key.startsWith(
+                '/client/v3/sendToDevice/m.room_key_request',
+              ),
+            )
+            .fold(0, (n, e) => n + e.value.length);
+        Future<void> request() async => keyManager.maybeAutoRequest(
+          room,
+          sessionId,
+          senderKey,
+          onlineKeyBackupOnly: false,
+          awaitRequest: true,
+        );
+        await keyManager.getRoomKeysBackupInfo(false);
+
+        await request();
+        final sent = keyRequests();
+        expect(sent, greaterThan(0));
+
+        etag = '1';
+        await keyManager.getRoomKeysBackupInfo(false);
+        await request();
+        expect(keyRequests(), sent);
+      },
+    );
+
     test('Load all Room Keys', () async {
       final keyManager = client.encryption!.keyManager;
       const roomId = '!getroomkeys726s6s6q:example.com';
