@@ -4,6 +4,13 @@ SPDX-FileCopyrightText: 2019-Present Famedly GmbH
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+## [18.0.0] 25th Nov 2026
+
+- build: verify downloaded vodozemac against the release SHA256SUMS (td)
+- ci: download vodozemac from the dart-vodozemac release (td)
+- fix(deps): [BREAKING] bump vodozemac to 0.10.0 (td)
+- fix: repeat a backup key request that found nothing once the backup changed (td)
+
 ## [17.1.0] 23rd Nov 2026
 
 - chore(deps): bump frontend-ci-templates dart.yml to v1.3.1 (td)
