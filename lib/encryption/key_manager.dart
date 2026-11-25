@@ -31,6 +31,11 @@ class KeyManager {
   final Map<String, Completer<void>> _requestedSessionIdCompleters =
       <String, Completer<void>>{};
 
+  /// The online backup's etag when a finished backup-only key request found no
+  /// key, per request ident. Only keys added to the backup change it, so the
+  /// request is not repeated before.
+  final Map<String, String> _keyRequestMissedAtEtag = {};
+
   KeyManager(this.encryption) {
     encryption.ssss.setValidator(megolmKey, (String secret) async {
       try {
@@ -51,6 +56,7 @@ class KeyManager {
       // we got a megolm key cached, clear our requested keys and try to re-decrypt
       // last events
       _requestedSessionIdCompleters.clear();
+      _keyRequestMissedAtEtag.clear();
       for (final room in client.rooms) {
         final lastEvent = room.lastEvent;
         if (lastEvent != null && lastEvent.canRequestSessionKey) {
@@ -69,6 +75,8 @@ class KeyManager {
   /// clear all cached inbound group sessions. useful for testing
   void clearInboundGroupSessions() {
     _inboundGroupSessions.clear();
+    _requestedSessionIdCompleters.clear();
+    _keyRequestMissedAtEtag.clear();
   }
 
   Future<void> setInboundGroupSession(
@@ -229,7 +237,14 @@ class KeyManager {
 
     final requestIdent = '${room.id}|$sessionId';
     final existingReqCompleter = _requestedSessionIdCompleters[requestIdent];
-    if (existingReqCompleter != null) {
+    final missedAtEtag = _keyRequestMissedAtEtag[requestIdent];
+    // The version info the SDK fetched last (refreshed by its own backup
+    // requests): no request just for this check.
+    final backupEtag = _roomKeysVersionCache?.etag;
+    if (existingReqCompleter != null &&
+        (missedAtEtag == null ||
+            backupEtag == null ||
+            missedAtEtag == backupEtag)) {
       if (awaitRequest) {
         await existingReqCompleter.future;
       }
@@ -240,6 +255,8 @@ class KeyManager {
     Future<void> requestFn() async {
       final completer = Completer<void>();
       _requestedSessionIdCompleters[requestIdent] = completer;
+      // Concurrent callers wait for this retry instead of starting their own.
+      _keyRequestMissedAtEtag.remove(requestIdent);
       try {
         await request(
           room,
@@ -248,6 +265,14 @@ class KeyManager {
           tryOnlineBackup: tryOnlineBackup,
           onlineKeyBackupOnly: onlineKeyBackupOnly,
         );
+        // Only the backup can have the key later; a to-device request is not
+        // repeated.
+        final etag = _roomKeysVersionCache?.etag;
+        if (onlineKeyBackupOnly &&
+            etag != null &&
+            getInboundGroupSession(room.id, sessionId) == null) {
+          _keyRequestMissedAtEtag[requestIdent] = etag;
+        }
       } catch (_) {
         // A failed attempt must not block a later retry for this session.
         _requestedSessionIdCompleters.remove(requestIdent);
