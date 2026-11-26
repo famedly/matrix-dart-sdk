@@ -854,6 +854,9 @@ class Room {
     /// the sync event. Using this can display a different sort order of events
     /// as the sync event does replace but not relocate the pending event.
     bool displayPendingEvent = true,
+    /// If true, skips the sequential sending queue. Use for batch sends where
+    /// multiple events should be sent concurrently instead of one at a time.
+    bool skipQueue = false,
   }) async {
     txid ??= client.generateUniqueTransactionId();
     await client.database.storeFile(
@@ -1180,6 +1183,7 @@ class Room {
       threadRootEventId: threadRootEventId,
       threadLastEventId: threadLastEventId,
       displayPendingEvent: displayPendingEvent,
+      skipQueue: skipQueue,
     );
     await client.database.deleteFile(
       Uri(scheme: 'cache', host: 'file', path: txid),
@@ -1279,6 +1283,9 @@ class Room {
     /// the sync event. Using this can display a different sort order of events
     /// as the sync event does replace but not relocate the pending event.
     bool displayPendingEvent = true,
+    /// If true, skips the sequential sending queue. Use for batch sends where
+    /// multiple events should be sent concurrently instead of one at a time.
+    bool skipQueue = false,
   }) async {
     // Create new transaction id
     final String messageID;
@@ -1380,10 +1387,13 @@ class Room {
     // even before the fake sync is called, so that the event constructor can check if the event is in the sending state
     sendingQueueEventsByTxId.add(messageID);
     if (displayPendingEvent) await _handleFakeSync(syncUpdate);
-    final completer = Completer();
-    sendingQueue.add(completer);
-    while (sendingQueue.first != completer) {
-      await sendingQueue.first.future;
+    Completer? completer;
+    if (!skipQueue) {
+      completer = Completer();
+      sendingQueue.add(completer);
+      while (sendingQueue.first != completer) {
+        await sendingQueue.first.future;
+      }
     }
 
     final timeoutDate = DateTime.now().add(client.sendTimelineEventTimeout);
@@ -1418,8 +1428,8 @@ class Room {
                   .unsigned![messageSendingStatusKey] =
               EventStatus.error.intValue;
           if (displayPendingEvent) await _handleFakeSync(syncUpdate);
-          completer.complete();
-          sendingQueue.remove(completer);
+          completer?.complete();
+          if (completer != null) sendingQueue.remove(completer);
           sendingQueueEventsByTxId.remove(messageID);
           if (e is EventTooLarge ||
               (e is MatrixException && e.error == MatrixError.M_FORBIDDEN)) {
@@ -1446,7 +1456,8 @@ class Room {
         EventStatus.sent.intValue;
     syncUpdate.rooms!.join!.values.first.timeline!.events!.first.eventId = res;
     if (displayPendingEvent) await _handleFakeSync(syncUpdate);
-    completer.complete();
+    completer?.complete();
+    if (completer != null) sendingQueue.remove(completer);
     sendingQueue.remove(completer);
     sendingQueueEventsByTxId.remove(messageID);
     return res;
