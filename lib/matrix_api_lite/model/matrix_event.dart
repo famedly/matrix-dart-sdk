@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import '../utils/map_copy_extension.dart';
+import '../utils/try_get_map_extension.dart';
 import 'stripped_state_event.dart';
 
 class MatrixEvent extends StrippedStateEvent {
@@ -21,8 +22,8 @@ class MatrixEvent extends StrippedStateEvent {
     this.roomId,
     required this.originServerTs,
     this.unsigned,
-    this.redacts,
-  });
+    String? redacts,
+  }) : redacts = content.tryGet<String>('redacts') ?? redacts;
 
   MatrixEvent.fromJson(super.json)
     : eventId = json['event_id'] as String,
@@ -31,7 +32,10 @@ class MatrixEvent extends StrippedStateEvent {
         json['origin_server_ts'] as int,
       ),
       unsigned = (json['unsigned'] as Map<String, Object?>?)?.copy(),
-      redacts = json['redacts'] as String?,
+      // Room v11 moved `redacts` into the content; top-level survives content stripping.
+      redacts =
+          (json['content'] as Map<String, Object?>).tryGet<String>('redacts') ??
+          json['redacts'] as String?,
       super.fromJson();
 
   @override

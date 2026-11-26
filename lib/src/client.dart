@@ -98,6 +98,14 @@ class Client extends MatrixApi {
 
   Set<String> roomPreviewLastEvents;
 
+  /// Maps a loaded event's type to the rel types of its own relations to fetch
+  /// via `/relations` in fragmented timelines.
+  Map<String, Set<String>> fragmentedTimelineRelations;
+
+  /// Rel types for which a loaded event also fetches its parent's other relations
+  /// of that type (siblings), as the parent may be outside the chunk, type unknown.
+  Set<String> fragmentedTimelineSiblingRelations;
+
   Set<String> supportedLoginTypes;
 
   bool requestHistoryOnLimitedTimeline;
@@ -209,6 +217,8 @@ class Client extends MatrixApi {
     /// previewEvents are stored with stateKey '' not the actual state key
     /// of your state event
     Set<String>? roomPreviewLastEvents,
+    Map<String, Set<String>>? fragmentedTimelineRelations,
+    Set<String>? fragmentedTimelineSiblingRelations,
     this.pinUnreadRooms = false,
     this.pinInvitedRooms = true,
     @Deprecated('Use [sendTimelineEventTimeout] instead.')
@@ -262,6 +272,19 @@ class Client extends MatrixApi {
            Filter(room: RoomFilter(state: StateFilter(lazyLoadMembers: true))),
        importantStateEvents = importantStateEvents ??= {},
        roomPreviewLastEvents = roomPreviewLastEvents ??= {},
+       fragmentedTimelineRelations =
+           <String, Set<String>>{
+             ...?fragmentedTimelineRelations?.map(
+               (type, relTypes) => MapEntry(type, {...relTypes}),
+             ),
+           }..update(
+             PollEventContent.startType,
+             (relTypes) => relTypes..add(RelationshipTypes.reference),
+             ifAbsent: () => {RelationshipTypes.reference},
+           ),
+       fragmentedTimelineSiblingRelations = {
+         ...?fragmentedTimelineSiblingRelations,
+       },
        supportedLoginTypes =
            supportedLoginTypes ?? {AuthenticationTypes.password},
        verificationMethods = verificationMethods ?? <KeyVerificationMethod>{},
@@ -3308,17 +3331,14 @@ class Client extends MatrixApi {
 
         // Is this event redacting the last event?
         if (event.type == EventTypes.Redaction &&
-            ({room.lastEvent?.eventId}.contains(
-              event.redacts ?? event.content.tryGet<String>('redacts'),
-            ))) {
+            ({room.lastEvent?.eventId}.contains(event.redacts))) {
           room.lastEvent?.setRedactionEvent(event);
           break;
         }
         // Is this event redacting the last event which is a edited event.
         final relationshipEventId = room.lastEvent?.relationshipEventId;
         if (relationshipEventId != null &&
-            relationshipEventId ==
-                (event.redacts ?? event.content.tryGet<String>('redacts')) &&
+            relationshipEventId == event.redacts &&
             event.type == EventTypes.Redaction &&
             room.lastEvent?.relationshipType == RelationshipTypes.edit) {
           final originalEvent =

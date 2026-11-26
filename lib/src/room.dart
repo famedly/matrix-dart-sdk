@@ -1899,19 +1899,8 @@ class Room {
       chunk.events.forEach(timeline.addAggregatedEvent);
     }
 
-    // Fetch poll responses for fragmented timelines after decryption so
-    // encrypted poll start events are visible as poll events.
     if (eventContextId != null) {
-      await Future.wait(
-        chunk.events
-            .where((event) => event.type == PollEventContent.startType)
-            .map(
-              (event) => timeline.fetchAggregatedEvents(
-                event.eventId,
-                RelationshipTypes.reference,
-              ),
-            ),
-      );
+      await timeline.fetchMissingRelations(chunk.events);
     }
 
     return timeline;

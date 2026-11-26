@@ -387,7 +387,6 @@ class Event extends MatrixEvent {
         MatrixEvent(
           type: EventTypes.Redaction,
           content: {'redacts': eventId},
-          redacts: eventId,
           senderId: senderId,
           eventId: '${eventId}_cancel_send',
           originServerTs: DateTime.now(),
