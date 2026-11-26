@@ -280,6 +280,36 @@ void main() {
         ),
       );
       expect(room.hasNewMessages, true);
+
+      // A main thread receipt marks a non-thread event as read
+      final readTs = DateTime.now().millisecondsSinceEpoch + 1000;
+      room.receiptState.mainThread = LatestReceiptStateForTimeline.empty()
+        ..latestOwnReceipt = LatestReceiptStateData('1', readTs);
+      expect(room.hasNewMessages, false);
+
+      // A thread receipt marks the event in that thread as read
+      final mainLastEvent = room.lastEvent;
+      room.lastEvent = Event(
+        senderId: '@test:example.com',
+        type: 'm.room.message',
+        room: room,
+        eventId: 'threadEvent',
+        originServerTs: DateTime.now(),
+        content: {
+          'msgtype': 'm.text',
+          'body': 'in thread',
+          'm.relates_to': {'rel_type': 'm.thread', 'event_id': 'root'},
+        },
+      );
+      expect(room.hasNewMessages, true);
+      room.receiptState.byThread = {
+        'root': LatestReceiptStateForTimeline.empty()
+          ..latestOwnReceipt = LatestReceiptStateData('threadEvent', readTs),
+      };
+      expect(room.hasNewMessages, false);
+      room.lastEvent = mainLastEvent;
+      room.receiptState = LatestReceiptState.empty();
+
       expect(room.isUnreadOrInvited, true);
       room.notificationCount = room.highlightCount = 0;
       expect(room.isUnreadOrInvited, false);
