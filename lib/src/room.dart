@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:async/async.dart';
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
+import 'package:meta/meta.dart';
 import 'package:mime/mime.dart';
 
 import '../matrix.dart';
@@ -65,6 +66,7 @@ class Room {
 
   /// Queue of sending events
   /// NOTE: This shouldn't be modified directly, use [sendEvent] instead. This is only used for testing.
+  @visibleForTesting
   final sendingQueue = <Completer>[];
 
   /// List of transaction IDs of events that are currently queued to be sent

@@ -11,6 +11,7 @@ import 'dart:typed_data';
 import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
+import 'package:meta/meta.dart';
 import 'package:mime/mime.dart';
 import 'package:random_string/random_string.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
@@ -393,6 +394,9 @@ class Client extends MatrixApi {
 
   /// The Matrix ID of the current logged user.
   String? get userID => _userID;
+
+  @visibleForTesting
+  set userID(String? userID) => _userID = userID;
   String? _userID;
 
   /// This points to the position in the synchronization history.
@@ -448,6 +452,7 @@ class Client extends MatrixApi {
       userDeviceKeys[userID]?.deviceKeys[deviceID]?.signed != true;
 
   /// Warning! This endpoint is for testing only!
+  @visibleForTesting
   set rooms(List<Room> newList) {
     Logs().w('Warning! This endpoint is for testing only!');
     _rooms = newList;
@@ -2327,11 +2332,6 @@ class Client extends MatrixApi {
     } finally {
       _initLock = false;
     }
-  }
-
-  /// Used for testing only
-  void setUserId(String s) {
-    _userID = s;
   }
 
   /// Resets all settings and stops the synchronisation.

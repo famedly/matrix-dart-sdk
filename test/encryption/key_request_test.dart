@@ -67,7 +67,7 @@ void main() {
       final matrix = await getClient();
       await matrix.abortSync();
 
-      matrix.setUserId('@alice:example.com'); // we need to pretend to be alice
+      matrix.userID = '@alice:example.com'; // we need to pretend to be alice
       FakeMatrixApi.calledEndpoints.clear();
       await matrix
           .userDeviceKeys['@alice:example.com']!

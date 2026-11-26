@@ -23,6 +23,7 @@ import 'utils/stream_helper.dart';
 /// `CallSession` or `GroupCallSession` methods
 class VoIP {
   // used only for internal tests, all txids for call events will be overwritten to this
+  @internal
   static String? customTxid;
 
   /// set to true if you want to use the ratcheting mechanism with your keyprovider
