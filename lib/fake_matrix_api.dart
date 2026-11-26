@@ -203,6 +203,8 @@ class FakeMatrixApi extends BaseClient {
       final act = api[method]?[action];
       if (act != null) {
         res = act(data);
+        // A handler may answer later, e.g. to hold a request in flight.
+        if (res is Future) res = await res;
         if (res is Map && res.containsKey('errcode')) {
           if (res['errcode'] == 'M_NOT_FOUND') {
             statusCode = 404;

@@ -3492,6 +3492,16 @@ class Client extends MatrixApi {
 
   final Map<String, DateTime> _keyQueryFailures = {};
 
+  /// Whether the last /keys/query for users on [domain] failed less than five
+  /// minutes ago. Until then their outdated device lists are not fetched
+  /// again: the server is likely still unreachable.
+  @internal
+  bool keyQueryBackingOff(String? domain) {
+    final failure = _keyQueryFailures[domain];
+    return failure != null &&
+        !DateTime.now().subtract(Duration(minutes: 5)).isAfter(failure);
+  }
+
   /// These are the user IDs we share an encrypted room with and need to track
   /// the devices from, cached here for performance reasons.
   /// It gets initialized after the first sync of every
@@ -3529,18 +3539,13 @@ class Client extends MatrixApi {
           userId,
           this,
         );
-        final failure = _keyQueryFailures[userId.domain];
-
         // deviceKeysList.outdated is not nullable but we have seen this error
         // in production: `Failed assertion: boolean expression must not be null`
         // So this could either be a null safety bug in Dart or a result of
         // using unsound null safety. The extra equal check `!= false` should
         // save us here.
         if (deviceKeysList.outdated != false &&
-            (failure == null ||
-                DateTime.now()
-                    .subtract(Duration(minutes: 5))
-                    .isAfter(failure))) {
+            !keyQueryBackingOff(userId.domain)) {
           outdatedLists[userId] = [];
         }
       }
@@ -3562,7 +3567,10 @@ class Client extends MatrixApi {
               this,
             );
             final oldKeys = Map<String, DeviceKeys>.from(userKeys.deviceKeys);
-            userKeys.deviceKeys = {};
+            // Filled here and swapped in at the end: the checks below await
+            // the database, and an encryption meanwhile must not see an empty
+            // or half filled list.
+            final newKeys = <String, DeviceKeys>{};
             for (final rawDeviceKeyEntry
                 in rawDeviceKeyListEntry.value.entries) {
               final deviceId = rawDeviceKeyEntry.key;
@@ -3631,7 +3639,7 @@ class Client extends MatrixApi {
                     entry.blocked = oldKey.blocked;
                     entry.validSignatures = oldKey.validSignatures;
                   }
-                  userKeys.deviceKeys[deviceId] = entry;
+                  newKeys[deviceId] = entry;
                   if (deviceId == deviceID &&
                       entry.ed25519Key == fingerprintKey) {
                     // Always trust the own device
@@ -3641,7 +3649,7 @@ class Client extends MatrixApi {
                   // This shouldn't ever happen. The same device ID has gotten
                   // a new public key. So we ignore the update. TODO: ask krille
                   // if we should instead use the new key with unknown verified / blocked status
-                  userKeys.deviceKeys[deviceId] = oldKeys[deviceId]!;
+                  newKeys[deviceId] = oldKeys[deviceId]!;
                 }
               } else {
                 Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
@@ -3651,7 +3659,7 @@ class Client extends MatrixApi {
             // delete old/unused entries
             for (final oldDeviceKeyEntry in oldKeys.entries) {
               final deviceId = oldDeviceKeyEntry.key;
-              if (!userKeys.deviceKeys.containsKey(deviceId)) {
+              if (!newKeys.containsKey(deviceId)) {
                 // we need to remove an old key
                 dbActions.add(
                   () => database.removeLastSentMessageUserDeviceKey(
@@ -3662,6 +3670,7 @@ class Client extends MatrixApi {
               }
             }
 
+            userKeys.deviceKeys = newKeys;
             userKeys.outdated = false;
             usersToPersist.add(userId);
           }
