@@ -193,6 +193,9 @@ class MockRTCPeerConnection implements RTCPeerConnection {
   @override
   Function(RTCTrackEvent event)? onTrack;
 
+  @override
+  Function(RTCIceCandidatePair pair)? onSelectedCandidatePairChanged;
+
   // Mock stats to simulate audio levels
   double mockAudioLevel = 0.0;
 

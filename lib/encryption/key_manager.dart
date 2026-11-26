@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
 
 import '../matrix.dart';
@@ -73,6 +74,7 @@ class KeyManager {
   bool get enabled => encryption.ssss.isSecret(megolmKey);
 
   /// clear all cached inbound group sessions. useful for testing
+  @visibleForTesting
   void clearInboundGroupSessions() {
     _inboundGroupSessions.clear();
     _requestedSessionIdCompleters.clear();
@@ -336,7 +338,7 @@ class KeyManager {
     return deviceKeyIds;
   }
 
-  /// clear all cached inbound group sessions. useful for testing
+  /// clear all cached outbound group sessions. useful for testing
   void clearOutboundGroupSessions() {
     _outboundGroupSessions.clear();
   }
