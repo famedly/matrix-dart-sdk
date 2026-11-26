@@ -1738,8 +1738,20 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     Client client, {
     bool skipSignatureCheck = false,
   }) async {
-    final raw = await _deviceKeysListBox.get(userId);
-    if (raw == null) return null;
+    Map raw;
+    try {
+      final value = await _deviceKeysListBox.get(userId);
+      if (value == null) return null;
+      raw = value;
+    } catch (e, s) {
+      // A row can be unreadable: on Android the CursorWindow cannot return
+      // rows larger than 2 MB (a user with thousands of devices, e.g.
+      // bridges and bots, can exceed this) and a corrupt row fails to
+      // decode. Treat the keys as unknown so they get refetched from the
+      // server instead of crashing event processing.
+      Logs().w('Unable to read device keys list for $userId', e, s);
+      return null;
+    }
     final json = copyMap(raw);
     return DeviceKeysList.fromJson(
       json,
@@ -1755,22 +1767,28 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   @override
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client) =>
       runBenchmarked('Get all user device keys from store', () async {
-        final raw = await _deviceKeysListBox.getAllValues();
-        return raw.map((k, v) {
+        // Read row by row instead of SELECT *: on Android a single row
+        // larger than the 2 MB CursorWindow (a user with thousands of
+        // devices) aborts the whole query. Per-row reads isolate the
+        // failure to that user, which is then marked outdated and
+        // refetched from the server.
+        final keys = await _deviceKeysListBox.getAllKeys();
+        final result = <String, DeviceKeysList>{};
+        for (final userId in keys) {
           try {
-            return MapEntry(
-              k,
-              DeviceKeysList.fromJson(
-                copyMap(v),
-                client,
-                skipSignatureCheck: true, // Check was on put into db already
-              ),
+            final raw = await _deviceKeysListBox.get(userId);
+            if (raw == null) continue;
+            result[userId] = DeviceKeysList.fromJson(
+              copyMap(raw),
+              client,
+              skipSignatureCheck: true, // Check was on put into db already
             );
           } catch (e, s) {
-            Logs().w('Unable to parse device keys list for $k', e, s);
-            return MapEntry(k, DeviceKeysList(k, client, outdated: true));
+            Logs().w('Unable to load device keys list for $userId', e, s);
+            result[userId] = DeviceKeysList(userId, client, outdated: true);
           }
-        });
+        }
+        return result;
       });
 }
 
