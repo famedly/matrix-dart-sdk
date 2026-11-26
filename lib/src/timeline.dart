@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 
 import '../matrix.dart';
 import 'models/timeline_chunk.dart';
@@ -320,16 +321,7 @@ class Timeline {
     }
     newEvents.forEach(addAggregatedEvent);
 
-    await Future.wait(
-      newEvents
-          .where((event) => event.type == PollEventContent.startType)
-          .map(
-            (event) => fetchAggregatedEvents(
-              event.eventId,
-              RelationshipTypes.reference,
-            ),
-          ),
-    );
+    if (isFragmentedTimeline) await fetchMissingRelations(newEvents);
 
     if (onUpdate != null) {
       onUpdate!();
@@ -386,6 +378,12 @@ class Timeline {
       events.removeAt(i);
       onRemove?.call(i);
       onUpdate?.call();
+      return;
+    }
+    final relation = _findAggregatedEvent(eventId);
+    if (relation != null) {
+      _removeAggregatedRelation(relation);
+      onUpdate?.call();
     }
   }
 
@@ -412,15 +410,18 @@ class Timeline {
 
   Future<void> _sessionKeyReceived(String sessionId) async {
     var decryptAtLeastOneEvent = false;
+    final decrypted = <Event>[];
     Future<void> decryptFn() async {
       final encryption = room.client.encryption;
       if (!room.client.encryptionEnabled || encryption == null) {
         return;
       }
+      final tried = <String>{};
       for (var i = 0; i < events.length; i++) {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].messageType == MessageTypes.BadEncrypted &&
             events[i].content['session_id'] == sessionId) {
+          tried.add(events[i].eventId);
           events[i] = await encryption.decryptRoomEvent(
             events[i],
             store: true,
@@ -430,13 +431,35 @@ class Timeline {
           onChange?.call(i);
           if (events[i].type != EventTypes.Encrypted) {
             decryptAtLeastOneEvent = true;
+            decrypted.add(events[i]);
           }
         }
+      }
+
+      // Relations outside the loaded chunk live only in aggregatedEvents.
+      final undecrypted = aggregatedEvents.values
+          .expand((relations) => relations.values)
+          .expand((set) => set)
+          .where(
+            (e) =>
+                !tried.contains(e.eventId) &&
+                e.type == EventTypes.Encrypted &&
+                e.messageType == MessageTypes.BadEncrypted &&
+                e.content['session_id'] == sessionId,
+          )
+          .toList();
+      for (final event in undecrypted) {
+        final result = await encryption.decryptRoomEvent(event);
+        if (result.type == EventTypes.Encrypted) continue;
+        addAggregatedEvent(result);
+        decryptAtLeastOneEvent = true;
+        decrypted.add(result);
       }
     }
 
     await room.client.database.transaction(decryptFn);
     if (decryptAtLeastOneEvent) onUpdate?.call();
+    if (isFragmentedTimeline) await fetchMissingRelations(decrypted);
   }
 
   /// Request the keys for undecryptable events of this timeline
@@ -524,7 +547,7 @@ class Timeline {
     e.add(event);
     if (onChange != null) {
       final index = _findEvent(event_id: relationshipEventId);
-      onChange?.call(index);
+      if (index < events.length) onChange?.call(index);
     }
   }
 
@@ -538,6 +561,83 @@ class Timeline {
         _removeEventFromSet(e, event);
       }
     }
+  }
+
+  Event? _findAggregatedEvent(String eventId) {
+    for (final relations in aggregatedEvents.values) {
+      for (final set in relations.values) {
+        final event = set.firstWhereOrNull(
+          (e) => e.matchesEventOrTransactionId(eventId),
+        );
+        if (event != null) return event;
+      }
+    }
+    return null;
+  }
+
+  void _removeAggregatedRelation(Event relation) {
+    removeAggregatedEvent(relation);
+    final parentId = relation.relationshipEventId;
+    if (parentId == null) return;
+    final index = _findEvent(event_id: parentId);
+    if (index < events.length) onChange?.call(index);
+  }
+
+  bool _updateRelationsOutsideLive(Event event) {
+    if (event.type == EventTypes.Redaction) {
+      final redacts = event.redacts;
+      if (redacts == null) return false;
+      final index = _findEvent(event_id: redacts);
+      if (index < events.length) {
+        _removeAggregatedRelation(events[index]);
+        events[index].setRedactionEvent(event);
+        onChange?.call(index);
+        return true;
+      }
+      final relation = _findAggregatedEvent(redacts);
+      if (relation == null) return false;
+      _removeAggregatedRelation(relation);
+      return true;
+    }
+    final parentId = event.relationshipEventId;
+    if (parentId == null ||
+        !aggregatedEvents.containsKey(parentId) &&
+            _findEvent(event_id: parentId) >= events.length) {
+      return false;
+    }
+    final txid = event.transactionId;
+    final old =
+        _findAggregatedEvent(event.eventId) ??
+        (txid == null ? null : _findAggregatedEvent(txid));
+    if (old != null &&
+        latestEventStatus(event.status, old.status) == old.status &&
+        !(event.status.isError && old.status.isSending)) {
+      event.status = old.status;
+    }
+    addAggregatedEvent(event);
+    return true;
+  }
+
+  /// Fetches configured relations of [events] that may lie outside the chunk.
+  @internal
+  Future<void> fetchMissingRelations(Iterable<Event> events) async {
+    final relations = room.client.fragmentedTimelineRelations;
+    final siblingRelations = room.client.fragmentedTimelineSiblingRelations;
+    final requests = <(String, String)>{};
+    for (final event in events) {
+      if (!event.status.isSynced) continue;
+      for (final relType in relations[event.type] ?? const <String>{}) {
+        requests.add((event.eventId, relType));
+      }
+      final relType = event.relationshipType;
+      final parentId = event.relationshipEventId;
+      if (relType != null &&
+          parentId != null &&
+          siblingRelations.contains(relType)) {
+        requests.add((parentId, relType));
+      }
+    }
+    await Future.wait(requests.map((r) => fetchAggregatedEvents(r.$1, r.$2)));
   }
 
   /// Fetches related events from the server using the `/relations` API and
@@ -557,19 +657,13 @@ class Timeline {
         ? '$eventId:$relType:$eventType'
         : '$eventId:$relType';
 
-    if (_relationRequests.containsKey(key)) return _relationRequests[key]!;
-
-    final future = _doFetchAggregatedEvents(
-      eventId,
-      relType,
-      eventType: eventType,
-    );
-    _relationRequests[key] = future;
-    try {
-      await future;
-    } catch (_) {
-      unawaited(_relationRequests.remove(key));
-    }
+    return _relationRequests[key] ??= () async {
+      try {
+        await _doFetchAggregatedEvents(eventId, relType, eventType: eventType);
+      } catch (_) {
+        _relationRequests.remove(key);
+      }
+    }();
   }
 
   Future<void> _doFetchAggregatedEvents(
@@ -642,7 +736,14 @@ class Timeline {
         onNewEvent?.call();
       }
 
-      if (!allowNewEvent) return;
+      if (!allowNewEvent) {
+        if (_updateRelationsOutsideLive(event) &&
+            update &&
+            !_collectHistoryUpdates) {
+          onUpdate?.call();
+        }
+        return;
+      }
 
       final status = event.status;
 
@@ -690,13 +791,20 @@ class Timeline {
           if (onChange != null) {
             final relationshipEventId = events[index].relationshipEventId;
             if (relationshipEventId != null) {
-              onChange?.call(_findEvent(event_id: relationshipEventId));
+              final parentIndex = _findEvent(event_id: relationshipEventId);
+              if (parentIndex < events.length) onChange?.call(parentIndex);
               return;
             }
           }
 
           events[index].setRedactionEvent(event);
           onChange?.call(index);
+        } else {
+          final redacts = event.redacts;
+          final relation = redacts == null
+              ? null
+              : _findAggregatedEvent(redacts);
+          if (relation != null) _removeAggregatedRelation(relation);
         }
       }
 

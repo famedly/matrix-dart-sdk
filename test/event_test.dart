@@ -72,6 +72,23 @@ void main() async {
       expect(state.stateKey, '');
       expect(state.status, EventStatus.synced);
     });
+
+    test('redacts prefers content and falls back to top-level', () {
+      final redaction = {
+        'event_id': '\$redaction',
+        'sender': senderID,
+        'origin_server_ts': timestamp,
+        'type': EventTypes.Redaction,
+        'redacts': '\$other',
+        'content': {'redacts': id},
+      };
+      expect(MatrixEvent.fromJson(redaction).redacts, id);
+      expect(Event.fromJson(redaction, room).redacts, id);
+
+      redaction['content'] = <String, Object?>{};
+      expect(MatrixEvent.fromJson(redaction).redacts, '\$other');
+      expect(Event.fromJson(redaction, room).redacts, '\$other');
+    });
     test('Test all EventTypes', () async {
       Event event;
 
