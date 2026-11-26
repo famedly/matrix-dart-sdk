@@ -2004,11 +2004,15 @@ class Client extends MatrixApi {
     }
     matrixEvent ??= await database.getEventById(eventId, room);
 
+    Future<MatrixEvent> loadEvent() =>
+        getOneRoomEvent(roomId, eventId).timeout(timeoutForServerRequests);
     try {
-      matrixEvent ??= await getOneRoomEvent(
-        roomId,
-        eventId,
-      ).timeout(timeoutForServerRequests);
+      // The network is often not ready yet right after the device woke up, so
+      // retry once on connection errors.
+      matrixEvent ??= await loadEvent().onError((e, _) {
+        Logs().w('Unable to load event for push notification. Retrying...', e);
+        return Future.delayed(const Duration(seconds: 1), loadEvent);
+      }, test: (e) => e is! MatrixException);
     } on MatrixException catch (_) {
       // No access to the MatrixEvent. Search in /notifications
       await ensureNotSoftLoggedOut();
@@ -2070,13 +2074,19 @@ class Client extends MatrixApi {
     final encryption = this.encryption;
     if (event.type == EventTypes.Encrypted && encryption != null) {
       var decrypted = await encryption.decryptRoomEvent(event);
-      if (decrypted.messageType == MessageTypes.BadEncrypted &&
-          prevBatch != null) {
-        await oneShotSync()
-            .timeout(timeoutForServerRequests)
-            .catchError((_) => null);
+      // The room key can arrive after the event and a sync can fail or end
+      // without it, so keep syncing until the key is there or time is up.
+      final stopwatch = Stopwatch()..start();
+      var remaining = timeoutForServerRequests;
+      while (decrypted.messageType == MessageTypes.BadEncrypted &&
+          prevBatch != null &&
+          remaining > Duration.zero) {
+        await oneShotSync(
+          timeout: remaining,
+        ).timeout(remaining).catchError((_) => null);
 
         decrypted = await encryption.decryptRoomEvent(event);
+        remaining = timeoutForServerRequests - stopwatch.elapsed;
       }
       event = decrypted;
     }
