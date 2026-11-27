@@ -2404,14 +2404,17 @@ class Client extends MatrixApi {
   /// Pass a timeout to set how long the server waits before sending an empty response.
   /// (Corresponds to the timeout param on the /sync request.)
   Future<void> _sync({Duration? timeout}) {
-    final currentSync = _currentSync ??= _innerSync(timeout: timeout)
-        .whenComplete(() {
-          _currentSync = null;
-          if (_backgroundSync && isLogged() && !_disposed) {
-            unawaited(_sync());
-          }
-        });
-    return currentSync;
+    late final Future<void> loop;
+    return _currentSync ??= loop = _innerSync(timeout: timeout).whenComplete(
+      () {
+        // After abortSync() another loop may already run; leave it alone.
+        if (!identical(_currentSync, loop)) return;
+        _currentSync = null;
+        if (_backgroundSync && isLogged() && !_disposed) {
+          unawaited(_sync());
+        }
+      },
+    );
   }
 
   /// Presence that is set on sync.
