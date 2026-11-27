@@ -1751,6 +1751,34 @@ void main() {
       await client.dispose();
     });
 
+    test('a sync aborted in flight leaves a single sync loop', () async {
+      final client = await getClient();
+      final syncs = <Completer<http.Response>>[];
+      client.httpClient = MockClient((request) {
+        if (!request.url.path.endsWith('/sync')) {
+          return Future.value(http.Response('{}', 200));
+        }
+        return (syncs..add(Completer())).last.future;
+      });
+      client.syncErrorTimeoutSec = 0;
+      int inFlight() => syncs.where((s) => !s.isCompleted).length;
+
+      client.backgroundSync = true;
+      while (syncs.isEmpty) {
+        await Future.delayed(Duration.zero);
+      }
+      await client.abortSync();
+      client.backgroundSync = true;
+      while (syncs.length < 2) {
+        await Future.delayed(Duration.zero);
+      }
+      syncs.first.complete(http.Response('{"next_batch": "stale"}', 200));
+      await Future.delayed(Duration(milliseconds: 50));
+
+      expect(inFlight(), 1);
+      await client.dispose(closeDatabase: false);
+    });
+
     test('dispose', () async {
       await matrix.dispose(closeDatabase: true);
     });
